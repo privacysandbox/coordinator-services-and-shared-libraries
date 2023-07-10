@@ -1,0 +1,46 @@
+diff --git a/bin/kmstool-enclave-cli/main.c b/bin/kmstool-enclave-cli/main.c
+index f810459..272b39e 100644
+--- a/bin/kmstool-enclave-cli/main.c
++++ b/bin/kmstool-enclave-cli/main.c
+@@ -131,7 +131,7 @@ static struct aws_cli_option s_long_options[] = {
+  * @param[out] app_ctx: struct to store all of the arguments
+  */
+ static void s_parse_options(int argc, char **argv, const char *subcommand, struct app_ctx *ctx) {
+-    ctx->proxy_port = DEFAULT_PROXY_PORT;
++    ctx->proxy_port = 0;
+     ctx->region = NULL;
+     ctx->aws_access_key_id = NULL;
+     ctx->aws_secret_access_key = NULL;
+@@ -267,6 +267,9 @@ static void init_kms_client(struct app_ctx *app_ctx, struct aws_credentials **cr
+     struct aws_socket_endpoint endpoint = {.address = DEFAULT_PARENT_CID, .port = app_ctx->proxy_port};
+     struct aws_nitro_enclaves_kms_client_configuration configuration = {
+         .allocator = app_ctx->allocator, .endpoint = &endpoint, .domain = AWS_SOCKET_VSOCK, .region = app_ctx->region};
++    if (app_ctx->proxy_port == 0) {
++        configuration.endpoint = NULL;
++    }
+ 
+     /* Sets the AWS credentials and creates a KMS client with them. */
+     struct aws_credentials *new_credentials = aws_credentials_new(
+diff --git a/containers/Dockerfile.al2 b/containers/Dockerfile.al2
+index e166022..ed9ea21 100644
+--- a/containers/Dockerfile.al2
++++ b/containers/Dockerfile.al2
+@@ -1,15 +1,15 @@
+ # Copyright 2020-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ # SPDX-License-Identifier: Apache-2.0
+ 
+-FROM amazonlinux:2 as builder
++FROM amazonlinux@sha256:cd3d9deffbb15db51382022a67ad717c02e0573c45c312713c046e4c2ac07771 as builder
+ 
+ RUN yum install -y \
+ 	cmake3 \
+-	gcc \
++	gcc-7.3.1-15.amzn2 \
+ 	git \
+ 	tar \
+ 	make \
+-	gcc-c++ \
++	gcc-c++-7.3.1-15.amzn2 \
+ 	go \
+ 	ninja-build \
+ 	doxygen

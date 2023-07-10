@@ -1,0 +1,11 @@
+[Unit]
+Description=Vsock proxy for allowing outgoing connections from enclave image
+After=network.target
+
+[Service]
+ExecStart=/opt/google/proxy/proxy
+WorkingDirectory=/home/ec2-user
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

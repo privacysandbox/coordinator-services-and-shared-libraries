@@ -1,0 +1,6 @@
+{
+  "job_request_id": "123",
+  "input_data_bucket_name": null,
+  "postback_url": "http://postback.com",
+  "input_data_blob_prefix": "dataHandle"
+}

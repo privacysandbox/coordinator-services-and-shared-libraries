@@ -1,0 +1,15 @@
+{
+  "requestContext": {
+    "requestId": "6c5b20ae-4bd4-4990-91ee-cda080f335ac",
+    "functionArn": "arn:aws:lambda:us-east-1:123456789012:function:ChangeHandler",
+    "condition": "RetryAttemptsExhausted",
+    "approximateInvokeCount": 4
+  },
+  "responseContext": {
+    "statusCode": 200,
+    "executedVersion": "$LATEST",
+    "functionError": "Unhandled"
+  },
+  "version": "1.0",
+  "timestamp": "2021-01-01T00:00:01Z"
+}

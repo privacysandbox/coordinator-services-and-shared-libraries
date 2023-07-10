@@ -1,0 +1,43 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.scp.coordinator.protos.keymanagement.keystorage.api.v1;
+
+import "coordinator/protos/keymanagement/shared/api/v1/encryption_key.proto";
+import "coordinator/protos/keymanagement/keystorage/api/v1/key_split_encryption_type.proto";
+import "coordinator/protos/keymanagement/keystorage/api/v1/data_key.proto";
+
+option java_package = "com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1";
+option java_outer_classname = "CreateKeyRequestProto";
+
+/** Request for saving a key. */
+message CreateKeyRequest{
+  /** Required field for the key's ID, which is the final part of the key's resource name. */
+  string keyId = 1;
+  google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKey key = 2;
+  /**
+   * New key split to be used by the receiving coordinator. How this value is encrypted is
+   * determined by key_split_encryption_type.
+   */
+  string encrypted_key_split = 3;
+  /** How encrypted_key_split is encrypted. */
+  KeySplitEncryptionType key_split_encryption_type = 4;
+  /**
+   * DataKey used to encrypt encrypted_key_split -- only used if
+   * key_split_encryption_type is set to DATA_KEY.
+   */
+  DataKey encrypted_key_split_data_key = 5;
+}

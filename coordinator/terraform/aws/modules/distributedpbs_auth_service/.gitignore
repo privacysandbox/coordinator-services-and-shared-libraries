@@ -1,0 +1,2 @@
+# TODO(b/240482765) Get rid of this gitignore file altogether once this zipping is done in bazel
+/files

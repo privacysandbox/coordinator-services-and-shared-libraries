@@ -1,0 +1,6 @@
+{
+    "reporting_origin": "",
+    "pbs_region": "us-east-1",
+    "pbs_endpoint": "https://pse2e-primary-google-scp-pbs.us-east-1.elasticbeanstalk.com",
+    "pbs_auth_endpoint": "https://auth.mp-pbs-pse2e-primary.aws.admcstesting.dev/auth"
+}
