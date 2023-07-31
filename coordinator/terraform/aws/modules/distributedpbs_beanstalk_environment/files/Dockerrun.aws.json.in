@@ -1,0 +1,18 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "${pbs_container_image_repo_path_and_tag}",
+    "Update": "true"
+  },
+  "Ports": [
+    {
+      "ContainerPort": ${pbs_container_port},
+      "HostPort": 80
+    },
+    {
+      "ContainerPort": ${pbs_container_health_service_port},
+      "HostPort": ${health_service_host_port}
+    }
+  ],
+  "Logging": "/var/log"
+}

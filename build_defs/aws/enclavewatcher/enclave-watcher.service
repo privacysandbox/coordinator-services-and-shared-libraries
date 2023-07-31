@@ -1,0 +1,17 @@
+[Unit]
+Description=Watcher script for nitro enclave
+After=network.target
+After=nitro-enclaves-allocator.service
+After=vsockproxy.service
+Requires=nitro-enclaves-allocator.service
+
+[Service]
+Type=notify
+ExecStart=/opt/google/scp/enclave_watcher.sh start
+ExecStop=/opt/google/scp/enclave_watcher.sh stop
+Restart=always
+# Restart if no ping is received in 60 seconds.
+WatchdogSec=60
+
+[Install]
+WantedBy=multi-user.target

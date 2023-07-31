@@ -1,0 +1,23 @@
+{
+  "requestContext": {
+    "requestId": "6c5b20ae-4bd4-4990-91ee-cda080f335ac",
+    "functionArn": "arn:aws:lambda:us-east-1:123456789012:function:ChangeHandler",
+    "condition": "RetryAttemptsExhausted",
+    "approximateInvokeCount": 4
+  },
+  "responseContext": {
+    "statusCode": 200,
+    "executedVersion": "$LATEST",
+    "functionError": "Unhandled"
+  },
+  "version": "1.0",
+  "timestamp": "2021-01-01T00:00:01Z",
+  "DDBStreamBatchInfo": {
+    "startSequenceNumber": "204654000000000042658847971",
+    "endSequenceNumber": "204654400000000042658848396",
+    "approximateArrivalOfFirstRecord": "2021-01-01T00:00:00Z",
+    "approximateArrivalOfLastRecord": "2021-01-01T00:00:01Z",
+    "batchSize": 4,
+    "streamArn": "arn:aws:dynamodb:us-east-1:123456789012:table/JobMetadata/stream/2021-01-01T00:00:00"
+  }
+}

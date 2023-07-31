@@ -1,0 +1,5 @@
+{
+  "input_data_bucket_name": "bucket",
+  "postback_url": "http://postback.com",
+  "input_data_blob_prefix": "dataHandle"
+}

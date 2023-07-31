@@ -1,0 +1,50 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.scp.coordinator.protos.keymanagement.shared.api.v1;
+
+import "coordinator/protos/keymanagement/shared/api/v1/encryption_key_type.proto";
+import "coordinator/protos/keymanagement/shared/api/v1/key_data.proto";
+
+option java_package = "com.google.scp.coordinator.protos.keymanagement.shared.api.v1";
+option java_outer_classname = "EncryptionKeyProto";
+
+/** Represents a singular or distributed encryption key. */
+message EncryptionKey {
+  /**
+   * Unique resource identifier.
+   *
+   * e.g. keys/{keyId}
+   */
+  string name = 1;
+  /** The type of key, and how it is split. */
+  EncryptionKeyType encryption_key_type = 2;
+  /** Tink keyset handle containing the public key material. */
+  string public_keyset_handle = 3;
+  /** The raw public key material, base 64 encoded. */
+  string public_key_material = 4;
+  /** Key creation time in Unix Epoch milliseconds. */
+  int64 creation_time = 5;
+  /** Key expiration time in Unix Epoch milliseconds. */
+  int64 expiration_time = 6;
+  /**
+   * Date in epoch seconds when Key is removed from database. TTL Time must be in seconds due to
+   * DynamoDB TTL requirements
+   */
+  int32 ttl_time = 7;
+  /** List of KeyData. */
+  repeated KeyData key_data = 8;
+}

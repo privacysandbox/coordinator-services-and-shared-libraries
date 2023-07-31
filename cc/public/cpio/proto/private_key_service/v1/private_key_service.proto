@@ -1,0 +1,54 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.private_key_service.v1;
+
+import "cc/core/common/proto/common.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Service to fetch private keys.
+service PrivateKeyService {
+  // Fetches private keys from KeyService for the given Key Ids. These keys are
+  // already decrypted.
+  rpc ListPrivateKeysByIds(ListPrivateKeysByIdsRequest)
+      returns (ListPrivateKeysByIdsResponse) {}
+}
+
+// Request to list private keys.
+message ListPrivateKeysByIdsRequest {
+  repeated string key_ids = 1;
+}
+
+// Response of listing private keys
+message ListPrivateKeysByIdsResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  repeated PrivateKey private_keys = 2;
+}
+
+// Wrap of private key.
+message PrivateKey {
+  // The id of the public and private key pair.
+  string key_id = 1;
+  // The value of the public key.
+  string public_key = 2;
+  // The value of the private key.
+  string private_key = 3;
+  // The expiration time of the private key.
+  int64 expiration_time_in_ms = 4;
+};

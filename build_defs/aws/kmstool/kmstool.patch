@@ -1,0 +1,89 @@
+diff --git a/bin/kmstool-enclave-cli/main.c b/bin/kmstool-enclave-cli/main.c
+index f810459..272b39e 100644
+--- a/bin/kmstool-enclave-cli/main.c
++++ b/bin/kmstool-enclave-cli/main.c
+@@ -131,7 +131,7 @@ static struct aws_cli_option s_long_options[] = {
+  * @param[out] app_ctx: struct to store all of the arguments
+  */
+ static void s_parse_options(int argc, char **argv, const char *subcommand, struct app_ctx *ctx) {
+-    ctx->proxy_port = DEFAULT_PROXY_PORT;
++    ctx->proxy_port = 0;
+     ctx->region = NULL;
+     ctx->aws_access_key_id = NULL;
+     ctx->aws_secret_access_key = NULL;
+@@ -267,6 +267,9 @@ static void init_kms_client(struct app_ctx *app_ctx, struct aws_credentials **cr
+     struct aws_socket_endpoint endpoint = {.address = DEFAULT_PARENT_CID, .port = app_ctx->proxy_port};
+     struct aws_nitro_enclaves_kms_client_configuration configuration = {
+         .allocator = app_ctx->allocator, .endpoint = &endpoint, .domain = AWS_SOCKET_VSOCK, .region = app_ctx->region};
++    if (app_ctx->proxy_port == 0) {
++        configuration.endpoint = NULL;
++    }
+ 
+     /* Sets the AWS credentials and creates a KMS client with them. */
+     struct aws_credentials *new_credentials = aws_credentials_new(
+diff --git a/containers/Dockerfile.al2 b/containers/Dockerfile.al2
+index e166022..7280f33 100644
+--- a/containers/Dockerfile.al2
++++ b/containers/Dockerfile.al2
+@@ -1,20 +1,20 @@
+ # Copyright 2020-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ # SPDX-License-Identifier: Apache-2.0
+ 
+-FROM amazonlinux:2 as builder
++FROM amazonlinux@sha256:cd3d9deffbb15db51382022a67ad717c02e0573c45c312713c046e4c2ac07771 as builder
+ 
+ RUN yum install -y \
+ 	cmake3 \
+-	gcc \
++	gcc-7.3.1-15.amzn2 \
+ 	git \
+ 	tar \
+ 	make \
+-	gcc-c++ \
++	gcc-c++-7.3.1-15.amzn2 \
+ 	go \
+ 	ninja-build \
+ 	doxygen
+ 
+-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.60
++RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.63
+ 
+ # We keep the build artifacts in the -build directory
+ WORKDIR /tmp/crt-builder
+@@ -61,7 +61,9 @@ RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/us
+ RUN cmake3 --build json-c/build --parallel $(nproc)  --target install
+ 
+ RUN git clone -b v0.2.1 https://github.com/aws/aws-nitro-enclaves-nsm-api.git
+-RUN source $HOME/.cargo/env && cd aws-nitro-enclaves-nsm-api && cargo build --release --jobs $(nproc) -p nsm-lib
++ADD nsm-api.patch /tmp/crt-builder/nsm-api.patch
++RUN cd aws-nitro-enclaves-nsm-api && git apply /tmp/crt-builder/nsm-api.patch  && cat Cargo.toml
++RUN source $HOME/.cargo/env && cd aws-nitro-enclaves-nsm-api && cargo build --release --jobs $(nproc) -p nsm-lib
+ RUN mv aws-nitro-enclaves-nsm-api/target/release/libnsm.so /usr/lib64
+ RUN mv aws-nitro-enclaves-nsm-api/target/release/nsm.h /usr/include
+ 
+diff --git a/nsm-api.patch b/nsm-api.patch
+new file mode 100644
+index 0000000..0c1abab
+--- /dev/null
++++ b/nsm-api.patch
+@@ -0,0 +1,20 @@
++diff --git a/Cargo.toml b/Cargo.toml
++index 86e8df1..c45162b 100644
++--- a/Cargo.toml
+++++ b/Cargo.toml
++@@ -17,9 +17,9 @@ default-members = [ "." ]
++ lto = true
++ 
++ [dependencies]
++-nix = "0.20"
++-libc = "0.2"
++-log = "0.4"
++-serde = { version = "1.0", features = ["derive"] }
++-serde_bytes = "0.11"
++-serde_cbor = "0.11"
+++nix = "0.20.2, < 0.20.3"
+++libc = "0.2.147, < 0.2.148"
+++log = "0.4.19, < 0.4.20"
+++serde = { version = "1.0.177, < 1.0.178", features = ["derive"] }
+++serde_bytes = "0.11.12, < 0.11.13"
+++serde_cbor = "0.11.2, < 0.11.3"
