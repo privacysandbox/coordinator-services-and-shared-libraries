@@ -150,6 +150,11 @@ resource "aws_cloudfront_distribution" "get_public_keys_cloudfront" {
     bucket          = aws_s3_bucket.get_public_keys_cloudfront_logs_bucket.bucket_domain_name
     prefix          = "cloudfront_logs"
   }
+
+  depends_on = [
+    // CloudFront requires the S3 bucket for logs enables ACL access.
+    aws_s3_bucket_acl.get_public_keys_cloudfront_logs_bucket_acl
+  ]
 }
 
 # Canonical User ID is different than Account ID

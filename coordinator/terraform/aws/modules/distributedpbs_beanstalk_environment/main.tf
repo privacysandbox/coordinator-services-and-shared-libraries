@@ -666,6 +666,11 @@ resource "aws_elastic_beanstalk_environment" "beanstalk_app_environment" {
         name      = "Protocol"
         value     = "HTTPS"
       },
+      {
+        namespace = "aws:elbv2:listener:443"
+        name      = "SSLPolicy"
+        value     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+      },
       # Health check timeout is 9 seconds
       # Must be smaller than HealthCheckInterval
       {

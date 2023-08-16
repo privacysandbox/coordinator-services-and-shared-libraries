@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.1.0...v1.1.1) (2023-07-27)
+
+### Changes
+  * Ensured ACL is set on CloudFront logs bucket by adding an explicit dependency
+  * Added option to uninstall SSH server from AMI
+  * Pinned and locked versions for nsm-api dependencies
+  * Enforced newer SSLPolicy on ELB LB
+
 ## [1.1.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.0.0...v1.1.0) (2023-07-27)
 
 ### Changes
