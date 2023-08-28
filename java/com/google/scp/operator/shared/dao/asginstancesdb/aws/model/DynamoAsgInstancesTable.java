@@ -36,6 +36,7 @@ public final class DynamoAsgInstancesTable {
   private static final String REQUEST_TIME = "RequestTime";
   private static final String TERMINATION_TIME = "TerminationTime";
   private static final String TTL = "Ttl";
+  private static final String LAST_HEARTBEAT_TIME = "LastHeartbeatTime";
 
   /** Returns the table schema for the DynamoDB representation of {@code AsgInstance}. */
   public static TableSchema<AsgInstance> getDynamoDbTableSchema() {
@@ -75,6 +76,13 @@ public final class DynamoAsgInstancesTable {
             Long.class,
             attribute ->
                 attribute.name(TTL).getter(AsgInstance::getTtl).setter(AsgInstance.Builder::setTtl))
+        .addAttribute(
+            Instant.class,
+            attribute ->
+                attribute
+                    .name(LAST_HEARTBEAT_TIME)
+                    .getter(BackendModelUtil::getAsgInstanceLastHeartbeatTimeValue)
+                    .setter(BackendModelUtil::setAsgInstanceLastHeartbeatTimeValue))
         .build();
   }
 }

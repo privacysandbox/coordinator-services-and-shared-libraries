@@ -68,6 +68,7 @@ def keygeneration_ami(
         ec2_instance = "m5.xlarge",
         subnet_id = subnet_id,
         enable_enclave_debug_mode = debug_mode,
+        uninstall_ssh_server = uninstall_ssh_server,
         enclave_allocator = Label("//build_defs/aws/enclave:small.allocator.yaml"),
         enclave_container_image = ":%s.tar" % container_name,
         licenses = _LICENSES_TARGET,

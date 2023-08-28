@@ -39,6 +39,7 @@ def _generic_enclave_ami_pkr_script_impl(ctx):
             "{ami_name}": ctx.attr.ami_name[BuildSettingInfo].value,
             "{ami_groups}": ctx.attr.ami_groups,
             "{enable_enclave_debug_mode}": "true" if ctx.attr.enable_enclave_debug_mode else "false",
+            "{uninstall_ssh_server}": "true" if ctx.attr.uninstall_ssh_server else "false",
             "{licenses}": ctx.file.licenses.short_path,
             "{docker_repo}": ctx.attr.enclave_container_image.label.package,
             # Use the input container tag if specified or remove the .tar extension from the container_image name
@@ -111,6 +112,9 @@ generic_enclave_ami_pkr_script = rule(
             allow_single_file = True,
         ),
         "enable_enclave_debug_mode": attr.bool(
+            default = False,
+        ),
+        "uninstall_ssh_server": attr.bool(
             default = False,
         ),
         "packer_binary": attr.label(

@@ -33,6 +33,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.net.URI;
+import java.util.Optional;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryPolicy;
@@ -110,9 +111,91 @@ public final class AwsLifecycleModule extends LifecycleModule {
     return 3;
   }
 
+  @Provides
+  @WorkerScaleInHookName
+  Optional<String> provideWorkerScaleInHook(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient.getParameter(WorkerParameter.SCALE_IN_HOOK.name());
+  }
+
+  @Provides
+  @WorkerAutoscalingGroupName
+  Optional<String> provideWorkerAutoscalingGroup(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient.getParameter(WorkerParameter.WORKER_AUTOSCALING_GROUP.name());
+  }
+
+  @Provides
+  @LifecycleActionHeartbeatTimeout
+  Optional<Integer> provideLifecycleActionHeartbeatTimeout(ParameterClient parameterClient)
+      throws ParameterClientException {
+    Optional<String> lifecycleActionHeartbeatTimeout =
+        parameterClient.getParameter(WorkerParameter.LIFECYCLE_ACTION_HEARTBEAT_TIMEOUT.name());
+    return lifecycleActionHeartbeatTimeout.map(Integer::parseInt);
+  }
+
+  @Provides
+  @MaxLifecycleActionTimeoutExtension
+  Optional<Integer> provideMaxLifecycleActionTimeoutExtension(ParameterClient parameterClient)
+      throws ParameterClientException {
+    Optional<String> maxLifecycleActionTimeoutExtension =
+        parameterClient.getParameter(WorkerParameter.MAX_LIFECYCLE_ACTION_TIMEOUT_EXTENSION.name());
+    return maxLifecycleActionTimeoutExtension.map(Integer::parseInt);
+  }
+
+  @Provides
+  @LifecycleActionHeartbeatEnabled
+  Boolean provideLifecycleActionHeartbeatEnabled(ParameterClient parameterClient)
+      throws ParameterClientException {
+    Optional<String> lifecycleActionHeartbeatEnabledParam =
+        parameterClient.getParameter(WorkerParameter.LIFECYCLE_ACTION_HEARTBEAT_ENABLED.name());
+    return lifecycleActionHeartbeatEnabledParam.map(Boolean::valueOf).orElse(false);
+  }
+
+  @Provides
+  @LifecycleActionHeartbeatFrequency
+  Optional<Integer> provideLifecycleActionHeartbeatFrequency(ParameterClient parameterClient)
+      throws ParameterClientException {
+    Optional<String> lifecycleActionHeartbeatFrequency =
+        parameterClient.getParameter(WorkerParameter.LIFECYCLE_ACTION_HEARTBEAT_FREQUENCY.name());
+    return lifecycleActionHeartbeatFrequency.map(Integer::parseInt);
+  }
+
   /** Annotation for binding an autoscaling endpoint override. */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
   @Retention(RetentionPolicy.RUNTIME)
   public @interface AutoScalingEndpointOverrideBinding {}
+
+  /** Annotation for binding an autoscaling endpoint override. */
+  @BindingAnnotation
+  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface WorkerScaleInHookName {}
+
+  /** Annotation for binding an autoscaling endpoint override. */
+  @BindingAnnotation
+  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface WorkerAutoscalingGroupName {}
+
+  @BindingAnnotation
+  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface LifecycleActionHeartbeatTimeout {}
+
+  @BindingAnnotation
+  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface MaxLifecycleActionTimeoutExtension {}
+
+  @BindingAnnotation
+  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface LifecycleActionHeartbeatEnabled {}
+
+  @BindingAnnotation
+  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface LifecycleActionHeartbeatFrequency {}
 }

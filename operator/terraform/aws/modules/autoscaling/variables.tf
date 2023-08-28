@@ -171,6 +171,48 @@ variable "terminated_instance_lambda_role_name" {
   description = "The name for the IAM role used by terminated instance lambda"
 }
 
+variable "termination_hook_heartbeat_timeout_sec" {
+  type        = number
+  description = <<-EOT
+        Autoscaling termination lifecycle hook heartbeat timeout in seconds.
+        If using termination hook timeout extension, this value is recommended
+        to be greater than 10 minutes to allow heartbeats to occur. The max
+        value for heartbeat is 7200 (2 hours) as per AWS documentation.
+    EOT
+}
+
+variable "termination_hook_timeout_extension_enabled" {
+  type        = bool
+  description = <<-EOT
+        Enable sending heartbeats to extend timeout for worker autoscaling
+        termination lifecycle hook action. Required if the user wants to
+        be able to wait over 2 hours for jobs to complete before instance
+        termination.
+     EOT
+}
+
+variable "termination_hook_heartbeat_frequency_sec" {
+  type        = number
+  description = <<-EOT
+        Autoscaling termination lifecycle hook heartbeat frequency in seconds.
+        If using termination hook timeout extension, this value is recommended
+        to be greater than 10 minutes to allow heartbeats to occur to avoid
+        Autoscaling API throttling. The value should be less than
+        termination_hook_heartbeat_timeout_sec to allow heartbeats to happen
+        before the heartbeat timeout.
+    EOT
+}
+
+variable "termination_hook_max_timeout_extension_sec" {
+  type        = number
+  description = <<-EOT
+        Max time to heartbeat the autoscaling termination lifecycle hook in
+        seconds. The exact timeout could exceed this value since heartbeats
+        increase the timeout by a fixed amount of time. Used if
+        termination_hook_timeout_extension_enabled is true."
+      EOT
+}
+
 ################################################################################
 # Terminated Instances Lambda Environment Variables
 ################################################################################

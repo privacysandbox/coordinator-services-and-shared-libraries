@@ -64,7 +64,7 @@ resource "aws_autoscaling_lifecycle_hook" "worker_scale_in_hook" {
   name                   = "worker-scale-in-hook-${var.environment}"
   autoscaling_group_name = aws_autoscaling_group.worker_group.name
   default_result         = "CONTINUE"
-  heartbeat_timeout      = 3600 // 1 hour
+  heartbeat_timeout      = var.termination_hook_heartbeat_timeout_sec
   lifecycle_transition   = "autoscaling:EC2_INSTANCE_TERMINATING"
 }
 
@@ -81,4 +81,32 @@ module "worker_autoscaling_group_parameter" {
   environment     = var.environment
   parameter_name  = "WORKER_AUTOSCALING_GROUP"
   parameter_value = aws_autoscaling_group.worker_group.name
+}
+
+module "lifecycle_action_heartbeat_timeout_parameter" {
+  source          = "../parameters"
+  environment     = var.environment
+  parameter_name  = "LIFECYCLE_ACTION_HEARTBEAT_TIMEOUT"
+  parameter_value = var.termination_hook_heartbeat_timeout_sec
+}
+
+module "lifecycle_action_heartbeat_enabled_parameter" {
+  source          = "../parameters"
+  environment     = var.environment
+  parameter_name  = "LIFECYCLE_ACTION_HEARTBEAT_ENABLED"
+  parameter_value = var.termination_hook_timeout_extension_enabled
+}
+
+module "lifecycle_action_heartbeat_frequency_parameter" {
+  source          = "../parameters"
+  environment     = var.environment
+  parameter_name  = "LIFECYCLE_ACTION_HEARTBEAT_FREQUENCY"
+  parameter_value = var.termination_hook_heartbeat_frequency_sec
+}
+
+module "max_lifecycle_action_heartbeat_timeout_extension_parameter" {
+  source          = "../parameters"
+  environment     = var.environment
+  parameter_name  = "MAX_LIFECYCLE_ACTION_TIMEOUT_EXTENSION"
+  parameter_value = var.termination_hook_max_timeout_extension_sec
 }

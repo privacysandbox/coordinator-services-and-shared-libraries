@@ -171,6 +171,7 @@ data "aws_iam_policy_document" "enclave_policy_doc" {
       "autoscaling:CompleteLifecycleAction",
       "autoscaling:DescribeAutoScalingInstances",
       "autoscaling:SetInstanceHealth",
+      "autoscaling:RecordLifecycleActionHeartbeat",
     ]
     resources = ["*"]
   }

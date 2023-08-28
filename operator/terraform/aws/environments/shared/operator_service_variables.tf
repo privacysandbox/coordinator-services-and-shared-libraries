@@ -126,6 +126,22 @@ variable "kms_key_parameter" {
   default     = "arn:aws:kms::example:key"
 }
 
+variable "max_job_num_attempts_parameter" {
+  type        = string
+  default     = "5"
+  description = "Max number of times a job can be picked up by a worker and attempted processing"
+}
+
+variable "max_job_processing_time_parameter" {
+  type        = string
+  default     = "3600"
+  description = "Max job processing time in seconds (queue visibility time-out)"
+}
+
+################################################################################
+# Autoscaling Variables
+################################################################################
+
 variable "initial_capacity_ec2_instances" {
   default     = 2
   type        = number
@@ -144,18 +160,6 @@ variable "max_capacity_ec2_instances" {
   default     = 20
 }
 
-variable "max_job_num_attempts_parameter" {
-  type        = string
-  default     = "5"
-  description = "Max number of times a job can be picked up by a worker and attempted processing"
-}
-
-variable "max_job_processing_time_parameter" {
-  type        = string
-  default     = "3600"
-  description = "Max job processing time in seconds (queue visibility time-out)"
-}
-
 variable "asg_capacity_handler_lambda" {
   description = <<-EOT
         ASG capacity handler lambda path. If not provided defaults to tar location jar file.
@@ -172,6 +176,52 @@ variable "terminated_instance_handler_lambda" {
       EOT
   type        = string
   default     = "../../jars/TerminatedInstanceHandlerLambda_deploy.jar"
+}
+
+variable "termination_hook_heartbeat_timeout_sec" {
+  type        = number
+  description = <<-EOT
+        Autoscaling termination lifecycle hook heartbeat timeout in seconds.
+        If using termination hook timeout extension, this value is recommended
+        to be greater than 10 minutes to allow heartbeats to occur. The max
+        value for heartbeat is 7200 (2 hours) as per AWS documentation.
+    EOT
+  default     = 3600
+}
+
+variable "termination_hook_timeout_extension_enabled" {
+  type        = bool
+  description = <<-EOT
+        Enable sending heartbeats to extend timeout for worker autoscaling
+        termination lifecycle hook action. Required if the user wants to
+        be able to wait over 2 hours for jobs to complete before instance
+        termination.
+     EOT
+  default     = true
+}
+
+variable "termination_hook_heartbeat_frequency_sec" {
+  type        = number
+  description = <<-EOT
+        Autoscaling termination lifecycle hook heartbeat frequency in seconds.
+        If using termination hook timeout extension, this value is recommended
+        to be greater than 10 minutes to allow heartbeats to occur to avoid
+        Autoscaling API throttling. The value should be less than
+        termination_hook_heartbeat_timeout_sec to allow heartbeats to happen
+        before the heartbeat timeout.
+    EOT
+  default     = 1800
+}
+
+variable "termination_hook_max_timeout_extension_sec" {
+  type        = number
+  description = <<-EOT
+        Max time to heartbeat the autoscaling termination lifecycle hook in
+        seconds. The exact timeout could exceed this value since heartbeats
+        increase the timeout by a fixed amount of time. Used if
+        termination_hook_timeout_extension_enabled is true."
+      EOT
+  default     = 3600
 }
 
 ################################################################################

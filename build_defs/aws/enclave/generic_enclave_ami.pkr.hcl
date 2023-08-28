@@ -137,14 +137,19 @@ build {
   provisioner "shell" {
     # This should be the last step because it removes access from Packer.
 
+    environment_vars = [
+      "UNINSTALL_SSH_SERVER={uninstall_ssh_server}",
+    ]
+
     inline = [
       # Standard AMI cleanup per:
       # https://aws.amazon.com/articles/how-to-share-and-use-public-amis-in-a-secure-manner/
       # This removes the auto-generated Packer key (created in
       # /home/ec2-user/.ssh/authorized_keys).
-      "sudo find / -name authorized_keys -delete -print"
+      "sudo find / -name authorized_keys -delete -print",
       # Note: omitting deletion of shell history and VCS files because they are
       # not present in these AMIs.
+      "if ( $UNINSTALL_SSH_SERVER ); then sudo rpm -e ec2-instance-connect openssh-server; fi",
     ]
   }
 }

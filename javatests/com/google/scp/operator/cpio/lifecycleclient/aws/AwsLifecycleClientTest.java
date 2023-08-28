@@ -40,6 +40,12 @@ import com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUr
 import com.google.scp.operator.cpio.configclient.local.Annotations.WorkerAutoscalingGroup;
 import com.google.scp.operator.cpio.configclient.local.LocalOperatorParameterModule;
 import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient;
+import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule.LifecycleActionHeartbeatEnabled;
+import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule.LifecycleActionHeartbeatFrequency;
+import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule.LifecycleActionHeartbeatTimeout;
+import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule.MaxLifecycleActionTimeoutExtension;
+import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule.WorkerAutoscalingGroupName;
+import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule.WorkerScaleInHookName;
 import com.google.scp.operator.protos.shared.backend.asginstance.AsgInstanceProto.AsgInstance;
 import com.google.scp.operator.protos.shared.backend.asginstance.InstanceStatusProto.InstanceStatus;
 import com.google.scp.operator.shared.dao.asginstancesdb.aws.DynamoAsgInstancesDb;
@@ -113,6 +119,30 @@ public class AwsLifecycleClientTest {
                     .setBinding()
                     .toInstance("replacedGroup");
                 bind(Clock.class).to(FakeClock.class);
+                OptionalBinder.newOptionalBinder(
+                        binder(), Key.get(String.class, WorkerAutoscalingGroupName.class))
+                    .setBinding()
+                    .toInstance("replacedGroup");
+                OptionalBinder.newOptionalBinder(
+                        binder(), Key.get(String.class, WorkerScaleInHookName.class))
+                    .setBinding()
+                    .toInstance("fakeHook");
+                OptionalBinder.newOptionalBinder(
+                        binder(), Key.get(Boolean.class, LifecycleActionHeartbeatEnabled.class))
+                    .setBinding()
+                    .toInstance(false);
+                OptionalBinder.newOptionalBinder(
+                        binder(), Key.get(Integer.class, LifecycleActionHeartbeatTimeout.class))
+                    .setBinding()
+                    .toInstance(300);
+                OptionalBinder.newOptionalBinder(
+                        binder(), Key.get(Integer.class, MaxLifecycleActionTimeoutExtension.class))
+                    .setBinding()
+                    .toInstance(600);
+                OptionalBinder.newOptionalBinder(
+                        binder(), Key.get(Integer.class, LifecycleActionHeartbeatFrequency.class))
+                    .setBinding()
+                    .toInstance(150);
               }
             })
         .injectMembers(this);

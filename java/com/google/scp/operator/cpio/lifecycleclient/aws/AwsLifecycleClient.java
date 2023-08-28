@@ -56,12 +56,16 @@ public final class AwsLifecycleClient implements LifecycleClient {
       ParameterClient parameterClient,
       DynamoAsgInstancesDb dynamoAsgInstancesDb,
       Clock clock,
-      @AsgInstancesDbDynamoTableName String asgInstancesTableName) {
+      @AsgInstancesDbDynamoTableName String asgInstancesTableName,
+      AwsLifecycleActionExtenderService awsLifecycleActionExtenderService) {
     this.autoScalingClient = autoScalingClient;
     this.parameterClient = parameterClient;
     this.dynamoAsgInstancesDb = dynamoAsgInstancesDb;
     this.clock = clock;
     this.useAsgInstancesTable = !asgInstancesTableName.isEmpty();
+    if (useAsgInstancesTable) {
+      awsLifecycleActionExtenderService.startAsync();
+    }
   }
 
   @Override

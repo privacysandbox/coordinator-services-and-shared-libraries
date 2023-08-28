@@ -612,7 +612,7 @@ grpc_extra_deps()
 # Distroless image for running Java.
 container_pull(
     name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-07-26.
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-08-24.
     digest = "sha256:052076466984fd56979c15a9c3b7433262b0ad9aae55bc0c53d1da8ffdd829c3",
     registry = "gcr.io",
     repository = "distroless/java17-debian11",
@@ -641,11 +641,11 @@ container_pull(
 # Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
 container_pull(
     name = "amazonlinux_2",
-    # Latest as of 2023-07-26.
-    digest = "sha256:4a3e160c969a06fed62fa091d6cf7e20387b40f330bd0393118cb17bd3abf433",
+    # Latest as of 2023-08-24.
+    digest = "sha256:69ed694873a13ec332eaf05babb4c192f695c7b06b8b6efacf895260e138835b",
     registry = "index.docker.io",
     repository = "amazonlinux",
-    tag = "2.0.20230628.0",
+    tag = "2.0.20230808.0",
 )
 
 # Needed for build containers which must execute bazel commands (e.g. //cc/aws/proxy).

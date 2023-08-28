@@ -222,6 +222,11 @@ module "worker_autoscaling" {
   min_ec2_instances              = var.min_capacity_ec2_instances
   max_ec2_instances              = var.max_capacity_ec2_instances
 
+  termination_hook_heartbeat_timeout_sec     = var.termination_hook_heartbeat_timeout_sec
+  termination_hook_timeout_extension_enabled = var.termination_hook_timeout_extension_enabled
+  termination_hook_heartbeat_frequency_sec   = var.termination_hook_heartbeat_frequency_sec
+  termination_hook_max_timeout_extension_sec = var.termination_hook_max_timeout_extension_sec
+
   jobqueue_sqs_url = module.job_queue.jobqueue_sqs_url
   jobqueue_sqs_arn = module.job_queue.jobqueue_sqs_arn
 

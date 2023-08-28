@@ -55,6 +55,11 @@ module "operator_service" {
   min_capacity_ec2_instances     = var.min_capacity_ec2_instances
   max_capacity_ec2_instances     = var.max_capacity_ec2_instances
 
+  termination_hook_heartbeat_timeout_sec     = var.termination_hook_heartbeat_timeout_sec
+  termination_hook_timeout_extension_enabled = var.termination_hook_timeout_extension_enabled
+  termination_hook_heartbeat_frequency_sec   = var.termination_hook_heartbeat_frequency_sec
+  termination_hook_max_timeout_extension_sec = var.termination_hook_max_timeout_extension_sec
+
   change_handler_lambda              = var.change_handler_lambda
   frontend_lambda                    = var.frontend_lambda
   sqs_write_failure_cleanup_lambda   = var.sqs_write_failure_cleanup_lambda

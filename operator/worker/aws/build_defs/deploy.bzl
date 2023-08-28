@@ -90,6 +90,8 @@ def worker_aws_deployment(
       licenses: This should be a label of a tar file containing all the licenses
         of our distribution and all dependencies.
       enable_worker_debug_mode: Whether to run enclave in debug mode.
+      uninstall_ssh_server: Whether to uninstall SSH server from AMI once
+        provisioning is completed (SSH is used for provisioning).
     """
 
     additional_container_files = []
@@ -130,6 +132,7 @@ def worker_aws_deployment(
         enclave_memory_mib = enclave_memory_mib,
         aws_region = aws_region,
         enable_worker_debug_mode = enable_worker_debug_mode,
+        uninstall_ssh_server = uninstall_ssh_server,
         licenses = licenses,
         user_rpms = user_rpms,
     )

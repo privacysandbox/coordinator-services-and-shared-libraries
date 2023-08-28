@@ -77,6 +77,7 @@ def _packer_worker_ami_impl(ctx):
             "{ami_name}": ctx.attr.ami_name[BuildSettingInfo].value,
             "{ami_groups}": ctx.attr.ami_groups,
             "{enable_worker_debug_mode}": "true" if ctx.attr.enable_worker_debug_mode else "false",
+            "{uninstall_ssh_server}": "true" if ctx.attr.uninstall_ssh_server else "false",
             "{licenses}": licenses_tar.short_path,
             "{subnet_id}": ctx.attr.subnet_id[BuildSettingInfo].value,
             "{rpms}": '["' + '","'.join(rpm_list) + '"]',
@@ -169,6 +170,9 @@ packer_worker_ami = rule(
             allow_single_file = True,
         ),
         "enable_worker_debug_mode": attr.bool(
+            default = False,
+        ),
+        "uninstall_ssh_server": attr.bool(
             default = False,
         ),
         "packer_binary": attr.label(

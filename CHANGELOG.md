@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.2.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.1.1...v1.2.0) (2023-08-24)
+
+### Changes
+  * Fixed terraform plan output
+  * Extended operator lifecycle hook timeout
+  * Added Codebuild terraform and instructions
+
+## [1.1.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.1.0...v1.1.1) (2023-08-08)
+
+### Changes
+  * Ensured ACL is set on CloudFront logs bucket by adding an explicit dependency
+  * Added option to uninstall SSH server from AMI
+  * Pinned and locked versions for nsm-api dependencies
+  * Enforced newer SSLPolicy on ELB LB
+
 ## [1.1.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.0.0...v1.1.0) (2023-07-27)
 
 ### Changes

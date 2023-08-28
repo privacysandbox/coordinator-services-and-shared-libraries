@@ -81,6 +81,7 @@ public class ManageTerminatedInstanceTask {
                   .setInstanceName(instanceId)
                   .setStatus(InstanceStatus.TERMINATING_WAIT)
                   .setRequestTime(ProtoUtil.toProtoTimestamp(currentTime))
+                  .setLastHeartbeatTime(ProtoUtil.toProtoTimestamp(currentTime))
                   .build();
           dynamoAsgInstancesDb.upsertAsgInstance(asgInstance);
           return true;

@@ -39,4 +39,7 @@ message AsgInstance {
 
   // The ttl of the instance record.
   int64 ttl = 5;
+
+  // The last lifecycle action heartbeat time.
+  google.protobuf.Timestamp last_heartbeat_time = 6;
 }

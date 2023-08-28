@@ -150,4 +150,26 @@ public class BackendModelUtil {
       asgInstance.setTerminationTime(toProtoTimestamp(terminationTime));
     }
   }
+
+  /**
+   * Returns AsgInstance.lastHeartbeatTime value, or null if it is not set. This is used in
+   * conversion of model to schemas which accept null instead of Optional.
+   */
+  @Nullable
+  public static Instant getAsgInstanceLastHeartbeatTimeValue(AsgInstance asgInstance) {
+    return asgInstance.hasLastHeartbeatTime()
+        ? toJavaInstant(asgInstance.getLastHeartbeatTime())
+        : null;
+  }
+
+  /**
+   * Sets the AsgInstance.lastHeartbeatTime value if the given {@param asgInstance} is not null.
+   * This is used in conversion of model to schemas which accept null instead of Optional.
+   */
+  public static void setAsgInstanceLastHeartbeatTimeValue(
+      AsgInstance.Builder asgInstance, @Nullable Instant lastHeartbeatTime) {
+    if (lastHeartbeatTime != null) {
+      asgInstance.setLastHeartbeatTime(toProtoTimestamp(lastHeartbeatTime));
+    }
+  }
 }
