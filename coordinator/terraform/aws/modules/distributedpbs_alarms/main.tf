@@ -123,7 +123,7 @@ resource "aws_cloudwatch_log_metric_filter" "error_level_metric_handle_journal" 
 
 # Alarm on the count of logs containing "ERROR" (metric defined in this module).
 resource "aws_cloudwatch_metric_alarm" "error_level_log_corrupted_alarm" {
-  alarm_name                = "error_level_log_corrupted"
+  alarm_name                = "WarningErrorLevelLogCorrupted${var.custom_alarm_label}"
   alarm_description         = "PBS error log - Log is corrupted, greater than threshold ${var.error_log_log_corrupted_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 60
@@ -144,7 +144,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_log_corrupted_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "error_level_missing_transaction_alarm" {
-  alarm_name                = "error_level_missing_transaction"
+  alarm_name                = "WarningErrorLevelMissingTransaction${var.custom_alarm_label}"
   alarm_description         = "PBS error log - Cannot find the transaction with id, greater than threshold ${var.error_log_missing_transaction_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 60
@@ -165,7 +165,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_missing_transaction_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "error_level_checkpointing_alarm" {
-  alarm_name                = "error_level_checkpointing"
+  alarm_name                = "WarningErrorLevelCheckpointing${var.custom_alarm_label}"
   alarm_description         = "PBS error log - Checkpointing failed, greater than threshold ${var.error_log_checkpointing_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 60
@@ -186,7 +186,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_checkpointing_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "error_level_database_read_alarm" {
-  alarm_name                = "error_level_database_read"
+  alarm_name                = "WarningErrorLevelDatabaseRead${var.custom_alarm_label}"
   alarm_description         = "PBS error log - Failed to read lease from the database, greater than threshold ${var.error_log_database_read_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 60
@@ -207,7 +207,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_database_read_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "error_level_database_update_alarm" {
-  alarm_name                = "error_level_database_update"
+  alarm_name                = "WarningErrorLevelDatabaseUpdate${var.custom_alarm_label}"
   alarm_description         = "PBS error log - Failed to update lease from the database, greater than threshold ${var.error_log_database_update_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 60
@@ -228,7 +228,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_database_update_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "error_level_missing_component_id_alarm" {
-  alarm_name                = "error_level_missing_component_id"
+  alarm_name                = "WarningErrorLevelMissingComponentId${var.custom_alarm_label}"
   alarm_description         = "PBS error log - Cannot find the component with id, greater than threshold ${var.error_log_missing_component_id_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 60
@@ -249,7 +249,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_missing_component_id_alarm" 
 }
 
 resource "aws_cloudwatch_metric_alarm" "error_level_handle_journal_alarm" {
-  alarm_name                = "error_level_handle_journal"
+  alarm_name                = "WarningErrorLevelHandleJournal${var.custom_alarm_label}"
   alarm_description         = "PBS error log - Cannot handle the journal log with id, greater than threshold ${var.error_log_handle_journal_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 60
@@ -272,7 +272,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_handle_journal_alarm" {
 
 # elb_4xx_error_ratio_high(4XXerror/TotalCount)
 resource "aws_cloudwatch_metric_alarm" "elb_4xx_error_ratio_high" {
-  alarm_name                = "PBS_ELB4xxErrorRatioHigh"
+  alarm_name                = "WarningELB4xxErrorRatioHigh${var.custom_alarm_label}"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = var.eval_period_sec
   threshold                 = var.error_ratio_4xx_threshold
@@ -325,7 +325,7 @@ resource "aws_cloudwatch_metric_alarm" "elb_4xx_error_ratio_high" {
 
 # elb_5xx_error_ratio_high(5XXerror/TotalCount)
 resource "aws_cloudwatch_metric_alarm" "elb_5xx_error_ratio_high" {
-  alarm_name                = "PBS_ELB5xxErrorRatioHigh"
+  alarm_name                = "WarningELB5xxErrorRatioHigh${var.custom_alarm_label}"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = var.eval_period_sec
   threshold                 = var.error_ratio_5xx_threshold
@@ -377,7 +377,7 @@ resource "aws_cloudwatch_metric_alarm" "elb_5xx_error_ratio_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "budget_key_table_read_capacity_alarm" {
-  alarm_name        = "${var.environment}_pbs_dynamodb_budget_key_table_read_capacity_ratio_alarm"
+  alarm_name        = "InfoDynamodbBudgetKeyTableReadCapacityRatio${var.custom_alarm_label}"
   alarm_description = "PBS budget key table is reaching its read capacity units limit."
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -418,7 +418,7 @@ resource "aws_cloudwatch_metric_alarm" "budget_key_table_read_capacity_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "budget_key_table_write_capacity_alarm" {
-  alarm_name        = "${var.environment}_pbs_dynamodb_budget_key_table_write_capacity_ratio_alarm"
+  alarm_name        = "InfoDynamodbBudgetKeyTableWriteCapacityRatio${var.custom_alarm_label}"
   alarm_description = "PBS budget key table is reaching its write capacity units limit."
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -458,7 +458,7 @@ resource "aws_cloudwatch_metric_alarm" "budget_key_table_write_capacity_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "partition_lock_table_read_capacity_alarm" {
-  alarm_name        = "${var.environment}_pbs_dynamodb_partition_lock_table_read_capacity_ratio_alarm"
+  alarm_name        = "InfoDynamodbPartitionLockTableReadCapacityRatio${var.custom_alarm_label}"
   alarm_description = "PBS partition lock table is reaching its read capacity units limit."
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -498,7 +498,7 @@ resource "aws_cloudwatch_metric_alarm" "partition_lock_table_read_capacity_alarm
 }
 
 resource "aws_cloudwatch_metric_alarm" "partition_lock_table_write_capacity_alarm" {
-  alarm_name        = "${var.environment}_pbs_dynamodb_partition_lock_table_write_capacity_ratio_alarm"
+  alarm_name        = "InfoDynamodbPartitionLockTableWriteCapacityRatio${var.custom_alarm_label}"
   alarm_description = "PBS partition lock table is reaching its write capacity units limit."
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -538,7 +538,7 @@ resource "aws_cloudwatch_metric_alarm" "partition_lock_table_write_capacity_alar
 }
 
 resource "aws_cloudwatch_metric_alarm" "reporting_origin_table_read_capacity_alarm" {
-  alarm_name        = "${var.environment}_pbs_dynamodb_reporting_origin_table_read_capacity_ratio_alarm"
+  alarm_name        = "InfoDynamodbReportingOriginTableReadCapacityRatio${var.custom_alarm_label}"
   alarm_description = "PBS reporting origin table is reaching its read capacity units limit."
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -578,7 +578,7 @@ resource "aws_cloudwatch_metric_alarm" "reporting_origin_table_read_capacity_ala
 }
 
 resource "aws_cloudwatch_metric_alarm" "reporting_origin_table_write_capacity_alarm" {
-  alarm_name        = "${var.environment}_pbs_dynamodb_reporting_origin_table_write_capacity_ratio_alarm"
+  alarm_name        = "InfoDynamodbReportingOriginTableWriteCapacityRatio${var.custom_alarm_label}"
   alarm_description = "PBS reporting origin table is reaching its write capacity units limit."
 
   comparison_operator = "GreaterThanOrEqualToThreshold"

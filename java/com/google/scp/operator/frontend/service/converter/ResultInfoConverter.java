@@ -50,7 +50,6 @@ public final class ResultInfoConverter
   @Override
   protected ResultInfo doForward(
       com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo resultInfo) {
-    errorySummaryConverter.convert(resultInfo.getErrorSummary());
     return ResultInfo.newBuilder()
         .setReturnCode(resultInfo.getReturnCode())
         .setReturnMessage(resultInfo.getReturnMessage())

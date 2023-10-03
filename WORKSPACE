@@ -356,7 +356,7 @@ http_archive(
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 load("//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
 
-JACKSON_VERSION = "2.12.2"
+JACKSON_VERSION = "2.15.2"
 
 AUTO_VALUE_VERSION = "1.7.4"
 
@@ -409,8 +409,8 @@ maven_install(
         "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.4.1",
         "com.google.api.grpc:proto-google-common-protos:2.9.2",
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
-        "com.google.guava:guava:30.1-jre",
-        "com.google.guava:guava-testlib:30.1-jre",
+        "com.google.guava:guava:32.0.1-jre",
+        "com.google.guava:guava-testlib:32.0.1-jre",
         "com.google.inject:guice:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.google.jimfs:jimfs:1.2",
@@ -458,6 +458,7 @@ maven_install(
         "software.amazon.awssdk:pricing:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:s3-transfer-manager:2.20.130",
         "software.amazon.awssdk:aws-core:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:ssm:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
@@ -612,10 +613,11 @@ grpc_extra_deps()
 # Distroless image for running Java.
 container_pull(
     name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-08-24.
-    digest = "sha256:052076466984fd56979c15a9c3b7433262b0ad9aae55bc0c53d1da8ffdd829c3",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-09-27.
+    digest = "sha256:5cc4322dea54a6732cd2d3feebb18138f62af280a167afcbe94d3be7a607f1e5",
     registry = "gcr.io",
     repository = "distroless/java17-debian11",
+    tag = "latest-amd64",
 )
 
 # Distroless image for running C++.
@@ -641,11 +643,11 @@ container_pull(
 # Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
 container_pull(
     name = "amazonlinux_2",
-    # Latest as of 2023-08-24.
-    digest = "sha256:69ed694873a13ec332eaf05babb4c192f695c7b06b8b6efacf895260e138835b",
+    # Latest as of 2023-09-27.
+    digest = "sha256:b081fff5a5d0ad435bc0e61ff06175880dadd76a50597b5cf9087d51906d126a",
     registry = "index.docker.io",
     repository = "amazonlinux",
-    tag = "2.0.20230808.0",
+    tag = "2.0.20230912.0",
 )
 
 # Needed for build containers which must execute bazel commands (e.g. //cc/aws/proxy).

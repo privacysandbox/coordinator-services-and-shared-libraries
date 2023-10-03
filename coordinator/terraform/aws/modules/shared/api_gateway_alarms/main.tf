@@ -24,7 +24,7 @@ terraform {
 
 # Latency alarm
 resource "aws_cloudwatch_metric_alarm" "max_latency_alarm" {
-  alarm_name          = "${var.api_name}_api_gateway_max_latency_alarm"
+  alarm_name          = "Info${var.api_name}ApiGatewayMaxLatency${var.custom_alarm_label}"
   alarm_description   = "Max latency over ${var.max_latency_ms}ms"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
@@ -48,7 +48,7 @@ resource "aws_cloudwatch_metric_alarm" "max_latency_alarm" {
 
 # 5xx Errors alarm
 resource "aws_cloudwatch_metric_alarm" "error_5xx_alarm" {
-  alarm_name                = "${var.api_name}_api_gateway_5xx_alarm"
+  alarm_name                = "Warning${var.api_name}ApiGateway5xx${var.custom_alarm_label}"
   alarm_description         = "5xx errors over ${var.error_5xx_threshold}%"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1

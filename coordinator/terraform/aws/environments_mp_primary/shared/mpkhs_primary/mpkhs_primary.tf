@@ -58,12 +58,15 @@ module "multipartykeyhosting_primary" {
   get_public_key_lambda_provisioned_concurrency_enabled = var.get_public_key_lambda_provisioned_concurrency_enabled
   get_public_key_lambda_provisioned_concurrency_count   = var.get_public_key_lambda_provisioned_concurrency_count
 
-  enable_domain_management         = var.enable_domain_management
-  parent_domain_name               = var.parent_domain_name
-  public_key_service_subdomain     = var.public_key_service_subdomain
-  encryption_key_service_subdomain = var.encryption_key_service_subdomain
-  api_version                      = var.api_version
-  api_env_stage_name               = var.api_env_stage_name
+  enable_domain_management                                = var.enable_domain_management
+  parent_domain_name                                      = var.parent_domain_name
+  public_key_service_subdomain                            = var.public_key_service_subdomain
+  public_key_service_alternate_domain_names               = var.public_key_service_alternate_domain_names
+  public_key_service_domain_name_to_domain_hosted_zone_id = var.public_key_service_domain_name_to_domain_hosted_zone_id
+  encryption_key_service_subdomain                        = var.encryption_key_service_subdomain
+  api_version                                             = var.api_version
+  api_env_stage_name                                      = var.api_env_stage_name
+  application_name                                        = var.application_name
 
   alarms_enabled                    = var.alarms_enabled
   alarm_notification_email          = var.alarm_notification_email
@@ -96,4 +99,5 @@ module "multipartykeyhosting_primary" {
 
   unified_keyhosting_dashboard_time_period_seconds = var.unified_keyhosting_dashboard_time_period_seconds
   public_keyhosting_dashboard_time_period_seconds  = var.public_keyhosting_dashboard_time_period_seconds
+  custom_alarm_label                               = var.custom_alarm_label
 }

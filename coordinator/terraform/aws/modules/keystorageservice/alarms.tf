@@ -13,27 +13,31 @@
 # limitations under the License.
 
 module "create_key_lambda_alarms" {
-  count                     = var.key_storage_service_alarms_enabled ? 1 : 0
-  source                    = "../shared/lambda_alarms"
-  environment               = var.environment
-  lambda_function_name      = aws_lambda_function.create_key_lambda.function_name
-  cloudwatch_log_group_name = aws_cloudwatch_log_group.create_key_lambda_cloudwatch.name
-  sns_topic_arn             = var.create_key_sns_topic_arn
-  execution_error_threshold = var.create_key_lambda_error_threshold
-  error_log_threshold       = var.create_key_lambda_error_log_threshold
-  eval_period_sec           = var.create_key_alarm_eval_period_sec
-  max_duration_threshold_ms = var.create_key_lambda_max_duration_threshold
+  count                      = var.key_storage_service_alarms_enabled ? 1 : 0
+  source                     = "../shared/lambda_alarms"
+  environment                = var.environment
+  lambda_function_name       = aws_lambda_function.create_key_lambda.function_name
+  cloudwatch_log_group_name  = aws_cloudwatch_log_group.create_key_lambda_cloudwatch.name
+  sns_topic_arn              = var.create_key_sns_topic_arn
+  execution_error_threshold  = var.create_key_lambda_error_threshold
+  error_log_threshold        = var.create_key_lambda_error_log_threshold
+  eval_period_sec            = var.create_key_alarm_eval_period_sec
+  max_duration_threshold_ms  = var.create_key_lambda_max_duration_threshold
+  custom_alarm_label         = var.custom_alarm_label
+  lambda_function_name_alarm = local.create_key_lambda_alarm_label
 }
 
 module "get_data_key_lambda_alarms" {
-  count                     = var.key_storage_service_alarms_enabled ? 1 : 0
-  source                    = "../shared/lambda_alarms"
-  environment               = var.environment
-  lambda_function_name      = aws_lambda_function.get_data_key_lambda.function_name
-  cloudwatch_log_group_name = aws_cloudwatch_log_group.get_data_key_lambda_cloudwatch.name
-  sns_topic_arn             = var.get_data_key_sns_topic_arn
-  execution_error_threshold = var.get_data_key_lambda_error_threshold
-  error_log_threshold       = var.get_data_key_lambda_error_log_threshold
-  eval_period_sec           = var.get_data_key_alarm_eval_period_sec
-  max_duration_threshold_ms = var.get_data_key_lambda_max_duration_threshold
+  count                      = var.key_storage_service_alarms_enabled ? 1 : 0
+  source                     = "../shared/lambda_alarms"
+  environment                = var.environment
+  lambda_function_name       = aws_lambda_function.get_data_key_lambda.function_name
+  cloudwatch_log_group_name  = aws_cloudwatch_log_group.get_data_key_lambda_cloudwatch.name
+  sns_topic_arn              = var.get_data_key_sns_topic_arn
+  execution_error_threshold  = var.get_data_key_lambda_error_threshold
+  error_log_threshold        = var.get_data_key_lambda_error_log_threshold
+  eval_period_sec            = var.get_data_key_alarm_eval_period_sec
+  max_duration_threshold_ms  = var.get_data_key_lambda_max_duration_threshold
+  custom_alarm_label         = var.custom_alarm_label
+  lambda_function_name_alarm = local.get_data_key_lambda_alarm_label
 }

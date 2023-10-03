@@ -33,7 +33,10 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -59,6 +62,28 @@ public final class S3BlobStorageClientModule extends BlobStorageClientModule {
     S3ClientBuilder builder =
         S3Client.builder()
             .httpClientBuilder(ApacheHttpClient.builder().maxConnections(100))
+            .credentialsProvider(awsCredentialsProvider)
+            .overrideConfiguration(
+                ClientOverrideConfiguration.builder().retryPolicy(retryPolicy).build())
+            .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+            .region(Region.of(region));
+    if (!endpointOverride.toString().isEmpty()) {
+      builder.endpointOverride(endpointOverride);
+    }
+    return builder.build();
+  }
+
+  /** Provider for an {@code S3AsyncClient} singleton */
+  @Provides
+  @Singleton
+  S3AsyncClient providesS3AsyncClient(
+      AwsCredentialsProvider awsCredentialsProvider,
+      RetryPolicy retryPolicy,
+      @S3EndpointOverrideBinding URI endpointOverride,
+      @ApplicationRegionBinding String region) {
+    S3AsyncClientBuilder builder =
+        S3AsyncClient.builder()
+            .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(100).build())
             .credentialsProvider(awsCredentialsProvider)
             .overrideConfiguration(
                 ClientOverrideConfiguration.builder().retryPolicy(retryPolicy).build())

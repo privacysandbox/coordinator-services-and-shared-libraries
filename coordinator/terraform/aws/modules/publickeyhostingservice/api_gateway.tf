@@ -16,7 +16,8 @@
 # HTTP Api Gateway
 ################################################################################
 locals {
-  api_gateway_name = "${var.environment}_${local.region}_get_public_key_api"
+  api_gateway_alarm_label = "GetPublicKey"
+  api_gateway_name        = "${var.environment}_${local.region}_get_public_key_api"
 }
 
 resource "aws_apigatewayv2_api" "get_public_key_api_gateway" {
@@ -29,6 +30,12 @@ resource "aws_apigatewayv2_api" "get_public_key_api_gateway" {
 resource "aws_apigatewayv2_route" "get_public_key_api_gateway_route" {
   api_id    = aws_apigatewayv2_api.get_public_key_api_gateway.id
   route_key = "GET /${var.api_version}/publicKeys"
+  target    = "integrations/${aws_apigatewayv2_integration.get_public_key_api_gateway_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_public_key_api_gateway_route_well-known" {
+  api_id    = aws_apigatewayv2_api.get_public_key_api_gateway.id
+  route_key = "GET /.well-known/${var.application_name}/v1/public-keys"
   target    = "integrations/${aws_apigatewayv2_integration.get_public_key_api_gateway_integration.id}"
 }
 

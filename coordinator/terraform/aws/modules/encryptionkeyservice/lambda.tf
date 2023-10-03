@@ -13,8 +13,12 @@
 # limitations under the License.
 
 locals {
-  role_name_prefix = "${var.environment}_${local.region}_get_encryption_key_lambda"
-  function_name    = "${var.environment}_${local.region}_get_encryption_key_lambda"
+  role_name_prefix                               = "${var.environment}_${local.region}_get_encryption_key_lambda"
+  function_name                                  = "${var.environment}_${local.region}_get_encryption_key_lambda"
+  get_encryption_key_lambda_alarm_label          = "GetEncryptionKey"
+  get_encryption_key_function_name               = "${var.environment}_${local.region}_get_encryption_key_lambda"
+  list_recent_encryption_keys_lambda_alarm_label = "ListRecentEncryptionKeys"
+  list_recent_encryption_keys_function_name      = "${var.environment}_${local.region}_list_recent_encryption_keys_lambda"
 }
 
 module "lambda_roles" {

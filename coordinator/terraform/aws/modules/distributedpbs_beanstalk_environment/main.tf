@@ -53,6 +53,7 @@ locals {
     }
 EOF
   enable_alarming_sns_topic_permissions = var.enable_alarms ? local.alarming_sns_topic_permissions : ""
+  ignore_4xx_errors_in_elb              = "{\"Rules\": { \"Environment\": { \"Application\": { \"ApplicationRequests4xx\": { \"Enabled\": false } }, \"ELB\": { \"ELBRequests4xx\": {\"Enabled\": false } } } }, \"Version\": 1 }"
 }
 
 module "sslcertificate" {
@@ -646,6 +647,11 @@ resource "aws_elastic_beanstalk_environment" "beanstalk_app_environment" {
         namespace = "aws:elasticbeanstalk:environment:process:healthcheck"
         name      = "HealthCheckPath"
         value     = "/health"
+      },
+      {
+        namespace = "aws:elasticbeanstalk:healthreporting:system"
+        name      = "ConfigDocument"
+        value     = local.ignore_4xx_errors_in_elb
       },
       # Setup default process (port 80) to use the health check process
       # The health check port for this process is set in files/alb-target-group.config

@@ -405,3 +405,14 @@ variable "vpc_availability_zones" {
   description = "Specify the letter identifiers of which availability zones to deploy resources, such as a, b or c."
   type        = set(string)
 }
+
+################################################################################
+# OpenTelemetry related variables
+################################################################################
+
+variable "allowed_otel_metrics" {
+  description = "Set of otel metrics would be exported."
+  type        = set(string)
+  default     = ["cpu_usage", "memory", "total_execution_time"]
+}
+

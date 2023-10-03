@@ -182,3 +182,9 @@ variable "enclave_memory_mib" {
     error_message = "Must allocate at least 1024 mebibytes."
   }
 }
+
+variable "allowed_otel_metrics" {
+  description = "Set of otel metrics would be exported."
+  type        = set(string)
+  default     = ["cpu_usage", "memory", "total_execution_time"]
+}

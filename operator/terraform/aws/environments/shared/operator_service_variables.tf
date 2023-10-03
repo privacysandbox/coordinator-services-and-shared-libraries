@@ -493,3 +493,13 @@ variable "vpc_availability_zones" {
     "e",
   ]
 }
+
+################################################################################
+# OpenTelemetry related variables
+################################################################################
+
+variable "allowed_otel_metrics" {
+  description = "Set of otel metrics would be exported."
+  type        = set(string)
+  default     = ["cpu_usage", "memory", "total_execution_time"]
+}

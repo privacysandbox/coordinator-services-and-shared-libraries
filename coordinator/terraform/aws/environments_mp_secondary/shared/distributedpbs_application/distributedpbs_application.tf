@@ -95,4 +95,5 @@ module "distributedpbs_application" {
   vpc_flow_logs_retention_in_days = var.vpc_flow_logs_retention_in_days
 
   privacy_budget_dashboard_time_period_seconds = var.privacy_budget_dashboard_time_period_seconds
+  custom_alarm_label                           = var.custom_alarm_label
 }

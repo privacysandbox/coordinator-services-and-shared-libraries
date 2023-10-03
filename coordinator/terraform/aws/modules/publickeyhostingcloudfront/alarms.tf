@@ -27,7 +27,7 @@ resource "aws_cloudfront_monitoring_subscription" "get_public_key_cloudfront_mon
 #5xx Error alarm
 resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_5xx_alarm" {
   count               = var.public_key_service_alarms_enabled ? 1 : 0
-  alarm_name          = "${var.environment}_get_public_key_cloudfront_5xx_alarm"
+  alarm_name          = "WarningGetPublicKeyCloudfront5xx${var.custom_alarm_label}"
   alarm_description   = "5xx errors ratio over ${var.get_public_key_cloudfront_5xx_threshold}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
@@ -51,7 +51,7 @@ resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_5xx_alarm" {
 #Alarms when cache hit ratio dips below certain level
 resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_cache_hit_alarm" {
   count               = var.public_key_service_alarms_enabled ? 1 : 0
-  alarm_name          = "${var.environment}_get_public_key_cloudfront_cache_hit_alarm"
+  alarm_name          = "WarningGetPublicKeyCloudfrontCacheHit${var.custom_alarm_label}"
   alarm_description   = "Cache hit percentage less than ${var.get_public_key_cloudfront_cache_hit_threshold}%"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
@@ -73,7 +73,7 @@ resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_cache_hit_alar
 #Origin latency alarm
 resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_origin_latency_alarm" {
   count               = var.public_key_service_alarms_enabled ? 1 : 0
-  alarm_name          = "${var.environment}_get_public_key_cloudfront_origin_latency_alarm"
+  alarm_name          = "WarningGetPublicKeyCloudfrontOriginLatency${var.custom_alarm_label}"
   alarm_description   = "Max origin latency over ${var.get_public_key_cloudfront_origin_latency_threshold}ms"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1

@@ -280,6 +280,16 @@ alias(
 )
 
 alias(
+    name = "aws_netty_nio_client",
+    actual = "@maven//:software_amazon_awssdk_netty_nio_client",
+)
+
+alias(
+    name = "aws_s3_transfer_manager",
+    actual = "@maven//:software_amazon_awssdk_s3_transfer_manager",
+)
+
+alias(
     name = "aws_ssm",
     actual = "@maven//:software_amazon_awssdk_ssm",
 )

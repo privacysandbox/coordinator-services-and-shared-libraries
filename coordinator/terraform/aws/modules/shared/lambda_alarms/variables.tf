@@ -32,6 +32,11 @@ variable "cloudwatch_log_group_name" {
   type        = string
 }
 
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
+  type        = string
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################
@@ -53,5 +58,9 @@ variable "error_log_threshold" {
 
 variable "max_duration_threshold_ms" {
   description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
+  type        = string
+}
+variable "lambda_function_name_alarm" {
+  description = "full function_name of the lambda to create alarm name"
   type        = string
 }

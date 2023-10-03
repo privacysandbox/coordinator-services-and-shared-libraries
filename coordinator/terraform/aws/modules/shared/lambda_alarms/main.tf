@@ -52,7 +52,7 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric" {
 
 # Alarm on lambda invocations resulting in an error.
 resource "aws_cloudwatch_metric_alarm" "lambda_invocation_error_alarm" {
-  alarm_name          = "${local.resource_prefix}_error_alarm"
+  alarm_name          = "Warning${var.lambda_function_name_alarm}LambdaError${var.custom_alarm_label}"
   alarm_description   = "Lambda errors over ${var.execution_error_threshold}%"
   comparison_operator = "GreaterThanThreshold"
   #Number of 'period' to evaluate for the alarm
@@ -78,7 +78,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_invocation_error_alarm" {
 
 # Alarm on the count of logs containing "ERROR" (metric defined in this module).
 resource "aws_cloudwatch_metric_alarm" "lambda_error_log_alarm" {
-  alarm_name                = "${local.resource_prefix}_error_log_alarm"
+  alarm_name                = "Warning${var.lambda_function_name_alarm}ErrorLog${var.custom_alarm_label}"
   alarm_description         = "Lambda error logs more than ${var.error_log_threshold}"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
@@ -100,7 +100,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_log_alarm" {
 
 # Alarm on the runtime duration of the lambda.
 resource "aws_cloudwatch_metric_alarm" "lambda_max_duration_alarm" {
-  alarm_name                = "${local.resource_prefix}_max_duration_alarm"
+  alarm_name                = "Warning${var.lambda_function_name_alarm}MaxDuration${var.custom_alarm_label}"
   alarm_description         = "Lambda duration over ${var.max_duration_threshold_ms}ms"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1

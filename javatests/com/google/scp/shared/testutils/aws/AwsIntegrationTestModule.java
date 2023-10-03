@@ -42,6 +42,7 @@ import software.amazon.awssdk.services.apigateway.ApiGatewayClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sts.StsClient;
@@ -128,6 +129,11 @@ public final class AwsIntegrationTestModule extends AbstractModule {
   @Provides
   public S3Client getS3Client(LocalStackContainer localstack) {
     return createS3Client(localstack);
+  }
+
+  @Provides
+  public S3AsyncClient getS3AsyncClient(LocalStackContainer localstack) {
+    return LocalStackAwsClientUtil.createS3AsyncClient(localstack);
   }
 
   @Provides

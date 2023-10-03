@@ -15,11 +15,12 @@
 module "api_gateway_alarms" {
   count               = var.api_gateway_alarms_enabled ? 1 : 0
   source              = "../shared/api_gateway_alarms"
-  api_name            = aws_apigatewayv2_api.api_gateway.name
+  api_name            = var.name
   environment         = var.environment
   api_gateway_id      = aws_apigatewayv2_api.api_gateway.id
   sns_topic_arn       = var.api_gateway_sns_topic_arn
   eval_period_sec     = var.api_gateway_alarm_eval_period_sec
   max_latency_ms      = var.api_gateway_api_max_latency_ms
   error_5xx_threshold = var.api_gateway_5xx_threshold
+  custom_alarm_label  = var.custom_alarm_label
 }

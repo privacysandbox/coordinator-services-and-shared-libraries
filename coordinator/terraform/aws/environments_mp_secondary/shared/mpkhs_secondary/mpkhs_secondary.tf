@@ -80,4 +80,5 @@ module "multipartykeyhosting_secondary" {
   vpc_flow_logs_retention_in_days = var.vpc_flow_logs_retention_in_days
 
   unified_keyhosting_dashboard_time_period_seconds = var.unified_keyhosting_dashboard_time_period_seconds
+  custom_alarm_label                               = var.custom_alarm_label
 }

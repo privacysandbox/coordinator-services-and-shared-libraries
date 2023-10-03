@@ -44,6 +44,12 @@ variable "secondary_region" {
   type        = string
 }
 
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
+  type        = string
+  default     = ""
+}
+
 ################################################################################
 # DynamoDB Variables.
 ################################################################################
@@ -267,6 +273,18 @@ variable "public_key_service_subdomain" {
   default     = "publickeyservice"
 }
 
+variable "public_key_service_alternate_domain_names" {
+  description = "A list of alternate domain names for the public key service for which to add as a subject alternative name in the SSL certificate. Eg: [service-example.com]"
+  type        = list(string)
+  default     = []
+}
+
+variable "public_key_service_domain_name_to_domain_hosted_zone_id" {
+  description = "(Optiontal) a Map of domain_names to the hosted zone id it belongs to that should be used to verify the SANs."
+  type        = map(string)
+  default     = {}
+}
+
 variable "encryption_key_service_subdomain" {
   description = "Subdomain to use with parent_domain_name to designate the private key service."
   type        = string
@@ -282,6 +300,12 @@ variable "api_env_stage_name" {
   description = "Stage name for API gateway instances."
   type        = string
   default     = "stage"
+}
+
+variable "application_name" {
+  description = "Application name that provide public key service. Eg: aggregation-service."
+  type        = string
+  default     = "default"
 }
 
 ################################################################################

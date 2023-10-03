@@ -13,10 +13,12 @@
 # limitations under the License.
 
 locals {
-  create_key_role_name_prefix   = "${var.environment}_${local.region}_create_key_lambda"
-  create_key_function_name      = "${var.environment}_${local.region}_create_key_lambda"
-  get_data_key_role_name_prefix = "${var.environment}_${local.region}_get_data_key_lambda"
-  get_data_key_function_name    = "${var.environment}_${local.region}_get_data_key_lambda"
+  create_key_lambda_alarm_label   = "CreateKey"
+  create_key_role_name_prefix     = "${var.environment}_${local.region}_create_key_lambda"
+  create_key_function_name        = "${var.environment}_${local.region}_create_key_lambda"
+  get_data_key_lambda_alarm_label = "GetDataKey"
+  get_data_key_role_name_prefix   = "${var.environment}_${local.region}_get_data_key_lambda"
+  get_data_key_function_name      = "${var.environment}_${local.region}_get_data_key_lambda"
 }
 
 module "lambda_roles" {

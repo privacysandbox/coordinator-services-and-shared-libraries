@@ -218,6 +218,16 @@ variable "public_key_service_subdomain" {
   type        = string
 }
 
+variable "public_key_service_alternate_domain_names" {
+  description = "A list of alternate domain names for the public key service for which to add as a subject alternative name in the SSL certificate. Eg: [service-example.com]"
+  type        = list(string)
+}
+
+variable "public_key_service_domain_name_to_domain_hosted_zone_id" {
+  description = "(Optiontal) a Map of domain_names to the hosted zone id it belongs to that should be used to verify the SANs."
+  type        = map(string)
+}
+
 variable "encryption_key_service_subdomain" {
   description = "Subdomain to use with parent_domain_name to designate the private key service."
   type        = string
@@ -250,6 +260,11 @@ variable "alarm_notification_email" {
 variable "cloudwatch_logging_retention_days" {
   description = "Number of days to keep logs in Cloudwatch."
   type        = number
+}
+
+variable "application_name" {
+  description = "Application name that provide public key service. Eg: aggregation-service."
+  type        = string
 }
 
 variable "sns_topic_arn" {
@@ -319,6 +334,11 @@ variable "mpkhs_api_gw_total_error_ratio_threshold" {
 
 variable "mpkhs_total_queue_messages_high_threshold" {
   description = "Total Queue Messages greater than this to send alarm. Must be in integer form: 10 = 10. Example: '2'."
+  type        = string
+}
+
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
   type        = string
 }
 

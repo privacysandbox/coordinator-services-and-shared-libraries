@@ -24,6 +24,9 @@ coordinator_b_assume_role_arn = "<output from mpkhs_secondary>"
 ## Uncomment if not set in ami_params.auto.tfvars
 # key_generation_ami_name_prefix = "<ami name prefix>"
 # key_generation_ami_owners = ["<ami owner account id>"]
+# Alarm names are created with the following format:
+# $Criticality$Alertname$CustomAlarmLabel
+custom_alarm_label = "<CustomAlarmLabel>"
 
 ## Uncomment below config values for development environments
 ## BEGIN - development default configuration values

@@ -33,6 +33,7 @@ import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStor
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.shared.testutils.aws.AwsHermeticTestHelper;
+import com.google.scp.shared.testutils.aws.LocalStackAwsClientUtil;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -50,6 +51,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /** Hermetic Test for the S3BlobStorageClient. */
@@ -69,9 +71,11 @@ public class S3BlobStorageClientTest {
   private static final String BUCKET_NAME = AwsHermeticTestHelper.getBucketName();
   private File file;
   private S3Client s3Client = AwsHermeticTestHelper.createS3Client(localstack);
-  private S3BlobStorageClient s3BlobStorageClient = new S3BlobStorageClient(s3Client, false, 0);
+  private S3AsyncClient s3AsyncClient = LocalStackAwsClientUtil.createS3AsyncClient(localstack);
+  private S3BlobStorageClient s3BlobStorageClient =
+      new S3BlobStorageClient(s3Client, s3AsyncClient, false, 0);
   private S3BlobStorageClient s3BlobStorageClientWithRangedStream =
-      new S3BlobStorageClient(s3Client, true, 180000);
+      new S3BlobStorageClient(s3Client, s3AsyncClient, true, 180000);
 
   @Before
   public void setUp() throws IOException {
@@ -142,6 +146,17 @@ public class S3BlobStorageClientTest {
     s3BlobStorageClient.deleteBlob(location);
 
     assertThrows(BlobStorageClientException.class, () -> s3BlobStorageClient.getBlob(location));
+  }
+
+  @Test
+  public void putBlob_NoSuchBucketException() {
+    assertThrows(
+        BlobStorageClientException.class,
+        () ->
+            s3BlobStorageClient.putBlob(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create("no-such-bucket", /* withPrefix= */ "")),
+                file.toPath()));
   }
 
   @Test
@@ -218,7 +233,7 @@ public class S3BlobStorageClientTest {
   }
 
   @Test
-  public void listBlobs_NoSuchBucketException() throws Exception {
+  public void listBlobs_NoSuchBucketException() {
     assertThrows(
         BlobStorageClientException.class,
         () ->

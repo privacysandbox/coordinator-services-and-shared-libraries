@@ -449,6 +449,9 @@ public final class JobClientImplTest {
                 .getErrorSummary()
                 .getErrorMessages(0))
         .isEqualTo(sampleErrorMessage);
+    assertThat(
+            jobMetadataDb.getLastJobMetadataUpdated().getResultInfo().getFinishedAt().getSeconds())
+        .isGreaterThan(0);
   }
 
   @Test

@@ -29,6 +29,27 @@ locals {
   metric_period = "60"
 }
 
+locals {
+  metrics_map = {
+    cpu_usage = "process.runtime.jvm.CPU.utilization"
+    memory    = "process.runtime.jvm.memory.utilization_ratio"
+  }
+  // Replace the metric name to match the real name in OTel
+  prod_otel_metrics = [
+    for metric in var.allowed_otel_metrics : try(local.metrics_map[metric], metric)
+  ]
+  // Currently, all the debug metrics/traces would be exported if running debug jar.
+  debug_otel_metrics = ["reports_process_time", "summary_write_time", "pbs_latency", "decryption_time_per_report"]
+  all_otel_metrics   = concat(local.prod_otel_metrics, local.debug_otel_metrics)
+
+  otel_metrics = [
+    for metric in local.all_otel_metrics : metric if contains(values(local.metrics_map), metric)
+  ]
+  otel_spans = [
+    for span in local.all_otel_metrics : span if !contains(values(local.metrics_map), span)
+  ]
+}
+
 ################################################################################
 # EC2 Instances
 ################################################################################
@@ -103,6 +124,8 @@ resource "aws_launch_template" "worker_template" {
       environment        = var.environment
       enclave_cpu_count  = var.enclave_cpu_count
       enclave_memory_mib = var.enclave_memory_mib
+      otel_metrics       = jsonencode(local.otel_metrics)
+      otel_spans         = jsonencode(local.otel_spans)
     }
   }
 

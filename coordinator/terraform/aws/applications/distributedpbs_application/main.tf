@@ -184,7 +184,7 @@ module "beanstalk_environment" {
 
   enable_alarms            = var.alarms_enabled
   alarm_notification_email = var.alarms_enabled ? var.alarm_notification_email : ""
-  sns_topic_arn            = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.pbs.arn : var.sns_topic_arn) : ""
+  sns_topic_arn            = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.pbs[0].arn : var.sns_topic_arn) : ""
   sqs_queue_arn            = var.sqs_queue_arn
   depends_on = [
     module.vpc,
@@ -194,9 +194,11 @@ module "beanstalk_environment" {
   ]
 }
 
+# Topic is used for alarms such that messages are not sensitive data.
+#tfsec:ignore:aws-sns-enable-topic-encryption
 resource "aws_sns_topic" "pbs" {
-  name = "${var.environment}_${var.aws_region}_pbs_sns_topic"
-
+  name  = "${var.environment}_${var.aws_region}_pbs_sns_topic"
+  count = var.alarms_enabled ? 1 : 0
   tags = {
     environment = var.environment
   }
@@ -204,7 +206,7 @@ resource "aws_sns_topic" "pbs" {
 
 resource "aws_sns_topic_subscription" "pbs" {
   count     = var.alarms_enabled ? 1 : 0
-  topic_arn = local.use_sns_to_sqs ? var.sns_topic_arn : aws_sns_topic.pbs.arn
+  topic_arn = local.use_sns_to_sqs ? var.sns_topic_arn : aws_sns_topic.pbs[0].arn
   protocol  = local.use_sns_to_sqs ? "sqs" : "email"
   endpoint  = local.use_sns_to_sqs ? var.sqs_queue_arn : var.alarm_notification_email
 }

@@ -25,7 +25,10 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -33,6 +36,8 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 /**
  * S3BlobStorageClient implements the {@code BlobStorageClient} interface for AWS S3 storage
@@ -41,6 +46,7 @@ import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 public final class S3BlobStorageClient implements BlobStorageClient {
 
   private final S3Client client;
+  private final S3TransferManager transferManager;
   // Indicate whether to use http partial request in getBlob function.
   private final Boolean usePartialRequests;
   // The buffer size for http partial request.
@@ -50,11 +56,13 @@ public final class S3BlobStorageClient implements BlobStorageClient {
   @Inject
   public S3BlobStorageClient(
       S3Client client,
+      S3AsyncClient asyncClient,
       @S3UsePartialRequests Boolean usePartialRequests,
       @PartialRequestBufferSize Integer partialRequestBufferSize) {
     this.client = client;
     this.usePartialRequests = usePartialRequests;
     this.partialRequestBufferSize = partialRequestBufferSize;
+    this.transferManager = S3TransferManager.builder().s3Client(asyncClient).build();
   }
 
   /**
@@ -91,10 +99,22 @@ public final class S3BlobStorageClient implements BlobStorageClient {
   public void putBlob(DataLocation location, Path filePath) throws BlobStorageClientException {
     BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
     try {
-      client.putObject(
-          PutObjectRequest.builder().bucket(blobLocation.bucket()).key(blobLocation.key()).build(),
-          filePath);
-    } catch (SdkException exception) {
+      transferManager
+          .uploadFile(
+              UploadFileRequest.builder()
+                  .putObjectRequest(
+                      PutObjectRequest.builder()
+                          .bucket(blobLocation.bucket())
+                          .key(blobLocation.key())
+                          .build())
+                  .source(filePath)
+                  .build())
+          .completionFuture()
+          .join();
+    } catch (CompletionException exception) {
+      // Underlying exception contains more details.
+      throw new BlobStorageClientException(exception.getCause());
+    } catch (CancellationException exception) {
       throw new BlobStorageClientException(exception);
     }
   }

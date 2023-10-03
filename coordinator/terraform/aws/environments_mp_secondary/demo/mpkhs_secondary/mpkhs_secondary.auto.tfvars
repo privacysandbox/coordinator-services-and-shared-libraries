@@ -19,6 +19,9 @@ api_version = "v1alpha"
 
 alarms_enabled           = false
 alarm_notification_email = "<notification email>"
+# Alarm names are created with the following format:
+# $Criticality$Alertname$CustomAlarmLabel
+custom_alarm_label = "<CustomAlarmLabel>"
 
 enable_domain_management = false
 

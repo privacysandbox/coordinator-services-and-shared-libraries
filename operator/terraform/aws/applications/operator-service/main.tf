@@ -196,6 +196,9 @@ module "worker_service" {
   # VPC
   dynamodb_vpc_endpoint_id = module.vpc[0].dynamodb_vpc_endpoint_id
   s3_vpc_endpoint_id       = module.vpc[0].s3_vpc_endpoint_id
+
+  # OpenTelemetry
+  allowed_otel_metrics = var.allowed_otel_metrics
 }
 
 module "operator_alarm_sns_topic" {

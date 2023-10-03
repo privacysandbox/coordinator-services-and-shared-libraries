@@ -17,9 +17,21 @@ variable "service_domain_name" {
   type        = string
 }
 
+variable "subject_alternative_names" {
+  description = "(Optiontal) Set of domains that should be SANs in the issued certificate."
+  type        = list(string)
+  default     = []
+}
+
 variable "domain_hosted_zone_id" {
   description = "Hosted zone for route53 record"
   type        = string
+}
+
+variable "domain_name_to_domain_hosted_zone_id" {
+  description = "(Optiontal) a Map of domain_names to the hosted zone id it belongs to that should be used to verify the SANs."
+  type        = map(string)
+  default     = {}
 }
 
 variable "environment" {

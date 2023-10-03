@@ -32,6 +32,11 @@ variable "api_name" {
   type        = string
 }
 
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
+  type        = string
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################

@@ -17,7 +17,7 @@ module "distributed_pbs_logs_alarms" {
   source = "../../modules/distributedpbs_alarms"
 
   environment                              = var.environment
-  sns_topic_arn                            = var.sns_topic_arn == "" ? aws_sns_topic.pbs.arn : var.sns_topic_arn
+  sns_topic_arn                            = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.pbs[0].arn : var.sns_topic_arn) : ""
   eval_period_sec                          = var.pbs_alarm_eval_period_sec
   pbs_cloudwatch_log_group_name            = var.pbs_cloudwatch_log_group_name
   error_log_log_corrupted_threshold        = var.pbs_error_log_log_corrupted_threshold
@@ -49,4 +49,5 @@ module "distributed_pbs_logs_alarms" {
   budget_table_write_capacity         = var.budget_table_write_capacity
   auth_table_read_max_capacity        = var.auth_table_read_max_capacity
   auth_table_write_max_capacity       = var.auth_table_write_max_capacity
+  custom_alarm_label                  = var.custom_alarm_label
 }

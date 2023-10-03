@@ -49,6 +49,10 @@ alarms_enabled                = false
 alarm_notification_email      = "<notification email>"
 pbs_cloudwatch_log_group_name = "/aws/elasticbeanstalk/demo-b-google-scp-pbs/docker/pbs-server/log.log"
 
+# Alarm names are created with the following format:
+# $Criticality$Alertname$CustomAlarmLabel
+custom_alarm_label = "<CustomAlarmLabel>"
+
 # Domain management:
 # Environment name domain name will be:
 # <service_subdomain>-<environment>.<parent_domain_name>

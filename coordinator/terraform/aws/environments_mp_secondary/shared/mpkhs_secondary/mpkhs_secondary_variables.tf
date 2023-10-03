@@ -234,6 +234,12 @@ variable "sqs_queue_arn" {
   default     = ""
 }
 
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
+  type        = string
+  default     = ""
+}
+
 ################################################################################
 # Private Key Alarm Variables.
 ################################################################################

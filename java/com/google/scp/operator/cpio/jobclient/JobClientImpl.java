@@ -326,6 +326,7 @@ public final class JobClientImpl implements JobClient {
       ResultInfo updatedResultInfo =
           currentMetadata.get().getResultInfo().toBuilder()
               .setErrorSummary(updatedErrorSummary)
+              .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
               .build();
 
       JobMetadata updatedMetadata =
@@ -421,6 +422,11 @@ public final class JobClientImpl implements JobClient {
             .setJobProcessingTimeout(
                 ProtoUtil.toJavaDuration(jobQueueItem.getJobProcessingTimeout()));
 
+    if (jobMetadata.hasRequestProcessingStartedAt()) {
+      resBuilder.setProcessingStartTime(
+          Optional.of(ProtoUtil.toJavaInstant(jobMetadata.getRequestProcessingStartedAt())));
+    }
+
     if (jobMetadata.hasRequestInfo()) {
       resBuilder.setRequestInfo(jobMetadata.getRequestInfo());
     } else if (jobMetadata.hasCreateJobRequest()) {
@@ -489,7 +495,7 @@ public final class JobClientImpl implements JobClient {
 
     logger.info(
         String.format(
-            "received job %s with status %s. The job started at %s, current time is %s, and job"
+            "Received job %s with status %s. The job started at %s, current time is %s, and job"
                 + " processing timeout is %d seconds.",
             job.get().jobKey(),
             job.get().jobStatus(),

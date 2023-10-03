@@ -21,6 +21,11 @@ variable "environment" {
   type        = string
 }
 
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
+  type        = string
+}
+
 ################################################################################
 # Lambda Variables
 ################################################################################
@@ -85,6 +90,11 @@ variable "api_version" {
 
 variable "api_env_stage_name" {
   description = "Stage name for API gateway instances. Must match across environment"
+  type        = string
+}
+
+variable "application_name" {
+  description = "Application name that provide public key service. Eg: aggregation-service."
   type        = string
 }
 

@@ -174,6 +174,11 @@ variable "get_data_key_lambda_max_duration_threshold" {
   type        = string
 }
 
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
+  type        = string
+}
+
 ################################################################################
 # VPC Variables
 ################################################################################

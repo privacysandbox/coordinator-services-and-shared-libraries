@@ -24,7 +24,7 @@ terraform {
 
 # api_gateway_4xx_error_ratio_high(4XXerror/TotalCount)
 resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_error_ratio_high" {
-  alarm_name                = "${var.api_name}_APIGateway4xxErrorRatioHigh"
+  alarm_name                = "Warning${var.api_name}ApiGateway4xxErrorRatioHigh${var.custom_alarm_label}"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = var.eval_period_sec
   threshold                 = var.error_ratio_4xx_threshold
@@ -76,7 +76,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_error_ratio_high" {
 
 # api_gateway_5xx_error_ratio_high(5XXerror/TotalCount)
 resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_error_ratio_high" {
-  alarm_name                = "${var.api_name}_APIGateway5xxErrorRatioHigh"
+  alarm_name                = "Warning${var.api_name}ApiGateway5xxErrorRatioHigh${var.custom_alarm_label}"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = var.eval_period_sec
   threshold                 = var.error_ratio_5xx_threshold
@@ -128,7 +128,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_error_ratio_high" {
 
 # api_gateway_total_error_ratio_high(5XXerror+4xxerror/TotalCount)
 resource "aws_cloudwatch_metric_alarm" "api_gateway_total_error_ratio_high" {
-  alarm_name                = "${var.api_name}_APIGatewayTotalErrorRatioHigh"
+  alarm_name                = "Warning${var.api_name}ApiGatewayTotalErrorRatioHigh${var.custom_alarm_label}"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = var.eval_period_sec
   threshold                 = var.total_error_ratio_threshold

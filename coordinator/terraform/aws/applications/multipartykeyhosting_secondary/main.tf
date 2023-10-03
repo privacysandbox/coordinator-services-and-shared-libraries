@@ -18,13 +18,15 @@ provider "aws" {
 }
 
 locals {
-  create_encryption_key_jar   = var.create_encryption_key_jar != "" ? var.create_encryption_key_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keystorage/service/aws/KeyStorageServiceLambda_deploy.jar"
-  encryption_key_service_jar  = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
-  use_sns_to_sqs              = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != ""
-  keydb_table_name            = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
-  keyhosting_api_gateway_name = "unified_key_hosting"
-  keystorage_api_gateway_name = "key_storage"
-  account_id                  = data.aws_caller_identity.current.account_id
+  create_encryption_key_jar          = var.create_encryption_key_jar != "" ? var.create_encryption_key_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keystorage/service/aws/KeyStorageServiceLambda_deploy.jar"
+  encryption_key_service_jar         = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
+  use_sns_to_sqs                     = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != ""
+  keydb_table_name                   = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
+  keyhosting_api_gateway_name        = "unified_key_hosting"
+  keystorage_api_gateway_name        = "key_storage"
+  account_id                         = data.aws_caller_identity.current.account_id
+  keyhosting_api_gateway_alarm_label = "UnifiedKeyHosting"
+  keystorage_api_gateway_alarm_label = "KeyStorage"
 }
 
 # Needed for dashboard ARNs
@@ -163,8 +165,11 @@ module "keystorageservice" {
   dynamodb_vpc_endpoint_id = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
   private_subnet_ids       = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
   kms_vpc_endpoint_id      = var.enable_vpc ? module.vpc[0].kms_vpc_endpoint_id : null
+  custom_alarm_label       = var.custom_alarm_label
 }
 
+# Topic is used for alarms such that messages are not sensitive data.
+#tfsec:ignore:aws-sns-enable-topic-encryption
 resource "aws_sns_topic" "mpkhs" {
   count = var.alarms_enabled ? 1 : 0
   name  = "${var.environment}_mpkhs_sns_topic"
@@ -211,6 +216,7 @@ module "encryptionkeyservice" {
   lambda_sg_ids             = var.enable_vpc ? [module.vpc[0].allow_internal_ingress_sg_id, module.vpc[0].allow_egress_sg_id] : null
   dynamodb_vpc_endpoint_id  = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
   private_subnet_ids        = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
+  custom_alarm_label        = var.custom_alarm_label
 }
 
 module "privatekeydomainprovider" {
@@ -232,7 +238,7 @@ module "keyhostingapigateway" {
 
   api_env_stage_name = var.api_env_stage_name
   environment        = var.environment
-  name               = local.keyhosting_api_gateway_name
+  name               = local.keyhosting_api_gateway_alarm_label
 
   api_gateway_logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
@@ -241,6 +247,7 @@ module "keyhostingapigateway" {
   api_gateway_alarm_eval_period_sec = var.mpkhs_alarm_eval_period_sec
   api_gateway_api_max_latency_ms    = var.mpkhs_api_gw_max_latency_ms
   api_gateway_sns_topic_arn         = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  custom_alarm_label                = var.custom_alarm_label
 }
 
 module "keystorageapigateway" {
@@ -248,7 +255,7 @@ module "keystorageapigateway" {
 
   api_env_stage_name = var.api_env_stage_name
   environment        = var.environment
-  name               = local.keystorage_api_gateway_name
+  name               = local.keystorage_api_gateway_alarm_label
 
   api_gateway_logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
@@ -257,6 +264,7 @@ module "keystorageapigateway" {
   api_gateway_alarm_eval_period_sec = var.mpkhs_alarm_eval_period_sec
   api_gateway_api_max_latency_ms    = var.mpkhs_api_gw_max_latency_ms
   api_gateway_sns_topic_arn         = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  custom_alarm_label                = var.custom_alarm_label
 }
 
 module "keystoragedashboard" {

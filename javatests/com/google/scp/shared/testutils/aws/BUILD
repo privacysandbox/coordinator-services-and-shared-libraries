@@ -42,6 +42,7 @@ java_library(
         "//java/external:aws_http_client_spi",
         "//java/external:aws_kms",
         "//java/external:aws_lambda_v2",
+        "//java/external:aws_netty_nio_client",
         "//java/external:aws_regions",
         "//java/external:aws_s3",
         "//java/external:aws_sqs",

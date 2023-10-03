@@ -24,7 +24,7 @@ terraform {
 
 # Total Queue Messages High alarm
 resource "aws_cloudwatch_metric_alarm" "total_queue_messages_high_alarm" {
-  alarm_name          = "${var.sqs_queue_name}_total_queue_messages_high_alarm"
+  alarm_name          = "Critical${var.alarm_label_sqs_queue}TotalQueueMessagesHigh${var.custom_alarm_label}"
   alarm_description   = "Total Queue Messages over ${var.total_queue_messages_high_threshold}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1

@@ -17,7 +17,7 @@ module "unified_key_hosting_api_gateway_alarms" {
   source = "../../modules/shared/mp_api_gateway_alarms"
 
   environment     = var.environment
-  api_name        = local.keyhosting_api_gateway_name
+  api_name        = local.keyhosting_api_gateway_alarm_label
   api_gateway_id  = module.apigateway.api_gateway_id
   sns_topic_arn   = var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn
   eval_period_sec = var.mpkhs_alarm_eval_period_sec
@@ -26,15 +26,18 @@ module "unified_key_hosting_api_gateway_alarms" {
   error_ratio_4xx_threshold   = var.mpkhs_api_gw_error_ratio_4xx_threshold
   error_ratio_5xx_threshold   = var.mpkhs_api_gw_error_ratio_5xx_threshold
   total_error_ratio_threshold = var.mpkhs_api_gw_total_error_ratio_threshold
+  custom_alarm_label          = var.custom_alarm_label
 }
 
 module "sqs_queue_alarms" {
   count  = var.alarms_enabled ? 1 : 0
   source = "../../modules/shared/sqs_queue_alarms"
 
+  alarm_label_sqs_queue               = "KeyRotationQueue"
   sqs_queue_name                      = module.key_job_queue.keyjobqueue_queue_name
   environment                         = var.environment
   sns_topic_arn                       = var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn
   eval_period_sec                     = var.mpkhs_alarm_eval_period_sec
   total_queue_messages_high_threshold = var.mpkhs_total_queue_messages_high_threshold
+  custom_alarm_label                  = var.custom_alarm_label
 }

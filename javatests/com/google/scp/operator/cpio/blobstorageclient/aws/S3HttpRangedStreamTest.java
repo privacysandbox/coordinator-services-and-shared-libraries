@@ -31,6 +31,7 @@ import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStor
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.shared.testutils.aws.AwsHermeticTestHelper;
+import com.google.scp.shared.testutils.aws.LocalStackAwsClientUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
@@ -49,6 +50,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
@@ -72,10 +74,12 @@ public class S3HttpRangedStreamTest {
   private static final String BUCKET_NAME = AwsHermeticTestHelper.getBucketName();
   private File file;
   private final S3Client s3Client = AwsHermeticTestHelper.createS3Client(localstack);
+  private final S3AsyncClient s3AsyncClient =
+      LocalStackAwsClientUtil.createS3AsyncClient(localstack);
   // The initialized buffer size in s3BlobStorageClient is ignored because we are not using getBlob
   // function in s3BlobStorageClient.
   private final S3BlobStorageClient s3BlobStorageClient =
-      new S3BlobStorageClient(s3Client, true, 20);
+      new S3BlobStorageClient(s3Client, s3AsyncClient, true, 20);
   private HashFunction hashFunction = Hashing.sha512();
   private final HashCode expectedResult = hashFunction.hashString(testMessage, UTF_8);
   private final BlobStoreDataLocation location =

@@ -70,10 +70,21 @@ variable "service_subdomain" {
   type        = string
 }
 
+variable "service_alternate_domain_names" {
+  description = "An list of alternate domain name for which to add as a subject alternative name in the SSL certificate. Eg: [service-example.com]"
+  type        = list(string)
+}
+
 variable "domain_hosted_zone_id" {
   description = "Hosted zone for route53 record"
   type        = string
 }
+
+variable "domain_name_to_domain_hosted_zone_id" {
+  description = "(Optiontal) a Map of domain_names to the hosted zone id it belongs to that should be used to verify the SANs."
+  type        = map(string)
+}
+
 
 ################################################################################
 # Alarm Variables
@@ -106,5 +117,10 @@ variable "get_public_key_cloudfront_cache_hit_threshold" {
 
 variable "get_public_key_cloudfront_origin_latency_threshold" {
   description = "Max origin latency to send alarm. Measured in milliseconds. Example: '5000'."
+  type        = string
+}
+
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
   type        = string
 }

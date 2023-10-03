@@ -120,6 +120,9 @@ module "operator_service" {
   user_provided_vpc_subnet_ids         = var.user_provided_vpc_subnet_ids
   vpc_cidr                             = var.vpc_cidr
   vpc_availability_zones               = var.vpc_availability_zones
+
+  # OpenTelemetry
+  allowed_otel_metrics = var.allowed_otel_metrics
 }
 
 # Used by Terraform to treat any existing resources belonging to formerly known

@@ -25,9 +25,11 @@ module "sslcertificate_public_key_service" {
   source = "../sslcertificateprovider"
   count  = var.enable_domain_management ? 1 : 0
 
-  environment           = var.environment
-  service_domain_name   = local.public_key_domain
-  domain_hosted_zone_id = var.domain_hosted_zone_id
+  environment                          = var.environment
+  service_domain_name                  = local.public_key_domain
+  subject_alternative_names            = var.service_alternate_domain_names
+  domain_hosted_zone_id                = var.domain_hosted_zone_id
+  domain_name_to_domain_hosted_zone_id = var.domain_name_to_domain_hosted_zone_id
 }
 
 resource "aws_route53_record" "cloudfront_alias" {

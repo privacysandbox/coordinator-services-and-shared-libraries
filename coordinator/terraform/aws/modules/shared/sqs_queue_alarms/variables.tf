@@ -23,7 +23,17 @@ variable "sns_topic_arn" {
 }
 
 variable "sqs_queue_name" {
-  description = "Name of the SQS Queue -- used for creating/naming alarms."
+  description = "Name of the SQS Queue -- used for creating alarms."
+  type        = string
+}
+
+variable "alarm_label_sqs_queue" {
+  description = "Name of the SQS Queue -- used for naming alarms."
+  type        = string
+}
+
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
   type        = string
 }
 

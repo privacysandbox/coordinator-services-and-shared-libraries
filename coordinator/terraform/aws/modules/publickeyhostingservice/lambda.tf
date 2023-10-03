@@ -13,8 +13,9 @@
 # limitations under the License.
 
 locals {
-  role_name_prefix = "${var.environment}_${local.region}_get_public_key_lambda"
-  function_name    = "${var.environment}_${local.region}_get_public_key_lambda"
+  role_name_prefix                  = "${var.environment}_${local.region}_get_public_key_lambda"
+  function_name                     = "${var.environment}_${local.region}_get_public_key_lambda"
+  get_public_key_lambda_alert_label = "GetPublicKey"
 }
 
 module "lambda_roles" {

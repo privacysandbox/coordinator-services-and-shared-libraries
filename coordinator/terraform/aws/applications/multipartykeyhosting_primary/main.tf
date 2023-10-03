@@ -28,13 +28,14 @@ provider "aws" {
 }
 
 locals {
-  public_key_service_jar      = var.public_key_service_jar != "" ? var.public_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/PublicKeyApiGatewayHandlerLambda_deploy.jar"
-  encryption_key_service_jar  = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
-  use_sns_to_sqs              = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != "" && var.primary_region == "us-east-1"
-  keydb_table_name            = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
-  keyhosting_api_gateway_name = "unified_key_hosting"
-  key_rotation_job_queue_name = "key-rotation-queue.fifo"
-  account_id                  = data.aws_caller_identity.current.account_id
+  public_key_service_jar             = var.public_key_service_jar != "" ? var.public_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/PublicKeyApiGatewayHandlerLambda_deploy.jar"
+  encryption_key_service_jar         = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
+  use_sns_to_sqs                     = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != "" && var.primary_region == "us-east-1"
+  keydb_table_name                   = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
+  keyhosting_api_gateway_name        = "unified_key_hosting"
+  key_rotation_job_queue_name        = "key-rotation-queue.fifo"
+  keyhosting_api_gateway_alarm_label = "UnifiedKeyHosting"
+  account_id                         = data.aws_caller_identity.current.account_id
 }
 
 # Needed for dashboard ARNs
@@ -290,6 +291,7 @@ module "encryptionkeyservice" {
   dynamodb_vpc_endpoint_id = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
   lambda_sg_ids            = var.enable_vpc ? [module.vpc[0].allow_egress_sg_id, module.vpc[0].allow_internal_ingress_sg_id] : null
   private_subnet_ids       = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
+  custom_alarm_label       = var.custom_alarm_label
 }
 
 module "privatekeydomainprovider" {
@@ -328,6 +330,7 @@ module "publickeyhostingservice_primary" {
   #API Gateway vars
   api_version        = var.api_version
   api_env_stage_name = var.api_env_stage_name
+  application_name   = var.application_name
 
   get_public_key_logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
@@ -345,6 +348,7 @@ module "publickeyhostingservice_primary" {
   coordinator_vpc_security_groups_ids = var.enable_vpc ? [module.vpc[0].allow_internal_ingress_sg_id, module.vpc[0].allow_egress_sg_id] : null
   coordinator_vpc_subnet_ids          = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
   keydb_vpc_endpoint_id               = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
+  custom_alarm_label                  = var.custom_alarm_label
 }
 
 module "publickeyhostingservice_secondary" {
@@ -374,6 +378,7 @@ module "publickeyhostingservice_secondary" {
   #API Gateway vars
   api_version        = var.api_version
   api_env_stage_name = var.api_env_stage_name
+  application_name   = var.application_name
 
   get_public_key_logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
@@ -391,6 +396,7 @@ module "publickeyhostingservice_secondary" {
   coordinator_vpc_security_groups_ids = var.enable_vpc ? [module.vpc_secondary[0].allow_internal_ingress_sg_id, module.vpc_secondary[0].allow_egress_sg_id] : null
   coordinator_vpc_subnet_ids          = var.enable_vpc ? module.vpc_secondary[0].private_subnet_ids : null
   keydb_vpc_endpoint_id               = var.enable_vpc ? module.vpc_secondary[0].dynamodb_vpc_endpoint_id : null
+  custom_alarm_label                  = var.custom_alarm_label
 }
 
 module "publickeyhostingcloudfront" {
@@ -406,10 +412,12 @@ module "publickeyhostingcloudfront" {
   min_cloudfront_ttl_seconds     = var.min_cloudfront_ttl_seconds
 
   #Domain
-  enable_domain_management = var.enable_domain_management
-  parent_domain_name       = var.parent_domain_name
-  domain_hosted_zone_id    = var.enable_domain_management ? data.aws_route53_zone.hosted_zone[0].zone_id : null
-  service_subdomain        = var.public_key_service_subdomain
+  enable_domain_management             = var.enable_domain_management
+  parent_domain_name                   = var.parent_domain_name
+  domain_hosted_zone_id                = var.enable_domain_management ? data.aws_route53_zone.hosted_zone[0].zone_id : null
+  domain_name_to_domain_hosted_zone_id = var.public_key_service_domain_name_to_domain_hosted_zone_id
+  service_subdomain                    = var.public_key_service_subdomain
+  service_alternate_domain_names       = var.public_key_service_alternate_domain_names
 
   #Must be us-east-1
   get_public_key_sns_topic_arn = var.alarms_enabled ? aws_sns_topic.mpkhs_snstopic_useast1[0].arn : null
@@ -419,6 +427,7 @@ module "publickeyhostingcloudfront" {
   get_public_key_cloudfront_5xx_threshold            = var.get_public_key_cloudfront_5xx_threshold
   get_public_key_cloudfront_cache_hit_threshold      = var.get_public_key_cloudfront_cache_hit_threshold
   get_public_key_cloudfront_origin_latency_threshold = var.get_public_key_cloudfront_origin_latency_threshold
+  custom_alarm_label                                 = var.custom_alarm_label
 }
 
 module "apigateway" {
@@ -426,7 +435,7 @@ module "apigateway" {
 
   api_env_stage_name = var.api_env_stage_name
   environment        = var.environment
-  name               = local.keyhosting_api_gateway_name
+  name               = local.keyhosting_api_gateway_alarm_label
 
   api_gateway_logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
@@ -435,6 +444,7 @@ module "apigateway" {
   api_gateway_alarm_eval_period_sec = var.mpkhs_alarm_eval_period_sec
   api_gateway_api_max_latency_ms    = var.mpkhs_api_gw_max_latency_ms
   api_gateway_sns_topic_arn         = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  custom_alarm_label                = var.custom_alarm_label
 }
 
 module "unifiedkeyhostingdashboard" {
