@@ -32,7 +32,9 @@
 #include "core/interface/journal_service_interface.h"
 #include "core/journal_service/interface/journal_service_stream_interface.h"
 #include "core/journal_service/src/proto/journal_service.pb.h"
+#include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "google/protobuf/any.pb.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::core {
 /*! @copydoc JournalOutputStreamInterface
@@ -40,11 +42,14 @@ namespace google::scp::core {
 class JournalOutputStream
     : public journal_service::JournalOutputStreamInterface {
  public:
-  JournalOutputStream(std::shared_ptr<std::string>& bucket_name,
-                      std::shared_ptr<std::string>& partition_name,
-                      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-                      std::shared_ptr<BlobStorageClientInterface>&
-                          blob_storage_provider_client);
+  JournalOutputStream(
+      const std::shared_ptr<std::string>& bucket_name,
+      const std::shared_ptr<std::string>& partition_name,
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<BlobStorageClientInterface>&
+          blob_storage_provider_client,
+      const std::shared_ptr<cpio::AggregateMetricInterface>&
+          journal_output_metric);
 
   ExecutionResult AppendLog(
       AsyncContext<journal_service::JournalStreamAppendLogRequest,
@@ -156,6 +161,9 @@ class JournalOutputStream
 
   /// Blob storage provider client instance.
   std::shared_ptr<BlobStorageClientInterface> blob_storage_provider_client_;
+
+  /// The aggregate metric instance for journal output count
+  std::shared_ptr<cpio::AggregateMetricInterface> journal_output_count_metric_;
 
   /// The last persisted journal id by the writer.
   JournalId last_persisted_journal_id_;

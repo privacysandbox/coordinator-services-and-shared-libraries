@@ -20,32 +20,61 @@
 
 #include <stdlib.h>
 
+#include <filesystem>
 #include <string>
 
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
+#include "core/common/uuid/src/uuid.h"
+#include "core/config_provider/mock/mock_config_provider.h"
 #include "core/config_provider/src/env_config_provider.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/configuration_keys.h"
 #include "core/interface/lease_manager_interface.h"
 #include "core/lease_manager/src/lease_manager.h"
 #include "core/tcp_traffic_forwarder/mock/mock_traffic_forwarder.h"
+#include "core/test/utils/conditional_wait.h"
+#include "core/test/utils/logging_utils.h"
+#include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
 #include "pbs/interface/configuration_keys.h"
+#include "pbs/leasable_lock/mock/mock_leasable_lock.h"
+#include "pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
 #include "pbs/pbs_server/src/pbs_instance/error_codes.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
+using google::scp::core::AsyncContext;
+using google::scp::core::AsyncExecutor;
+using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ConfigProviderInterface;
 using google::scp::core::EnvConfigProvider;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::GetTransactionStatusRequest;
+using google::scp::core::GetTransactionStatusResponse;
+using google::scp::core::HttpClient;
+using google::scp::core::HttpClientInterface;
+using google::scp::core::HttpClientOptions;
 using google::scp::core::LeasableLockInterface;
 using google::scp::core::LeaseInfo;
 using google::scp::core::LeaseManager;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::TimeDuration;
-using google::scp::core::errors::SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH;
-using google::scp::core::errors::
-    SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH;
+using google::scp::core::TokenProviderCacheInterface;
+using google::scp::core::TransactionRequest;
+using google::scp::core::TransactionResponse;
+using google::scp::core::common::RetryStrategyOptions;
+using google::scp::core::common::RetryStrategyType;
+using google::scp::core::common::Uuid;
+using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::tcp_traffic_forwarder::mock::MockTCPTrafficForwarder;
+using google::scp::core::test::ResultIs;
+using google::scp::core::test::TestLoggingUtils;
+using google::scp::core::test::WaitUntil;
+using google::scp::core::token_provider_cache::mock::DummyTokenProviderCache;
 using google::scp::pbs::PBSInstance;
+using google::scp::pbs::leasable_lock::mock::MockLeasableLock;
 using std::atomic;
 using std::make_shared;
 using std::mutex;
@@ -54,59 +83,17 @@ using std::shared_ptr;
 using std::string;
 using std::thread;
 using std::unique_lock;
+using std::vector;
 using std::chrono::milliseconds;
 using std::this_thread::sleep_for;
 
 namespace google::scp::pbs::test {
-
-class MockLeasableLock : public LeasableLockInterface {
- public:
-  explicit MockLeasableLock(TimeDuration lease_duration)
-      : lease_duration_(lease_duration) {}
-
-  bool ShouldRefreshLease() const noexcept override {
-    return should_refresh_lease_;
-  }
-
-  ExecutionResult RefreshLease() noexcept override {
-    return SuccessExecutionResult();
-  }
-
-  TimeDuration GetConfiguredLeaseDurationInMilliseconds()
-      const noexcept override {
-    return lease_duration_;
-  }
-
-  optional<LeaseInfo> GetCurrentLeaseOwnerInfo() const noexcept override {
-    unique_lock lock(mutex_);
-    return current_lease_owner_info_;
-  }
-
-  void SetCurrentLeaseOwnerInfo(LeaseInfo lease_info) noexcept {
-    unique_lock lock(mutex_);
-    current_lease_owner_info_ = lease_info;
-  }
-
-  bool IsCurrentLeaseOwner() const noexcept override { return is_owner_; }
-
-  mutable mutex mutex_;
-  LeaseInfo current_lease_owner_info_ = {};
-  atomic<bool> is_owner_ = false;
-  TimeDuration lease_duration_;
-  atomic<bool> should_refresh_lease_ = true;
-};
 
 class PBSInstancePrivateTester : public PBSInstance {
  public:
   PBSInstancePrivateTester(
       shared_ptr<ConfigProviderInterface> config_provider = nullptr)
       : PBSInstance(config_provider) {}
-
-  ExecutionResult ReadConfiguration() {
-    return PBSInstance::ReadConfigurations();
-  }
-
-  PBSInstanceConfig GetInstanceConfig() { return pbs_instance_config_; }
 
   void TestRunLeaseManagerAndWaitUntilLeaseIsAcquired() {
     atomic<bool> is_terminated = false;
@@ -115,7 +102,7 @@ class PBSInstancePrivateTester : public PBSInstance {
     auto lease_manager =
         make_shared<LeaseManager>(100 /* lease enforcer periodicity */,
                                   3000 /* lease obtainer max running time */);
-    EXPECT_EQ(lease_manager->Init(), SuccessExecutionResult());
+    EXPECT_SUCCESS(lease_manager->Init());
 
     auto traffic_forwarder = make_shared<MockTCPTrafficForwarder>();
     EXPECT_EQ(traffic_forwarder->GetForwardingAddress(), "");
@@ -167,7 +154,7 @@ class PBSInstancePrivateTester : public PBSInstance {
       thread_obj.join();
     }
 
-    EXPECT_EQ(lease_manager->Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(lease_manager->Stop());
   }
 };
 
@@ -176,154 +163,4 @@ TEST(PBSInstanceTest, TestRunLeaseManagerAndWaitUntilLeaseIsAcquired) {
   tester.TestRunLeaseManagerAndWaitUntilLeaseIsAcquired();
 }
 
-static void SetAllConfigs() {
-  setenv(kAsyncExecutorQueueSize, "1", 1);
-  setenv(kAsyncExecutorThreadsCount, "1", 1);
-  setenv(kIOAsyncExecutorQueueSize, "1", 1);
-  setenv(kIOAsyncExecutorThreadsCount, "1", 1);
-  setenv(kTransactionManagerCapacity, "1", 1);
-  setenv(kJournalServiceBucketName, "name", 1);
-  setenv(kJournalServicePartitionName, "part", 1);
-  setenv(kPrivacyBudgetServiceHostAddress, "0.0.0.0", 1);
-  setenv(kPrivacyBudgetServiceHostPort, "8000", 1);
-  setenv(kPrivacyBudgetServiceHealthPort, "8001", 1);
-  setenv(kRemotePrivacyBudgetServiceCloudServiceRegion, "region", 1);
-  setenv(kRemotePrivacyBudgetServiceAuthServiceEndpoint, "https://auth.com", 1);
-  setenv(kRemotePrivacyBudgetServiceClaimedIdentity, "remote-id", 1);
-  setenv(kRemotePrivacyBudgetServiceAssumeRoleArn, "arn", 1);
-  setenv(kRemotePrivacyBudgetServiceAssumeRoleExternalId, "id", 1);
-  setenv(kRemotePrivacyBudgetServiceHostAddress, "https://remote.com", 1);
-  setenv(kAuthServiceEndpoint, "https://auth.com", 1);
-  setenv(core::kCloudServiceRegion, "region", 1);
-  setenv(kServiceMetricsNamespace, "ns", 1);
-  setenv(kTotalHttp2ServerThreadsCount, "1", 1);
-
-  unsetenv(kHttp2ServerUseTls);
-  unsetenv(kHttp2ServerPrivateKeyFilePath);
-  unsetenv(kHttp2ServerCertificateFilePath);
-}
-
-TEST(PBSInstanceTest, ReadConfigurationShouldFailIfUseTlsButNoPrivateKeyPath) {
-  shared_ptr<ConfigProviderInterface> config_prover =
-      make_shared<EnvConfigProvider>();
-  PBSInstancePrivateTester tester(config_prover);
-
-  SetAllConfigs();
-
-  setenv(kHttp2ServerUseTls, "true", 1);
-  setenv(kHttp2ServerCertificateFilePath, "/cert/path", 1);
-  // Error if unset
-  EXPECT_EQ(tester.ReadConfiguration(),
-            FailureExecutionResult(
-                SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH));
-  // Error if empty
-  setenv(kHttp2ServerPrivateKeyFilePath, "", 1);
-  EXPECT_EQ(tester.ReadConfiguration(),
-            FailureExecutionResult(
-                SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH));
-}
-
-TEST(PBSInstanceTest, ReadConfigurationShouldFailIfUseTlsButNoCertificatePath) {
-  shared_ptr<ConfigProviderInterface> config_prover =
-      make_shared<EnvConfigProvider>();
-  PBSInstancePrivateTester tester(config_prover);
-
-  SetAllConfigs();
-  setenv(kHttp2ServerUseTls, "true", 1);
-  setenv(kHttp2ServerPrivateKeyFilePath, "/key/path", 1);
-  // Error if unset
-  EXPECT_EQ(tester.ReadConfiguration(),
-            FailureExecutionResult(SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH));
-
-  setenv(kHttp2ServerCertificateFilePath, "", 1);
-  // Error if empty
-  EXPECT_EQ(tester.ReadConfiguration(),
-            FailureExecutionResult(SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH));
-}
-
-TEST(PBSInstanceTest,
-     ReadConfigurationShouldSucceedIfUseTlsAndCertAndKeyPathsAreSet) {
-  shared_ptr<ConfigProviderInterface> config_prover =
-      make_shared<EnvConfigProvider>();
-  PBSInstancePrivateTester tester(config_prover);
-
-  SetAllConfigs();
-  setenv(kHttp2ServerUseTls, "true", 1);
-  setenv(kHttp2ServerPrivateKeyFilePath, "/key/path", 1);
-  setenv(kHttp2ServerCertificateFilePath, "/cert/path", 1);
-
-  EXPECT_TRUE(tester.ReadConfiguration().Successful());
-
-  auto instance_config = tester.GetInstanceConfig();
-  EXPECT_TRUE(instance_config.http2_server_use_tls);
-  EXPECT_EQ(*instance_config.http2_server_private_key_file_path, "/key/path");
-  EXPECT_EQ(*instance_config.http2_server_certificate_file_path, "/cert/path");
-}
-
-TEST(PBSInstanceTest, ReadConfigurationShouldSucceedIfMissingUseTlsOrEmpty) {
-  shared_ptr<ConfigProviderInterface> config_prover =
-      make_shared<EnvConfigProvider>();
-  PBSInstancePrivateTester tester(config_prover);
-
-  SetAllConfigs();
-  // Missing use tls config
-  EXPECT_TRUE(tester.ReadConfiguration().Successful());
-
-  auto instance_config = tester.GetInstanceConfig();
-  EXPECT_FALSE(instance_config.http2_server_use_tls);
-  EXPECT_EQ(*instance_config.http2_server_private_key_file_path, "");
-  EXPECT_EQ(*instance_config.http2_server_certificate_file_path, "");
-
-  // Empty use tls config
-  setenv(kHttp2ServerUseTls, "", 1);
-  EXPECT_TRUE(tester.ReadConfiguration().Successful());
-
-  instance_config = tester.GetInstanceConfig();
-  EXPECT_FALSE(instance_config.http2_server_use_tls);
-  EXPECT_EQ(*instance_config.http2_server_private_key_file_path, "");
-  EXPECT_EQ(*instance_config.http2_server_certificate_file_path, "");
-}
-
-TEST(PBSInstanceTest, ReadConfigurationShouldSucceedIfUseTlsParsingFails) {
-  shared_ptr<ConfigProviderInterface> config_prover =
-      make_shared<EnvConfigProvider>();
-  PBSInstancePrivateTester tester(config_prover);
-
-  SetAllConfigs();
-  // Does not parse to bool
-  setenv(kHttp2ServerUseTls, "t", 1);
-
-  EXPECT_TRUE(tester.ReadConfiguration().Successful());
-
-  auto instance_config = tester.GetInstanceConfig();
-  EXPECT_FALSE(instance_config.http2_server_use_tls);
-  EXPECT_EQ(*instance_config.http2_server_private_key_file_path, "");
-  EXPECT_EQ(*instance_config.http2_server_certificate_file_path, "");
-
-  // Does not parse to bool
-  setenv(kHttp2ServerUseTls, "123", 1);
-
-  EXPECT_TRUE(tester.ReadConfiguration().Successful());
-
-  instance_config = tester.GetInstanceConfig();
-  EXPECT_FALSE(instance_config.http2_server_use_tls);
-  EXPECT_EQ(*instance_config.http2_server_private_key_file_path, "");
-  EXPECT_EQ(*instance_config.http2_server_certificate_file_path, "");
-}
-
-TEST(PBSInstanceTest, ReadConfigurationShouldSucceedIfUseTlsIsSetToFalse) {
-  shared_ptr<ConfigProviderInterface> config_prover =
-      make_shared<EnvConfigProvider>();
-  PBSInstancePrivateTester tester(config_prover);
-
-  SetAllConfigs();
-  setenv(kHttp2ServerUseTls, "false", 1);
-
-  EXPECT_TRUE(tester.ReadConfiguration().Successful());
-
-  auto instance_config = tester.GetInstanceConfig();
-  EXPECT_FALSE(instance_config.http2_server_use_tls);
-  EXPECT_EQ(*instance_config.http2_server_private_key_file_path, "");
-  EXPECT_EQ(*instance_config.http2_server_certificate_file_path, "");
-}
 }  // namespace google::scp::pbs::test

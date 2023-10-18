@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_test(
@@ -27,7 +29,7 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_lib",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

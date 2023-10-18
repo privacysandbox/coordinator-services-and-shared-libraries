@@ -1,10 +1,10 @@
-# Copyright 2023 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,28 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "roma_worker_lib",
-    srcs = glob(
+    name = "roma_execution_utils_lib",
+    srcs =
         [
-            "*.cc",
-            "*.h",
+            "error_codes.h",
+            "execution_utils.cc",
+            "execution_utils.h",
         ],
-    ),
     copts = [
         "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",
-        "//cc/core/common/time_provider/src:time_provider_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/interface:type_def_lib",
         "//cc/public/core/interface:execution_result",
         "//cc/roma/config/src:roma_config_lib",
-        "//cc/roma/ipc/src:roma_ipc_lib",
+        "//cc/roma/interface:roma_interface_lib",
         "//cc/roma/wasm/src:roma_wasm_lib",
-        "@v8",
+        "@v8//:v8_icu",
+    ],
+)
+
+cc_library(
+    name = "execution_watchdog_lib",
+    srcs =
+        [
+            "execution_watchdog.cc",
+            "execution_watchdog.h",
+        ],
+    copts = [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:interface_lib",
+        "//cc/core/interface:type_def_lib",
+        "//cc/public/core/interface:execution_result",
+        "//cc/roma/config/src:roma_config_lib",
+        "//cc/roma/wasm/src:roma_wasm_lib",
+        "@v8//:v8_icu",
     ],
 )

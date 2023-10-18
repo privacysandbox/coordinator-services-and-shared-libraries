@@ -75,7 +75,6 @@ public final class PrivacyBudgetClientTest {
   private HttpClientResponse budgetExhaustedResponse;
   private HttpClientResponse unauthenticatedResponse;
   private HttpClientResponse unauthorizedResponse;
-  private Transaction transaction;
 
   private PrivacyBudgetClientImpl privacyBudgetClient;
 
@@ -284,7 +283,7 @@ public final class PrivacyBudgetClientTest {
 
   @Test
   public void performAction_unauthenticated() throws IOException, PrivacyBudgetClientException {
-    transaction =
+    Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
     long lastExecTimeStamp = Instant.now().toEpochMilli();
     when(awsHttpClient.executePost(
@@ -302,7 +301,7 @@ public final class PrivacyBudgetClientTest {
 
   @Test
   public void performAction_unauthorized() throws IOException, PrivacyBudgetClientException {
-    transaction =
+    Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
     long lastExecTimeStamp = Instant.now().toEpochMilli();
     when(awsHttpClient.executePost(

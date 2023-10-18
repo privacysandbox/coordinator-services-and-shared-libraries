@@ -57,9 +57,9 @@ ExecutionResult AuthorizationProxy::Init() noexcept {
                             *server_endpoint_uri_)) {
     auto execution_result =
         FailureExecutionResult(errors::SC_AUTHORIZATION_PROXY_INVALID_CONFIG);
-    ERROR(kAuthorizationProxy, kZeroUuid, kZeroUuid, execution_result,
-          "Failed to parse URI with boost error_code: %s",
-          http2_error_code.message().c_str());
+    SCP_ERROR(kAuthorizationProxy, kZeroUuid, execution_result,
+              "Failed to parse URI with boost error_code: %s",
+              http2_error_code.message().c_str());
     return execution_result;
   }
   return cache_.Init();
@@ -144,11 +144,11 @@ ExecutionResult AuthorizationProxy::Authorize(
   http_request->path = server_endpoint_uri_;
   http_request->headers = make_shared<HttpHeaders>();
 
-  execution_result = http_helper_->AddHeadersToRequest(
+  execution_result = http_helper_->PrepareRequest(
       request.authorization_metadata, *http_request);
   if (!execution_result.Successful()) {
-    ERROR(kAuthorizationProxy, kZeroUuid, kZeroUuid, execution_result,
-          "Failed adding headers to request");
+    SCP_ERROR(kAuthorizationProxy, kZeroUuid, execution_result,
+              "Failed adding headers to request");
     cache_.Erase(key_value_pair.first);
     return FailureExecutionResult(errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST);
   }
@@ -157,7 +157,7 @@ ExecutionResult AuthorizationProxy::Authorize(
       move(http_request),
       bind(&AuthorizationProxy::HandleAuthorizeResponse, this,
            authorization_context, key_value_pair.first, _1),
-      authorization_context.activity_id);
+      authorization_context);
   auto result = http_client_->PerformRequest(http_context);
   if (!result.Successful()) {
     cache_.Erase(key_value_pair.first);
@@ -182,7 +182,8 @@ void AuthorizationProxy::HandleAuthorizeResponse(
   }
 
   auto metadata_or = http_helper_->ObtainAuthorizedMetadataFromResponse(
-      *http_context.response);
+      authorization_context.request->authorization_metadata,
+      *(http_context.response));
   if (!metadata_or.Successful()) {
     cache_.Erase(cache_entry_key);
     authorization_context.result = metadata_or.result();
@@ -197,8 +198,8 @@ void AuthorizationProxy::HandleAuthorizeResponse(
   shared_ptr<CacheEntry> cache_entry;
   auto execution_result = cache_.Find(cache_entry_key, cache_entry);
   if (!execution_result.Successful()) {
-    DEBUG_CONTEXT(kAuthorizationProxy, authorization_context,
-                  "Cannot find the cached entry.");
+    SCP_DEBUG_CONTEXT(kAuthorizationProxy, authorization_context,
+                      "Cannot find the cached entry.");
     authorization_context.result = SuccessExecutionResult();
     authorization_context.Finish();
   }

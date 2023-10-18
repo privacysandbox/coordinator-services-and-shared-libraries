@@ -20,6 +20,7 @@
 
 #include <aws/dynamodb/DynamoDBClient.h>
 #include <aws/dynamodb/model/CreateTableRequest.h>
+#include <aws/kms/KMSClient.h>
 #include <aws/s3/S3Client.h>
 #include <aws/ssm/SSMClient.h>
 
@@ -39,6 +40,9 @@ void CreateTable(
 std::shared_ptr<Aws::S3::S3Client> CreateS3Client(
     const std::string& endpoint, const std::string& region = kDefaultRegion);
 
+std::shared_ptr<Aws::KMS::KMSClient> CreateKMSClient(
+    const std::string& endpoint, const std::string& region = kDefaultRegion);
+
 void CreateBucket(const std::shared_ptr<Aws::S3::S3Client>& s3_client,
                   const std::string& bucket_name);
 
@@ -48,4 +52,13 @@ std::shared_ptr<Aws::SSM::SSMClient> CreateSSMClient(
 void PutParameter(const std::shared_ptr<Aws::SSM::SSMClient>& ssm_client,
                   const std::string& parameter_name,
                   const std::string& parameter_value);
+
+std::string GetParameter(const std::shared_ptr<Aws::SSM::SSMClient>& ssm_client,
+                         const std::string& parameter_name);
+
+void CreateKey(const std::shared_ptr<Aws::KMS::KMSClient>& kms_client,
+               std::string& key_id, std::string& key_resource_name);
+
+std::string Encrypt(const std::shared_ptr<Aws::KMS::KMSClient>& kms_client,
+                    const std::string& key_id, const std::string& plaintext);
 }  // namespace google::scp::core::test

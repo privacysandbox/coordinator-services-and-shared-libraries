@@ -23,7 +23,8 @@
 
 #include "core/interface/config_provider_interface.h"
 #include "core/journal_service/src/journal_service.h"
-#include "cpio/client_providers/metric_client_provider/mock/utils/mock_simple_metric.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_simple_metric.h"
 
 namespace google::scp::core::journal_service::mock {
 class MockJournalServiceWithOverrides : public JournalService {
@@ -34,13 +35,16 @@ class MockJournalServiceWithOverrides : public JournalService {
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
       const std::shared_ptr<BlobStorageProviderInterface>&
           blob_storage_provider,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<ConfigProviderInterface>& config_provider)
       : JournalService(bucket_name, partition_name, async_executor,
                        blob_storage_provider, metric_client, config_provider) {
-    recover_time_metrics_ =
-        std::make_shared<cpio::client_providers::mock::MockSimpleMetric>();
+    // TODO: Temporary hack to make the tests work. This will be removed when we
+    // have a MetricFactory (we can just simply use MockMetricFactory)
+    recover_time_metric_ = std::make_shared<cpio::MockSimpleMetric>();
+    recover_log_count_metric_ = std::make_shared<cpio::MockAggregateMetric>();
+    journal_output_count_metric_ =
+        std::make_shared<cpio::MockAggregateMetric>();
   }
 
   void SetInputStream(
@@ -65,25 +69,14 @@ class MockJournalServiceWithOverrides : public JournalService {
     return journal_output_stream_;
   }
 
-  common::ConcurrentMap<
-      common::Uuid,
-      std::function<ExecutionResult(const std::shared_ptr<BytesBuffer>&)>,
-      common::UuidCompare>&
+  common::ConcurrentMap<common::Uuid, OnLogRecoveredCallback,
+                        common::UuidCompare>&
   GetSubscribersMap() {
     return subscribers_map_;
   }
 
-  virtual ExecutionResult RegisterSimpleMetric(
-      std::shared_ptr<cpio::client_providers::SimpleMetricInterface>&
-          metrics_instance,
-      const std::shared_ptr<cpio::MetricName>& name) noexcept {
-    JournalService::recover_time_metrics_ =
-        std::make_shared<cpio::client_providers::mock::MockSimpleMetric>();
-    return SuccessExecutionResult();
-  }
-
   virtual void OnJournalStreamReadLogCallback(
-      std::shared_ptr<cpio::client_providers::TimeEvent>& time_event,
+      std::shared_ptr<cpio::TimeEvent>& time_event,
       std::shared_ptr<std::unordered_set<std::string>>& replayed_logs,
       AsyncContext<JournalRecoverRequest, JournalRecoverResponse>&
           journal_recover_context,

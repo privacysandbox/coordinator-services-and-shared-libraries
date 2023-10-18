@@ -17,16 +17,151 @@
 #ifndef SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
 #define SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
 
+#include <utility>
 #include <variant>
 
 #include "core/common/proto/common.pb.h"
 
 namespace google::scp::core {
 
-#define RETURN_IF_FAILURE(__execution_result)                            \
-  if (ExecutionResult __res = __execution_result; !__res.Successful()) { \
-    return __res;                                                        \
+// Macro to shorten this pattern:
+// ExecutionResult result = foo();
+// if (!result.Successful()) {
+//   return result;
+// }
+//
+// This is useful if the callsite doesn't need to use the ExecutionResult
+// anymore than just returning it upon failure.
+//
+// Example 1:
+// ExecutionResult result = foo();
+// RETURN_IF_FAILURE(result);
+// // If we reach this point, result was Successful.
+//
+// Example 2:
+// RETURN_IF_FAILURE(foo());
+// // If we reach this point, foo() was Successful.
+#define RETURN_IF_FAILURE(execution_result)                          \
+  if (::google::scp::core::ExecutionResult __res = execution_result; \
+      !__res.Successful()) {                                         \
+    return __res;                                                    \
   }
+
+// Same as above but logs an error before returning upon failure.
+// The other arguments would be the same as those used in SCP_ERROR(...) except
+// the ExecutionResult is abstracted away.
+//
+// Example:
+// RETURN_AND_LOG_IF_FAILURE(foo(), kComponentName, parent_activity_id,
+//     activity_id, "some message %s", str.c_str()));
+// // If we reach this point, foo() was Successful and SCP_ERROR_CONTEXT was not
+// // called.
+#define RETURN_AND_LOG_IF_FAILURE(execution_result, component_name,    \
+                                  activity_id, message, ...)           \
+  __RETURN_IF_FAILURE_LOG(execution_result, SCP_ERROR, component_name, \
+                          activity_id, message, ##__VA_ARGS__)
+// Same as above but logs an error using the supplied context upon failure.
+// The other arguments would be the same as those used in
+// SCP_ERROR_CONTEXT(...). RETURN_AND_LOG_IF_FAILURE_CONTEXT(foo(),
+// kComponentName, context, "some message %s", str.c_str()));
+#define RETURN_AND_LOG_IF_FAILURE_CONTEXT(execution_result, component_name,    \
+                                          async_context, message, ...)         \
+  __RETURN_IF_FAILURE_LOG(execution_result, SCP_ERROR_CONTEXT, component_name, \
+                          async_context, message, ##__VA_ARGS__)
+
+#define __RETURN_IF_FAILURE_LOG(execution_result, error_level, component_name, \
+                                activity_id, message, ...)                     \
+  if (::google::scp::core::ExecutionResult __res = execution_result;           \
+      !__res.Successful()) {                                                   \
+    error_level(component_name, activity_id, __res, message, ##__VA_ARGS__);   \
+    return __res;                                                              \
+  }
+
+// Macro similar to RETURN_IF_FAILURE but for ExecutionResultOr.
+// Useful for shortening this pattern:
+// ExecutionResultOr<Foo> result_or = foo();
+// if (!result_or.Successful()) {
+//   return result_or.result();
+// }
+// Foo val = std::move(*result_or);
+//
+// Example 1:
+// // NOTEs:
+// // 1. This pattern will not compile if Foo is non-copyable - use Example 2
+// //    instead.
+// // 2. This pattern results in the value being copied once into an internal
+// //    variable.
+//
+// ExecutionResultOr<Foo> result_or = foo();
+// ASSIGN_OR_RETURN(auto val, result_or);
+// // If we reach this point, foo() was Successful and val is of type Foo.
+//
+// Example 2:
+// ASSIGN_OR_RETURN(auto val, foo());
+// // If we reach this point, foo() was Successful and val is of type Foo.
+//
+// Example 3:
+// Foo val;
+// ASSIGN_OR_RETURN(val, foo());
+// // If we reach this point, foo() was Successful and val holds the value.
+//
+// Example 4:
+// std::pair<Foo, Bar> pair;
+// ASSIGN_OR_RETURN(pair.first, foo());
+// // If we reach this point, foo() was Successful and pair.first holds the
+// // value.
+#define ASSIGN_OR_RETURN(lhs, execution_result_or)            \
+  __ASSIGN_OR_RETURN_HELPER(lhs, __UNIQUE_VAR_NAME(__LINE__), \
+                            execution_result_or, )
+
+// Same as above but logs the error before returning it.
+// The other arguments would be the same as those used in SCP_ERROR(...) except
+// the ExecutionResult is abstracted away.
+//
+// Example:
+// ExecutionResultOr<Foo> result_or = foo();
+// ASSIGN_OR_LOG_AND_RETURN(auto val, result_or, kComponentName,
+//     parent_activity_id, activity_id, "some message %s", str.c_str());
+// // If we reach this point, foo() was Successful and val is of type Foo.
+#define ASSIGN_OR_LOG_AND_RETURN(lhs, execution_result_or, component_name, \
+                                 activity_id, message, ...)                \
+  __ASSIGN_OR_RETURN_HELPER(                                               \
+      lhs, __UNIQUE_VAR_NAME(__LINE__), execution_result_or,               \
+      SCP_ERROR(component_name, activity_id, __res, message, ##__VA_ARGS__))
+
+// Same as above but logs the error using the supplied context before returning
+// it.
+// The other arguments would be the same as those used in
+// SCP_ERROR_CONTEXT(...) except the ExecutionResult is abstracted away.
+//
+// Example:
+// ExecutionResultOr<Foo> result_or = foo();
+// ASSIGN_OR_LOG_AND_RETURN_CONTEXT(auto val, result_or, kComponentName,
+//     context, "some message %s", str.c_str());
+// // If we reach this point, foo() was Successful and val is of type Foo.
+#define ASSIGN_OR_LOG_AND_RETURN_CONTEXT(                                    \
+    lhs, execution_result_or, component_name, async_context, message, ...)   \
+  __ASSIGN_OR_RETURN_HELPER(lhs, __UNIQUE_VAR_NAME(__LINE__),                \
+                            execution_result_or,                             \
+                            SCP_ERROR_CONTEXT(component_name, async_context, \
+                                              __res, message, ##__VA_ARGS__))
+
+#define __ASSIGN_OR_RETURN_W_LOG(lhs, execution_result_or, failure_statement) \
+  __ASSIGN_OR_RETURN_HELPER(lhs, __UNIQUE_VAR_NAME(__LINE__),                 \
+                            execution_result_or, failure_statement)
+
+#define __UNIQUE_VAR_NAME_HELPER(x, y) x##y
+#define __UNIQUE_VAR_NAME(x) __UNIQUE_VAR_NAME_HELPER(__var, x)
+
+#define __ASSIGN_OR_RETURN_HELPER(lhs, result_or_temp_var_name,           \
+                                  execution_result_or, failure_statement) \
+  auto&& result_or_temp_var_name = execution_result_or;                   \
+  if (!result_or_temp_var_name.Successful()) {                            \
+    auto __res = result_or_temp_var_name.result();                        \
+    failure_statement;                                                    \
+    return __res;                                                         \
+  }                                                                       \
+  lhs = result_or_temp_var_name.release();
 
 /// Operation's execution status.
 enum class ExecutionStatus {
@@ -78,6 +213,8 @@ struct ExecutionResult {
 
   bool Successful() const { return *this == SuccessExecutionResult(); }
 
+  bool Retryable() const { return this->status == ExecutionStatus::Retry; }
+
   explicit operator bool() const { return Successful(); }
 
   /// Status of the executed operation.
@@ -120,7 +257,13 @@ class RetryExecutionResult : public ExecutionResult {
 //   return string_to_int(str);
 // }
 //
-// NOTE: The type T should be copyable and moveable.
+// NOTE 1: The type T should be copyable and moveable.
+// NOTE 2: After moving the value out of an ExecutionResultOr result_or, the
+// value in the result_or will be the same as the value v after:
+// Foo w(std::move(v));
+//
+// i.e. use-after-move still applies, but result_or.Successful() would still be
+// true.
 template <typename T>
 class ExecutionResultOr : public std::variant<ExecutionResult, T> {
  private:
@@ -150,18 +293,32 @@ class ExecutionResultOr : public std::variant<ExecutionResult, T> {
   // Returns true if this contains a value.
   bool has_value() const { return !HasExecutionResult(); }
 
+  // clang-format off
+
   // Returns the value held by this.
   // Should be guarded by has_value() calls - otherwise the behavior is
   // undefined.
-  const T& value() const { return std::get<T>(*this); }
-  T& value() { return std::get<T>(*this); }
-  const T& operator*() const { return std::get<T>(*this); }
-  T& operator*() { return std::get<T>(*this); }
+  const T& value() const& { return std::get<T>(*this); }
+  // lvalue reference overload - indicated by "...() &".
+  T& value() & { return std::get<T>(*this); }
+  // rvalue reference overload - indicated by "...() &&".
+  T&& value() && { return std::move(this->value()); }
+
+  const T& operator*() const& { return this->value(); }
+  // lvalue reference overload - indicated by "...() &".
+  T& operator*() & { return this->value(); }
+  // rvalue reference overload - indicated by "...() &&".
+  T&& operator*() && { return std::move(this->value()); }
 
   // Returns a pointer to the value held by this.
   // Returns nullptr if no value is contained.
   const T* operator->() const { return std::get_if<T>(this); }
   T* operator->() { return std::get_if<T>(this); }
+
+  // alias for value() && but no call to std::move() is necessary.
+  T&& release() { return std::move(this->value()); }
+
+  // clang-format on
 
  private:
   bool HasExecutionResult() const {

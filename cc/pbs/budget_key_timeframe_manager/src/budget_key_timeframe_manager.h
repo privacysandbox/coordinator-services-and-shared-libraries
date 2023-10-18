@@ -33,6 +33,8 @@
 #include "pbs/interface/budget_key_timeframe_manager_interface.h"
 #include "pbs/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 // TODO: Make the retry strategy configurable.
 static constexpr google::scp::core::TimeDuration
@@ -53,14 +55,36 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
       const std::shared_ptr<core::JournalServiceInterface>& journal_service,
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      const std::shared_ptr<cpio::AggregateMetricInterface>&
+          budget_key_count_metric)
+      : BudgetKeyTimeframeManager(budget_key_name, id, async_executor,
+                                  journal_service, nosql_database_provider,
+                                  nosql_database_provider, metric_client,
+                                  config_provider, budget_key_count_metric) {}
+
+  BudgetKeyTimeframeManager(
+      const std::shared_ptr<std::string>& budget_key_name,
+      const core::common::Uuid& id,
+      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<core::JournalServiceInterface>& journal_service,
+      const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
+          nosql_database_provider_for_background_operations,
+      const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
+          nosql_database_provider_for_live_traffic,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      const std::shared_ptr<cpio::AggregateMetricInterface>&
+          budget_key_count_metric)
       : budget_key_name_(budget_key_name),
         id_(id),
         async_executor_(async_executor),
         journal_service_(journal_service),
-        nosql_database_provider_(nosql_database_provider),
+        nosql_database_provider_for_background_operations_(
+            nosql_database_provider_for_background_operations),
+        nosql_database_provider_for_live_traffic_(
+            nosql_database_provider_for_live_traffic),
         budget_key_timeframe_groups_(
             std::make_unique<core::common::AutoExpiryConcurrentMap<
                 TimeBucket, std::shared_ptr<BudgetKeyTimeframeGroup>>>(
@@ -78,7 +102,8 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
                 kBudgetKeyTimeframeManagerRetryStrategyDelayMs,
                 kBudgetKeyTimeframeManagerRetryStrategyTotalRetries)),
         metric_client_(metric_client),
-        config_provider_(config_provider) {}
+        config_provider_(config_provider),
+        budget_key_count_metric_(budget_key_count_metric) {}
 
   ~BudgetKeyTimeframeManager();
 
@@ -159,7 +184,8 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
    * @return ExecutionResult The execution result of the operation.
    */
   virtual core::ExecutionResult OnJournalServiceRecoverCallback(
-      const std::shared_ptr<core::BytesBuffer>& bytes_buffer) noexcept;
+      const std::shared_ptr<core::BytesBuffer>& bytes_buffer,
+      const core::common::Uuid& activity_id) noexcept;
 
   /**
    * @brief Is called when logging on the update operation is completed.
@@ -262,8 +288,12 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
   const std::shared_ptr<core::JournalServiceInterface> journal_service_;
 
   /// An instance to the nosql database provider.
-  const std::shared_ptr<core::NoSQLDatabaseProviderInterface>
-      nosql_database_provider_;
+  std::shared_ptr<core::NoSQLDatabaseProviderInterface>
+      nosql_database_provider_for_background_operations_;
+
+  /// An instance to the nosql database provider.
+  std::shared_ptr<core::NoSQLDatabaseProviderInterface>
+      nosql_database_provider_for_live_traffic_;
 
   /// The concurrent map of the budget key time frame groups.
   std::unique_ptr<core::common::AutoExpiryConcurrentMap<
@@ -273,9 +303,11 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
   /// Operation dispatcher
   core::common::OperationDispatcher operation_dispatcher_;
   /// Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-      metric_client_;
+  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
   /// An instance of the config provider
   const std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+
+  /// The aggregate metric instance for budget key counters
+  std::shared_ptr<cpio::AggregateMetricInterface> budget_key_count_metric_;
 };
 }  // namespace google::scp::pbs

@@ -26,6 +26,7 @@
 #include "core/test/utils/conditional_wait.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using core::message_router::test::TestBoolRequest;
 using core::message_router::test::TestBoolResponse;
@@ -40,8 +41,8 @@ namespace google::scp::core::test {
 class MessageRouterTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    EXPECT_EQ(router_.Init(), SuccessExecutionResult());
-    EXPECT_EQ(router_.Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(router_.Init());
+    EXPECT_SUCCESS(router_.Run());
 
     running_ = true;
     thread_ = std::thread([this]() {
@@ -65,7 +66,7 @@ class MessageRouterTest : public ::testing::Test {
   void TearDown() override {
     running_ = false;
     thread_.join();
-    EXPECT_EQ(router_.Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(router_.Stop());
   }
 
   std::shared_ptr<ConcurrentQueue<std::shared_ptr<AsyncContext<Any, Any>>>>
@@ -84,9 +85,9 @@ TEST_F(MessageRouterTest, RequestNotSubscribed) {
   auto request = make_shared<Any>(any_request_1_);
   auto context = make_shared<AsyncContext<Any, Any>>(
       request, [&](AsyncContext<Any, Any>& context) {
-        EXPECT_EQ(context.result,
-                  FailureExecutionResult(
-                      errors::SC_MESSAGE_ROUTER_REQUEST_NOT_SUBSCRIBED));
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_MESSAGE_ROUTER_REQUEST_NOT_SUBSCRIBED)));
         count++;
       });
   queue_->TryEnqueue(context);
@@ -97,14 +98,13 @@ TEST_F(MessageRouterTest, RequestNotSubscribed) {
 
 TEST_F(MessageRouterTest, SubscriptionConflict) {
   auto request_type = any_request_1_.type_url();
-  EXPECT_EQ(
-      router_.Subscribe(request_type, [&](AsyncContext<Any, Any>& context) {}),
-      SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      router_.Subscribe(request_type, [&](AsyncContext<Any, Any>& context) {}));
 
-  EXPECT_EQ(
+  EXPECT_THAT(
       router_.Subscribe(request_type, [&](AsyncContext<Any, Any>& context) {}),
-      FailureExecutionResult(
-          errors::SC_MESSAGE_ROUTER_REQUEST_ALREADY_SUBSCRIBED));
+      ResultIs(FailureExecutionResult(
+          errors::SC_MESSAGE_ROUTER_REQUEST_ALREADY_SUBSCRIBED)));
 }
 
 TEST_F(MessageRouterTest, SingleMessage) {

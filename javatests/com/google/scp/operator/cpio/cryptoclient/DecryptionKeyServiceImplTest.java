@@ -78,13 +78,6 @@ public class DecryptionKeyServiceImplTest {
   @Test
   public void getDecrypter_errorWithCode_NOT_FOUND() throws Exception {
     keyFetchingService.setExceptionContents(Code.NOT_FOUND, /* message= */ "");
-    keyFetchingService.setResponse(mockTinkUtils.getAeadKeySetJson());
-    when(aead.decrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getDecryptedKey());
-    when(aead.encrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getEncryptedKey());
-    String plaintext = "test_plaintext";
-    byte[] cipheredText = mockTinkUtils.getCiphertext(plaintext);
 
     KeyFetchException exception =
         assertThrows(
@@ -97,13 +90,6 @@ public class DecryptionKeyServiceImplTest {
   @Test
   public void getDecrypter_errorWithCode_PERMISSION_DENIED() throws Exception {
     keyFetchingService.setExceptionContents(Code.PERMISSION_DENIED, /* message= */ "");
-    keyFetchingService.setResponse(mockTinkUtils.getAeadKeySetJson());
-    when(aead.decrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getDecryptedKey());
-    when(aead.encrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getEncryptedKey());
-    String plaintext = "test_plaintext";
-    byte[] cipheredText = mockTinkUtils.getCiphertext(plaintext);
 
     KeyFetchException exception =
         assertThrows(
@@ -116,13 +102,6 @@ public class DecryptionKeyServiceImplTest {
   @Test
   public void getDecrypter_errorWithCode_INTERNAL() throws Exception {
     keyFetchingService.setExceptionContents(Code.INTERNAL, /* message= */ "");
-    keyFetchingService.setResponse(mockTinkUtils.getAeadKeySetJson());
-    when(aead.decrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getDecryptedKey());
-    when(aead.encrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getEncryptedKey());
-    String plaintext = "test_plaintext";
-    byte[] cipheredText = mockTinkUtils.getCiphertext(plaintext);
 
     KeyFetchException exception =
         assertThrows(
@@ -135,13 +114,6 @@ public class DecryptionKeyServiceImplTest {
   @Test
   public void getDecrypter_errorWithCode_default() throws Exception {
     keyFetchingService.setExceptionContents(Code.UNKNOWN, /* message= */ "");
-    keyFetchingService.setResponse(mockTinkUtils.getAeadKeySetJson());
-    when(aead.decrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getDecryptedKey());
-    when(aead.encrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getEncryptedKey());
-    String plaintext = "test_plaintext";
-    byte[] cipheredText = mockTinkUtils.getCiphertext(plaintext);
 
     KeyFetchException exception =
         assertThrows(
@@ -178,12 +150,6 @@ public class DecryptionKeyServiceImplTest {
   @Test
   public void getDecrypter_errorWithCode_UNKNOWN() throws Exception {
     keyFetchingService.setResponse("bad test string");
-    when(aead.decrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getDecryptedKey());
-    when(aead.encrypt(any(byte[].class), any(byte[].class)))
-        .thenReturn(mockTinkUtils.getEncryptedKey());
-    String plaintext = "test_plaintext";
-    byte[] cipheredText = mockTinkUtils.getCiphertext(plaintext);
 
     KeyFetchException exception =
         assertThrows(

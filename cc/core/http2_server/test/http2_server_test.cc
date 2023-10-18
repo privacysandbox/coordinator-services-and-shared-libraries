@@ -31,11 +31,15 @@
 #include "core/authorization_proxy/mock/mock_authorization_proxy.h"
 #include "core/common/concurrent_map/src/error_codes.h"
 #include "core/common/uuid/src/uuid.h"
+#include "core/config_provider/src/env_config_provider.h"
 #include "core/http2_client/src/http2_client.h"
+#include "core/http2_server/mock/mock_http2_request_with_overrides.h"
+#include "core/http2_server/mock/mock_http2_response_with_overrides.h"
 #include "core/http2_server/mock/mock_http2_server_with_overrides.h"
 #include "core/http2_server/src/error_codes.h"
 #include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncExecutor;
 using google::scp::core::AuthorizationProxyInterface;
@@ -45,8 +49,10 @@ using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::authorization_proxy::mock::MockAuthorizationProxy;
 using google::scp::core::common::Uuid;
 using google::scp::core::http2_server::mock::MockHttp2ServerWithOverrides;
+using google::scp::core::http2_server::mock::MockNgHttp2RequestWithOverrides;
+using google::scp::core::http2_server::mock::MockNgHttp2ResponseWithOverrides;
 using google::scp::core::test::WaitUntil;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockMetricClient;
 using std::make_shared;
 using std::promise;
 using std::shared_ptr;
@@ -78,19 +84,20 @@ TEST_F(Http2ServerTest, Run) {
 
   shared_ptr<AuthorizationProxyInterface> mock_authorization_proxy =
       make_shared<MockAuthorizationProxy>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   Http2Server http_server(host_address, port, 2 /* thread_pool_size */,
                           async_executor, mock_authorization_proxy);
 
-  EXPECT_EQ(http_server.Run(), SuccessExecutionResult());
-  EXPECT_EQ(http_server.Run(),
-            FailureExecutionResult(errors::SC_HTTP2_SERVER_ALREADY_RUNNING));
+  EXPECT_SUCCESS(http_server.Run());
+  EXPECT_THAT(http_server.Run(), ResultIs(FailureExecutionResult(
+                                     errors::SC_HTTP2_SERVER_ALREADY_RUNNING)));
 
-  EXPECT_EQ(http_server.Stop(), SuccessExecutionResult());
-  EXPECT_EQ(http_server.Stop(),
-            FailureExecutionResult(errors::SC_HTTP2_SERVER_ALREADY_STOPPED));
+  EXPECT_SUCCESS(http_server.Stop());
+  EXPECT_THAT(http_server.Stop(),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_HTTP2_SERVER_ALREADY_STOPPED)));
 }
 
 TEST_F(Http2ServerTest, RegisterHandlers) {
@@ -99,7 +106,7 @@ TEST_F(Http2ServerTest, RegisterHandlers) {
 
   shared_ptr<AuthorizationProxyInterface> mock_authorization_proxy =
       make_shared<MockAuthorizationProxy>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(host_address, port, async_executor,
@@ -111,13 +118,13 @@ TEST_F(Http2ServerTest, RegisterHandlers) {
     return SuccessExecutionResult();
   };
 
-  EXPECT_EQ(
-      http_server.RegisterResourceHandler(HttpMethod::GET, path, callback),
-      SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      http_server.RegisterResourceHandler(HttpMethod::GET, path, callback));
 
-  EXPECT_EQ(
+  EXPECT_THAT(
       http_server.RegisterResourceHandler(HttpMethod::GET, path, callback),
-      FailureExecutionResult(errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS));
+      ResultIs(FailureExecutionResult(
+          errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 }
 
 TEST_F(Http2ServerTest, HandleHttp2Request) {
@@ -127,10 +134,10 @@ TEST_F(Http2ServerTest, HandleHttp2Request) {
   auto mock_authorization_proxy = make_shared<MockAuthorizationProxy>();
   shared_ptr<AuthorizationProxyInterface> authorization_proxy =
       mock_authorization_proxy;
-  ON_CALL(*mock_authorization_proxy, Authorize)
-      .WillByDefault(Return(SuccessExecutionResult()));
+  EXPECT_CALL(*mock_authorization_proxy, Authorize)
+      .WillOnce(Return(SuccessExecutionResult()));
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(host_address, port, async_executor,
@@ -141,9 +148,16 @@ TEST_F(Http2ServerTest, HandleHttp2Request) {
     return SuccessExecutionResult();
   };
 
+  nghttp2::asio_http2::server::request request;
+  nghttp2::asio_http2::server::response response;
+  auto mock_http2_request =
+      make_shared<MockNgHttp2RequestWithOverrides>(request);
+  auto mock_http2_response =
+      std::make_shared<MockNgHttp2ResponseWithOverrides>(response);
   AsyncContext<NgHttp2Request, NgHttp2Response> ng_http2_context(
-      make_shared<NgHttp2Request>(nghttp2::asio_http2::server::request()),
+      mock_http2_request,
       [](AsyncContext<NgHttp2Request, NgHttp2Response>&) {});
+  ng_http2_context.response = mock_http2_response;
 
   http_server.HandleHttp2Request(ng_http2_context, callback);
   shared_ptr<MockHttp2ServerWithOverrides::Http2SynchronizationContext>
@@ -153,11 +167,122 @@ TEST_F(Http2ServerTest, HandleHttp2Request) {
             SuccessExecutionResult());
   EXPECT_EQ(sync_context->failed.load(), false);
   EXPECT_EQ(sync_context->pending_callbacks.load(), 2);
-  bool function_exist = false;
-  if (ng_http2_context.request->on_request_body_received) {
-    function_exist = true;
-  }
-  EXPECT_EQ(function_exist, true);
+  EXPECT_TRUE(mock_http2_request->IsOnRequestBodyDataReceivedCallbackSet());
+}
+
+TEST_F(Http2ServerTest, HandleHttp2RequestSetsAuthorizedDomainFromRequest) {
+  string host_address("localhost");
+  string port("0");
+
+  auto mock_authorization_proxy = make_shared<MockAuthorizationProxy>();
+  shared_ptr<AuthorizationProxyInterface> authorization_proxy =
+      mock_authorization_proxy;
+
+  EXPECT_CALL(*mock_authorization_proxy, Authorize).WillOnce([](auto& context) {
+    context.response = make_shared<AuthorizationProxyResponse>();
+    context.response->authorized_metadata.authorized_domain =
+        make_shared<string>("https://site.com");
+    context.result = SuccessExecutionResult();
+
+    context.Finish();
+    return SuccessExecutionResult();
+  });
+
+  auto mock_metric_client = make_shared<MockMetricClient>();
+  shared_ptr<AsyncExecutorInterface> async_executor =
+      make_shared<MockAsyncExecutor>();
+  setenv(kPBSAuthorizationEnableSiteBasedAuthorization, "true", /*replace=*/1);
+  shared_ptr<ConfigProviderInterface> config = make_shared<EnvConfigProvider>();
+  MockHttp2ServerWithOverrides http_server(
+      host_address, port, async_executor, authorization_proxy,
+      mock_metric_client, make_shared<EnvConfigProvider>());
+  EXPECT_SUCCESS(http_server.Init());
+  HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
+    return SuccessExecutionResult();
+  };
+
+  nghttp2::asio_http2::server::request request;
+  nghttp2::asio_http2::server::response response;
+  auto mock_http2_request =
+      make_shared<MockNgHttp2RequestWithOverrides>(request);
+  auto mock_http2_response =
+      std::make_shared<MockNgHttp2ResponseWithOverrides>(response);
+  mock_http2_request->headers = make_shared<HttpHeaders>();
+  mock_http2_request->headers->insert(
+      {kClaimedIdentityHeader, "https://origin.site.com"});
+  AsyncContext<NgHttp2Request, NgHttp2Response> ng_http2_context(
+      mock_http2_request,
+      [](AsyncContext<NgHttp2Request, NgHttp2Response>&) {});
+  ng_http2_context.response = mock_http2_response;
+
+  http_server.HandleHttp2Request(ng_http2_context, callback);
+  shared_ptr<MockHttp2ServerWithOverrides::Http2SynchronizationContext>
+      sync_context;
+  EXPECT_EQ(http_server.GetActiveRequests().Find(ng_http2_context.request->id,
+                                                 sync_context),
+            SuccessExecutionResult());
+  EXPECT_EQ(sync_context->failed.load(), false);
+  EXPECT_EQ(
+      *sync_context->http2_context.request->auth_context.authorized_domain,
+      "https://origin.site.com");
+}
+
+TEST_F(Http2ServerTest,
+       HandleHttp2RequestSetsAuthorizedDomainFromAuthResponse) {
+  string host_address("localhost");
+  string port("0");
+
+  auto mock_authorization_proxy = make_shared<MockAuthorizationProxy>();
+  shared_ptr<AuthorizationProxyInterface> authorization_proxy =
+      mock_authorization_proxy;
+
+  EXPECT_CALL(*mock_authorization_proxy, Authorize).WillOnce([](auto& context) {
+    context.response = make_shared<AuthorizationProxyResponse>();
+    context.response->authorized_metadata.authorized_domain =
+        make_shared<string>("https://site.com");
+    context.result = SuccessExecutionResult();
+
+    context.Finish();
+    return SuccessExecutionResult();
+  });
+
+  auto mock_metric_client = make_shared<MockMetricClient>();
+  shared_ptr<AsyncExecutorInterface> async_executor =
+      make_shared<MockAsyncExecutor>();
+  setenv(kPBSAuthorizationEnableSiteBasedAuthorization, "false", /*replace=*/1);
+  MockHttp2ServerWithOverrides http_server(
+      host_address, port, async_executor, authorization_proxy,
+      mock_metric_client, make_shared<EnvConfigProvider>());
+  EXPECT_SUCCESS(http_server.Init());
+
+  HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
+    return SuccessExecutionResult();
+  };
+
+  nghttp2::asio_http2::server::request request;
+  nghttp2::asio_http2::server::response response;
+  auto mock_http2_request =
+      make_shared<MockNgHttp2RequestWithOverrides>(request);
+  auto mock_http2_response =
+      std::make_shared<MockNgHttp2ResponseWithOverrides>(response);
+  mock_http2_request->headers = make_shared<HttpHeaders>();
+  mock_http2_request->headers->insert(
+      {kClaimedIdentityHeader, "htps://origin.site.com"});
+  AsyncContext<NgHttp2Request, NgHttp2Response> ng_http2_context(
+      mock_http2_request,
+      [](AsyncContext<NgHttp2Request, NgHttp2Response>&) {});
+  ng_http2_context.response = mock_http2_response;
+
+  http_server.HandleHttp2Request(ng_http2_context, callback);
+  shared_ptr<MockHttp2ServerWithOverrides::Http2SynchronizationContext>
+      sync_context;
+  EXPECT_EQ(http_server.GetActiveRequests().Find(ng_http2_context.request->id,
+                                                 sync_context),
+            SuccessExecutionResult());
+  EXPECT_EQ(sync_context->failed.load(), false);
+  EXPECT_EQ(
+      *sync_context->http2_context.request->auth_context.authorized_domain,
+      "https://site.com");
 }
 
 TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {
@@ -167,9 +292,9 @@ TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {
   auto mock_authorization_proxy = make_shared<MockAuthorizationProxy>();
   shared_ptr<AuthorizationProxyInterface> authorization_proxy =
       mock_authorization_proxy;
-  ON_CALL(*mock_authorization_proxy, Authorize)
-      .WillByDefault(Return(FailureExecutionResult(123)));
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  EXPECT_CALL(*mock_authorization_proxy, Authorize)
+      .WillOnce(Return(FailureExecutionResult(123)));
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(host_address, port, async_executor,
@@ -181,11 +306,15 @@ TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {
   };
 
   bool should_continue = false;
+
+  nghttp2::asio_http2::server::request request;
+  nghttp2::asio_http2::server::response response;
   AsyncContext<NgHttp2Request, NgHttp2Response> ng_http2_context(
-      make_shared<NgHttp2Request>(nghttp2::asio_http2::server::request()),
+      make_shared<NgHttp2Request>(request),
       [&](AsyncContext<NgHttp2Request, NgHttp2Response>&) {
         should_continue = true;
       });
+  ng_http2_context.response = std::make_shared<NgHttp2Response>(response);
 
   http_server.HandleHttp2Request(ng_http2_context, callback);
   http_server.OnHttp2Cleanup(ng_http2_context.parent_activity_id,
@@ -204,12 +333,11 @@ TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {
 TEST_F(Http2ServerTest, OnHttp2PendingCallbackFailure) {
   string host_address("localhost");
   string port("0");
-  nghttp2::asio_http2::server::request ng_request;
 
   auto mock_authorization_proxy = make_shared<MockAuthorizationProxy>();
   shared_ptr<AuthorizationProxyInterface> authorization_proxy =
       mock_authorization_proxy;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(host_address, port, async_executor,
@@ -221,8 +349,11 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackFailure) {
   };
 
   bool should_continue = false;
+
+  nghttp2::asio_http2::server::request request;
+  nghttp2::asio_http2::server::response response;
   AsyncContext<NgHttp2Request, NgHttp2Response> ng_http2_context(
-      make_shared<NgHttp2Request>(ng_request),
+      make_shared<NgHttp2Request>(request),
       [&](AsyncContext<NgHttp2Request, NgHttp2Response>&) {
         should_continue = true;
       });
@@ -235,24 +366,23 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackFailure) {
   sync_context->http_handler = callback;
 
   auto pair = make_pair(ng_http2_context.request->id, sync_context);
-  EXPECT_EQ(http_server.GetActiveRequests().Insert(pair, sync_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(http_server.GetActiveRequests().Insert(pair, sync_context));
 
   auto callback_execution_result = FailureExecutionResult(1234);
   auto request_id = ng_http2_context.request->id;
   http_server.OnHttp2PendingCallback(callback_execution_result, request_id);
   WaitUntil([&]() { return should_continue; });
 
-  EXPECT_EQ(http_server.GetActiveRequests().Find(request_id, sync_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      http_server.GetActiveRequests().Find(request_id, sync_context));
   EXPECT_EQ(sync_context->failed.load(), true);
 
   http_server.OnHttp2PendingCallback(callback_execution_result, request_id);
   http_server.OnHttp2Cleanup(sync_context->http2_context.parent_activity_id,
                              request_id, 0);
-  EXPECT_EQ(
-      http_server.GetActiveRequests().Find(request_id, sync_context),
-      FailureExecutionResult(errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
+  EXPECT_THAT(http_server.GetActiveRequests().Find(request_id, sync_context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
@@ -264,7 +394,7 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
       mock_authorization_proxy;
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   MockHttp2ServerWithOverrides http_server(host_address, port, async_executor,
                                            authorization_proxy,
                                            mock_metric_client);
@@ -274,10 +404,13 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
   };
 
   bool should_continue = false;
+  nghttp2::asio_http2::server::request request;
+  nghttp2::asio_http2::server::response response;
   AsyncContext<NgHttp2Request, NgHttp2Response> ng_http2_context(
-      make_shared<NgHttp2Request>(nghttp2::asio_http2::server::request()),
+      make_shared<NgHttp2Request>(request),
       [&](AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context) {
-        EXPECT_EQ(http2_context.result, FailureExecutionResult(12345));
+        EXPECT_THAT(http2_context.result,
+                    ResultIs(FailureExecutionResult(12345)));
         should_continue = true;
       });
 
@@ -289,8 +422,7 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
   sync_context->http_handler = callback;
 
   auto pair = make_pair(ng_http2_context.request->id, sync_context);
-  EXPECT_EQ(http_server.GetActiveRequests().Insert(pair, sync_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(http_server.GetActiveRequests().Insert(pair, sync_context));
 
   auto callback_execution_result = SuccessExecutionResult();
   auto request_id = ng_http2_context.request->id;
@@ -308,17 +440,18 @@ TEST_F(Http2ServerTest,
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   size_t thread_pool_size = 2;
-  bool use_tls = true;
-  string private_key_file("/file/that/dos/not/exist.pem");
-  string certificate_chain_file("./public.crt");
+
+  Http2ServerOptions http2_server_options(
+      true, make_shared<string>("/file/that/dos/not/exist.pem"),
+      make_shared<string>("./public.crt"));
 
   Http2Server http_server(host_address, port, thread_pool_size, async_executor,
                           mock_authorization_proxy, nullptr /* metric_client */,
-                          use_tls, private_key_file, certificate_chain_file);
+                          nullptr /* config_provider */, http2_server_options);
 
-  EXPECT_EQ(http_server.Init(),
-            FailureExecutionResult(
-                errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT));
+  EXPECT_THAT(http_server.Init(),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
 }
 
 TEST_F(Http2ServerTest,
@@ -331,17 +464,18 @@ TEST_F(Http2ServerTest,
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   size_t thread_pool_size = 2;
-  bool use_tls = true;
-  string private_key_file("./privatekey.pem");
-  string certificate_chain_file("/file/that/dos/not/exist.crt");
+
+  Http2ServerOptions http2_server_options(
+      true, make_shared<string>("./privatekey.pem"),
+      make_shared<string>("/file/that/dos/not/exist.crt"));
 
   Http2Server http_server(host_address, port, thread_pool_size, async_executor,
                           mock_authorization_proxy, nullptr /* metric_client */,
-                          use_tls, private_key_file, certificate_chain_file);
+                          nullptr /* config_provider */, http2_server_options);
 
-  EXPECT_EQ(http_server.Init(),
-            FailureExecutionResult(
-                errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT));
+  EXPECT_THAT(http_server.Init(),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
 }
 
 TEST_F(Http2ServerTest,
@@ -354,15 +488,16 @@ TEST_F(Http2ServerTest,
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   size_t thread_pool_size = 2;
-  bool use_tls = true;
-  string private_key_file("./privatekey.pem");
-  string certificate_chain_file("./public.crt");
+
+  Http2ServerOptions http2_server_options(
+      true, make_shared<string>("./privatekey.pem"),
+      make_shared<string>("./public.crt"));
 
   Http2Server http_server(host_address, port, thread_pool_size, async_executor,
                           mock_authorization_proxy, nullptr /* metric_client */,
-                          use_tls, private_key_file, certificate_chain_file);
+                          nullptr /* config_provider */, http2_server_options);
 
-  EXPECT_EQ(http_server.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_server.Init());
 }
 
 TEST_F(Http2ServerTest, ShouldInitCorrectlyRunAndStopWhenTlsIsEnabled) {
@@ -374,17 +509,18 @@ TEST_F(Http2ServerTest, ShouldInitCorrectlyRunAndStopWhenTlsIsEnabled) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   size_t thread_pool_size = 2;
-  bool use_tls = true;
-  string private_key_file("./privatekey.pem");
-  string certificate_chain_file("./public.crt");
+
+  Http2ServerOptions http2_server_options(
+      true, make_shared<string>("./privatekey.pem"),
+      make_shared<string>("./public.crt"));
 
   Http2Server http_server(host_address, port, thread_pool_size, async_executor,
                           mock_authorization_proxy, nullptr /* metric_client */,
-                          use_tls, private_key_file, certificate_chain_file);
+                          nullptr /* config_provider */, http2_server_options);
 
-  EXPECT_EQ(http_server.Init(), SuccessExecutionResult());
-  EXPECT_EQ(http_server.Run(), SuccessExecutionResult());
-  EXPECT_EQ(http_server.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_server.Init());
+  EXPECT_SUCCESS(http_server.Run());
+  EXPECT_SUCCESS(http_server.Stop());
 }
 
 static int GenerateRandomIntInRange(int min, int max) {
@@ -402,7 +538,7 @@ void SubmitUntilSuccess(HttpClient& http_client,
     execution_result = http_client.PerformRequest(context);
     std::this_thread::sleep_for(milliseconds(50));
   }
-  EXPECT_EQ(execution_result, SuccessExecutionResult());
+  EXPECT_SUCCESS(execution_result);
 }
 
 TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
@@ -411,32 +547,32 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
   string port = to_string(random_port);
   shared_ptr<MockAuthorizationProxy> mock_authorization_proxy =
       make_shared<MockAuthorizationProxy>();
-  ON_CALL(*mock_authorization_proxy, Authorize)
-      .WillByDefault([](auto& context) {
-        context.response = make_shared<AuthorizationProxyResponse>();
-        context.response->authorized_metadata.authorized_domain =
-            make_shared<string>(
-                context.request->authorization_metadata.claimed_identity);
-        context.result = SuccessExecutionResult();
+  EXPECT_CALL(*mock_authorization_proxy, Authorize).WillOnce([](auto& context) {
+    context.response = make_shared<AuthorizationProxyResponse>();
+    context.response->authorized_metadata.authorized_domain =
+        make_shared<string>(
+            context.request->authorization_metadata.claimed_identity);
+    context.result = SuccessExecutionResult();
 
-        context.Finish();
-        return SuccessExecutionResult();
-      });
+    context.Finish();
+    return SuccessExecutionResult();
+  });
   shared_ptr<AuthorizationProxyInterface> authorization_proxy =
       mock_authorization_proxy;
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<AsyncExecutor>(8, 10, true);
 
   size_t thread_pool_size = 2;
-  bool use_tls = true;
-  string private_key_file("./privatekey.pem");
-  string certificate_chain_file("./public.crt");
   string test_path("/test");
+
+  Http2ServerOptions http2_server_options(
+      true, make_shared<string>("./privatekey.pem"),
+      make_shared<string>("./public.crt"));
 
   // Start the server
   Http2Server http_server(host_address, port, thread_pool_size, async_executor,
                           authorization_proxy, nullptr /* metric_client */,
-                          use_tls, private_key_file, certificate_chain_file);
+                          nullptr /* config_provider */, http2_server_options);
 
   HttpHandler handler_callback =
       [](AsyncContext<HttpRequest, HttpResponse>& context) {
@@ -448,8 +584,8 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
   http_server.RegisterResourceHandler(HttpMethod::GET, test_path,
                                       handler_callback);
 
-  EXPECT_EQ(http_server.Init(), SuccessExecutionResult());
-  EXPECT_EQ(http_server.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_server.Init());
+  EXPECT_SUCCESS(http_server.Run());
 
   // Start the client
   HttpClient http_client(async_executor);
@@ -465,7 +601,7 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
   promise<void> done;
   AsyncContext<HttpRequest, HttpResponse> context(
       move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         const auto& bytes = *context.response->body.bytes;
         EXPECT_EQ(string(bytes.begin(), bytes.end()),
                   "hello, world with TLS\r\n");
@@ -479,4 +615,90 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
   http_server.Stop();
   async_executor->Stop();
 }
+
+TEST_F(Http2ServerTest,
+       OnBodyDataReceivedWithExtraDataReturnsPartialDataError) {
+  {
+    nghttp2::asio_http2::server::request ng_request;
+    MockNgHttp2RequestWithOverrides request(ng_request, 10 /* body length */);
+
+    // Without callback to ensure nothing goes wrong.
+    uint8_t data[11];
+    request.SimulateOnRequestBodyDataReceived(data, 11);
+  }
+  {
+    nghttp2::asio_http2::server::request ng_request;
+    MockNgHttp2RequestWithOverrides request(ng_request, 10 /* body length */);
+
+    // Install callback
+    bool callback_called = false;
+    request.SetOnRequestBodyDataReceivedCallback([&](ExecutionResult result) {
+      EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                              errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
+      callback_called = true;
+    });
+    uint8_t data[11];
+    request.SimulateOnRequestBodyDataReceived(data, 11);
+
+    EXPECT_TRUE(callback_called);
+  }
+}
+
+TEST_F(Http2ServerTest, OnBodyDataReceivedWithExactDataIsSuccessful) {
+  {
+    nghttp2::asio_http2::server::request ng_request;
+    MockNgHttp2RequestWithOverrides request(ng_request, 10 /* body length */);
+
+    // Without callback to ensure nothing goes wrong.
+    uint8_t data[10];
+    request.SimulateOnRequestBodyDataReceived(data, 10);
+    request.SimulateOnRequestBodyDataReceived(data, 0);
+  }
+  {
+    nghttp2::asio_http2::server::request ng_request;
+    MockNgHttp2RequestWithOverrides request(ng_request, 10 /* body length */);
+
+    // Install callback
+    bool callback_called = false;
+    request.SetOnRequestBodyDataReceivedCallback([&](ExecutionResult result) {
+      EXPECT_SUCCESS(result);
+      callback_called = true;
+    });
+    uint8_t data[11];
+    request.SimulateOnRequestBodyDataReceived(data, 10);
+    request.SimulateOnRequestBodyDataReceived(data, 0);
+
+    EXPECT_TRUE(callback_called);
+  }
+}
+
+TEST_F(Http2ServerTest, OnBodyDataReceivedWithLessDataReturnsPartialDataError) {
+  {
+    nghttp2::asio_http2::server::request ng_request;
+    MockNgHttp2RequestWithOverrides request(ng_request, 10 /* body length */);
+
+    // Without callback to ensure nothing goes wrong.
+    uint8_t data[2];
+    request.SimulateOnRequestBodyDataReceived(data, 2);
+    request.SimulateOnRequestBodyDataReceived(data, 0);
+  }
+  {
+    nghttp2::asio_http2::server::request ng_request;
+    MockNgHttp2RequestWithOverrides request(ng_request, 10 /* body length */);
+
+    // Install callback
+    bool callback_called = false;
+    request.SetOnRequestBodyDataReceivedCallback([&](ExecutionResult result) {
+      EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                              errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
+      callback_called = true;
+    });
+    uint8_t data[11];
+    request.SimulateOnRequestBodyDataReceived(data, 2);
+    request.SimulateOnRequestBodyDataReceived(data, 0);
+
+    EXPECT_TRUE(callback_called);
+  }
+}
+
 }  // namespace google::scp::core::test

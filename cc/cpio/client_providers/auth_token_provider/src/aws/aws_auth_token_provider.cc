@@ -68,8 +68,8 @@ ExecutionResult AwsAuthTokenProvider::Init() noexcept {
   if (!http_client_) {
     auto execution_result = FailureExecutionResult(
         SC_AWS_INSTANCE_AUTHORIZER_PROVIDER_INITIALIZATION_FAILED);
-    ERROR(kAwsAuthTokenProvider, kZeroUuid, kZeroUuid, execution_result,
-          "Http client cannot be nullptr.");
+    SCP_ERROR(kAwsAuthTokenProvider, kZeroUuid, execution_result, ,
+              "Http client cannot be nullptr.");
     return execution_result;
   }
 
@@ -102,8 +102,9 @@ ExecutionResult AwsAuthTokenProvider::GetSessionToken(
 
   auto execution_result = http_client_->PerformRequest(http_context);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kAwsAuthTokenProvider, get_token_context, execution_result,
-                  "Failed to perform http request to fetch access token.");
+    SCP_ERROR_CONTEXT(kAwsAuthTokenProvider, get_token_context,
+                      execution_result,
+                      "Failed to perform http request to fetch access token.");
     get_token_context.result = execution_result;
     get_token_context.Finish();
     return execution_result;
@@ -117,9 +118,9 @@ void AwsAuthTokenProvider::OnGetSessionTokenCallback(
         get_token_context,
     AsyncContext<HttpRequest, HttpResponse>& http_client_context) noexcept {
   if (!http_client_context.result.Successful()) {
-    ERROR_CONTEXT(kAwsAuthTokenProvider, get_token_context,
-                  http_client_context.result,
-                  "Failed to get access token from Instance Metadata server");
+    SCP_ERROR_CONTEXT(
+        kAwsAuthTokenProvider, get_token_context, http_client_context.result,
+        "Failed to get access token from Instance Metadata server");
     get_token_context.result = http_client_context.result;
     get_token_context.Finish();
 

@@ -16,6 +16,10 @@ syntax = "proto3";
 
 package google.cmrt.sdk.instance_service.v1;
 
+option java_multiple_files = true;
+option java_outer_classname = "InstanceServiceProto";
+option java_package = "com.google.cmrt.sdk.instance_service.v1";
+
 import "cc/core/common/proto/common.proto";
 
 // For faster allocations of sub-messages.
@@ -92,6 +96,10 @@ message InstanceDetails {
   // Instance networks.
   // GCP VM instance supports multiple network interfaces.
   repeated InstanceNetwork networks = 2;
+  // Labels on the instance.
+  // In AWS, they are the same as instance tags.
+  // In GCP, they are the instance labels.
+  map<string, string> labels = 3;
 }
 
 // Response of fetching instance details for a given resource id.

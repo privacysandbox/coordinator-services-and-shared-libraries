@@ -18,24 +18,14 @@ package com.google.scp.shared.clients.configclient.aws;
 
 import static com.google.common.collect.MoreCollectors.toOptional;
 import static com.google.scp.shared.clients.configclient.model.ErrorReason.FETCH_ERROR;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.COORDINATOR_A_ROLE;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.COORDINATOR_B_ROLE;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.COORDINATOR_KMS_ARN;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.JOB_METADATA_DB;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.JOB_QUEUE;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.MAX_JOB_NUM_ATTEMPTS;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.MAX_JOB_PROCESSING_TIME_SECONDS;
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.SCALE_IN_HOOK;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableMap;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClientUtils;
-import com.google.scp.shared.clients.configclient.model.WorkerParameter;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -64,20 +54,6 @@ public final class AwsParameterClient implements ParameterClient {
   private static final long CACHE_ENTRY_TTL_SEC = 3600;
   private static final String DEFAULT_PARAM_PREFIX = "scp";
   private static final String ENVIRONMENT_TAG_NAME = "environment";
-
-  private static final ImmutableMap<WorkerParameter, String> LEGACY_PARAMETER_NAMES =
-      ImmutableMap.<WorkerParameter, String>builder()
-          .put(JOB_QUEUE, "/aggregate-service/%s/sqs_queue_url")
-          .put(JOB_METADATA_DB, "/aggregate-service/%s/dynamodb_metadatadb_table_name")
-          .put(MAX_JOB_NUM_ATTEMPTS, "/aggregate-service/%s/max_job_num_attempts")
-          .put(
-              MAX_JOB_PROCESSING_TIME_SECONDS,
-              "/aggregate-service/%s/max_job_processing_time_seconds")
-          .put(COORDINATOR_A_ROLE, "/aggregate-service/%s/coordinator_a_assume_role_arn")
-          .put(COORDINATOR_B_ROLE, "/aggregate-service/%s/coordinator_b_assume_role_arn")
-          .put(COORDINATOR_KMS_ARN, "/aggregate-service/%s/kms_key_arn")
-          .put(SCALE_IN_HOOK, "/aggregate-service/%s/scale_in_hook")
-          .build();
 
   private final Ec2Client ec2Client;
   private final SsmClient ssmClient;
@@ -121,70 +97,17 @@ public final class AwsParameterClient implements ParameterClient {
 
     Optional<String> paramValue;
     try {
-      paramValue = paramCache.get(storageParam);
+      return paramCache.get(storageParam);
     } catch (ExecutionException e) {
       logger.log(Level.SEVERE, "Error getting value for AWS parameter " + storageParam, e);
       throw new ParameterClientException(
           "Error getting value for AWS parameter " + storageParam, FETCH_ERROR, e);
     }
-    if (paramValue.isPresent()) {
-      return paramValue;
-    }
-
-    // No parameter value was found. For safety, check if a value can be found using the legacy
-    // parameter name. This may happen if the new parameter names have not yet been pushed for an
-    // environment during the migration.
-    // TODO(b/231332179): Remove this once all new parameters are pushed to all environments.
-    Optional<String> legacyStorageParamOpt = getLegacyStorageParameterName(param);
-    if (legacyStorageParamOpt.isEmpty()) {
-      return paramValue;
-    }
-
-    String legacyStorageParam = legacyStorageParamOpt.get();
-    Optional<String> legacyParamValue;
-    try {
-      legacyParamValue = paramCache.get(legacyStorageParam);
-    } catch (ExecutionException e) {
-      logger.log(
-          Level.SEVERE, "Error getting value for legacy AWS parameter " + legacyStorageParam, e);
-      throw new ParameterClientException(
-          "Error getting value for legacy AWS parameter " + legacyStorageParam, FETCH_ERROR, e);
-    }
-
-    legacyParamValue.ifPresent(
-        unused ->
-            logger.log(
-                Level.SEVERE,
-                String.format(
-                    "Found value for legacy storage parameter '%s', but missing value for '%s'.",
-                    legacyStorageParam, storageParam)));
-    return legacyParamValue;
   }
 
   @Override
   public Optional<String> getEnvironmentName() {
     return Optional.ofNullable(parameterEnvSupplier.get());
-  }
-
-  /**
-   * Builds the legacy parameter name used by the underlying parameter storage layer.
-   *
-   * <p>The name is formatted as `/aggregate-service/{environment}/{parameter}`, where the parameter
-   * fragment may or may not be the same as the parameter value provided.
-   *
-   * @param param the name of the parameter
-   * @return the fully expanded legacy storage parameter name
-   */
-  private Optional<String> getLegacyStorageParameterName(String param) {
-    WorkerParameter workerParameter;
-    try {
-      workerParameter = WorkerParameter.valueOf(param);
-    } catch (IllegalArgumentException | NullPointerException e) {
-      return Optional.empty();
-    }
-
-    return Optional.ofNullable(LEGACY_PARAMETER_NAMES.get(workerParameter))
-        .flatMap(paramPattern -> getEnvironmentName().map(env -> String.format(paramPattern, env)));
   }
 
   /**

@@ -23,13 +23,7 @@
 #include <vector>
 
 #include "absl/strings/str_format.h"
-#include "include/v8.h"
 #include "public/core/interface/execution_result.h"
-#include "roma/config/src/type_converter.h"
-#include "roma/ipc/src/ipc_message.h"
-#include "roma/wasm/src/deserializer.h"
-#include "roma/wasm/src/serializer.h"
-#include "roma/wasm/src/wasm_types.h"
 
 #include "error_codes.h"
 
@@ -38,29 +32,19 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::StatusCode;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::SC_ROMA_V8_WORKER_BAD_HANDLER_NAME;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_BAD_INPUT_ARGS;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_BAD_SOURCE_CODE;
 using google::scp::core::errors::SC_ROMA_V8_WORKER_CODE_COMPILE_FAILURE;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_CODE_EXECUTION_FAILURE;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_HANDLER_INVALID_FUNCTION;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_RESULT_PARSE_FAILURE;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_SCRIPT_EXECUTION_TIMEOUT;
 using google::scp::core::errors::SC_ROMA_V8_WORKER_SCRIPT_RUN_FAILURE;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_WASM_COMPILE_FAILURE;
-using google::scp::core::errors::SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE;
-using google::scp::core::errors::
-    SC_ROMA_V8_WORKER_WASM_OBJECT_RETRIEVAL_FAILURE;
-using google::scp::roma::common::RomaString;
-using google::scp::roma::common::RomaVector;
-using google::scp::roma::ipc::RomaCodeObj;
 using google::scp::roma::wasm::RomaWasmListOfStringRepresentation;
 using google::scp::roma::wasm::RomaWasmStringRepresentation;
 using google::scp::roma::wasm::WasmDeserializer;
 using google::scp::roma::wasm::WasmSerializer;
+using std::shared_ptr;
 using std::string;
 using std::vector;
+
 using v8::Array;
 using v8::Context;
+using v8::External;
 using v8::Function;
 using v8::FunctionCallback;
 using v8::FunctionCallbackInfo;
@@ -87,64 +71,255 @@ using v8::WasmMemoryObject;
 using v8::WasmModuleObject;
 
 namespace google::scp::roma::worker {
-static constexpr char kWebAssemblyTag[] = "WebAssembly";
-static constexpr char kInstanceTag[] = "Instance";
-static constexpr char kExportsTag[] = "exports";
-static constexpr char kRegisteredWasmExports[] = "RomaRegisteredWasmExports";
 static constexpr char kWasmMemory[] = "memory";
 static constexpr char kWasiSnapshotPreview[] = "wasi_snapshot_preview1";
 static constexpr char kWasiProcExitFunctionName[] = "proc_exit";
-static constexpr char kTimeoutErrorMsg[] = "execution timeout";
 
-// TODO: maybe more to TypeConversion folder.
-bool ExecutionUtils::RomaStrToLocalStr(const RomaString& roma_string,
-                                       Local<String>& v8_string) noexcept {
-  auto string_maybe =
-      String::NewFromUtf8(Isolate::GetCurrent(), roma_string.c_str(),
-                          NewStringType::kNormal, roma_string.length());
-  return string_maybe.ToLocal(&v8_string);
-}
-
-/**
- * @brief Parse the input using JSON::Parse to turn it into the right JS types
- *
- * @param input
- * @return Local<Array> The array of parsed values
- */
-static Local<Array> ParseAsJsInput(const RomaVector<RomaString>& input) {
+ExecutionResult ExecutionUtils::CompileRunJS(
+    const std::string& js, std::string& err_msg,
+    Local<UnboundScript>* unbound_script) noexcept {
   auto isolate = Isolate::GetCurrent();
-  auto context = isolate->GetCurrentContext();
+  TryCatch try_catch(isolate);
+  Local<Context> context(isolate->GetCurrentContext());
 
-  const int argc = input.size();
-
-  Local<Array> argv = Array::New(isolate, argc);
-  for (auto i = 0; i < argc; ++i) {
-    Local<String> arg_str;
-    if (!ExecutionUtils::RomaStrToLocalStr(input[i], arg_str)) {
-      return Local<Array>();
-    }
-
-    Local<Value> arg = Undefined(isolate);
-    if (arg_str->Length() && !JSON::Parse(context, arg_str).ToLocal(&arg)) {
-      return Local<Array>();
-    }
-    if (!argv->Set(context, i, arg).ToChecked()) {
-      return Local<Array>();
-    }
+  Local<v8::String> js_source =
+      v8::String::NewFromUtf8(isolate, js.data(), v8::NewStringType::kNormal,
+                              static_cast<uint32_t>(js.length()))
+          .ToLocalChecked();
+  Local<v8::Script> script;
+  if (!v8::Script::Compile(context, js_source).ToLocal(&script)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_CODE_COMPILE_FAILURE);
   }
 
-  return argv;
+  if (unbound_script) {
+    *unbound_script = script->GetUnboundScript();
+  }
+
+  Local<Value> script_result;
+  if (!script->Run(context).ToLocal(&script_result)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_SCRIPT_RUN_FAILURE);
+  }
+
+  return core::SuccessExecutionResult();
 }
 
-/**
- * @brief Get the WASM memory object that was registered in the global context
- *
- * @param isolate
- * @param context
- * @return Local<Value> The WASM memory object
- */
-static Local<Value> GetWasmMemoryObject(Isolate* isolate,
-                                        Local<Context>& context) {
+ExecutionResult ExecutionUtils::GetJsHandler(const std::string& handler_name,
+                                             Local<Value>& handler,
+                                             std::string& err_msg) noexcept {
+  if (handler_name.empty()) {
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_BAD_HANDLER_NAME);
+  }
+  auto isolate = Isolate::GetCurrent();
+  TryCatch try_catch(isolate);
+  Local<Context> context(isolate->GetCurrentContext());
+
+  Local<v8::String> local_name =
+      v8::String::NewFromUtf8(isolate, handler_name.data(),
+                              v8::NewStringType::kNormal,
+                              static_cast<uint32_t>(handler_name.length()))
+          .ToLocalChecked();
+
+  // If there is no handler function, or if it is not a function,
+  // bail out
+  if (!context->Global()->Get(context, local_name).ToLocal(&handler) ||
+      !handler->IsFunction()) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_HANDLER_INVALID_FUNCTION);
+  }
+
+  return core::SuccessExecutionResult();
+}
+
+ExecutionResult ExecutionUtils::CompileRunWASM(const std::string& wasm,
+                                               std::string& err_msg) noexcept {
+  auto isolate = Isolate::GetCurrent();
+  v8::HandleScope handle_scope(isolate);
+  TryCatch try_catch(isolate);
+  Local<Context> context(isolate->GetCurrentContext());
+
+  auto module_maybe = v8::WasmModuleObject::Compile(
+      isolate,
+      v8::MemorySpan<const uint8_t>(
+          reinterpret_cast<const unsigned char*>(wasm.c_str()), wasm.length()));
+  Local<v8::WasmModuleObject> wasm_module;
+  if (!module_maybe.ToLocal(&wasm_module)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_WASM_COMPILE_FAILURE);
+  }
+
+  Local<Value> web_assembly;
+  if (!context->Global()
+           ->Get(context, v8::String::NewFromUtf8(isolate, kWebAssemblyTag)
+                              .ToLocalChecked())
+           .ToLocal(&web_assembly)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
+  }
+
+  Local<Value> wasm_instance;
+  if (!web_assembly.As<v8::Object>()
+           ->Get(
+               context,
+               v8::String::NewFromUtf8(isolate, kInstanceTag).ToLocalChecked())
+           .ToLocal(&wasm_instance)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
+  }
+
+  auto wasm_imports = ExecutionUtils::GenerateWasmImports(isolate);
+
+  Local<Value> instance_args[] = {wasm_module, wasm_imports};
+  Local<Value> wasm_construct;
+  if (!wasm_instance.As<v8::Object>()
+           ->CallAsConstructor(context, 2, instance_args)
+           .ToLocal(&wasm_construct)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
+  }
+
+  Local<Value> wasm_exports;
+  if (!wasm_construct.As<v8::Object>()
+           ->Get(context,
+                 v8::String::NewFromUtf8(isolate, kExportsTag).ToLocalChecked())
+           .ToLocal(&wasm_exports)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
+  }
+
+  // Register wasm_exports object in context.
+  if (!context->Global()
+           ->Set(context,
+                 v8::String::NewFromUtf8(isolate, kRegisteredWasmExports)
+                     .ToLocalChecked(),
+                 wasm_exports)
+           .ToChecked()) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
+  }
+
+  return core::SuccessExecutionResult();
+}
+
+ExecutionResult ExecutionUtils::GetWasmHandler(const std::string& handler_name,
+                                               Local<Value>& handler,
+                                               std::string& err_msg) noexcept {
+  auto isolate = Isolate::GetCurrent();
+  TryCatch try_catch(isolate);
+  Local<Context> context(isolate->GetCurrentContext());
+
+  // Get wasm export object.
+  Local<Value> wasm_exports;
+  if (!context->Global()
+           ->Get(context,
+                 v8::String::NewFromUtf8(isolate, kRegisteredWasmExports)
+                     .ToLocalChecked())
+           .ToLocal(&wasm_exports)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_WASM_OBJECT_RETRIEVAL_FAILURE);
+  }
+
+  // Fetch out the handler name from code object.
+  auto str = std::string(handler_name.c_str(), handler_name.size());
+  Local<v8::String> local_name =
+      TypeConverter<std::string>::ToV8(isolate, str).As<v8::String>();
+
+  // If there is no handler function, or if it is not a function,
+  // bail out
+  if (!wasm_exports.As<v8::Object>()
+           ->Get(context, local_name)
+           .ToLocal(&handler) ||
+      !handler->IsFunction()) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_HANDLER_INVALID_FUNCTION);
+  }
+
+  return core::SuccessExecutionResult();
+}
+
+void ExecutionUtils::GlobalV8FunctionCallback(
+    const FunctionCallbackInfo<Value>& info) {
+  auto isolate = info.GetIsolate();
+  Isolate::Scope isolate_scope(isolate);
+  HandleScope handle_scope(isolate);
+
+  if (info.Data().IsEmpty() || !info.Data()->IsExternal()) {
+    isolate->ThrowError("Unexpected data in global callback");
+    return;
+  }
+
+  // Get the user-provided function
+  Local<External> data_object = Local<External>::Cast(info.Data());
+  auto user_function =
+      reinterpret_cast<FunctionBindingObjectBase*>(data_object->Value());
+
+  if (user_function->Signature != FunctionBindingObjectBase::KnownSignature) {
+    // This signals a bad cast. The pointer we got is not really a
+    // FunctionBindingObjectBase
+    isolate->ThrowError("Unexpected function in global callback");
+    return;
+  }
+
+  user_function->InvokeInternalHandler(info);
+}
+
+ExecutionResult ExecutionUtils::CreateUnboundScript(
+    Global<UnboundScript>& unbound_script, Isolate* isolate,
+    const std::string& js, std::string& err_msg) noexcept {
+  Isolate::Scope isolate_scope(isolate);
+  v8::HandleScope handle_scope(isolate);
+
+  Local<Context> context = Context::New(isolate);
+  Context::Scope context_scope(context);
+
+  Local<UnboundScript> local_unbound_script;
+  auto execution_result =
+      ExecutionUtils::CompileRunJS(js, err_msg, &local_unbound_script);
+  RETURN_IF_FAILURE(execution_result);
+
+  // Store unbound_script_ in a Global handle in isolate.
+  unbound_script.Reset(isolate, local_unbound_script);
+
+  return core::SuccessExecutionResult();
+}
+
+ExecutionResult ExecutionUtils::BindUnboundScript(
+    const Global<UnboundScript>& global_unbound_script,
+    std::string& err_msg) noexcept {
+  auto isolate = Isolate::GetCurrent();
+  TryCatch try_catch(isolate);
+  Local<Context> context(isolate->GetCurrentContext());
+  Context::Scope context_scope(context);
+
+  Local<UnboundScript> unbound_script =
+      Local<UnboundScript>::New(isolate, global_unbound_script);
+
+  Local<Value> script_result;
+  if (!unbound_script->BindToCurrentContext()->Run(context).ToLocal(
+          &script_result)) {
+    err_msg = ExecutionUtils::DescribeError(isolate, &try_catch);
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_BIND_UNBOUND_SCRIPT_FAILED);
+  }
+
+  return core::SuccessExecutionResult();
+}
+
+Local<Value> ExecutionUtils::GetWasmMemoryObject(Isolate* isolate,
+                                                 Local<Context>& context) {
   auto wasm_exports = context->Global()
                           ->Get(context, TypeConverter<std::string>::ToV8(
                                              isolate, kRegisteredWasmExports))
@@ -161,33 +336,90 @@ static Local<Value> GetWasmMemoryObject(Isolate* isolate,
   return wasm_memory_maybe.ToLocalChecked();
 }
 
-/**
- * @brief Parse the handler input to be provided to a WASM handler.
- * This function handles writing to the WASM memory if necessary.
- *
- * @param isolate
- * @param context
- * @param input
- * @return Local<Array> The input arguments to be provided to the WASM handler
- */
-static Local<Array> ParseAsWasmInput(Isolate* isolate, Local<Context>& context,
-                                     const RomaVector<RomaString>& input) {
-  // Parse it into JS types so we can distinguish types
-  auto parsed_args = ParseAsJsInput(input).As<Array>();
-  const int argc = parsed_args.As<Array>()->Length();
-  Local<Array> argv = Array::New(isolate, argc);
+Local<Array> ExecutionUtils::InputToLocalArgv(
+    const std::vector<std::string_view>& input, bool is_wasm) noexcept {
+  auto isolate = Isolate::GetCurrent();
+  auto context = isolate->GetCurrentContext();
 
-  auto wasm_memory = GetWasmMemoryObject(isolate, context);
+  if (is_wasm) {
+    return ExecutionUtils::ParseAsWasmInput(isolate, context, input);
+  }
+
+  return ExecutionUtils::ParseAsJsInput(input);
+}
+
+string ExecutionUtils::ExtractMessage(Isolate* isolate,
+                                      Local<v8::Message> message) noexcept {
+  string exception_msg;
+  TypeConverter<string>::FromV8(isolate, message->Get(), &exception_msg);
+  // We want to return a message of the form:
+  //
+  //     line 7: Uncaught ReferenceError: blah is not defined.
+  //
+  int line;
+  // Sometimes for multi-line errors there is no line number.
+  if (!message->GetLineNumber(isolate->GetCurrentContext()).To(&line)) {
+    return absl::StrFormat("%s", exception_msg);
+  }
+
+  return absl::StrFormat("line %i: %s", line, exception_msg);
+}
+
+Local<v8::Array> ExecutionUtils::ParseAsJsInput(
+    const std::vector<std::string_view>& input) {
+  auto isolate = Isolate::GetCurrent();
+  auto context = isolate->GetCurrentContext();
+
+  const int argc = input.size();
+
+  Local<v8::Array> argv = v8::Array::New(isolate, argc);
+  for (auto i = 0; i < argc; ++i) {
+    Local<v8::String> arg_str =
+        v8::String::NewFromUtf8(isolate, input[i].data(),
+                                v8::NewStringType::kNormal,
+                                static_cast<uint32_t>(input[i].length()))
+            .ToLocalChecked();
+
+    Local<Value> arg = v8::Undefined(isolate);
+    if (arg_str->Length() > 0 &&
+        !v8::JSON::Parse(context, arg_str).ToLocal(&arg)) {
+      return Local<v8::Array>();
+    }
+    if (!argv->Set(context, i, arg).ToChecked()) {
+      return Local<v8::Array>();
+    }
+  }
+
+  return argv;
+}
+
+Local<v8::Array> ExecutionUtils::ParseAsWasmInput(
+    Isolate* isolate, Local<Context>& context,
+    const std::vector<std::string_view>& input) {
+  // Parse it into JS types so we can distinguish types
+  auto parsed_args = ExecutionUtils::ParseAsJsInput(input);
+  const int argc = parsed_args.IsEmpty() ? 0 : parsed_args->Length();
+
+  // Parsing the input failed
+  if (argc != input.size()) {
+    return Local<v8::Array>();
+  }
+
+  Local<v8::Array> argv = v8::Array::New(isolate, argc);
+
+  auto wasm_memory = ExecutionUtils::GetWasmMemoryObject(isolate, context);
 
   if (wasm_memory->IsUndefined()) {
-    // The module has not memory object. This is either a very basic WASM, or
+    // The module has no memory object. This is either a very basic WASM, or
     // invalid, we'll just exit early, and pass the input as it was parsed.
     return parsed_args;
   }
 
-  auto wasm_memory_blob =
-      wasm_memory.As<WasmMemoryObject>()->Buffer()->GetBackingStore()->Data();
-  auto wasm_memory_size = wasm_memory.As<WasmMemoryObject>()
+  auto wasm_memory_blob = wasm_memory.As<v8::WasmMemoryObject>()
+                              ->Buffer()
+                              ->GetBackingStore()
+                              ->Data();
+  auto wasm_memory_size = wasm_memory.As<v8::WasmMemoryObject>()
                               ->Buffer()
                               ->GetBackingStore()
                               ->ByteLength();
@@ -201,7 +433,7 @@ static Local<Array> ParseAsWasmInput(Isolate* isolate, Local<Context>& context,
     if (!arg->IsUint32() && !arg->IsInt32() && !arg->IsString() &&
         !arg->IsArray()) {
       argv.Clear();
-      return Local<Array>();
+      return Local<v8::Array>();
     }
 
     Local<Value> new_arg;
@@ -211,180 +443,63 @@ static Local<Array> ParseAsWasmInput(Isolate* isolate, Local<Context>& context,
       new_arg = arg;
     }
     if (arg->IsString()) {
-      string str_value;
-      TypeConverter<string>::FromV8(isolate, arg, &str_value);
-      auto string_ptr_in_wasm_memory = WasmSerializer::WriteCustomString(
+      std::string str_value;
+      TypeConverter<std::string>::FromV8(isolate, arg, &str_value);
+      auto string_ptr_in_wasm_memory = wasm::WasmSerializer::WriteCustomString(
           wasm_memory_blob, wasm_memory_size, wasm_memory_offset, str_value);
 
       // The serialization failed
       if (string_ptr_in_wasm_memory == UINT32_MAX) {
-        return Local<Array>();
+        return Local<v8::Array>();
       }
 
       new_arg =
           TypeConverter<uint32_t>::ToV8(isolate, string_ptr_in_wasm_memory);
       wasm_memory_offset +=
-          RomaWasmStringRepresentation::ComputeMemorySizeFor(str_value);
+          wasm::RomaWasmStringRepresentation::ComputeMemorySizeFor(str_value);
     }
     if (arg->IsArray()) {
-      vector<string> vec_value;
-      bool worked =
-          TypeConverter<vector<string>>::FromV8(isolate, arg, &vec_value);
+      std::vector<std::string> vec_value;
+      bool worked = TypeConverter<std::vector<std::string>>::FromV8(
+          isolate, arg, &vec_value);
 
       if (!worked) {
         // This means the array is not an array of string
-        return Local<Array>();
+        return Local<v8::Array>();
       }
 
-      auto list_ptr_in_wasm_memory = WasmSerializer::WriteCustomListOfString(
-          wasm_memory_blob, wasm_memory_size, wasm_memory_offset, vec_value);
+      auto list_ptr_in_wasm_memory =
+          wasm::WasmSerializer::WriteCustomListOfString(
+              wasm_memory_blob, wasm_memory_size, wasm_memory_offset,
+              vec_value);
 
       // The serialization failed
       if (list_ptr_in_wasm_memory == UINT32_MAX) {
-        return Local<Array>();
+        return Local<v8::Array>();
       }
 
       new_arg = TypeConverter<uint32_t>::ToV8(isolate, list_ptr_in_wasm_memory);
       wasm_memory_offset +=
-          RomaWasmListOfStringRepresentation::ComputeMemorySizeFor(vec_value);
+          wasm::RomaWasmListOfStringRepresentation::ComputeMemorySizeFor(
+              vec_value);
     }
 
     if (!argv->Set(context, i, new_arg).ToChecked()) {
-      return Local<Array>();
+      return Local<v8::Array>();
     }
   }
 
   return argv;
 }
 
-Local<Array> ExecutionUtils::InputToLocalArgv(
-    const RomaVector<RomaString>& input, bool is_wasm) noexcept {
-  auto isolate = Isolate::GetCurrent();
-  auto context = isolate->GetCurrentContext();
-
-  if (is_wasm) {
-    return ParseAsWasmInput(isolate, context, input);
-  }
-
-  return ParseAsJsInput(input);
-}
-
-static string DescribeError(Isolate* isolate, TryCatch* try_catch) noexcept {
-  auto context = isolate->GetCurrentContext();
-
-  auto exception = try_catch->Exception();
-  if (exception.IsEmpty()) {
-    return std::string();
-  }
-
-  Local<String> local_exception;
-  if (!exception->ToString(context).ToLocal(&local_exception)) {
-    return std::string();
-  }
-  string exception_msg;
-  TypeConverter<string>::FromV8(isolate, local_exception, &exception_msg);
-
+string ExecutionUtils::DescribeError(Isolate* isolate,
+                                     TryCatch* try_catch) noexcept {
   const Local<Message> message = try_catch->Message();
-
-  // If there's no message, just return the exception_msg.
   if (message.IsEmpty()) {
-    return exception_msg;
+    return std::string();
   }
 
-  // We want to return a message of the form:
-  //
-  //     7: ReferenceError: blah is not defined.
-  //
-  int line;
-  // Sometimes for multi-line errors there is no line number.
-  if (!message->GetLineNumber(isolate->GetCurrentContext()).To(&line)) {
-    return absl::StrFormat("%s", exception_msg);
-  }
-
-  return absl::StrFormat("%i: %s", line, exception_msg);
-}
-
-ExecutionResult ExecutionUtils::ReportException(TryCatch* try_catch,
-                                                RomaString& err_msg) noexcept {
-  auto isolate = Isolate::GetCurrent();
-  HandleScope handle_scope(isolate);
-  String::Utf8Value exception(isolate, try_catch->Exception());
-
-  // Checks isolate is currently terminating because of a call to
-  // TerminateExecution.
-  if (isolate->IsExecutionTerminating()) {
-    err_msg = RomaString(kTimeoutErrorMsg);
-    return FailureExecutionResult(SC_ROMA_V8_WORKER_SCRIPT_EXECUTION_TIMEOUT);
-  }
-
-  err_msg = DescribeError(isolate, try_catch);
-
-  return FailureExecutionResult(SC_UNKNOWN);
-}
-
-ExecutionResult ExecutionUtils::CompileRunJS(
-    const RomaString& js, RomaString& err_msg,
-    Local<UnboundScript>* unbound_script) noexcept {
-  auto isolate = Isolate::GetCurrent();
-  TryCatch try_catch(isolate);
-  Local<Context> context(isolate->GetCurrentContext());
-
-  Local<String> js_source;
-  if (!ExecutionUtils::RomaStrToLocalStr(js, js_source)) {
-    // ReportException just used to catch exception for err_msg. No
-    // manually isolate TerminateExecution() call in CompileRunJS(), so don't
-    // need to convert the failure result with GetExecutionResult();
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(SC_ROMA_V8_WORKER_BAD_SOURCE_CODE);
-  }
-
-  Local<Script> script;
-  if (!Script::Compile(context, js_source).ToLocal(&script)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(SC_ROMA_V8_WORKER_CODE_COMPILE_FAILURE);
-  }
-
-  if (unbound_script) {
-    *unbound_script = script->GetUnboundScript();
-  }
-
-  Local<Value> script_result;
-  if (!script->Run(context).ToLocal(&script_result)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(SC_ROMA_V8_WORKER_SCRIPT_RUN_FAILURE);
-  }
-
-  return SuccessExecutionResult();
-}
-
-ExecutionResult ExecutionUtils::GetJsHandler(const RomaString& handler_name,
-                                             Local<Value>& handler,
-                                             RomaString& err_msg) noexcept {
-  if (handler_name.empty()) {
-    return FailureExecutionResult(SC_ROMA_V8_WORKER_BAD_HANDLER_NAME);
-  }
-  auto isolate = Isolate::GetCurrent();
-  TryCatch try_catch(isolate);
-  Local<Context> context(isolate->GetCurrentContext());
-
-  // Fetch out the handler name from code object.
-  Local<String> local_name;
-  if (!ExecutionUtils::RomaStrToLocalStr(handler_name, local_name)) {
-    auto exception_result = ReportException(&try_catch, err_msg);
-    return GetExecutionResult(exception_result,
-                              SC_ROMA_V8_WORKER_BAD_HANDLER_NAME);
-  }
-
-  // If there is no handler function, or if it is not a function,
-  // bail out
-  if (!context->Global()->Get(context, local_name).ToLocal(&handler) ||
-      !handler->IsFunction()) {
-    auto exception_result = ReportException(&try_catch, err_msg);
-    return GetExecutionResult(exception_result,
-                              SC_ROMA_V8_WORKER_HANDLER_INVALID_FUNCTION);
-  }
-
-  return SuccessExecutionResult();
+  return ExecutionUtils::ExtractMessage(isolate, message);
 }
 
 /**
@@ -463,7 +578,7 @@ static void RegisterObjectInWasmImports(Isolate* isolate,
  * @param isolate
  * @return Local<Object>
  */
-static Local<Object> GenerateWasmImports(Isolate* isolate) {
+Local<Object> ExecutionUtils::GenerateWasmImports(Isolate* isolate) {
   auto imports_object = v8::Object::New(isolate);
 
   auto wasi_object = GenerateWasiObject(isolate);
@@ -472,127 +587,6 @@ static Local<Object> GenerateWasmImports(Isolate* isolate) {
                               wasi_object);
 
   return imports_object;
-}
-
-ExecutionResult ExecutionUtils::CompileRunWASM(const RomaString& wasm,
-                                               RomaString& err_msg) noexcept {
-  auto isolate = Isolate::GetCurrent();
-  HandleScope handle_scope(isolate);
-  TryCatch try_catch(isolate);
-  Local<Context> context(isolate->GetCurrentContext());
-
-  auto module_maybe = WasmModuleObject::Compile(
-      isolate,
-      MemorySpan<const uint8_t>(
-          reinterpret_cast<const unsigned char*>(wasm.c_str()), wasm.length()));
-  Local<WasmModuleObject> wasm_module;
-  if (!module_maybe.ToLocal(&wasm_module)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(SC_ROMA_V8_WORKER_WASM_COMPILE_FAILURE);
-  }
-
-  Local<Value> web_assembly;
-  if (!context->Global()
-           ->Get(context,
-                 String::NewFromUtf8(isolate, kWebAssemblyTag).ToLocalChecked())
-           .ToLocal(&web_assembly)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(
-        SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
-  }
-
-  Local<Value> wasm_instance;
-  if (!web_assembly.As<Object>()
-           ->Get(context,
-                 String::NewFromUtf8(isolate, kInstanceTag).ToLocalChecked())
-           .ToLocal(&wasm_instance)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(
-        SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
-  }
-
-  auto wasm_imports = GenerateWasmImports(isolate);
-
-  Local<Value> instance_args[] = {wasm_module, wasm_imports};
-  Local<Value> wasm_construct;
-  if (!wasm_instance.As<Object>()
-           ->CallAsConstructor(context, 2, instance_args)
-           .ToLocal(&wasm_construct)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(
-        SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
-  }
-
-  Local<Value> wasm_exports;
-  if (!wasm_construct.As<Object>()
-           ->Get(context,
-                 String::NewFromUtf8(isolate, kExportsTag).ToLocalChecked())
-           .ToLocal(&wasm_exports)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(
-        SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
-  }
-
-  // Register wasm_exports object in context.
-  if (!context->Global()
-           ->Set(context,
-                 String::NewFromUtf8(isolate, kRegisteredWasmExports)
-                     .ToLocalChecked(),
-                 wasm_exports)
-           .ToChecked()) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(
-        SC_ROMA_V8_WORKER_WASM_OBJECT_CREATION_FAILURE);
-  }
-
-  return SuccessExecutionResult();
-}
-
-ExecutionResult ExecutionUtils::GetWasmHandler(const RomaString& handler_name,
-                                               Local<Value>& handler,
-                                               RomaString& err_msg) noexcept {
-  auto isolate = Isolate::GetCurrent();
-  TryCatch try_catch(isolate);
-  Local<Context> context(isolate->GetCurrentContext());
-
-  // Get wasm export object.
-  Local<Value> wasm_exports;
-  if (!context->Global()
-           ->Get(context, String::NewFromUtf8(isolate, kRegisteredWasmExports)
-                              .ToLocalChecked())
-           .ToLocal(&wasm_exports)) {
-    ReportException(&try_catch, err_msg);
-    return FailureExecutionResult(
-        SC_ROMA_V8_WORKER_WASM_OBJECT_RETRIEVAL_FAILURE);
-  }
-
-  // Fetch out the handler name from code object.
-  Local<String> local_name;
-  if (!ExecutionUtils::RomaStrToLocalStr(handler_name, local_name)) {
-    auto exception_result = ReportException(&try_catch, err_msg);
-    return GetExecutionResult(exception_result,
-                              SC_ROMA_V8_WORKER_BAD_HANDLER_NAME);
-  }
-
-  // If there is no handler function, or if it is not a function,
-  // bail out
-  if (!wasm_exports.As<Object>()->Get(context, local_name).ToLocal(&handler) ||
-      !handler->IsFunction()) {
-    auto exception_result = ReportException(&try_catch, err_msg);
-    return GetExecutionResult(exception_result,
-                              SC_ROMA_V8_WORKER_HANDLER_INVALID_FUNCTION);
-  }
-
-  return SuccessExecutionResult();
-}
-
-ExecutionResult ExecutionUtils::GetExecutionResult(
-    const ExecutionResult& exception_result, StatusCode defined_code) noexcept {
-  if (exception_result != FailureExecutionResult(SC_UNKNOWN)) {
-    return exception_result;
-  }
-
-  return FailureExecutionResult(defined_code);
 }
 
 Local<Value> ExecutionUtils::ReadFromWasmMemory(Isolate* isolate,
@@ -644,4 +638,32 @@ Local<Value> ExecutionUtils::ReadFromWasmMemory(Isolate* isolate,
 
   return ret_val;
 }
+
+ExecutionResult ExecutionUtils::V8PromiseHandler(Isolate* isolate,
+                                                 Local<Value>& result,
+                                                 std::string& err_msg) {
+  // We don't need a callback handler for now. The default handler will wrap
+  // the successful result of Promise::kFulfilled and the exception message of
+  // Promise::kRejected.
+  auto promise = result.As<v8::Promise>();
+
+  // Wait until promise state isn't pending.
+  while (promise->State() == v8::Promise::kPending) {
+    isolate->PerformMicrotaskCheckpoint();
+  }
+
+  if (promise->State() == v8::Promise::kRejected) {
+    // Extract the exception message from a rejected promise.
+    const Local<v8::Message> message =
+        v8::Exception::CreateMessage(isolate, promise->Result());
+    err_msg = ExecutionUtils::ExtractMessage(isolate, message);
+    promise->MarkAsHandled();
+    return core::FailureExecutionResult(
+        core::errors::SC_ROMA_V8_WORKER_ASYNC_EXECUTION_FAILED);
+  }
+
+  result = promise->Result();
+  return core::SuccessExecutionResult();
+}
+
 }  // namespace google::scp::roma::worker

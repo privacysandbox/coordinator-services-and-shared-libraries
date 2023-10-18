@@ -57,4 +57,12 @@ DEFINE_ERROR_CODE(SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT,
                   SC_HTTP2_SERVER, 0x0009,
                   "Http2Server failed to initialize TLS context.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
+
+DEFINE_ERROR_CODE(SC_HTTP2_SERVER_FAILED_TO_RESOLVE_ROUTE, SC_HTTP2_SERVER,
+                  0x000A, "Http2Server failed to resolve route for request.",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+
+DEFINE_ERROR_CODE(SC_HTTP2_SERVER_FAILED_TO_ROUTE, SC_HTTP2_SERVER, 0x000B,
+                  "Http2Server failed to route the request.",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 }  // namespace google::scp::core::errors

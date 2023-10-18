@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 output "acm_certificate_validation_arn" {
   value = aws_acm_certificate_validation.cert.certificate_arn
 }

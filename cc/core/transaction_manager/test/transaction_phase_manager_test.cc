@@ -140,4 +140,47 @@ TEST(TransactionPhaseManagerTests, AbortedPhase) {
                 TransactionPhase::Aborted, RetryExecutionResult(1)),
             TransactionPhase::Aborted);
 }
+
+TEST(TransactionPhaseManagerTests, CanProceedToAbortAtPhase) {
+  EXPECT_FALSE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::NotStarted));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::Begin));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::Prepare));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::Commit));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::CommitNotify));
+  EXPECT_FALSE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::Committed));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::AbortNotify));
+  EXPECT_FALSE(TransactionPhaseManager::CanProceedToAbortAtPhase(
+      TransactionPhase::Aborted));
+  EXPECT_FALSE(
+      TransactionPhaseManager::CanProceedToAbortAtPhase(TransactionPhase::End));
+}
+
+TEST(TransactionPhaseManagerTests, CanProceedToEndAtPhase) {
+  EXPECT_FALSE(TransactionPhaseManager::CanProceedToEndAtPhase(
+      TransactionPhase::NotStarted));
+  EXPECT_TRUE(
+      TransactionPhaseManager::CanProceedToEndAtPhase(TransactionPhase::Begin));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToEndAtPhase(
+      TransactionPhase::Prepare));
+  EXPECT_FALSE(TransactionPhaseManager::CanProceedToEndAtPhase(
+      TransactionPhase::Commit));
+  EXPECT_FALSE(TransactionPhaseManager::CanProceedToEndAtPhase(
+      TransactionPhase::CommitNotify));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToEndAtPhase(
+      TransactionPhase::Committed));
+  EXPECT_FALSE(TransactionPhaseManager::CanProceedToEndAtPhase(
+      TransactionPhase::AbortNotify));
+  EXPECT_TRUE(TransactionPhaseManager::CanProceedToEndAtPhase(
+      TransactionPhase::Aborted));
+  EXPECT_TRUE(
+      TransactionPhaseManager::CanProceedToEndAtPhase(TransactionPhase::End));
+}
+
 }  // namespace google::scp::core::test

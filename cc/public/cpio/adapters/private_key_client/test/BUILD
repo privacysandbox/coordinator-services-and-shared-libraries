@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_test(
@@ -27,6 +29,7 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/private_key_client_provider/src:private_key_client_provider_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/adapters/private_key_client/mock:private_key_client_mock",
         "//cc/public/cpio/core/mock:lib_cpio_mock",
         "//cc/public/cpio/interface:cpio_errors",

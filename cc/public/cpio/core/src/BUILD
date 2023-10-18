@@ -12,6 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 exports_files(["cpio.cc"])
+
+cc_library(
+    name = "cpio_utils_lib",
+    srcs = [
+        "cpio_utils.cc",
+        "cpio_utils.h",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:interface_lib",
+        "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
+        "//cc/cpio/client_providers/global_cpio/src/cpio_provider:cpio_provider_lib",
+    ],
+)

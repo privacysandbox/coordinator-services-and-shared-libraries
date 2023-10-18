@@ -19,10 +19,25 @@ package google.scp.coordinator.protos.keymanagement.shared.api.v1;
 option java_package = "com.google.scp.coordinator.protos.keymanagement.shared.api.v1";
 option java_outer_classname = "EncryptionKeyTypeProto";
 
-/** Type of encryption key and how it is split */
+/**
+ * Type of encryption key and how it is split
+ * Note: Consider backward compatibility on client side when new enum type is
+ * added. Unsynchronized client would assign the default value for unknown enum
+ * type.
+ */
 enum EncryptionKeyType {
   /** Single-coordinator managed key using a Tink hybrid key */
   SINGLE_PARTY_HYBRID_KEY = 0;
-  /** Multi-coordinator using a Tink hybrid key, split using XOR with random data */
+  /** Multi-coordinator using a Tink hybrid key, split using XOR with random
+   * data */
   MULTI_PARTY_HYBRID_EVEN_KEYSPLIT = 1;
+  /**
+   * Adding a new value to this enum may have unexpected consequence for clients
+   * on older version of this proto because some clients parse unknown enum into
+   * the 0 value.
+   * Normally, this is non issue as 0 is reserved for `UNSPECIFIED`, however,
+   * since 0 for this enum used for application logic, it can cause client to
+   * unintentionally treat it as whatever 0 means i.e. `SINGLE_PARTY_HYBRID_KEY`
+   * here.
+   */
 }

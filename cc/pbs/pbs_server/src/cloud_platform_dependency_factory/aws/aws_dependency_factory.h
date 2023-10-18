@@ -44,14 +44,20 @@ class AwsDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   std::unique_ptr<core::BlobStorageProviderInterface>
   ConstructBlobStorageClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor) noexcept
-      override;
+      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+      core::AsyncPriority async_execution_priority =
+          kDefaultAsyncPriorityForCallbackExecution,
+      core::AsyncPriority io_async_execution_priority =
+          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
 
   std::unique_ptr<core::NoSQLDatabaseProviderInterface>
   ConstructNoSQLDatabaseClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor) noexcept
-      override;
+      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+      core::AsyncPriority async_execution_priority =
+          kDefaultAsyncPriorityForCallbackExecution,
+      core::AsyncPriority io_async_execution_priority =
+          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
 
   std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
   ConstructInstanceAuthorizer(std::shared_ptr<core::HttpClientInterface>
@@ -66,8 +72,7 @@ class AwsDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
           auth_token_provider) noexcept override;
 
-  std::unique_ptr<cpio::client_providers::MetricClientProviderInterface>
-  ConstructMetricClient(
+  std::unique_ptr<cpio::MetricClientInterface> ConstructMetricClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
       std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>

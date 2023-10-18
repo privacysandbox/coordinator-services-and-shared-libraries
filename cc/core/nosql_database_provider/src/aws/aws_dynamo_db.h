@@ -38,7 +38,7 @@ class AwsDynamoDB : public NoSQLDatabaseProviderInterface {
  protected:
   explicit AwsDynamoDB(
       std::shared_ptr<Aws::DynamoDB::DynamoDBClient> dynamo_db_client,
-      std::shared_ptr<AsyncExecutorInterface>& async_executor)
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor)
       : async_executor_(async_executor), dynamo_db_client_(dynamo_db_client) {}
 
  public:

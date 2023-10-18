@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "testing_utils.h"
 
 #include <fstream>
+
+#include "absl/log/check.h"
 
 using std::ifstream;
 using std::runtime_error;
@@ -27,9 +28,7 @@ std::vector<char> WasmTestingUtils::LoadWasmFile(const std::string& file_path) {
   vector<char> file_contents;
 
   ifstream input_file(file_path);
-  if (!input_file.good()) {
-    throw runtime_error("File: " + file_path + " does not exist.");
-  }
+  CHECK(input_file.good()) << "File: " + file_path + " does not exist.";
 
   input_file.seekg(0, std::ios::end);
   size_t filesize = input_file.tellg();

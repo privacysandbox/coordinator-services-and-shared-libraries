@@ -16,52 +16,35 @@
 
 #pragma once
 
+#include <gmock/gmock.h>
+
 #include <memory>
 #include <vector>
 
-#include <google/protobuf/util/message_differencer.h>
-
 #include "core/interface/async_context.h"
-#include "core/message_router/src/message_router.h"
 #include "cpio/client_providers/interface/kms_client_provider_interface.h"
-#include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockKmsClientProvider : public KmsClientProviderInterface {
  public:
-  core::ExecutionResult init_result_mock = core::SuccessExecutionResult();
-
-  core::ExecutionResult Init() noexcept override { return init_result_mock; }
-
-  core::ExecutionResult run_result_mock = core::SuccessExecutionResult();
-
-  core::ExecutionResult Run() noexcept override { return run_result_mock; }
-
-  core::ExecutionResult stop_result_mock = core::SuccessExecutionResult();
-
-  core::ExecutionResult Stop() noexcept override { return stop_result_mock; }
-
-  std::function<core::ExecutionResult(
-      core::AsyncContext<KmsDecryptRequest, KmsDecryptResponse>&)>
-      decrypt_mock;
-
-  core::ExecutionResult decrypt_result_mock = core::SuccessExecutionResult();
-  std::shared_ptr<KmsDecryptResponse> decrypt_response_mock;
-
-  core::ExecutionResult Decrypt(
-      core::AsyncContext<KmsDecryptRequest, KmsDecryptResponse>&
-          decrypt_context) noexcept override {
-    if (decrypt_mock) {
-      return decrypt_mock(decrypt_context);
-    }
-
-    if (decrypt_response_mock) {
-      decrypt_context.result = decrypt_result_mock;
-      decrypt_context.response = decrypt_response_mock;
-      decrypt_context.Finish();
-    }
-    return decrypt_result_mock;
+  MockKmsClientProvider() {
+    ON_CALL(*this, Init)
+        .WillByDefault(testing::Return(core::SuccessExecutionResult()));
+    ON_CALL(*this, Run)
+        .WillByDefault(testing::Return(core::SuccessExecutionResult()));
+    ON_CALL(*this, Stop)
+        .WillByDefault(testing::Return(core::SuccessExecutionResult()));
   }
+
+  MOCK_METHOD(core::ExecutionResult, Init, (), (noexcept, override));
+  MOCK_METHOD(core::ExecutionResult, Run, (), (noexcept, override));
+  MOCK_METHOD(core::ExecutionResult, Stop, (), (noexcept, override));
+
+  MOCK_METHOD(core::ExecutionResult, Decrypt,
+              ((core::AsyncContext<
+                  google::cmrt::sdk::kms_service::v1::DecryptRequest,
+                  google::cmrt::sdk::kms_service::v1::DecryptResponse>&)),
+              (noexcept, override));
 };
 }  // namespace google::scp::cpio::client_providers::mock

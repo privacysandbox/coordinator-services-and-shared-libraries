@@ -105,7 +105,7 @@ class ConcurrentMap {
    * @param key The key to be erased from the map.
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult Erase(TKey& key) {
+  ExecutionResult Erase(const TKey& key) {
     std::shared_lock lock(concurrent_map_mutex_);
     ExecutionResult execution_result = SuccessExecutionResult();
 

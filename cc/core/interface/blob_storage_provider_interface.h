@@ -30,7 +30,7 @@ namespace google::scp::core {
 struct Blob {
   /// The bucket name.
   std::shared_ptr<std::string> bucket_name;
-  /// The blob name. Note: Used as prefix for ListBlobs.
+  /// The blob name.
   std::shared_ptr<std::string> blob_name;
 };
 
@@ -38,7 +38,7 @@ struct Blob {
 struct BlobRequest {
   /// The bucket name.
   std::shared_ptr<std::string> bucket_name;
-  /// The blob name.
+  /// The blob name. Note: Overloaded use as prefix for ListBlobs.
   std::shared_ptr<std::string> blob_name;
 };
 

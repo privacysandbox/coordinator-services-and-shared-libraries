@@ -26,11 +26,23 @@
 #include <vector>
 
 #include "core/common/concurrent_map/src/concurrent_map.h"
+#include "core/common/global_logger/src/global_logger.h"
 #include "core/common/time_provider/src/time_provider.h"
+#include "core/common/uuid/src/uuid.h"
 #include "core/interface/async_executor_interface.h"
 #include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
+
+static constexpr char kAutoExpiryConcurrentMap[] = "AutoExpiryConcurrentMap";
+
+static constexpr std::chrono::milliseconds
+    kAutoExpiryConcurrentMapStopWaitSleepDuration =
+        std::chrono::milliseconds(100);
+
+static constexpr std::chrono::seconds
+    kAutoExpiryConcurrentMapStopWaitMaxDurationToWait =
+        std::chrono::seconds(10);
 
 namespace google::scp::core::common {
 /**
@@ -138,6 +150,7 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
         on_before_element_deletion_callback_(
             on_before_element_deletion_callback),
         async_executor_(async_executor),
+        pending_garbage_collection_callbacks_(0),
         is_running_(false) {}
 
   ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
@@ -148,11 +161,37 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
   }
 
   ExecutionResult Stop() noexcept override {
+    SCP_INFO(kAutoExpiryConcurrentMap, kZeroUuid, "Stopping...");
     sync_mutex.lock();
     is_running_ = false;
     sync_mutex.unlock();
 
     current_cancellation_callback_();
+
+    // Wait until scheduled work (if any) is completed
+    auto wait_start_timestamp = TimeProvider::GetSteadyTimestampInNanoseconds();
+    while (pending_garbage_collection_callbacks_ > 0) {
+      std::this_thread::sleep_for(
+          kAutoExpiryConcurrentMapStopWaitSleepDuration);
+      // If timeout, then return an error.
+      if ((TimeProvider::GetSteadyTimestampInNanoseconds() -
+           wait_start_timestamp) >=
+          kAutoExpiryConcurrentMapStopWaitMaxDurationToWait) {
+        auto result = FailureExecutionResult(
+            core::errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_STOP_INCOMPLETE);
+        SCP_ERROR(
+            kAutoExpiryConcurrentMap, kZeroUuid, result,
+            "Exiting prematurely. Waited for '%llu' (ms). There are still "
+            "'%llu' pending callbacks.",
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                TimeProvider::GetSteadyTimestampInNanoseconds() -
+                wait_start_timestamp)
+                .count(),
+            pending_garbage_collection_callbacks_.load());
+        return result;
+      }
+    }
+
     return SuccessExecutionResult();
   }
 

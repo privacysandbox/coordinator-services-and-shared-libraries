@@ -14,13 +14,12 @@
 
 #include "pbs/budget_key_transaction_protocols/src/batch_consume_budget_transaction_protocol.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <atomic>
 #include <utility>
 #include <vector>
-
-#include <gmock/gmock.h>
 
 #include "core/interface/async_context.h"
 #include "core/interface/type_def.h"
@@ -29,6 +28,7 @@
 #include "pbs/budget_key_transaction_protocols/mock/mock_consume_budget_transaction_protocol_with_overrides.h"
 #include "pbs/budget_key_transaction_protocols/src/error_codes.h"
 #include "pbs/interface/budget_key_timeframe_manager_interface.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -36,6 +36,7 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::Uuid;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using google::scp::pbs::BudgetKeyTimeframe;
 using google::scp::pbs::budget_key::mock::
@@ -358,7 +359,7 @@ TEST(BatchConsumeBudgetTransactionProtocolTest,
   prepare_batch_consume_budget_context.request->budget_consumptions = {
       {timeframe_bucket1, 1}, {timeframe_bucket2, 1}, {timeframe_bucket3, 1}};
   prepare_batch_consume_budget_context.callback = [&](auto& context) {
-    EXPECT_EQ(context.result, SuccessExecutionResult());
+    EXPECT_SUCCESS(context.result);
     condition = true;
   };
   condition = false;
@@ -409,7 +410,7 @@ TEST(BatchConsumeBudgetTransactionProtocolTest, PrepareSufficientTokens) {
           make_shared<PrepareBatchConsumeBudgetRequest>(
               move(prepare_batch_consume_budget_request)),
           [&](auto& context) {
-            EXPECT_EQ(context.result, SuccessExecutionResult());
+            EXPECT_SUCCESS(context.result);
             condition = true;
           });
 
@@ -548,7 +549,7 @@ TEST(BatchConsumeBudgetTransactionProtocolTest, CommitRetry) {
           make_shared<CommitBatchConsumeBudgetRequest>(
               move(commit_batch_consume_budget_request)),
           [&](auto& context) {
-            EXPECT_EQ(context.result, SuccessExecutionResult());
+            EXPECT_SUCCESS(context.result);
             request_finished = true;
           });
 
@@ -891,7 +892,7 @@ TEST(BatchConsumeBudgetTransactionProtocolTest, CommitBudgetLogUpdateFails) {
           make_shared<CommitBatchConsumeBudgetRequest>(
               move(commit_batch_consume_budget_request)),
           [&](auto& context) {
-            EXPECT_EQ(context.result, FailureExecutionResult(1234));
+            EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1234)));
             request_finished = true;
           });
 
@@ -1005,7 +1006,7 @@ TEST(BatchConsumeBudgetTransactionProtocolTest, CommitSufficientBudget) {
           make_shared<CommitBatchConsumeBudgetRequest>(
               move(commit_batch_consume_budget_request)),
           [&](auto& context) {
-            EXPECT_EQ(context.result, SuccessExecutionResult());
+            EXPECT_SUCCESS(context.result);
             request_finished = true;
           });
 

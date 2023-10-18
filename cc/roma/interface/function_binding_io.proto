@@ -1,0 +1,73 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This is used for communication between JS and C++ functions
+// Binding are C++ functions which are invoked when a JS function is called.
+// This is a two-way proto that will be used to receive input form the JS
+// function, and return output from the C++ function. e.g.
+//
+// JS Code:
+// function main() {
+// return cool_funcion("hello")
+// }
+//
+// C++ Code:
+// void CoolFunction(
+// google::scp::roma::proto::FunctionBindingIoProto& io_object) {
+//  io_object.set_output_string(io_object.input_string() + "Hello");
+// }
+//
+
+syntax = "proto3";
+
+package google.scp.roma.proto;
+
+message ListOfStringProto {
+  repeated string data = 1;
+}
+
+message MapOfStringProto {
+  map<string, string> data = 1;
+}
+
+message FunctionBindingIoProto {
+  // Input
+
+  // Metadata belonging to the function binding call. To be read from the c++
+  // function.
+  map<string, string> metadata = 1;
+
+  // Used to accumulate errors that occur in the JS execution.
+  repeated string errors = 2;
+
+  // The input passed to the function binding call. To be read from the c++
+  // function.
+  oneof input_from_js_oneof {
+    string input_string = 3;
+    ListOfStringProto input_list_of_string = 4;
+    MapOfStringProto input_map_of_string = 5;
+    bytes input_bytes = 20;
+  }
+
+  // Output
+
+  // The output that should be returned by the JS call. To be set by the c++
+  // function.
+  oneof output_to_js_oneof {
+    string output_string = 6;
+    ListOfStringProto output_list_of_string = 7;
+    MapOfStringProto output_map_of_string = 8;
+    bytes output_bytes = 9;
+  }
+}

@@ -14,12 +14,13 @@
 
 #include "pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <gmock/gmock.h>
-
 #include "core/test/utils/conditional_wait.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
+using google::scp::core::test::ResultIs;
 using std::atomic;
 using std::make_shared;
 using std::shared_ptr;
@@ -72,14 +73,14 @@ TEST_F(AwsAuthorizationTokenFetcherTest,
   context.request = make_shared<FetchTokenRequest>();
   context.callback =
       [&](AsyncContext<FetchTokenRequest, FetchTokenResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         EXPECT_NE(context.response->token, "");
         EXPECT_NE(context.response->token_lifetime_in_seconds, seconds::max());
         callback_invoked = true;
         return SuccessExecutionResult();
       };
 
-  EXPECT_EQ(auth_token_fetcher_.FetchToken(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(auth_token_fetcher_.FetchToken(context));
   test::WaitUntil([&]() { return callback_invoked.load(); });
 }
 
@@ -112,12 +113,12 @@ TEST_F(AwsAuthorizationTokenFetcherTest,
   context.request = make_shared<FetchTokenRequest>();
   context.callback =
       [&](AsyncContext<FetchTokenRequest, FetchTokenResponse>& context) {
-        EXPECT_EQ(context.result, FailureExecutionResult(1234));
+        EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1234)));
         callback_invoked = true;
         return SuccessExecutionResult();
       };
 
-  EXPECT_EQ(auth_token_fetcher_.FetchToken(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(auth_token_fetcher_.FetchToken(context));
   test::WaitUntil([&]() { return callback_invoked.load(); });
 }
 

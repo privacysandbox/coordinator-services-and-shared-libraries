@@ -212,7 +212,7 @@ ExecutionResult AwsAuthorizer::Authorize(
       move(http_request),
       bind(&AwsAuthorizer::HandleHttpResponse, this, authorization_context,
            cache_entry_key, _1),
-      authorization_context.activity_id);
+      authorization_context);
   auto result = http_client_->PerformRequest(http_context);
   if (!result.Successful()) {
     authorization_tokens_->Erase(cache_entry_key);
@@ -259,8 +259,8 @@ void AwsAuthorizer::HandleHttpResponse(
   auto execution_result =
       authorization_tokens_->Find(cache_entry_key, auth_token_cache_entry);
   if (!execution_result.Successful()) {
-    DEBUG_CONTEXT(kAWSAuthorizer, authorization_context,
-                  "Cannot find the cached token.");
+    SCP_DEBUG_CONTEXT(kAWSAuthorizer, authorization_context,
+                      "Cannot find the cached token.");
   } else {
     auth_token_cache_entry->authorized_domain =
         authorization_context.response->authorized_domain;

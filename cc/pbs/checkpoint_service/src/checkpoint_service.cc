@@ -16,8 +16,9 @@
 
 #include "checkpoint_service.h"
 
+// IWYU pragma: no_include <bits/chrono.h>
 #include <atomic>
-#include <chrono>
+#include <chrono>  // IWYU pragma: keep
 #include <future>
 #include <list>
 #include <memory>
@@ -27,9 +28,13 @@
 #include <vector>
 
 #include "core/async_executor/src/async_executor.h"
+#include "core/common/global_logger/src/global_logger.h"
+#include "core/common/serialization/src/error_codes.h"
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/common/uuid/src/uuid.h"
+#include "core/interface/async_context.h"
 #include "core/interface/nosql_database_provider_interface.h"
+#include "core/interface/service_interface.h"
 #include "core/journal_service/src/error_codes.h"
 #include "core/journal_service/src/journal_serialization.h"
 #include "core/journal_service/src/journal_service.h"
@@ -54,6 +59,7 @@ using google::scp::core::CheckpointId;
 using google::scp::core::CheckpointLog;
 using google::scp::core::ConfigProviderInterface;
 using google::scp::core::ExecutionResult;
+using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::JournalId;
 using google::scp::core::JournalRecoverRequest;
@@ -85,6 +91,8 @@ using std::promise;
 using std::shared_ptr;
 using std::string;
 using std::thread;
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
 
 // TODO: Use configuration provider to update the following.
 static constexpr char kLastCheckpointBlobName[] = "last_checkpoint";
@@ -101,6 +109,7 @@ ExecutionResult CheckpointService::Init() noexcept {
            .Successful()) {
     checkpointing_interval_in_seconds_ = kDefaultCheckpointIntervalInSeconds;
   }
+
   if (!config_provider_
            ->Get(kPBSJournalCheckpointingMaxJournalEntriesToProcessInEachRun,
                  max_journals_to_process_in_each_checkpoint_run_)
@@ -109,29 +118,38 @@ ExecutionResult CheckpointService::Init() noexcept {
         kDefaultMaxJournalsToCheckpointInEachRun;
   }
 
-  INFO(kCheckpointService, kZeroUuid, kZeroUuid,
-       "Starting Checkpoint Service. Checkpointing Interval in Seconds: %zu, "
-       "Number of journal entries to process in each checkpoint run: %zu",
-       checkpointing_interval_in_seconds_,
-       max_journals_to_process_in_each_checkpoint_run_);
+  if (auto execution_result = FromString(*partition_name_, partition_id_);
+      !execution_result.Successful()) {
+    SCP_ERROR(kCheckpointService, kZeroUuid, execution_result,
+              "Invalid partition name '%s'", partition_name_->c_str());
+    return execution_result;
+  }
+
+  SCP_INFO(kCheckpointService, partition_id_,
+           "Starting Checkpoint Service for Partition with ID: '%s'. "
+           "Checkpointing Interval in Seconds: %zu, "
+           "Number of journal entries to process in each checkpoint run: %zu",
+           ToString(partition_id_).c_str(), checkpointing_interval_in_seconds_,
+           max_journals_to_process_in_each_checkpoint_run_);
 
   return SuccessExecutionResult();
 };
 
 ExecutionResult CheckpointService::Run() noexcept {
-  if (is_running) {
+  if (is_running_) {
     return FailureExecutionResult(
         core::errors::SC_PBS_CHECKPOINT_SERVICE_IS_ALREADY_RUNNING);
   }
 
-  is_running = true;
+  is_running_ = true;
   thread checkpoint_thread([&]() {
-    while (true) {
+    while (is_running_) {
       // This operation must be done synchronously.
       activity_id_ = Uuid::GenerateUuid();
 
-      INFO(kCheckpointService, activity_id_, activity_id_,
-           "Starting checkpointing activity");
+      SCP_INFO(kCheckpointService, activity_id_,
+               "Starting checkpointing activity for Partition with ID: '%s'",
+               ToString(partition_id_).c_str());
 
       auto execution_result = RunCheckpointWorker();
       Shutdown();
@@ -142,10 +160,14 @@ ExecutionResult CheckpointService::Run() noexcept {
             (execution_result.status_code !=
              core::errors::SC_PBS_CHECKPOINT_SERVICE_NO_LOGS_TO_PROCESS)) {
           // TODO: Create an alert.
-          ERROR(kCheckpointService, activity_id_, activity_id_,
-                execution_result, "Checkpointing failed.");
+          SCP_ERROR(kCheckpointService, activity_id_, execution_result,
+                    "Checkpointing failed.");
           continue;
         }
+      }
+
+      if (!is_running_) {
+        break;
       }
 
       // If it was successful sleep for the interval.
@@ -158,12 +180,12 @@ ExecutionResult CheckpointService::Run() noexcept {
 };
 
 ExecutionResult CheckpointService::Stop() noexcept {
-  if (!is_running) {
+  if (!is_running_) {
     return FailureExecutionResult(
         core::errors::SC_PBS_CHECKPOINT_SERVICE_IS_ALREADY_STOPPED);
   }
 
-  is_running = false;
+  is_running_ = false;
   if (worker_thread_.joinable()) {
     worker_thread_.join();
   }
@@ -172,6 +194,8 @@ ExecutionResult CheckpointService::Stop() noexcept {
 };
 
 ExecutionResult CheckpointService::RunCheckpointWorker() noexcept {
+  auto checkpoint_round_start_timestamp =
+      TimeProvider::GetSteadyTimestampInNanoseconds();
   auto execution_result = Bootstrap();
   if (!execution_result.Successful()) {
     return execution_result;
@@ -183,16 +207,26 @@ ExecutionResult CheckpointService::RunCheckpointWorker() noexcept {
     return execution_result;
   }
 
-  DEBUG(kCheckpointService, activity_id_, activity_id_,
-        "Last processed journal id in this recovery run: %llu.",
-        last_processed_journal_id);
+  SCP_INFO(
+      kCheckpointService, activity_id_,
+      "Checkpoint run's Journal Recovery finished. "
+      "Last processed journal id: %llu. Time taken to recover: '%llu' (ms)",
+      last_processed_journal_id_,
+      duration_cast<milliseconds>(
+          TimeProvider::GetSteadyTimestampInNanoseconds() -
+          checkpoint_round_start_timestamp)
+          .count());
+
   if (last_processed_journal_id == last_processed_journal_id_) {
-    INFO(kCheckpointService, activity_id_, activity_id_,
-         "Last processed journal in this recovery run is same as the one "
-         "authored in the most recent checkpointing activity. "
-         "Nothing new to checkpoint.");
+    SCP_INFO(kCheckpointService, activity_id_,
+             "Last processed journal in this recovery run is same as the one "
+             "authored in the most recent checkpointing activity. "
+             "Nothing new to checkpoint.");
     return SuccessExecutionResult();
   }
+
+  auto checkpoint_generation_start_timestamp =
+      TimeProvider::GetSteadyTimestampInNanoseconds();
 
   CheckpointId checkpoint_id;
   BytesBuffer checkpoint_buffer(initial_buffer_size_);
@@ -203,6 +237,16 @@ ExecutionResult CheckpointService::RunCheckpointWorker() noexcept {
     return execution_result;
   }
 
+  SCP_INFO(kCheckpointService, activity_id_,
+           "Checkpoint buffer constructed. Size (bytes): '%llu', Time taken to "
+           "construct: "
+           "'%llu' (ms)",
+           checkpoint_buffer.Size(),
+           duration_cast<milliseconds>(
+               TimeProvider::GetSteadyTimestampInNanoseconds() -
+               checkpoint_generation_start_timestamp)
+               .count());
+
   execution_result =
       Store(checkpoint_id, last_check_point_buffer, checkpoint_buffer);
   if (!execution_result.Successful()) {
@@ -210,10 +254,18 @@ ExecutionResult CheckpointService::RunCheckpointWorker() noexcept {
   }
 
   last_processed_journal_id_ = last_processed_journal_id;
-  DEBUG(kCheckpointService, activity_id_, activity_id_,
-        "Checkpoint run finished. "
-        "Last processed journal id: %llu",
-        last_processed_journal_id_);
+  last_persisted_checkpoint_id_ = checkpoint_id;
+  SCP_INFO(kCheckpointService, activity_id_,
+           "Partition with ID: '%s' Checkpointing Done. "
+           "Last processed journal id: '%llu'. Last persisted checkpoint id: "
+           "'%llu'. "
+           "Time taken for this checkpoint run: '%llu' (ms)",
+           ToString(partition_id_).c_str(), last_processed_journal_id_,
+           last_persisted_checkpoint_id_,
+           duration_cast<milliseconds>(
+               TimeProvider::GetSteadyTimestampInNanoseconds() -
+               checkpoint_round_start_timestamp)
+               .count());
   return Shutdown();
 }
 
@@ -229,7 +281,8 @@ void CheckpointService::CreateComponents() noexcept {
       async_executor_, budget_key_provider_);
   transaction_manager_ = make_shared<TransactionManager>(
       async_executor_, transaction_command_serializer_, journal_service_,
-      remote_transaction_manager_, 100000, metric_client_, config_provider_);
+      remote_transaction_manager_, 100000, metric_client_, config_provider_,
+      partition_id_);
 }
 
 ExecutionResult CheckpointService::Bootstrap() noexcept {
@@ -270,10 +323,15 @@ ExecutionResult CheckpointService::Recover(
     JournalId& last_processed_journal_id) noexcept {
   JournalId max_journal_id_to_process;
 
+  // If there is no activity on application after restart, we cannot get the
+  // last persisted journal ID, so we defer the checkpointing for later when the
+  // traffic starts.
   auto execution_result =
       application_journal_service_->GetLastPersistedJournalId(
           max_journal_id_to_process);
   if (!execution_result.Successful()) {
+    SCP_INFO(kCheckpointService, activity_id_,
+             "LastPersistedJournalId not available. Not checkpointing.");
     return execution_result;
   }
 
@@ -284,7 +342,12 @@ ExecutionResult CheckpointService::Recover(
       max_journal_id_to_process;
   recovery_context.request->max_number_of_journals_to_process =
       max_journals_to_process_in_each_checkpoint_run_;
+  // If there is only a checkpoint to recover, we do not need to Recover because
+  // there is nothing to be checkpointed after recovery.
+  recovery_context.request
+      ->should_perform_recovery_with_only_checkpoint_in_stream = false;
   recovery_context.parent_activity_id = activity_id_;
+  recovery_context.correlation_id = activity_id_;
   recovery_context.callback =
       [&](AsyncContext<JournalRecoverRequest, JournalRecoverResponse>&
               recovery_context) {
@@ -296,12 +359,14 @@ ExecutionResult CheckpointService::Recover(
       };
 
   // Recovering the service
-  execution_result = journal_service_->Recover(recovery_context);
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
+  // Recovery metrics needs to be separately Run because the journal_service_ is
+  // not yet Run().
+  RETURN_IF_FAILURE(journal_service_->RunRecoveryMetrics());
+  RETURN_IF_FAILURE(journal_service_->Recover(recovery_context));
+  auto future_result = recovery_execution_result.get_future().get();
+  RETURN_IF_FAILURE(journal_service_->StopRecoveryMetrics());
 
-  return recovery_execution_result.get_future().get();
+  return future_result;
 }
 
 ExecutionResult CheckpointService::Checkpoint(
@@ -322,22 +387,27 @@ ExecutionResult CheckpointService::Checkpoint(
   }
 
   if (checkpoint_logs->size() == 0) {
-    DEBUG(kCheckpointService, activity_id_, activity_id_,
-          "No new checkpoint logs found from transaction manager "
-          "and budget key provider. No new checkpoint file will be created.");
+    SCP_INFO(
+        kCheckpointService, activity_id_,
+        "No new checkpoint logs found from transaction manager "
+        "and budget key provider. No new checkpoint file will be created.");
     return FailureExecutionResult(
         core::errors::SC_PBS_CHECKPOINT_SERVICE_NO_LOGS_TO_PROCESS);
   }
+
+  SCP_INFO(kCheckpointService, activity_id_,
+           "Total log count in this checkpoint file: '%llu'",
+           checkpoint_logs->size());
 
   // Unique wall-clock timestamp is used for checkpoint_id
   Timestamp current_clock =
       TimeProvider::GetUniqueWallTimestampInNanoseconds().count();
   checkpoint_id = current_clock;
   last_checkpoint_metadata.set_last_checkpoint_id(checkpoint_id);
-  DEBUG(kCheckpointService, activity_id_, activity_id_,
-        "Last checkpoint id set to : %llu. This id will be persisted in "
-        "last_checkpoint file",
-        checkpoint_id);
+  SCP_INFO(kCheckpointService, activity_id_,
+           "Last checkpoint id set to '%llu'. This id will be persisted in "
+           "last_checkpoint file",
+           checkpoint_id);
   size_t current_buffer_offset = 0;
   size_t current_bytes_serialized = 0;
   execution_result = JournalSerialization::SerializeLastCheckpointMetadata(
@@ -377,6 +447,7 @@ ExecutionResult CheckpointService::Checkpoint(
       successfully_written = true;
     }
 
+    last_persisted_checkpoint_id_ = checkpoint_id;
     current_buffer_offset += current_bytes_serialized;
     current_bytes_serialized = 0;
 
@@ -438,6 +509,7 @@ ExecutionResult CheckpointService::WriteBlob(
     shared_ptr<string>& blob_name, shared_ptr<BytesBuffer>& bytes_buffer) {
   AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context;
   put_blob_context.parent_activity_id = activity_id_;
+  put_blob_context.correlation_id = activity_id_;
   put_blob_context.request = make_shared<PutBlobRequest>();
   put_blob_context.request->blob_name = blob_name;
   put_blob_context.request->buffer = bytes_buffer;
@@ -481,9 +553,9 @@ ExecutionResult CheckpointService::Store(
     return execution_result;
   }
 
-  DEBUG(kCheckpointService, activity_id_, activity_id_,
-        "Wrote Checkpoint file with file name : %s",
-        checkpoint_blob_name->c_str());
+  SCP_INFO(kCheckpointService, activity_id_,
+           "Wrote Checkpoint file with file name : %s",
+           checkpoint_blob_name->c_str());
   shared_ptr<string> last_checkpoint_blob_name =
       make_shared<string>(kLastCheckpointBlobName);
   shared_ptr<string> last_checkpoint_full_path;
@@ -521,6 +593,16 @@ ExecutionResult CheckpointService::Shutdown() noexcept {
   transaction_command_serializer_ = nullptr;
   transaction_manager_ = nullptr;
   return SuccessExecutionResult();
+}
+
+ExecutionResultOr<CheckpointId>
+CheckpointService::GetLastPersistedCheckpointId() noexcept {
+  if (last_persisted_checkpoint_id_ == 0) {
+    return FailureExecutionResult(
+        core::errors::
+            SC_PBS_CHECKPOINT_SERVICE_INVALID_LAST_PERSISTED_CHECKPOINT_ID);
+  }
+  return last_persisted_checkpoint_id_;
 }
 
 }  // namespace google::scp::pbs

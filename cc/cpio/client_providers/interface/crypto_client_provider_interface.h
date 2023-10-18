@@ -74,12 +74,4 @@ class CryptoClientProviderInterface : public core::ServiceInterface {
                          cmrt::sdk::crypto_service::v1::AeadDecryptResponse>&
           context) noexcept = 0;
 };
-
-/// Configurations for CryptoClient.
-struct CryptoClientOptions {
-  virtual ~CryptoClientOptions() = default;
-
-  // Parameters to be used for encrypt/decrypt data using HPKE.
-  cmrt::sdk::crypto_service::v1::HpkeParams hpke_params;
-};
 }  // namespace google::scp::cpio::client_providers

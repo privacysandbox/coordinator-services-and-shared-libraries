@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_test(
@@ -21,8 +23,9 @@ cc_test(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/global_cpio/test:test_global_cpio_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/interface/metric_client",
         "//cc/public/cpio/test/global_cpio:test_lib_cpio",
-        "@aws_sdk_cpp//:core",
         "@com_google_googletest//:gtest_main",
     ],
 )

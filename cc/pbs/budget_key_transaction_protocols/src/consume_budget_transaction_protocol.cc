@@ -52,7 +52,7 @@ ExecutionResult ConsumeBudgetTransactionProtocol::Prepare(
           make_shared<LoadBudgetKeyTimeframeRequest>(move(request)),
           bind(&ConsumeBudgetTransactionProtocol::OnPrepareBudgetKeyLoaded,
                this, prepare_consume_budget_context, _1),
-          prepare_consume_budget_context.activity_id);
+          prepare_consume_budget_context);
 
   return budget_key_timeframe_manager_->Load(load_budget_key_timeframe_context);
 }
@@ -111,7 +111,7 @@ ExecutionResult ConsumeBudgetTransactionProtocol::Commit(
           make_shared<LoadBudgetKeyTimeframeRequest>(move(request)),
           bind(&ConsumeBudgetTransactionProtocol::OnCommitBudgetKeyLoaded, this,
                commit_consume_budget_context, _1),
-          commit_consume_budget_context.activity_id);
+          commit_consume_budget_context);
 
   return budget_key_timeframe_manager_->Load(load_budget_key_timeframe_context);
 }
@@ -177,6 +177,8 @@ void ConsumeBudgetTransactionProtocol::OnCommitBudgetKeyLoaded(
       .emplace_back();
   update_budget_key_timeframe_context.parent_activity_id =
       commit_consume_budget_context.activity_id;
+  update_budget_key_timeframe_context.correlation_id =
+      commit_consume_budget_context.correlation_id;
   update_budget_key_timeframe_context.request->timeframes_to_update.back()
       .active_token_count = budget_key_frame->token_count.load() -
                             commit_consume_budget_context.request->token_count;
@@ -243,7 +245,7 @@ ExecutionResult ConsumeBudgetTransactionProtocol::Notify(
           make_shared<LoadBudgetKeyTimeframeRequest>(move(request)),
           bind(&ConsumeBudgetTransactionProtocol::OnNotifyBudgetKeyLoaded, this,
                notify_consume_budget_context, _1),
-          notify_consume_budget_context.activity_id);
+          notify_consume_budget_context);
 
   return budget_key_timeframe_manager_->Load(load_budget_key_timeframe_context);
 }
@@ -283,6 +285,8 @@ void ConsumeBudgetTransactionProtocol::OnNotifyBudgetKeyLoaded(
       update_budget_key_timeframe_context;
   update_budget_key_timeframe_context.activity_id =
       notify_consume_budget_context.activity_id;
+  update_budget_key_timeframe_context.correlation_id =
+      notify_consume_budget_context.correlation_id;
   update_budget_key_timeframe_context.request =
       make_shared<UpdateBudgetKeyTimeframeRequest>();
   BudgetKeyTimeframeUpdateInfo timeframe_to_update;
@@ -345,7 +349,7 @@ ExecutionResult ConsumeBudgetTransactionProtocol::Abort(
           make_shared<LoadBudgetKeyTimeframeRequest>(move(request)),
           bind(&ConsumeBudgetTransactionProtocol::OnAbortBudgetKeyLoaded, this,
                abort_consume_budget_context, _1),
-          abort_consume_budget_context.activity_id);
+          abort_consume_budget_context);
 
   return budget_key_timeframe_manager_->Load(load_budget_key_timeframe_context);
 }
@@ -380,6 +384,8 @@ void ConsumeBudgetTransactionProtocol::OnAbortBudgetKeyLoaded(
       update_budget_key_timeframe_context;
   update_budget_key_timeframe_context.parent_activity_id =
       load_budget_key_timeframe_context.activity_id;
+  update_budget_key_timeframe_context.correlation_id =
+      load_budget_key_timeframe_context.correlation_id;
   update_budget_key_timeframe_context.request =
       make_shared<UpdateBudgetKeyTimeframeRequest>();
   BudgetKeyTimeframeUpdateInfo timeframe_to_update;

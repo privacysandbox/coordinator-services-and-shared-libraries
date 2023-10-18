@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@com_github_google_rpmpack//:def.bzl", "pkg_tar2rpm")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -95,6 +95,8 @@ genrule(
         yum install glibc-devel-2.26-63.amzn2.0.1 glibc-headers-2.26-63.amzn2.0.1 gcc-7.3.1-17.amzn2 gcc-c++-7.3.1-17.amzn2 tar git -y > /dev/null
         tar xf /source_code.tar -C /
         cd /scp
+        # Remove clang flags
+        sed -i '/fbracket-depth=512/d' .bazelrc
         bazel build \
           //cc/aws/proxy/src:proxify \
           //cc/aws/proxy/src:proxy \

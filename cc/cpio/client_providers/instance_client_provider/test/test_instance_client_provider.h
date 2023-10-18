@@ -35,7 +35,9 @@ struct TestInstanceClientOptions {
       : region(cpio_options.region),
         instance_id(cpio_options.instance_id),
         public_ipv4_address(cpio_options.public_ipv4_address),
-        private_ipv4_address(cpio_options.private_ipv4_address) {}
+        private_ipv4_address(cpio_options.private_ipv4_address),
+        owner_id(cpio_options.owner_id),
+        zone(cpio_options.zone) {}
 
   /// Cloud region.
   std::string region;
@@ -45,6 +47,10 @@ struct TestInstanceClientOptions {
   std::string public_ipv4_address;
   /// Private IP address.
   std::string private_ipv4_address;
+  /// Owner ID.
+  std::string owner_id;
+  /// Zone ID.
+  std::string zone;
 };
 
 /**
@@ -62,67 +68,35 @@ class TestInstanceClientProvider : public InstanceClientProviderInterface {
 
   core::ExecutionResult Stop() noexcept override;
 
-  core::ExecutionResult GetTagsOfInstance(
-      const std::vector<std::string>& tag_names, const std::string& instance_id,
-      std::map<std::string, std::string>& tag_values_map) noexcept override;
-
-  core::ExecutionResult GetCurrentInstanceId(
-      std::string& instance_id) noexcept override;
-
-  core::ExecutionResult GetCurrentInstanceRegion(
-      std::string& region) noexcept override;
-
-  core::ExecutionResult GetCurrentInstancePublicIpv4Address(
-      std::string& instance_public_ipv4_address) noexcept override;
-
-  core::ExecutionResult GetCurrentInstancePrivateIpv4Address(
-      std::string& instance_private_ipv4_address) noexcept override;
-
-  core::ExecutionResult GetCurrentInstanceProjectId(
-      std::string& project_id) noexcept override;
-
-  core::ExecutionResult GetCurrentInstanceZone(
-      std::string& instance_zone) noexcept override;
-
   core::ExecutionResult GetCurrentInstanceResourceName(
       core::AsyncContext<cmrt::sdk::instance_service::v1::
                              GetCurrentInstanceResourceNameRequest,
                          cmrt::sdk::instance_service::v1::
                              GetCurrentInstanceResourceNameResponse>&
-          context) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
-
-  core::ExecutionResult GetCurrentInstanceResourceNameSync(
-      std::string& resource_name) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
+          context) noexcept override;
 
   core::ExecutionResult GetTagsByResourceName(
       core::AsyncContext<
           cmrt::sdk::instance_service::v1::GetTagsByResourceNameRequest,
           cmrt::sdk::instance_service::v1::GetTagsByResourceNameResponse>&
-          context) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
+          context) noexcept override;
 
   core::ExecutionResult GetInstanceDetailsByResourceName(
       core::AsyncContext<cmrt::sdk::instance_service::v1::
                              GetInstanceDetailsByResourceNameRequest,
                          cmrt::sdk::instance_service::v1::
                              GetInstanceDetailsByResourceNameResponse>&
-          context) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
+          context) noexcept override;
+
+  core::ExecutionResult GetCurrentInstanceResourceNameSync(
+      std::string& resource_name) noexcept override;
 
   core::ExecutionResult GetInstanceDetailsByResourceNameSync(
       const std::string& resource_name,
       cmrt::sdk::instance_service::v1::InstanceDetails&
-          instance_details) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
+          instance_details) noexcept override;
 
- private:
+ protected:
   std::shared_ptr<TestInstanceClientOptions> test_options_;
 };
 }  // namespace google::scp::cpio::client_providers

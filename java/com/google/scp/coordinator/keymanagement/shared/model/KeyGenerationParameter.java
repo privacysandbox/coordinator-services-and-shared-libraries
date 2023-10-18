@@ -37,4 +37,15 @@ public final class KeyGenerationParameter {
   public static final String NUMBER_OF_KEYS_TO_CREATE = "NUMBER_OF_KEYS_TO_CREATE";
   public static final String KEYS_VALIDITY_IN_DAYS = "KEYS_VALIDITY_IN_DAYS";
   public static final String KEY_TTL_IN_DAYS = "KEY_TTL_IN_DAYS";
+
+  public static final String PEER_COORDINATOR_KMS_KEY_URI = "PEER_COORDINATOR_KMS_KEY_URI";
+
+  public static final String KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL =
+      "KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL";
+
+  public static final String PEER_COORDINATOR_WIP_PROVIDER = "PEER_COORDINATOR_WIP_PROVIDER";
+
+  public static final String PEER_COORDINATOR_SERVICE_ACCOUNT = "PEER_COORDINATOR_SERVICE_ACCOUNT";
+
+  public static final String KEY_ID_TYPE = "KEY_ID_TYPE";
 }

@@ -16,12 +16,11 @@
 
 #include "roma/wasm/src/deserializer.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <string>
 #include <vector>
-
-#include <gmock/gmock.h>
 
 using std::string;
 using std::vector;

@@ -34,9 +34,11 @@ class AwsRoleCredentialsProvider : public RoleCredentialsProviderInterface {
   AwsRoleCredentialsProvider(
       const std::shared_ptr<InstanceClientProviderInterface>&
           instance_client_provider,
-      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor)
+      const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor)
       : instance_client_provider_(instance_client_provider),
-        async_executor_(async_executor) {}
+        cpu_async_executor_(cpu_async_executor),
+        io_async_executor_(io_async_executor) {}
 
   core::ExecutionResult Init() noexcept override;
 
@@ -69,11 +71,22 @@ class AwsRoleCredentialsProvider : public RoleCredentialsProviderInterface {
       const std::shared_ptr<const Aws::Client::AsyncCallerContext>
           async_context) noexcept;
 
+  /**
+   * @brief Creates the Client Config object.
+   *
+   * @param region the region of the client.
+   * @return std::shared_ptr<Aws::Client::ClientConfiguration> client
+   * configuration.
+   */
+  virtual std::shared_ptr<Aws::Client::ClientConfiguration>
+  CreateClientConfiguration(const std::string& region) noexcept;
+
   /// Instance client provider to fetch cloud metadata.
   std::shared_ptr<InstanceClientProviderInterface> instance_client_provider_;
 
-  /// An instance of the async executo to execute call.
-  const std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
+  /// Instances of the async executor to execute call.
+  const std::shared_ptr<core::AsyncExecutorInterface> cpu_async_executor_,
+      io_async_executor_;
 
   /// An instance of the AWS STS client.
   std::shared_ptr<Aws::STS::STSClient> sts_client_;

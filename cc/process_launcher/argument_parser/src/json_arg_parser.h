@@ -29,6 +29,7 @@ namespace google::scp::process_launcher {
 struct ExecutableArgument {
   std::string executable_name;
   std::vector<std::string> command_line_args;
+  bool restart = true;
 
   void ToExecutableVector(std::vector<char*>& cstring_vec) {
     cstring_vec.reserve(command_line_args.size() + 2);
@@ -68,6 +69,10 @@ class JsonArgParser<ExecutableArgument> {
           parsed["executable_name"].get<std::string>();
       for (auto& arg : parsed["command_line_args"]) {
         parsed_value.command_line_args.push_back(arg);
+      }
+
+      if (parsed.contains("restart")) {
+        parsed_value.restart = parsed["restart"].get<bool>();
       }
     } catch (std::exception& e) {
       std::cerr << "Failed parsing json with: " << e.what() << std::endl;

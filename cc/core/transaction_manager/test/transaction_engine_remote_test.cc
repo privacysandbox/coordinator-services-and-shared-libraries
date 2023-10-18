@@ -33,8 +33,9 @@
 #include "core/transaction_manager/mock/mock_transaction_command_serializer.h"
 #include "core/transaction_manager/mock/mock_transaction_engine.h"
 #include "core/transaction_manager/src/proto/transaction_engine.pb.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::FailureExecutionResult;
@@ -61,7 +62,7 @@ using google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLogType;
 using google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockMetricClient;
 using std::atomic;
 using std::function;
 using std::make_pair;
@@ -78,7 +79,7 @@ namespace google::scp::core::test {
 
 TEST(TransactionEngineRemoteTest, VerifyExecuteRemoteOperation) {
   atomic<bool> condition = false;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -120,8 +121,7 @@ TEST(TransactionEngineRemoteTest, VerifyExecuteRemoteOperation) {
   EXPECT_EQ(current_transaction->id.high,
             transaction_context.request->transaction_id.high);
   EXPECT_EQ(current_transaction->current_phase, TransactionPhase::NotStarted);
-  EXPECT_EQ(current_transaction->current_phase_execution_result,
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(current_transaction->current_phase_execution_result);
   EXPECT_EQ(current_transaction->pending_callbacks, 0);
   EXPECT_EQ(current_transaction->is_coordinated_remotely, true);
 
@@ -134,7 +134,7 @@ TEST(TransactionEngineRemoteTest, VerifyExecuteRemoteOperation) {
 }
 
 TEST(TransactionEngineRemoteTest, ExecutePhaseNonmatchingTransactionFound) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -152,9 +152,9 @@ TEST(TransactionEngineRemoteTest, ExecutePhaseNonmatchingTransactionFound) {
   transaction_phase_context.request = make_shared<TransactionPhaseRequest>();
   transaction_phase_context.request->transaction_id = Uuid::GenerateUuid();
 
-  EXPECT_EQ(mock_transaction_engine.ExecutePhase(transaction_phase_context),
-            FailureExecutionResult(
-                errors::SC_TRANSACTION_MANAGER_TRANSACTION_NOT_FOUND));
+  EXPECT_THAT(mock_transaction_engine.ExecutePhase(transaction_phase_context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_TRANSACTION_MANAGER_TRANSACTION_NOT_FOUND)));
 }
 
 TEST(TransactionEngineRemoteTest, ExecutePhaseRemoteAndWaitingCombinations) {
@@ -165,7 +165,7 @@ TEST(TransactionEngineRemoteTest, ExecutePhaseRemoteAndWaitingCombinations) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
@@ -192,25 +192,28 @@ TEST(TransactionEngineRemoteTest, ExecutePhaseRemoteAndWaitingCombinations) {
   transaction_phase_context.request->transaction_origin =
       transaction->transaction_origin;
 
-  EXPECT_EQ(
+  EXPECT_THAT(
       mock_transaction_engine.ExecutePhase(transaction_phase_context),
-      FailureExecutionResult(
-          errors::SC_TRANSACTION_MANAGER_TRANSACTION_NOT_COORDINATED_REMOTELY));
+      ResultIs(FailureExecutionResult(
+          errors::
+              SC_TRANSACTION_MANAGER_TRANSACTION_NOT_COORDINATED_REMOTELY)));
 
   transaction->is_coordinated_remotely = true;
   transaction->is_waiting_for_remote = false;
 
-  EXPECT_EQ(mock_transaction_engine.ExecutePhase(transaction_phase_context),
-            FailureExecutionResult(
-                errors::SC_TRANSACTION_MANAGER_CURRENT_TRANSACTION_IS_RUNNING));
+  EXPECT_THAT(
+      mock_transaction_engine.ExecutePhase(transaction_phase_context),
+      ResultIs(FailureExecutionResult(
+          errors::SC_TRANSACTION_MANAGER_CURRENT_TRANSACTION_IS_RUNNING)));
 
   transaction->is_coordinated_remotely = false;
   transaction->is_waiting_for_remote = false;
 
-  EXPECT_EQ(
+  EXPECT_THAT(
       mock_transaction_engine.ExecutePhase(transaction_phase_context),
-      FailureExecutionResult(
-          errors::SC_TRANSACTION_MANAGER_TRANSACTION_NOT_COORDINATED_REMOTELY));
+      ResultIs(FailureExecutionResult(
+          errors::
+              SC_TRANSACTION_MANAGER_TRANSACTION_NOT_COORDINATED_REMOTELY)));
 }
 
 void ExecuteNonPossiblePhases(vector<TransactionPhase> all_non_possible_phases,
@@ -223,7 +226,7 @@ void ExecuteNonPossiblePhases(vector<TransactionPhase> all_non_possible_phases,
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
 
   for (auto non_possible_phase : all_non_possible_phases) {
@@ -255,9 +258,9 @@ void ExecuteNonPossiblePhases(vector<TransactionPhase> all_non_possible_phases,
     transaction_phase_context.request->transaction_origin =
         transaction->transaction_origin;
 
-    EXPECT_EQ(mock_transaction_engine.ExecutePhase(transaction_phase_context),
-              FailureExecutionResult(
-                  errors::SC_TRANSACTION_MANAGER_INVALID_TRANSACTION_PHASE));
+    EXPECT_THAT(mock_transaction_engine.ExecutePhase(transaction_phase_context),
+                ResultIs(FailureExecutionResult(
+                    errors::SC_TRANSACTION_MANAGER_INVALID_TRANSACTION_PHASE)));
   }
 }
 
@@ -348,7 +351,7 @@ void ExecutePhaseProperCallbacksCalled(
           make_shared<MockTransactionCommandSerializer>();
 
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
       remote_transaction_manager, mock_metric_client);
@@ -381,8 +384,8 @@ void ExecutePhaseProperCallbacksCalled(
   transaction_phase_context.request->transaction_origin =
       transaction->transaction_origin;
 
-  EXPECT_EQ(mock_transaction_engine.ExecutePhase(transaction_phase_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      mock_transaction_engine.ExecutePhase(transaction_phase_context));
 }
 
 TEST(TransactionEngineRemoteTest, ExecutePhaseProperCallbacksCalledBegin) {
@@ -500,7 +503,7 @@ TEST(TransactionEngineRemoteTest, ProceedToNextPhaseRemotely) {
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
       remote_transaction_manager, mock_metric_client);
@@ -516,8 +519,7 @@ TEST(TransactionEngineRemoteTest, ProceedToNextPhaseRemotely) {
           make_shared<TransactionPhaseRequest>(),
           [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
                   transaction_phase_context) {
-            EXPECT_EQ(transaction_phase_context.result,
-                      SuccessExecutionResult());
+            EXPECT_SUCCESS(transaction_phase_context.result);
             condition = true;
           });
 
@@ -543,7 +545,7 @@ TEST(TransactionEngineRemoteTest, ProceedToNextPhaseRemotelyFailed) {
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
       remote_transaction_manager, mock_metric_client);
@@ -561,8 +563,8 @@ TEST(TransactionEngineRemoteTest, ProceedToNextPhaseRemotelyFailed) {
           make_shared<TransactionPhaseRequest>(),
           [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
                   transaction_phase_context) {
-            EXPECT_EQ(transaction_phase_context.result,
-                      FailureExecutionResult(123));
+            EXPECT_THAT(transaction_phase_context.result,
+                        ResultIs(FailureExecutionResult(123)));
             condition = true;
           });
 

@@ -70,6 +70,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_invocation_error_alarm" {
     FunctionName = var.lambda_function_name
   }
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -92,6 +93,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_log_alarm" {
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -117,6 +119,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_max_duration_alarm" {
     FunctionName = var.lambda_function_name
   }
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment

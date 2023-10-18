@@ -47,13 +47,13 @@ def _sam_config_impl(ctx):
 sam_config = rule(
     implementation = _sam_config_impl,
     attrs = {
-        "sam_config_template": attr.label(
-            doc = "YAML file used to define the sam template",
+        "deploy_jar_file": attr.label(
+            doc = "_deploy.jar file to use as the CodeURI in the sam template",
             allow_single_file = True,
             mandatory = True,
         ),
-        "deploy_jar_file": attr.label(
-            doc = "_deploy.jar file to use as the CodeURI in the sam template",
+        "sam_config_template": attr.label(
+            doc = "YAML file used to define the sam template",
             allow_single_file = True,
             mandatory = True,
         ),

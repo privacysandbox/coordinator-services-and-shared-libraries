@@ -17,21 +17,33 @@
 #include "roma/interface/roma.h"
 
 #include <memory>
+#include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
-#include "roma/dispatcher/src/dispatcher.h"
-
-#include "roma_service.h"
+#include "core/interface/errors.h"
+#include "core/os/src/linux/system_resource_info_provider_linux.h"
+#include "roma/logging/src/logging.h"
+#include "roma/sandbox/roma_service/src/roma_service.h"
 
 using absl::OkStatus;
 using absl::Status;
 using absl::StatusCode;
-using google::scp::roma::roma_service::RomaService;
+using google::scp::core::errors::GetErrorMessage;
+using google::scp::core::os::linux::SystemResourceInfoProviderLinux;
+using google::scp::roma::sandbox::roma_service::RomaService;
 using std::make_unique;
 using std::move;
+using std::string;
 using std::unique_ptr;
 using std::vector;
+
+// This value does not account for runtime memory usage and is only a generic
+// estimate based on the memory needed by roma and the steady-state memory
+// needed by v8.
+static constexpr uint64_t kDefaultMinimumStartupMemoryNeededPerWorkerKb =
+    400 * 1024;
 
 namespace google::scp::roma {
 namespace {
@@ -64,7 +76,8 @@ Status ExecuteInternal(unique_ptr<RequestT> invocation_req, Callback callback) {
       roma_service->Dispatcher().Dispatch(move(invocation_req), callback);
   if (!result.Successful()) {
     return Status(StatusCode::kInternal,
-                  "Roma Execute failed due to dispatch error.");
+                  "Roma Execute failed due to: " +
+                      std::string(GetErrorMessage(result.status_code)));
   }
   return OkStatus();
 }
@@ -83,23 +96,65 @@ Status BatchExecuteInternal(vector<RequestT>& batch,
   auto result = roma_service->Dispatcher().DispatchBatch(batch, batch_callback);
   if (!result.Successful()) {
     return Status(StatusCode::kInternal,
-                  "Roma Batch Execute failed due to dispatch error.");
+                  "Roma Batch Execute failed due to dispatch error: " +
+                      string(GetErrorMessage(result.status_code)));
   }
   return OkStatus();
+}
+
+static bool RomaHasEnoughMemoryForStartup(const Config& config) {
+  if (!config.enable_startup_memory_check) {
+    return true;
+  }
+
+  SystemResourceInfoProviderLinux mem_info;
+  auto available_memory_or = mem_info.GetAvailableMemoryKb();
+  ROMA_VLOG(1) << "Available memory is " << available_memory_or.value()
+               << " Kb";
+  if (!available_memory_or.result().Successful()) {
+    // Failing to read the meminfo file should not stop startup.
+    // This mem check is a best-effort check.
+    return true;
+  }
+
+  if (config.GetStartupMemoryCheckMinimumNeededValueKb) {
+    return config.GetStartupMemoryCheckMinimumNeededValueKb() <
+           *available_memory_or;
+  }
+
+  auto cpu_count = std::thread::hardware_concurrency();
+  auto num_processes =
+      (config.number_of_workers > 0 && config.number_of_workers <= cpu_count)
+          ? config.number_of_workers
+          : cpu_count;
+
+  ROMA_VLOG(1) << "Number of workers is " << num_processes;
+
+  auto minimum_memory_needed =
+      num_processes * kDefaultMinimumStartupMemoryNeededPerWorkerKb;
+
+  return minimum_memory_needed < *available_memory_or;
 }
 }  // namespace
 
 Status RomaInit(const Config& config) {
+  if (!RomaHasEnoughMemoryForStartup(config)) {
+    return Status(StatusCode::kInternal,
+                  "Roma startup failed due to insufficient system memory.");
+  }
+
   auto* roma_service = RomaService::Instance(config);
   auto result = roma_service->Init();
   if (!result.Successful()) {
     return Status(StatusCode::kInternal,
-                  "Roma initialization failed due to internal error.");
+                  "Roma initialization failed due to internal error: " +
+                      string(GetErrorMessage(result.status_code)));
   }
   result = roma_service->Run();
   if (!result.Successful()) {
     return Status(StatusCode::kInternal,
-                  "Roma startup failed due to internal error.");
+                  "Roma startup failed due to internal error: " +
+                      string(GetErrorMessage(result.status_code)));
   }
   return OkStatus();
 }
@@ -109,7 +164,8 @@ Status RomaStop() {
   auto result = roma_service->Stop();
   if (!result.Successful()) {
     return Status(StatusCode::kInternal,
-                  "Roma stop failed due to internal error.");
+                  "Roma stop failed due to internal error: " +
+                      string(GetErrorMessage(result.status_code)));
   }
   RomaService::Delete();
   return OkStatus();
@@ -144,12 +200,25 @@ Status LoadCodeObj(unique_ptr<CodeObject> code_object, Callback callback) {
     return Status(StatusCode::kInternal,
                   "Roma LoadCodeObj failed due to empty code content.");
   }
+  if (!code_object->wasm.empty() && !code_object->wasm_bin.empty()) {
+    return Status(StatusCode::kInternal,
+                  "Roma LoadCodeObj failed due to wasm code and wasm code "
+                  "array conflict.");
+  }
+  if (!code_object->wasm_bin.empty() !=
+      code_object->tags.contains(kWasmCodeArrayName)) {
+    return Status(StatusCode::kInternal,
+                  "Roma LoadCodeObj failed due to empty wasm_bin or "
+                  "missing wasm code array name tag.");
+  }
+
   auto* roma_service = RomaService::Instance();
   auto result =
       roma_service->Dispatcher().Broadcast(move(code_object), callback);
   if (!result.Successful()) {
     return Status(StatusCode::kInternal,
-                  "Roma LoadCodeObj failed due to dispatch error.");
+                  "Roma LoadCodeObj failed with: " +
+                      string(GetErrorMessage(result.status_code)));
   }
   return OkStatus();
 }

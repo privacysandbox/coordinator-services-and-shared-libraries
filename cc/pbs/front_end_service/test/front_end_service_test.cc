@@ -33,20 +33,22 @@
 #include "core/interface/async_context.h"
 #include "core/interface/http_server_interface.h"
 #include "core/interface/journal_service_interface.h"
+#include "core/interface/remote_transaction_manager_interface.h"
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "core/test/utils/conditional_wait.h"
-#include "core/transaction_manager/mock/mock_transaction_manager_override.h"
-#include "cpio/client_providers/metric_client_provider/interface/aggregate_metric_interface.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
-#include "cpio/client_providers/metric_client_provider/mock/utils/mock_aggregate_metric.h"
-#include "pbs/budget_key_provider/mock/mock_budget_key_provider.h"
 #include "pbs/front_end_service/mock/mock_front_end_service_with_overrides.h"
 #include "pbs/front_end_service/src/error_codes.h"
 #include "pbs/interface/configuration_keys.h"
+#include "pbs/partition_request_router/mock/mock_transaction_request_router.h"
+#include "pbs/transactions/mock/mock_consume_budget_command_factory.h"
 #include "pbs/transactions/src/batch_consume_budget_command.h"
 #include "pbs/transactions/src/consume_budget_command.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
@@ -82,17 +84,19 @@ using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::http2_server::mock::MockHttp2Server;
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
-using google::scp::core::transaction_manager::mock::MockTransactionManager;
-using google::scp::cpio::client_providers::AggregateMetricInterface;
-using google::scp::cpio::client_providers::mock::MockAggregateMetric;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::AggregateMetricInterface;
+using google::scp::cpio::MockAggregateMetric;
+using google::scp::cpio::MockMetricClient;
 using google::scp::pbs::BatchConsumeBudgetCommand;
 using google::scp::pbs::BudgetKeyProviderInterface;
 using google::scp::pbs::ConsumeBudgetCommand;
-using google::scp::pbs::budget_key_provider::mock::MockBudgetKeyProvider;
 using google::scp::pbs::front_end_service::mock::
     MockFrontEndServiceWithOverrides;
+using google::scp::pbs::partition_request_router::mock::
+    MockTransactionRequestRouter;
+using google::scp::pbs::transactions::mock::MockConsumeBudgetCommandFactory;
 using std::atomic;
 using std::dynamic_pointer_cast;
 using std::list;
@@ -106,8 +110,22 @@ using std::string;
 using std::vector;
 using std::chrono::hours;
 using std::chrono::nanoseconds;
+using ::testing::_;
+using ::testing::An;
+using ::testing::DoAll;
+using ::testing::Return;
 
 namespace google::scp::pbs::test {
+
+std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+GetMockConsumeBudgetCommandFactory() {
+  return std::make_unique<MockConsumeBudgetCommandFactory>();
+}
+
+std::unique_ptr<MockTransactionRequestRouter>
+GetMockTransactionRequestRouter() {
+  return std::make_unique<MockTransactionRequestRouter>();
+}
 
 class FrontEndServiceTest : public testing::Test {
  protected:
@@ -117,7 +135,7 @@ class FrontEndServiceTest : public testing::Test {
   }
 
   void InitializeClassComponents() {
-    auto mock_metric_client = make_shared<MockMetricClientProvider>();
+    auto mock_metric_client = make_shared<MockMetricClient>();
     mock_config_provider_ = make_shared<MockConfigProvider>();
     shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
     shared_ptr<JournalServiceInterface> journal_service;
@@ -125,22 +143,20 @@ class FrontEndServiceTest : public testing::Test {
     shared_ptr<TransactionCommandSerializerInterface>
         transaction_command_serializer;
 
-    mock_transaction_manager_ = make_shared<MockTransactionManager>(
-        async_executor_, transaction_command_serializer, journal_service,
-        remote_transaction_manager, 1, mock_metric_client);
-    transaction_manager_ = mock_transaction_manager_;
-
     shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
         make_shared<MockNoSQLDatabaseProvider>();
-    budget_key_provider_ = make_shared<MockBudgetKeyProvider>(
-        async_executor_, journal_service, nosql_database_provider,
-        mock_metric_client, mock_config_provider_);
+    std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+        consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
+
+    auto transaction_request_router = GetMockTransactionRequestRouter();
+    mock_transaction_request_router_ = transaction_request_router.get();
 
     shared_ptr<HttpServerInterface> http2_server =
         make_shared<MockHttp2Server>();
     front_end_service_ = make_shared<MockFrontEndServiceWithOverrides>(
-        http2_server, async_executor_, transaction_manager_,
-        budget_key_provider_, mock_metric_client, mock_config_provider_);
+        http2_server, async_executor_, std::move(transaction_request_router),
+        std::move(consume_budget_command_factory), mock_metric_client,
+        mock_config_provider_);
 
     front_end_service_->InitMetricInstances();
   }
@@ -160,21 +176,31 @@ class FrontEndServiceTest : public testing::Test {
 
   class BatchConsumeBudgetCommandOverride : public BatchConsumeBudgetCommand {
    public:
-    template <typename... Args>
-    explicit BatchConsumeBudgetCommandOverride(Args&&... args)
-        : BatchConsumeBudgetCommand(std::forward<Args>(args)...) {}
+    explicit BatchConsumeBudgetCommandOverride(
+        core::common::Uuid transaction_id,
+        std::shared_ptr<BudgetKeyName>& budget_key_name,
+        std::vector<ConsumeBudgetCommandRequestInfo>&& budget_consumptions)
+        : BatchConsumeBudgetCommand(transaction_id, budget_key_name,
+                                    std::move(budget_consumptions),
+                                    nullptr /* not needed for the test */,
+                                    nullptr /* not needed for the test */) {}
 
     void SetFailedBudgetsWithInsufficientConsumption(
-        vector<ConsumeBudgetCommandRequestInfo>& failed_budgets) {
+        const vector<ConsumeBudgetCommandRequestInfo>& failed_budgets) {
       failed_insufficient_budget_consumptions_ = failed_budgets;
     }
   };
 
   class ConsumeBudgetCommandOverride : public ConsumeBudgetCommand {
    public:
-    template <typename... Args>
-    explicit ConsumeBudgetCommandOverride(Args&&... args)
-        : ConsumeBudgetCommand(std::forward<Args>(args)...) {}
+    explicit ConsumeBudgetCommandOverride(
+        core::common::Uuid transaction_id,
+        std::shared_ptr<BudgetKeyName>& budget_key_name,
+        ConsumeBudgetCommandRequestInfo&& budget_consumption)
+        : ConsumeBudgetCommand(transaction_id, budget_key_name,
+                               std::move(budget_consumption),
+                               nullptr /* not needed for the test */,
+                               nullptr /* not needed for the test */) {}
 
     void SetBudgetFailedDueToInsufficientConsumption() {
       failed_with_insufficient_budget_consumption_ = true;
@@ -187,8 +213,7 @@ class FrontEndServiceTest : public testing::Test {
       const vector<ConsumeBudgetCommandRequestInfo>& budget_consumptions) {
     auto budget_consumptions_copy = budget_consumptions;
     return make_shared<BatchConsumeBudgetCommandOverride>(
-        transaction_id, budget_key, move(budget_consumptions_copy),
-        async_executor_, budget_key_provider_);
+        transaction_id, budget_key, move(budget_consumptions_copy));
   }
 
   shared_ptr<ConsumeBudgetCommandOverride> GetConsumeBudgetCommandOverride(
@@ -196,8 +221,7 @@ class FrontEndServiceTest : public testing::Test {
       const ConsumeBudgetCommandRequestInfo& budget_consumption) {
     auto budget_consumption_copy = budget_consumption;
     return make_shared<ConsumeBudgetCommandOverride>(
-        transaction_id, budget_key, move(budget_consumption_copy),
-        async_executor_, budget_key_provider_);
+        transaction_id, budget_key, move(budget_consumption_copy));
   }
 
   static pair<vector<ConsumeBudgetCommandRequestInfo>,
@@ -280,49 +304,34 @@ class FrontEndServiceTest : public testing::Test {
   // Dependent components
   shared_ptr<AsyncExecutorInterface> async_executor_;
   shared_ptr<TransactionManagerInterface> transaction_manager_;
-  shared_ptr<MockTransactionManager> mock_transaction_manager_;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider_;
   shared_ptr<MockFrontEndServiceWithOverrides> front_end_service_;
   shared_ptr<MockConfigProvider> mock_config_provider_;
+  MockTransactionRequestRouter* mock_transaction_request_router_;
 
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context_;
 };
 
 TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
-
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
-
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
-
-  mock_transaction_manager->execute_mock =
-      [](AsyncContext<TransactionRequest, TransactionResponse>&
-             transaction_context) { return SuccessExecutionResult(); };
-
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
 
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
-
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
 
   FrontEndService front_end_service(http2_server, mock_async_executor,
-                                    transaction_manager, budget_key_provider,
+                                    std::move(mock_transaction_request_router),
+                                    std::move(consume_budget_command_factory),
                                     mock_metric_client, mock_config_provider);
   ConsumeBudgetTransactionRequest consume_budget_transaction_request;
   consume_budget_transaction_request.budget_keys =
@@ -344,20 +353,13 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
 
 TEST_F(FrontEndServiceTest,
        ExecuteConsumeBudgetOperationTransactionManagerFailure) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
-
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
 
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
@@ -365,25 +367,27 @@ TEST_F(FrontEndServiceTest,
                                      RetryExecutionResult(1234)};
 
   for (auto result : results) {
-    mock_transaction_manager->execute_mock =
-        [&](AsyncContext<TransactionRequest, TransactionResponse>&) {
-          return result;
-        };
-
+    auto mock_transaction_request_router = GetMockTransactionRequestRouter();
+    EXPECT_CALL(
+        *mock_transaction_request_router,
+        Execute(An<AsyncContext<TransactionRequest, TransactionResponse>&>()))
+        .WillOnce(
+            [result](AsyncContext<TransactionRequest, TransactionResponse>&) {
+              return result;
+            });
     shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
         make_shared<MockNoSQLDatabaseProvider>();
-
-    shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-        make_shared<MockBudgetKeyProvider>(
-            async_executor, journal_service, nosql_database_provider,
-            mock_metric_client, mock_config_provider);
-
     shared_ptr<HttpServerInterface> http2_server =
         make_shared<MockHttp2Server>();
+    std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+        consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
 
-    FrontEndService front_end_service(http2_server, mock_async_executor,
-                                      transaction_manager, budget_key_provider,
-                                      mock_metric_client, mock_config_provider);
+    FrontEndService front_end_service(
+        http2_server, mock_async_executor,
+        std::move(mock_transaction_request_router),
+        std::move(consume_budget_command_factory), mock_metric_client,
+        mock_config_provider);
+
     ConsumeBudgetTransactionRequest consume_budget_transaction_request;
     consume_budget_transaction_request.budget_keys =
         make_shared<vector<ConsumeBudgetMetadata>>();
@@ -405,46 +409,40 @@ TEST_F(FrontEndServiceTest,
 }
 
 TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
-
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
 
-  mock_transaction_manager->execute_mock =
-      [](AsyncContext<TransactionRequest, TransactionResponse>&
-             transaction_context) {
+  EXPECT_CALL(
+      *mock_transaction_request_router,
+      Execute(An<AsyncContext<TransactionRequest, TransactionResponse>&>()))
+      .WillOnce([](AsyncContext<TransactionRequest, TransactionResponse>&
+                       transaction_context) {
         EXPECT_EQ(transaction_context.request->commands.size(), 100);
         EXPECT_NE(transaction_context.request->timeout_time, 0);
         EXPECT_NE(transaction_context.request->transaction_id.high, 0);
         EXPECT_NE(transaction_context.request->transaction_id.low, 0);
         return SuccessExecutionResult();
-      };
+      });
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
 
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
-
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
 
   FrontEndService front_end_service(http2_server, mock_async_executor,
-                                    transaction_manager, budget_key_provider,
+                                    std::move(mock_transaction_request_router),
+                                    std::move(consume_budget_command_factory),
                                     mock_metric_client, mock_config_provider);
   ConsumeBudgetTransactionRequest consume_budget_transaction_request;
   consume_budget_transaction_request.budget_keys =
@@ -468,55 +466,50 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
                           ConsumeBudgetTransactionResponse>&
                  consume_budget_transaction_context) {});
 
-  EXPECT_EQ(front_end_service.ExecuteConsumeBudgetTransaction(
-                consume_budget_transaction_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(front_end_service.ExecuteConsumeBudgetTransaction(
+      consume_budget_transaction_context));
 }
 
 TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationTransactionResults) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
-
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
-
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
 
   for (auto result : results) {
-    mock_transaction_manager->execute_mock =
-        [&](AsyncContext<TransactionRequest, TransactionResponse>&
-                transaction_context) {
-          transaction_context.result = result;
-          transaction_context.Finish();
-          return SuccessExecutionResult();
-        };
+    auto mock_transaction_request_router = GetMockTransactionRequestRouter();
+    EXPECT_CALL(
+        *mock_transaction_request_router,
+        Execute(An<AsyncContext<TransactionRequest, TransactionResponse>&>()))
+        .WillOnce(
+            [result](AsyncContext<TransactionRequest, TransactionResponse>&
+                         transaction_context) {
+              transaction_context.result = result;
+              transaction_context.Finish();
+              return SuccessExecutionResult();
+            });
 
+    std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+        consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
     shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
         make_shared<MockNoSQLDatabaseProvider>();
 
-    shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-        make_shared<MockBudgetKeyProvider>(
-            async_executor, journal_service, nosql_database_provider,
-            mock_metric_client, mock_config_provider);
     shared_ptr<HttpServerInterface> http2_server =
         make_shared<MockHttp2Server>();
 
-    FrontEndService front_end_service(http2_server, mock_async_executor,
-                                      transaction_manager, budget_key_provider,
-                                      mock_metric_client, mock_config_provider);
+    FrontEndService front_end_service(
+        http2_server, mock_async_executor,
+        std::move(mock_transaction_request_router),
+        std::move(consume_budget_command_factory), mock_metric_client,
+        mock_config_provider);
     ConsumeBudgetTransactionRequest consume_budget_transaction_request;
     consume_budget_transaction_request.budget_keys =
         make_shared<vector<ConsumeBudgetMetadata>>();
@@ -531,7 +524,8 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationTransactionResults) {
             [&](AsyncContext<ConsumeBudgetTransactionRequest,
                              ConsumeBudgetTransactionResponse>&
                     consume_budget_transaction_context) {
-              EXPECT_EQ(consume_budget_transaction_context.result, result);
+              EXPECT_THAT(consume_budget_transaction_context.result,
+                          ResultIs(result));
               condition = true;
             });
 
@@ -547,7 +541,7 @@ TEST_F(FrontEndServiceTest,
   auto begin_transaction_context =
       GetBeginTransactionHttpRequestContext_Sample();
 
-  mock_config_provider_->Set(pbs::kDisallowNewTransactionRequests, true);
+  mock_config_provider_->SetBool(pbs::kDisallowNewTransactionRequests, true);
 
   front_end_service_->InitMetricInstances();
   EXPECT_EQ(
@@ -555,47 +549,42 @@ TEST_F(FrontEndServiceTest,
       FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_BEGIN_TRANSACTION_DISALLOWED));
 
-  mock_config_provider_->Set(pbs::kDisallowNewTransactionRequests, false);
-  // Set the execute transaction mock for the BeginTransaction
-  mock_transaction_manager_->execute_mock =
-      [](AsyncContext<TransactionRequest, TransactionResponse>& context) {
-        return FailureExecutionResult(12345);
-      };
+  mock_config_provider_->SetBool(pbs::kDisallowNewTransactionRequests, false);
 
-  EXPECT_EQ(front_end_service_->BeginTransaction(begin_transaction_context),
-            FailureExecutionResult(12345));
+  // Set the execute transaction mock for the BeginTransaction
+  EXPECT_CALL(
+      *mock_transaction_request_router_,
+      Execute(An<AsyncContext<TransactionRequest, TransactionResponse>&>()))
+      .WillOnce(Return(FailureExecutionResult(12345)));
+
+  EXPECT_THAT(front_end_service_->BeginTransaction(begin_transaction_context),
+              ResultIs(FailureExecutionResult(12345)));
 }
 
 TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
-
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
 
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
 
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
 
   front_end_service.InitMetricInstances();
   AsyncContext<HttpRequest, HttpResponse> http_context;
@@ -638,29 +627,25 @@ TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
 }
 
 TEST_F(FrontEndServiceTest, BeginTransactionValidBody) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
-
-  shared_ptr<AsyncExecutorInterface> mock_async_executor =
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
+  std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
 
   atomic<bool> condition = false;
 
-  mock_transaction_manager->execute_mock =
-      [&](AsyncContext<TransactionRequest, TransactionResponse>&
-              transaction_context) {
+  EXPECT_CALL(
+      *mock_transaction_request_router,
+      Execute(An<AsyncContext<TransactionRequest, TransactionResponse>&>()))
+      .WillOnce([&](AsyncContext<TransactionRequest, TransactionResponse>&
+                        transaction_context) {
         EXPECT_EQ(transaction_context.request->commands.size(), 2);
         EXPECT_NE(transaction_context.request->timeout_time, 0);
         EXPECT_NE(transaction_context.request->transaction_id.high, 0);
@@ -682,19 +667,20 @@ TEST_F(FrontEndServiceTest, BeginTransactionValidBody) {
         EXPECT_EQ(command->GetTokenCount(), 23);
         condition = true;
         return SuccessExecutionResult();
-      };
+      });
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
 
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
+
   front_end_service.InitMetricInstances();
   string begin_transaction_body_string =
       GetBeginTransactionHttpRequestBody_Sample();
@@ -745,7 +731,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackFailed) {
   http_context.response = make_shared<HttpResponse>();
   http_context.callback =
       [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-        EXPECT_EQ(http_context.result, FailureExecutionResult(123));
+        EXPECT_THAT(http_context.result, ResultIs(FailureExecutionResult(123)));
         condition = true;
       };
 
@@ -795,7 +781,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallback) {
     http_context.response->headers = make_shared<core::HttpHeaders>();
     http_context.callback =
         [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-          EXPECT_EQ(http_context.result, result);
+          EXPECT_THAT(http_context.result, ResultIs(result));
 
           if (result.status != core::ExecutionStatus::Failure) {
             EXPECT_EQ(http_context.response->body.capacity, 0);
@@ -815,6 +801,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallback) {
         [&](const shared_ptr<AggregateMetricInterface>& metric_instance,
             AsyncContext<HttpRequest, HttpResponse>& http_context,
             Uuid& transaction_id, shared_ptr<string>& transaction_secret,
+            shared_ptr<string>& transaction_origin,
             Timestamp transaction_last_execution_timestamp,
             TransactionExecutionPhase transaction_phase) {
           EXPECT_EQ(transaction_context.request->transaction_id,
@@ -822,6 +809,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallback) {
           EXPECT_EQ(transaction_phase, TransactionExecutionPhase::Begin);
           EXPECT_EQ(transaction_last_execution_timestamp, 1234567);
           EXPECT_EQ(*transaction_secret, "secret");
+          EXPECT_EQ(*transaction_origin, "origin");
           condition = result.Successful();
           return result;
         };
@@ -890,7 +878,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
     http_context.response->headers = make_shared<core::HttpHeaders>();
     http_context.callback =
         [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-          EXPECT_EQ(http_context.result, result);
+          EXPECT_THAT(http_context.result, ResultIs(result));
 
           if (result.status != core::ExecutionStatus::Failure) {
             EXPECT_EQ(http_context.response->body.capacity, 0);
@@ -910,6 +898,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
         [&](const shared_ptr<AggregateMetricInterface>& metric_instance,
             AsyncContext<HttpRequest, HttpResponse>& http_context,
             Uuid& transaction_id, shared_ptr<string>& transaction_secret,
+            shared_ptr<string>& transaction_origin,
             Timestamp transaction_last_execution_timestamp,
             TransactionExecutionPhase transaction_phase) {
           EXPECT_EQ(transaction_context_.request->transaction_id,
@@ -917,6 +906,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
           EXPECT_EQ(transaction_phase, TransactionExecutionPhase::Begin);
           EXPECT_EQ(transaction_last_execution_timestamp, 1234567);
           EXPECT_EQ(*transaction_secret, "secret");
+          EXPECT_EQ(*transaction_origin, "origin");
 
           if (result.Successful()) {
             condition = true;
@@ -937,36 +927,57 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
   }
 }
 
+TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsAuthorizedDomain) {
+  AsyncContext<HttpRequest, HttpResponse> http_context;
+  http_context.response = make_shared<HttpResponse>();
+  http_context.request = make_shared<HttpRequest>();
+  http_context.request->headers = make_shared<HttpHeaders>();
+  http_context.request->auth_context.authorized_domain =
+      make_shared<string>("origin");
+  http_context.response->headers = make_shared<core::HttpHeaders>();
+  EXPECT_EQ(*front_end_service_->ObtainTransactionOrigin(http_context),
+            "origin");
+}
+
+TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsHeaderValue) {
+  AsyncContext<HttpRequest, HttpResponse> http_context;
+  http_context.response = make_shared<HttpResponse>();
+  http_context.request = make_shared<HttpRequest>();
+  http_context.request->headers = make_shared<HttpHeaders>();
+  http_context.request->auth_context.authorized_domain =
+      make_shared<string>("origin");
+  auto origin_header =
+      make_pair(string(kTransactionOriginHeader), string("origin from header"));
+  http_context.request->headers->insert(origin_header);
+
+  EXPECT_EQ(*front_end_service_->ObtainTransactionOrigin(http_context),
+            "origin from header");
+}
+
 TEST_F(FrontEndServiceTest, InvalidTransactionId) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
-
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
 
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
 
   front_end_service.InitMetricInstances();
 
@@ -1035,36 +1046,34 @@ TEST_F(FrontEndServiceTest, InvalidTransactionId) {
 }
 
 TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
+  EXPECT_CALL(*mock_transaction_request_router,
+              Execute(An<AsyncContext<TransactionPhaseRequest,
+                                      TransactionPhaseResponse>&>()))
+      .Times(5)
+      .WillRepeatedly(Return(FailureExecutionResult(123)));
 
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
-
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
 
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
-
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
   front_end_service.InitMetricInstances();
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
@@ -1078,53 +1087,44 @@ TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
   http_context.request->headers->insert(
       {string(kTransactionSecretHeader), "this_is_a_secret"});
 
-  mock_transaction_manager->execute_phase_mock =
-      [](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&) {
-        return FailureExecutionResult(123);
-      };
-
-  EXPECT_EQ(front_end_service.PrepareTransaction(http_context),
-            FailureExecutionResult(123));
-  EXPECT_EQ(front_end_service.CommitTransaction(http_context),
-            FailureExecutionResult(123));
-  EXPECT_EQ(front_end_service.NotifyTransaction(http_context),
-            FailureExecutionResult(123));
-  EXPECT_EQ(front_end_service.AbortTransaction(http_context),
-            FailureExecutionResult(123));
-  EXPECT_EQ(front_end_service.EndTransaction(http_context),
-            FailureExecutionResult(123));
+  EXPECT_THAT(front_end_service.PrepareTransaction(http_context),
+              ResultIs(FailureExecutionResult(123)));
+  EXPECT_THAT(front_end_service.CommitTransaction(http_context),
+              ResultIs(FailureExecutionResult(123)));
+  EXPECT_THAT(front_end_service.NotifyTransaction(http_context),
+              ResultIs(FailureExecutionResult(123)));
+  EXPECT_THAT(front_end_service.AbortTransaction(http_context),
+              ResultIs(FailureExecutionResult(123)));
+  EXPECT_THAT(front_end_service.EndTransaction(http_context),
+              ResultIs(FailureExecutionResult(123)));
 }
 
 TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
+  auto mock_transaction_request_router_copy =
+      mock_transaction_request_router.get();
 
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
-
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
   front_end_service.InitMetricInstances();
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
@@ -1141,97 +1141,107 @@ TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
   Uuid uuid;
   core::common::FromString(transaction_id, uuid);
 
-  mock_transaction_manager->execute_phase_mock =
-      [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
-              transaction_phase_context) {
-        EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
-        EXPECT_EQ(
-            transaction_phase_context.request->transaction_execution_phase,
-            TransactionExecutionPhase::Prepare);
-        return SuccessExecutionResult();
-      };
+  EXPECT_CALL(*mock_transaction_request_router_copy,
+              Execute(An<AsyncContext<TransactionPhaseRequest,
+                                      TransactionPhaseResponse>&>()))
+      .WillOnce(
+          [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
+                  transaction_phase_context) {
+            EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
+            EXPECT_EQ(
+                transaction_phase_context.request->transaction_execution_phase,
+                TransactionExecutionPhase::Prepare);
+            return SuccessExecutionResult();
+          });
+
   EXPECT_EQ(front_end_service.PrepareTransaction(http_context),
             SuccessExecutionResult());
 
-  mock_transaction_manager->execute_phase_mock =
-      [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
-              transaction_phase_context) {
-        EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
-        EXPECT_EQ(
-            transaction_phase_context.request->transaction_execution_phase,
-            TransactionExecutionPhase::Commit);
-        return SuccessExecutionResult();
-      };
+  EXPECT_CALL(*mock_transaction_request_router_copy,
+              Execute(An<AsyncContext<TransactionPhaseRequest,
+                                      TransactionPhaseResponse>&>()))
+      .WillOnce(
+          [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
+                  transaction_phase_context) {
+            EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
+            EXPECT_EQ(
+                transaction_phase_context.request->transaction_execution_phase,
+                TransactionExecutionPhase::Commit);
+            return SuccessExecutionResult();
+          });
   EXPECT_EQ(front_end_service.CommitTransaction(http_context),
             SuccessExecutionResult());
 
-  mock_transaction_manager->execute_phase_mock =
-      [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
-              transaction_phase_context) {
-        EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
-        EXPECT_EQ(
-            transaction_phase_context.request->transaction_execution_phase,
-            TransactionExecutionPhase::Notify);
-        return SuccessExecutionResult();
-      };
+  EXPECT_CALL(*mock_transaction_request_router_copy,
+              Execute(An<AsyncContext<TransactionPhaseRequest,
+                                      TransactionPhaseResponse>&>()))
+      .WillOnce(
+          [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
+                  transaction_phase_context) {
+            EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
+            EXPECT_EQ(
+                transaction_phase_context.request->transaction_execution_phase,
+                TransactionExecutionPhase::Notify);
+            return SuccessExecutionResult();
+          });
   EXPECT_EQ(front_end_service.NotifyTransaction(http_context),
             SuccessExecutionResult());
 
-  mock_transaction_manager->execute_phase_mock =
-      [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
-              transaction_phase_context) {
-        EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
-        EXPECT_EQ(
-            transaction_phase_context.request->transaction_execution_phase,
-            TransactionExecutionPhase::Abort);
-        return SuccessExecutionResult();
-      };
+  EXPECT_CALL(*mock_transaction_request_router_copy,
+              Execute(An<AsyncContext<TransactionPhaseRequest,
+                                      TransactionPhaseResponse>&>()))
+      .WillOnce(
+          [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
+                  transaction_phase_context) {
+            EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
+            EXPECT_EQ(
+                transaction_phase_context.request->transaction_execution_phase,
+                TransactionExecutionPhase::Abort);
+            return SuccessExecutionResult();
+          });
   EXPECT_EQ(front_end_service.AbortTransaction(http_context),
             SuccessExecutionResult());
 
-  mock_transaction_manager->execute_phase_mock =
-      [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
-              transaction_phase_context) {
-        EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
-        EXPECT_EQ(
-            transaction_phase_context.request->transaction_execution_phase,
-            TransactionExecutionPhase::End);
-        return SuccessExecutionResult();
-      };
+  EXPECT_CALL(*mock_transaction_request_router_copy,
+              Execute(An<AsyncContext<TransactionPhaseRequest,
+                                      TransactionPhaseResponse>&>()))
+      .WillOnce(
+          [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
+                  transaction_phase_context) {
+            EXPECT_EQ(transaction_phase_context.request->transaction_id, uuid);
+            EXPECT_EQ(
+                transaction_phase_context.request->transaction_execution_phase,
+                TransactionExecutionPhase::End);
+            return SuccessExecutionResult();
+          });
   EXPECT_EQ(front_end_service.EndTransaction(http_context),
             SuccessExecutionResult());
 }
 
 TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
-
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
 
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
@@ -1249,7 +1259,7 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
     http_context.response->headers = make_shared<HttpHeaders>();
     http_context.callback =
         [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-          EXPECT_EQ(http_context.result, result);
+          EXPECT_THAT(http_context.result, ResultIs(result));
           condition = true;
         };
 
@@ -1288,7 +1298,7 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallbackFailureWithKeys) {
     http_context.response->headers = make_shared<HttpHeaders>();
     http_context.callback =
         [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-          EXPECT_EQ(http_context.result, result);
+          EXPECT_THAT(http_context.result, ResultIs(result));
 
           if (result.status != core::ExecutionStatus::Failure) {
             EXPECT_EQ(http_context.response->body.capacity, 0);
@@ -1369,7 +1379,7 @@ TEST_F(FrontEndServiceTest,
     http_context.response->headers = make_shared<HttpHeaders>();
     http_context.callback =
         [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-          EXPECT_EQ(http_context.result, result);
+          EXPECT_THAT(http_context.result, ResultIs(result));
 
           if (result.status != core::ExecutionStatus::Failure) {
             EXPECT_EQ(http_context.response->body.capacity, 0);
@@ -1418,7 +1428,7 @@ TEST_F(FrontEndServiceTest, GetServiceStatus) {
   http_context.response->headers = make_shared<core::HttpHeaders>();
   http_context.callback =
       [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-        EXPECT_EQ(http_context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(http_context.result);
         string body(http_context.response->body.bytes->begin(),
                     http_context.response->body.bytes->end());
         EXPECT_EQ(body, expected_body);
@@ -1428,12 +1438,14 @@ TEST_F(FrontEndServiceTest, GetServiceStatus) {
         callback_invoked = true;
       };
 
-  mock_transaction_manager_->get_status_mock =
-      [&](const GetTransactionManagerStatusRequest& request,
-          GetTransactionManagerStatusResponse& response) {
+  EXPECT_CALL(*mock_transaction_request_router_,
+              Execute(An<const GetTransactionManagerStatusRequest&>(),
+                      An<GetTransactionManagerStatusResponse&>()))
+      .WillOnce([&](const GetTransactionManagerStatusRequest&,
+                    GetTransactionManagerStatusResponse& response) {
         response.pending_transactions_count = 19;
         return SuccessExecutionResult();
-      };
+      });
 
   EXPECT_EQ(front_end_service_->GetServiceStatus(http_context),
             SuccessExecutionResult());
@@ -1450,16 +1462,19 @@ TEST_F(FrontEndServiceTest, GetServiceStatusFailure) {
   http_context.response->headers = make_shared<core::HttpHeaders>();
   http_context.callback =
       [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-        EXPECT_EQ(http_context.result, FailureExecutionResult(1234));
+        EXPECT_THAT(http_context.result,
+                    ResultIs(FailureExecutionResult(1234)));
         callback_invoked = true;
       };
 
-  mock_transaction_manager_->get_status_mock =
-      [&](const GetTransactionManagerStatusRequest& request,
-          GetTransactionManagerStatusResponse& response) {
+  EXPECT_CALL(*mock_transaction_request_router_,
+              Execute(An<const GetTransactionManagerStatusRequest&>(),
+                      An<GetTransactionManagerStatusResponse&>()))
+      .WillOnce([&](const GetTransactionManagerStatusRequest&,
+                    GetTransactionManagerStatusResponse& response) {
         response.pending_transactions_count = 19;
         return FailureExecutionResult(1234);
-      };
+      });
 
   EXPECT_EQ(front_end_service_->GetServiceStatus(http_context),
             FailureExecutionResult(1234));
@@ -1468,20 +1483,17 @@ TEST_F(FrontEndServiceTest, GetServiceStatusFailure) {
 }
 
 TEST_F(FrontEndServiceTest, GetTransactionStatus) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
+  auto mock_transaction_request_router_copy =
+      mock_transaction_request_router.get();
 
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
@@ -1490,15 +1502,15 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
 
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
 
   front_end_service.InitMetricInstances();
 
@@ -1549,21 +1561,24 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
   pair = make_pair(string(kTransactionSecretHeader), string("secret"));
   http_context.request->headers->insert(pair);
 
-  mock_transaction_manager->get_transaction_status_mock =
-      [&](AsyncContext<GetTransactionStatusRequest,
-                       GetTransactionStatusResponse>& transaction_context) {
-        Uuid transaction_id;
-        EXPECT_EQ(core::common::FromString(
-                      "3E2A3D09-48ED-A355-D346-AD7DC6CB0909", transaction_id),
-                  SuccessExecutionResult());
-        EXPECT_EQ(transaction_context.request->transaction_id, transaction_id);
-        EXPECT_EQ(*transaction_context.request->transaction_secret, "secret");
-        condition = true;
-        return SuccessExecutionResult();
-      };
+  EXPECT_CALL(*mock_transaction_request_router_copy,
+              Execute(An<AsyncContext<GetTransactionStatusRequest,
+                                      GetTransactionStatusResponse>&>()))
+      .WillOnce(
+          [&](AsyncContext<GetTransactionStatusRequest,
+                           GetTransactionStatusResponse>& transaction_context) {
+            Uuid transaction_id;
+            EXPECT_SUCCESS(core::common::FromString(
+                "3E2A3D09-48ED-A355-D346-AD7DC6CB0909", transaction_id));
+            EXPECT_EQ(transaction_context.request->transaction_id,
+                      transaction_id);
+            EXPECT_EQ(*transaction_context.request->transaction_secret,
+                      "secret");
+            condition = true;
+            return SuccessExecutionResult();
+          });
 
-  EXPECT_EQ(front_end_service.GetTransactionStatus(http_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(front_end_service.GetTransactionStatus(http_context));
   EXPECT_EQ(
       total_request_metric_instance->GetCounter(kMetricLabelValueCoordinator),
       3);
@@ -1578,35 +1593,29 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
 }
 
 TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<TransactionCommandSerializerInterface>
       transaction_command_serializer;
-  shared_ptr<TransactionManagerInterface> transaction_manager =
-      make_shared<MockTransactionManager>(
-          async_executor, transaction_command_serializer, journal_service,
-          remote_transaction_manager, 1, mock_metric_client);
 
-  auto mock_transaction_manager =
-      dynamic_pointer_cast<MockTransactionManager>(transaction_manager);
-
+  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
   shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
-      make_shared<MockBudgetKeyProvider>(
-          async_executor, journal_service, nosql_database_provider,
-          mock_metric_client, mock_config_provider);
 
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
   shared_ptr<HttpServerInterface> http2_server = make_shared<MockHttp2Server>();
   MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor, transaction_manager,
-      budget_key_provider, mock_metric_client, mock_config_provider);
+      http2_server, mock_async_executor,
+      std::move(mock_transaction_request_router),
+      std::move(consume_budget_command_factory), mock_metric_client,
+      mock_config_provider);
 
   vector<ExecutionResult> results = {FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
@@ -1631,7 +1640,7 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
 
     http_context.callback =
         [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-          EXPECT_EQ(result, http_context.result);
+          EXPECT_THAT(http_context.result, ResultIs(result));
           called = true;
         };
 
@@ -1658,7 +1667,7 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
   atomic<bool> called = false;
   http_context
       .callback = [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
-    EXPECT_EQ(SuccessExecutionResult(), http_context.result);
+    EXPECT_SUCCESS(http_context.result);
     string response(http_context.response->body.bytes->begin(),
                     http_context.response->body.bytes->end());
     EXPECT_EQ(
@@ -1674,33 +1683,6 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
             0);
   WaitUntil([&]() { return called.load(); });
 }
-
-class FrontEndServiceAccessor : public FrontEndService {
- public:
-  static std::vector<std::shared_ptr<core::TransactionCommand>>
-  GenerateConsumeBudgetCommandsAcccesor(
-      std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-      const std::string& authorized_domain,
-      const core::common::Uuid& transaction_id,
-      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider) {
-    return GenerateConsumeBudgetCommands(consume_budget_metadata_list,
-                                         authorized_domain, transaction_id,
-                                         async_executor, budget_key_provider);
-  }
-
-  static std::vector<std::shared_ptr<core::TransactionCommand>>
-  GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-      std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-      const std::string& authorized_domain,
-      const core::common::Uuid& transaction_id,
-      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider) {
-    return GenerateConsumeBudgetCommandsWithBatchesPerDay(
-        consume_budget_metadata_list, authorized_domain, transaction_id,
-        async_executor, budget_key_provider);
-  }
-};
 
 TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommands) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
@@ -1725,12 +1707,8 @@ TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommands) {
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands =
-      FrontEndServiceAccessor::GenerateConsumeBudgetCommandsAcccesor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands = front_end_service_->GenerateConsumeBudgetCommands(
+      consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(generated_commands.size(), consume_budget_metadata_list.size());
 
   auto consume_budget_metadata_it = consume_budget_metadata_list.begin();
@@ -1801,12 +1779,9 @@ TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands = FrontEndServiceAccessor::
-      GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands =
+      front_end_service_->GenerateConsumeBudgetCommandsWithBatchesPerDay(
+          consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(consume_budget_metadata_list.size(), 3);
   EXPECT_EQ(generated_commands.size(), 2);
 
@@ -1875,12 +1850,9 @@ TEST_F(FrontEndServiceTest,
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands = FrontEndServiceAccessor::
-      GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands =
+      front_end_service_->GenerateConsumeBudgetCommandsWithBatchesPerDay(
+          consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(consume_budget_metadata_list.size(), 3);
   EXPECT_EQ(generated_commands.size(), 2);
 
@@ -1950,12 +1922,9 @@ TEST_F(FrontEndServiceTest,
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands = FrontEndServiceAccessor::
-      GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands =
+      front_end_service_->GenerateConsumeBudgetCommandsWithBatchesPerDay(
+          consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(consume_budget_metadata_list.size(), 3);
   EXPECT_EQ(generated_commands.size(), 3);
 
@@ -2028,12 +1997,9 @@ TEST_F(FrontEndServiceTest,
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands = FrontEndServiceAccessor::
-      GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands =
+      front_end_service_->GenerateConsumeBudgetCommandsWithBatchesPerDay(
+          consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(consume_budget_metadata_list.size(), 3);
   EXPECT_EQ(generated_commands.size(), 3);
 
@@ -2115,12 +2081,9 @@ TEST_F(
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands = FrontEndServiceAccessor::
-      GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands =
+      front_end_service_->GenerateConsumeBudgetCommandsWithBatchesPerDay(
+          consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(consume_budget_metadata_list.size(), 4);
   EXPECT_EQ(generated_commands.size(), 1);
 
@@ -2180,12 +2143,9 @@ TEST_F(FrontEndServiceTest,
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands = FrontEndServiceAccessor::
-      GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands =
+      front_end_service_->GenerateConsumeBudgetCommandsWithBatchesPerDay(
+          consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(consume_budget_metadata_list.size(), 5);
   EXPECT_EQ(generated_commands.size(), 2);
 
@@ -2285,12 +2245,9 @@ TEST_F(FrontEndServiceTest,
   auto transaction_id = core::common::Uuid({1, 1});
   auto auth_domain = "origin";
 
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<BudgetKeyProviderInterface> budget_key_provider;
-  auto generated_commands = FrontEndServiceAccessor::
-      GenerateConsumeBudgetCommandsWithBatchesPerDayAccessor(
-          consume_budget_metadata_list, auth_domain, transaction_id,
-          async_executor, budget_key_provider);
+  auto generated_commands =
+      front_end_service_->GenerateConsumeBudgetCommandsWithBatchesPerDay(
+          consume_budget_metadata_list, auth_domain, transaction_id);
   EXPECT_EQ(consume_budget_metadata_list.size(), 5);
   EXPECT_EQ(generated_commands.size(), 2);
 

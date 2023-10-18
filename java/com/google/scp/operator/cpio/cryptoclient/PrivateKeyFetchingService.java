@@ -16,7 +16,12 @@
 
 package com.google.scp.operator.cpio.cryptoclient;
 
-/** Interface responsible for fetching encrypted private keys from the Key Handling Service. */
+/**
+ * Interface responsible for fetching encrypted private keys from the Key Handling Service.
+ *
+ * @deprecated Single-party key features are deprecated. Pending removal b/282204533.
+ */
+@Deprecated
 public interface PrivateKeyFetchingService {
 
   /** Returns the json-encoded key ciphertext for a given key ID. */
@@ -24,6 +29,7 @@ public interface PrivateKeyFetchingService {
 
   /** Represents an exception thrown by the {@code PrivateKeyFetchingService} class. */
   final class PrivateKeyFetchingServiceException extends Exception {
+
     /** Creates a new instance from a {@code Throwable}. */
     public PrivateKeyFetchingServiceException(Throwable cause) {
       super(cause);

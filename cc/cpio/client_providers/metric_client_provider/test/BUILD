@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_test(
@@ -29,7 +31,8 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/cpio/common/src/aws:aws_utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
@@ -47,7 +50,7 @@ cc_test(
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "@com_google_googletest//:gtest_main",
     ],

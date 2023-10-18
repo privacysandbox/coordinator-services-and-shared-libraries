@@ -40,6 +40,7 @@
 #include "core/transaction_manager/src/proto/transaction_engine.pb.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 #include "error_codes.h"
 
@@ -48,7 +49,7 @@ static constexpr google::scp::core::TimeDuration
     kTransactionManagerRetryStrategyDelayMs = 31;
 static constexpr size_t kTransactionManagerRetryStrategyTotalRetries = 12;
 static constexpr size_t kTransactionEngineCacheLifetimeSeconds = 30;
-static constexpr size_t kTransactionLifetimeSeconds = 300;
+static constexpr size_t kTransactionTimeoutSeconds = 300;
 
 namespace google::scp::core {
 /**
@@ -77,7 +78,8 @@ struct Transaction : public LoadableObject {
   /// The original context of the transaction.
   AsyncContext<TransactionRequest, TransactionResponse> context;
 
-  /// The current phase of the transaction.
+  /// The current phase of the transaction. This is the transaction phase that
+  /// is to be executed on the transaction.
   std::atomic<transaction_manager::TransactionPhase> current_phase;
 
   /// The current phase execution result of the transaction.
@@ -107,7 +109,12 @@ struct Transaction : public LoadableObject {
   /// manager.
   bool is_coordinated_remotely;
 
-  /// Indicates whether the transaction is waiting for a remote command.
+  /// Indicates whether the transaction is waiting for a remote command from
+  /// either remote transaction manager, or remote PBS instance in the case of
+  /// transaction resolution after transaction expiry.
+  /// This boolean is used for synchronization between transaction phase
+  /// execution requests from remote and internal activites on a
+  /// transaction.
   std::atomic<bool> is_waiting_for_remote;
 
   /// The context of the remote phase operation.
@@ -147,8 +154,7 @@ class TransactionEngine
       std::shared_ptr<JournalServiceInterface>& journal_service,
       std::shared_ptr<RemoteTransactionManagerInterface>&
           remote_transaction_manager,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<ConfigProviderInterface> config_provider);
 
   ExecutionResult Init() noexcept override;
@@ -185,8 +191,7 @@ class TransactionEngine
           transaction_phase_manager,
       std::shared_ptr<RemoteTransactionManagerInterface>
           remote_transaction_manager,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<ConfigProviderInterface> config_provider,
       size_t transaction_engine_cache_lifetime_seconds =
           kTransactionEngineCacheLifetimeSeconds)
@@ -213,7 +218,10 @@ class TransactionEngine
         transaction_engine_cache_lifetime_seconds_(
             transaction_engine_cache_lifetime_seconds),
         config_provider_(config_provider),
-        skip_log_recovery_failures_(false) {}
+        skip_log_recovery_failures_(false),
+        transaction_timeout_in_seconds_(kTransactionTimeoutSeconds),
+        transaction_resolution_with_remote_enabled_(true),
+        activity_id_(core::common::Uuid::GenerateUuid()) {}
 
   /**
    * @brief Locks a local transaction that is being managed remotely. While the
@@ -354,7 +362,8 @@ class TransactionEngine
    * @return ExecutionResult The execution result of the operation.
    */
   virtual ExecutionResult OnJournalServiceRecoverCallback(
-      const std::shared_ptr<core::BytesBuffer>& bytes_buffer) noexcept;
+      const std::shared_ptr<core::BytesBuffer>& bytes_buffer,
+      const common::Uuid& activity_id) noexcept;
 
   /**
    * @brief Initializes transaction with the provided transaction context
@@ -739,8 +748,7 @@ class TransactionEngine
   core::common::OperationDispatcher operation_dispatcher_;
 
   /// Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-      metric_client_;
+  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
   /// Cache life time of the transactions
   size_t transaction_engine_cache_lifetime_seconds_;
@@ -751,5 +759,14 @@ class TransactionEngine
   /// Indicates whether to skip logs that may cause log recovery to fail in
   /// this component.
   bool skip_log_recovery_failures_;
+
+  /// Transaction lifetime in seconds
+  size_t transaction_timeout_in_seconds_;
+
+  /// Is resolution with remote coordinator enabled?
+  bool transaction_resolution_with_remote_enabled_;
+
+  /// Activity ID of background activities
+  core::common::Uuid activity_id_;
 };
 }  // namespace google::scp::core

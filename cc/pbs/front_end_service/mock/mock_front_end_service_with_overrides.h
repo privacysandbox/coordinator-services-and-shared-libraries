@@ -17,12 +17,14 @@
 #pragma once
 
 #include <functional>
+#include <list>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
-#include "cpio/client_providers/metric_client_provider/mock/utils/mock_aggregate_metric.h"
 #include "pbs/front_end_service/src/front_end_service.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::front_end_service::mock {
 
@@ -31,30 +33,30 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
   MockFrontEndServiceWithOverrides(
       std::shared_ptr<core::HttpServerInterface>& http_server,
       std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<core::TransactionManagerInterface>& transaction_manager,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      std::unique_ptr<core::TransactionRequestRouterInterface>
+          transaction_request_router,
+      std::unique_ptr<ConsumeBudgetCommandFactoryInterface> command_factory,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
-      : FrontEndService(http_server, async_executor, transaction_manager,
-                        budget_key_provider, metric_client, config_provider) {
+      : FrontEndService(
+            http_server, async_executor, std::move(transaction_request_router),
+            std::move(command_factory), metric_client, config_provider) {
     remote_coordinator_claimed_identity_ = "remote-coordinator.com";
   }
 
   std::function<core::ExecutionResult(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&,
+      const std::shared_ptr<cpio::AggregateMetricInterface>&,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>&,
       core::common::Uuid&, std::shared_ptr<std::string>& transaction_secret,
-      core::Timestamp, core::TransactionExecutionPhase)>
+      std::shared_ptr<std::string>& transaction_origin, core::Timestamp,
+      core::TransactionExecutionPhase)>
       execution_transaction_phase_mock;
 
-  core::ExecutionResultOr<
-      std::shared_ptr<cpio::client_providers::AggregateMetricInterface>>
+  core::ExecutionResultOr<std::shared_ptr<cpio::AggregateMetricInterface>>
   RegisterAggregateMetric(const std::string& name,
                           const std::string& phase) noexcept {
-    std::shared_ptr<cpio::client_providers::AggregateMetricInterface>
-        metrics_instance = std::make_shared<
-            cpio::client_providers::mock::MockAggregateMetric>();
+    std::shared_ptr<cpio::AggregateMetricInterface> metrics_instance =
+        std::make_shared<cpio::MockAggregateMetric>();
     return metrics_instance;
   }
 
@@ -63,8 +65,7 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
   }
 
   void OnTransactionCallback(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionRequest, core::TransactionResponse>&
           transaction_context) noexcept {
@@ -72,36 +73,37 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
                                            transaction_context);
   }
 
-  std::shared_ptr<cpio::client_providers::mock::MockAggregateMetric>
-  GetMetricsInstance(const std::string& method_name, const std::string& phase) {
-    std::shared_ptr<cpio::client_providers::AggregateMetricInterface>
-        metrics_instance = metrics_instances_map_.at(method_name).at(phase);
-    return std::dynamic_pointer_cast<
-        cpio::client_providers::mock::MockAggregateMetric>(metrics_instance);
+  std::shared_ptr<cpio::MockAggregateMetric> GetMetricsInstance(
+      const std::string& method_name, const std::string& phase) {
+    std::shared_ptr<cpio::AggregateMetricInterface> metrics_instance =
+        metrics_instances_map_.at(method_name).at(phase);
+    return std::dynamic_pointer_cast<cpio::MockAggregateMetric>(
+        metrics_instance);
   }
 
   core::ExecutionResult ExecuteTransactionPhase(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::common::Uuid& transaction_id,
       std::shared_ptr<std::string>& transaction_secret,
+      std::shared_ptr<std::string>& transaction_origin,
       core::Timestamp last_transaction_execution_timestamp,
       core::TransactionExecutionPhase transaction_phase) noexcept override {
     if (execution_transaction_phase_mock) {
       return execution_transaction_phase_mock(
           metric_instance, http_context, transaction_id, transaction_secret,
-          last_transaction_execution_timestamp, transaction_phase);
+          transaction_origin, last_transaction_execution_timestamp,
+          transaction_phase);
     }
 
     return FrontEndService::ExecuteTransactionPhase(
         metric_instance, http_context, transaction_id, transaction_secret,
-        last_transaction_execution_timestamp, transaction_phase);
+        transaction_origin, last_transaction_execution_timestamp,
+        transaction_phase);
   }
 
   void OnExecuteTransactionPhaseCallback(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionPhaseRequest,
                          core::TransactionPhaseResponse>&
@@ -159,14 +161,37 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
   }
 
   void OnGetTransactionStatusCallback(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::GetTransactionStatusRequest,
                          core::GetTransactionStatusResponse>&
           get_transaction_status_context) noexcept {
     FrontEndService::OnGetTransactionStatusCallback(
         metric_instance, http_context, get_transaction_status_context);
+  }
+
+  std::vector<std::shared_ptr<core::TransactionCommand>>
+  GenerateConsumeBudgetCommands(
+      std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
+      const std::string& authorized_domain,
+      const core::common::Uuid& transaction_id) {
+    return FrontEndService::GenerateConsumeBudgetCommands(
+        consume_budget_metadata_list, authorized_domain, transaction_id);
+  }
+
+  std::vector<std::shared_ptr<core::TransactionCommand>>
+  GenerateConsumeBudgetCommandsWithBatchesPerDay(
+      std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
+      const std::string& authorized_domain,
+      const core::common::Uuid& transaction_id) {
+    return FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
+        consume_budget_metadata_list, authorized_domain, transaction_id);
+  }
+
+  std::shared_ptr<std::string> ObtainTransactionOrigin(
+      core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context)
+      const {
+    return FrontEndService::ObtainTransactionOrigin(http_context);
   }
 };
 }  // namespace google::scp::pbs::front_end_service::mock

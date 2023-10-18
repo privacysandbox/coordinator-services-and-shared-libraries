@@ -26,7 +26,8 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/transaction_manager_interface.h"
 #include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/transactions/src/consume_budget_command_common.h"
+#include "pbs/transactions/src/consume_budget_command_base.h"
+#include "pbs/transactions/src/consume_budget_command_request_info.h"
 #include "public/core/interface/execution_result.h"
 
 // TODO: Make the retry strategy configurable.
@@ -45,41 +46,38 @@ namespace google::scp::pbs {
  * protocol to commit a batch of budgets belonging to the same budget key.
  * NOTE: Batching is per budgetkey.
  */
-class BatchConsumeBudgetCommand : public core::TransactionCommand {
+class BatchConsumeBudgetCommand : public ConsumeBudgetCommandBase {
  public:
+  /**
+   * @brief Construct a new Consume Budget Command object with execution
+   * dependencies
+   *
+   * @param transaction_id
+   * @param budget_key_name
+   * @param budget_consumptions
+   * @param async_executor
+   * @param budget_key_provider
+   */
   BatchConsumeBudgetCommand(
-      core::common::Uuid transaction_id,
-      std::shared_ptr<BudgetKeyName>& budget_key_name,
-      std::vector<ConsumeBudgetCommandRequestInfo>&& budget_consumptions,
-      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider)
-      : transaction_id_(transaction_id),
-        budget_key_name_(budget_key_name),
-        budget_consumptions_(budget_consumptions),
-        async_executor_(async_executor),
-        budget_key_provider_(budget_key_provider),
-        operation_dispatcher_(
-            async_executor,
-            core::common::RetryStrategy(
-                core::common::RetryStrategyType::Exponential,
-                kBatchConsumeBudgetCommandRetryStrategyDelayMs,
-                kBatchConsumeBudgetCommandRetryStrategyTotalRetries)) {
-    begin = [](core::TransactionCommandCallback& callback) mutable {
-      auto success_result = core::SuccessExecutionResult();
-      callback(success_result);
-      return core::SuccessExecutionResult();
-    };
-    prepare = std::bind(&BatchConsumeBudgetCommand::Prepare, this,
-                        std::placeholders::_1);
-    commit = std::bind(&BatchConsumeBudgetCommand::Commit, this,
-                       std::placeholders::_1);
-    notify = std::bind(&BatchConsumeBudgetCommand::Notify, this,
-                       std::placeholders::_1);
-    abort = std::bind(&BatchConsumeBudgetCommand::Abort, this,
-                      std::placeholders::_1);
-    end = begin;
-    command_id = kBatchConsumeBudgetCommandId;
-  }
+      const core::common::Uuid& transaction_id,
+      const std::shared_ptr<BudgetKeyName>& budget_key_name,
+      const std::vector<ConsumeBudgetCommandRequestInfo>& budget_consumptions,
+      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider);
+
+  /**
+   * @brief Construct a new Consume Budget Command object with deferred setting
+   * of execution dependencies. The dependencies will be set by the component
+   * handling the execution of the command.
+   *
+   * @param transaction_id
+   * @param budget_key_name
+   * @param budget_consumptions
+   */
+  BatchConsumeBudgetCommand(
+      const core::common::Uuid& transaction_id,
+      const std::shared_ptr<BudgetKeyName>& budget_key_name,
+      const std::vector<ConsumeBudgetCommandRequestInfo>& budget_consumptions);
 
   /// Returns the budget key name associated with the command.
   const std::shared_ptr<BudgetKeyName> GetBudgetKeyName() const {
@@ -96,13 +94,18 @@ class BatchConsumeBudgetCommand : public core::TransactionCommand {
     return failed_insufficient_budget_consumptions_;
   }
 
-  /// Returns the transaction of the command
-  const core::common::Uuid GetTransactionId() const { return transaction_id_; }
-
-  /// Returns the current version of the command
-  core::Version GetVersion() const { return {.major = 1, .minor = 0}; }
+  /// Set up the dependencies provided.
+  void SetUpCommandExecutionDependencies(
+      const std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          async_executor) noexcept override;
 
  protected:
+  /**
+   * @brief Set up handlers for phases such as BEGIN, PREPARE, COMMIT, etc.
+   */
+  void SetUpCommandPhaseHandlers();
+
   /**
    * @brief Executes the prepare phase of a two-phase commit operation for
    * consuming budgets.
@@ -257,23 +260,11 @@ class BatchConsumeBudgetCommand : public core::TransactionCommand {
   void SetFailedInsufficientBudgetConsumptions(
       const core::AsyncContext<Request, Response>& context);
 
-  /// The transaction id associated with the command.
-  core::common::Uuid transaction_id_;
-
   /// The budget key name for the current command.
   std::shared_ptr<BudgetKeyName> budget_key_name_;
 
   /// The budget key consumptions info
   std::vector<ConsumeBudgetCommandRequestInfo> budget_consumptions_;
-
-  /// An instance of the async executor.
-  std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
-
-  /// An instance of the budget key provider.
-  std::shared_ptr<BudgetKeyProviderInterface> budget_key_provider_;
-
-  /// Operation distpatcher
-  core::common::OperationDispatcher operation_dispatcher_;
 
   /// The budget key consumptions that failed during command phase execution due
   /// to insufficient budget

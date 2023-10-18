@@ -41,9 +41,9 @@ class MockRoleCredentialsProvider : public RoleCredentialsProviderInterface {
       core::AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>&
           get_credentials_context) noexcept override {
     if (fail_credentials) {
-      get_credentials_context.result = core::FailureExecutionResult(123);
+      get_credentials_context.result = core::FailureExecutionResult(SC_UNKNOWN);
       get_credentials_context.Finish();
-      return core::FailureExecutionResult(123);
+      return core::FailureExecutionResult(SC_UNKNOWN);
     }
 
     get_credentials_context.response =

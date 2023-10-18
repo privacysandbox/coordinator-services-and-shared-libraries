@@ -24,6 +24,7 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/transaction_manager/src/transaction_engine.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionEngine : public core::TransactionEngine {
@@ -35,8 +36,7 @@ class MockTransactionEngine : public core::TransactionEngine {
       std::shared_ptr<JournalServiceInterface>& journal_service,
       std::shared_ptr<RemoteTransactionManagerInterface>
           remote_transaction_manager,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client)
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client)
       : core::TransactionEngine(
             async_executor, transaction_command_serializer, journal_service,
             remote_transaction_manager, metric_client,
@@ -49,8 +49,7 @@ class MockTransactionEngine : public core::TransactionEngine {
       std::shared_ptr<JournalServiceInterface>& journal_service,
       std::shared_ptr<RemoteTransactionManagerInterface>
           remote_transaction_manager,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<ConfigProviderInterface> config_provider)
       : core::TransactionEngine(async_executor, transaction_command_serializer,
                                 journal_service, remote_transaction_manager,
@@ -65,8 +64,7 @@ class MockTransactionEngine : public core::TransactionEngine {
           transaction_phase_manager,
       std::shared_ptr<RemoteTransactionManagerInterface>
           remote_transaction_manager,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       size_t transaction_engine_cache_lifetime_seconds)
       : core::TransactionEngine(
             async_executor, transaction_command_serializer, journal_service,
@@ -350,9 +348,10 @@ class MockTransactionEngine : public core::TransactionEngine {
   }
 
   ExecutionResult OnJournalServiceRecoverCallback(
-      const std::shared_ptr<core::BytesBuffer>& bytes_buffer) noexcept
-      override {
-    return TransactionEngine::OnJournalServiceRecoverCallback(bytes_buffer);
+      const std::shared_ptr<core::BytesBuffer>& bytes_buffer,
+      const core::common::Uuid& activity_id) noexcept override {
+    return TransactionEngine::OnJournalServiceRecoverCallback(bytes_buffer,
+                                                              activity_id);
   }
 
   ExecutionResult LogTransactionAndProceedToNextPhase(

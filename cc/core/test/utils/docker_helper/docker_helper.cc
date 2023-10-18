@@ -14,16 +14,27 @@
 
 #include "docker_helper.h"
 
+#include <chrono>
+#include <cstdio>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 #include <string>
+#include <thread>
 
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 
+using std::array;
 using std::map;
+using std::runtime_error;
 using std::string;
 
+// localstack version is pinned so that tests are repeatable
 static constexpr char kLocalstackImage[] = "localstack/localstack:1.0.3";
+// gcloud SDK tool version is pinned so that tests are repeatable
+static constexpr char kGcpImage[] =
+    "gcr.io/google.com/cloudsdktool/google-cloud-cli:380.0.0-emulators";
 
 namespace google::scp::core::test {
 string PortMapToSelf(string port) {
@@ -35,9 +46,16 @@ int StartLocalStackContainer(const string& network,
                              const string& exposed_port) {
   map<string, string> env_variables;
   env_variables["EDGE_PORT"] = exposed_port;
-  // localstack version is pinned so that tests are repeatable
   return StartContainer(network, container_name, kLocalstackImage,
                         PortMapToSelf(exposed_port), "4510-4559",
+                        env_variables);
+}
+
+int StartGcpContainer(const string& network, const string& container_name,
+                      const string& exposed_port) {
+  map<string, string> env_variables;
+  return StartContainer(network, container_name, kGcpImage,
+                        PortMapToSelf(exposed_port), "9000-9050",
                         env_variables);
 }
 
@@ -45,10 +63,11 @@ int StartContainer(
     const string& network, const string& container_name,
     const string& image_name, const string& port_mapping1,
     const string& port_mapping2,
-    const std::map<std::string, std::string>& environment_variables) {
-  return std::system(BuildStartContainerCmd(network, container_name, image_name,
-                                            port_mapping1, port_mapping2,
-                                            environment_variables)
+    const std::map<std::string, std::string>& environment_variables,
+    const string& addition_args) {
+  return std::system(BuildStartContainerCmd(
+                         network, container_name, image_name, port_mapping1,
+                         port_mapping2, environment_variables, addition_args)
                          .c_str());
 }
 
@@ -56,7 +75,8 @@ string BuildStartContainerCmd(
     const string& network, const string& container_name,
     const string& image_name, const string& port_mapping1,
     const string& port_mapping2,
-    const std::map<std::string, std::string>& environment_variables) {
+    const std::map<std::string, std::string>& environment_variables,
+    const string& addition_args) {
   auto ports_mapping = absl::StrFormat("-p %s ", port_mapping1);
   if (!port_mapping2.empty()) {
     ports_mapping += absl::StrFormat("-p %s ", port_mapping2);
@@ -79,8 +99,10 @@ string BuildStartContainerCmd(
       "--name=%s "
       "%s"
       "%s"
+      "%s"
       "%s",
-      name_network, container_name, ports_mapping, envs, image_name);
+      name_network, container_name, ports_mapping, envs,
+      addition_args.empty() ? addition_args : addition_args + " ", image_name);
 }
 
 int CreateImage(const string& image_target, const string& args) {
@@ -125,6 +147,49 @@ int StopContainer(const std::string& container_name) {
 }
 
 std::string BuildStopContainerCmd(const std::string& container_name) {
-  return absl::StrFormat("docker stop %s", container_name);
+  return absl::StrFormat("docker rm -f %s", container_name);
+}
+
+std::string GetIpAddress(const std::string& network_name,
+                         const std::string& container_name) {
+  char buffer[20];
+  string result;
+  string command =
+      absl::StrCat("docker inspect -f '{{ .NetworkSettings.Networks.",
+                   network_name, ".IPAddress }}' ", container_name);
+  auto pipe = popen(command.c_str(), "r");
+  if (!pipe) {
+    throw runtime_error("Failed to fetch IP address for container!");
+    return "";
+  }
+
+  while (fgets(buffer, 20, pipe) != nullptr) {
+    result += buffer;
+  }
+
+  auto return_status = pclose(pipe);
+  if (return_status == EXIT_FAILURE) {
+    throw runtime_error(
+        "Failed to close pipe to fetch IP address for container!");
+    return "";
+  }
+
+  auto length = result.length();
+  if (result.back() == '\n') {
+    length -= 1;
+  }
+  return result.substr(0, length);
+}
+
+void GrantPermissionToFolder(const string& container_name,
+                             const string& folder) {
+  string s = absl::StrCat("docker exec -itd " + container_name + " chmod 666 " +
+                          folder);
+  auto result = std::system(s.c_str());
+  if (result != 0) {
+    throw runtime_error("Failed to grant permission!");
+  } else {
+    std::cout << "Succeeded to grant permission!" << std::endl;
+  }
 }
 }  // namespace google::scp::core::test

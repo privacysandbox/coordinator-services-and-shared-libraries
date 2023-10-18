@@ -23,31 +23,42 @@
 #include <aws/core/client/ClientConfiguration.h>
 
 #include "cpio/client_providers/role_credentials_provider/src/aws/aws_role_credentials_provider.h"
-#include "public/cpio/test/test_aws_role_credentials_options.h"
+#include "public/cpio/test/global_cpio/test_cpio_options.h"
 
 namespace google::scp::cpio::client_providers {
+/// RoleCredentialsProviderOptions for testing on AWS.
+struct TestAwsRoleCredentialsProviderOptions
+    : public RoleCredentialsProviderOptions {
+  TestAwsRoleCredentialsProviderOptions() = default;
+
+  explicit TestAwsRoleCredentialsProviderOptions(
+      const TestCpioOptions& cpio_options)
+      : sts_endpoint_override(
+            std::make_shared<std::string>(cpio_options.sts_endpoint_override)) {
+  }
+
+  std::shared_ptr<std::string> sts_endpoint_override =
+      std::make_shared<std::string>();
+};
+
 /*! @copydoc AwsRoleCredentialsProvider
  */
 class TestAwsRoleCredentialsProvider : public AwsRoleCredentialsProvider {
  public:
   explicit TestAwsRoleCredentialsProvider(
-      const std::shared_ptr<TestAwsRoleCredentialsOptions>&
-          role_credentials_options,
+      const std::shared_ptr<TestAwsRoleCredentialsProviderOptions>& options,
       const std::shared_ptr<InstanceClientProviderInterface>&
           instance_client_provider,
-      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor)
-      : AwsRoleCredentialsProvider(role_credentials_options,
-                                   instance_client_provider, async_executor),
-        cloud_watch_endpoint_override_(
-            role_credentials_options->cloud_watch_endpoint_override),
-        region_(role_credentials_options->region) {}
+      const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor)
+      : AwsRoleCredentialsProvider(instance_client_provider, cpu_async_executor,
+                                   io_async_executor),
+        test_options_(options) {}
 
  protected:
-  core::ExecutionResult CreateClientConfiguration(
-      std::shared_ptr<Aws::Client::ClientConfiguration>& client_config) noexcept
-      override;
+  std::shared_ptr<Aws::Client::ClientConfiguration> CreateClientConfiguration(
+      const std::string& region) noexcept override;
 
-  std::shared_ptr<std::string> cloud_watch_endpoint_override_;
-  std::shared_ptr<std::string> region_;
+  std::shared_ptr<TestAwsRoleCredentialsProviderOptions> test_options_;
 };
 }  // namespace google::scp::cpio::client_providers

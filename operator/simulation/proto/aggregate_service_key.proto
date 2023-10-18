@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+package aggregate_api_simulation;
+
+option java_package = "com.google.scp.simulation";
+option java_outer_classname = "KeyProto";
+
+// Representation of a single assymetric key.
+// Currently only contains bytes.
+message AsymmetricKey {
+
+  // Always set.
+  optional bytes key = 1;
+}
+
+// Convenience wrapper for both private and public key.
+message AsymmetricKeyPair {
+
+  // Always set.
+  optional AsymmetricKey private_key = 1;
+
+  // Always set.
+  optional AsymmetricKey public_key = 2;
+}

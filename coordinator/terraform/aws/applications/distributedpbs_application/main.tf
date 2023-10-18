@@ -157,6 +157,8 @@ module "beanstalk_environment" {
   ec2_instance_type                 = var.ec2_instance_type
   beanstalk_app_version             = var.beanstalk_app_version
   root_volume_size_gb               = var.root_volume_size_gb
+  autoscaling_min_size              = var.autoscaling_min_size
+  autoscaling_max_size              = var.autoscaling_max_size
   pbs_s3_bucket_lb_access_logs_id   = module.beanstalk_storage.pbs_s3_bucket_lb_access_logs_id
   enable_pbs_lb_access_logs         = var.enable_pbs_lb_access_logs
 

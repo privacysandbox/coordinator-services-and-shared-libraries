@@ -81,8 +81,8 @@ public final class LocalStackAwsClientUtil {
   private static final SdkHttpClient lambdaHttpClient =
       ApacheHttpClient.builder()
           // Note: 30 seconds appeared to cause premature timeouts.
-          .connectionTimeout(Duration.ofSeconds(60))
-          .socketTimeout(Duration.ofSeconds(60))
+          .connectionTimeout(Duration.ofSeconds(120))
+          .socketTimeout(Duration.ofSeconds(120))
           .tcpKeepAlive(true)
           .build();
 

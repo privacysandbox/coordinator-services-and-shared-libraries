@@ -23,54 +23,42 @@
 #include "core/interface/lease_manager_interface.h"
 
 namespace google::scp::pbs::leasable_lock::mock {
-class MockLeasableLock : public LeasableLockInterface {
+class MockLeasableLock : public core::LeasableLockInterface {
  public:
-  ExecutionResult RefreshLease() noexcept {
-    on_before_lease_acquire_();
-    return SuccessExecutionResult();
+  explicit MockLeasableLock(core::TimeDuration lease_duration)
+      : lease_duration_(lease_duration) {}
+
+  bool ShouldRefreshLease() const noexcept override {
+    return should_refresh_lease_;
   }
 
-  std::optional<LeaseInfo> GetCurrentLeaseOwnerInfo() const noexcept {
+  core::ExecutionResult RefreshLease(
+      bool is_read_only_lease_refresh = false) noexcept override {
+    return core::SuccessExecutionResult();
+  }
+
+  core::TimeDuration GetConfiguredLeaseDurationInMilliseconds()
+      const noexcept override {
+    return lease_duration_;
+  }
+
+  std::optional<core::LeaseInfo> GetCurrentLeaseOwnerInfo()
+      const noexcept override {
+    std::unique_lock lock(mutex_);
     return current_lease_owner_info_;
-  };
-
-  TimeDuration GetConfiguredLeaseDurationInMilliseconds() const noexcept {
-    return lease_duration_in_milliseconds_;
   }
 
-  bool IsLeaseExpired() noexcept { return is_lease_expired_; }
-
-  bool ShouldRefreshLease() const noexcept { return should_try_refresh_lease_; }
-
-  void SetLeaseOwnerInfo(LeaseInfo lease_owner_info) {
-    lease_owner_info_ = lease_owner_info;
+  void SetCurrentLeaseOwnerInfo(core::LeaseInfo lease_info) noexcept {
+    std::unique_lock lock(mutex_);
+    current_lease_owner_info_ = lease_info;
   }
 
-  bool IsCurrentLeaseOwner() const noexcept {
-    return should_allow_lease_acquire;
-  }
+  bool IsCurrentLeaseOwner() const noexcept override { return is_owner_; }
 
-  void AllowLeaseAcquire() {
-    should_allow_lease_acquire = true;
-    current_lease_owner_info_ = lease_owner_info_;
-  }
-
-  void DisallowLeaseAcquire() {
-    should_allow_lease_acquire = false;
-    current_lease_owner_info_.reset();
-  }
-
-  void SetOnBeforeAcquireLease(std::function<void()> on_before_lease_acquire) {
-    on_before_lease_acquire_ = on_before_lease_acquire;
-  }
-
- private:
-  LeaseInfo lease_owner_info_;
-  std::optional<LeaseInfo> current_lease_owner_info_;
-  std::atomic<bool> should_allow_lease_acquire = {false};
-  std::atomic<bool> should_try_refresh_lease_ = {true};
-  std::atomic<bool> is_lease_expired_ = {false};
-  TimeDuration lease_duration_in_milliseconds_ = 100;
-  std::function<void()> on_before_lease_acquire_ = []() {};
+  mutable std::mutex mutex_;
+  core::LeaseInfo current_lease_owner_info_ = {};
+  std::atomic<bool> is_owner_ = false;
+  core::TimeDuration lease_duration_;
+  std::atomic<bool> should_refresh_lease_ = true;
 };
 }  // namespace google::scp::pbs::leasable_lock::mock

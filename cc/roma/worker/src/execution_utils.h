@@ -24,11 +24,21 @@
 
 #include "include/v8.h"
 #include "public/core/interface/execution_result.h"
-#include "roma/ipc/src/ipc_message.h"
+#include "roma/config/src/type_converter.h"
+#include "roma/interface/roma.h"
+#include "roma/wasm/src/deserializer.h"
+#include "roma/wasm/src/serializer.h"
+#include "roma/wasm/src/wasm_types.h"
 
 #include "error_codes.h"
 
 namespace google::scp::roma::worker {
+
+static constexpr char kWebAssemblyTag[] = "WebAssembly";
+static constexpr char kInstanceTag[] = "Instance";
+static constexpr char kExportsTag[] = "exports";
+static constexpr char kRegisteredWasmExports[] = "RomaRegisteredWasmExports";
+static constexpr char kTimeoutErrorMsg[] = "execution timeout";
 
 class ExecutionUtils {
  public:
@@ -42,7 +52,7 @@ class ExecutionUtils {
    * @return core::ExecutionResult
    */
   static core::ExecutionResult CompileRunJS(
-      const common::RomaString& js, common::RomaString& err_msg,
+      const std::string& js, std::string& err_msg,
       v8::Local<v8::UnboundScript>* unbound_script = nullptr) noexcept;
 
   /**
@@ -53,9 +63,9 @@ class ExecutionUtils {
    * @param err_msg the error message to output.
    * @return core::ExecutionResult
    */
-  static core::ExecutionResult GetJsHandler(
-      const common::RomaString& handler_name, v8::Local<v8::Value>& handler,
-      common::RomaString& err_msg) noexcept;
+  static core::ExecutionResult GetJsHandler(const std::string& handler_name,
+                                            v8::Local<v8::Value>& handler,
+                                            std::string& err_msg) noexcept;
 
   /**
    * @brief Compiles and runs WASM code object.
@@ -65,8 +75,8 @@ class ExecutionUtils {
    * @return core::ExecutionResult the execution result of JavaScript code
    * object compile and run.
    */
-  static core::ExecutionResult CompileRunWASM(
-      const common::RomaString& wasm, common::RomaString& err_msg) noexcept;
+  static core::ExecutionResult CompileRunWASM(const std::string& wasm,
+                                              std::string& err_msg) noexcept;
 
   /**
    * @brief Get handler from WASM export object.
@@ -76,55 +86,20 @@ class ExecutionUtils {
    * @param err_msg the error message to output.
    * @return core::ExecutionResult
    */
-  static core::ExecutionResult GetWasmHandler(
-      const common::RomaString& handler_name, v8::Local<v8::Value>& handler,
-      common::RomaString& err_msg) noexcept;
+  static core::ExecutionResult GetWasmHandler(const std::string& handler_name,
+                                              v8::Local<v8::Value>& handler,
+                                              std::string& err_msg) noexcept;
 
   /**
-   * @brief Reports the caught exception from v8 isolate to error
-   * message, and returns associated execution result.
+   * @brief Converts string vector to v8 Array.
    *
-   * @param try_catch the pointer to v8 try catch object.
-   * @param err_msg the reference to error message.
-   * @return core::ExecutionResult
-   */
-  static core::ExecutionResult ReportException(
-      v8::TryCatch* try_catch, common::RomaString& err_msg) noexcept;
-
-  /**
-   * @brief Converts RomaString to v8 local native string.
-   *
-   * @param roma_string The object of RomaString.
-   * @param v8_string The output of v8 local string.
-   * @return true
-   * @return false
-   */
-  static bool RomaStrToLocalStr(const common::RomaString& roma_string,
-                                v8::Local<v8::String>& v8_string) noexcept;
-
-  /**
-   * @brief Converts RomaVector to v8 Array.
-   *
-   * @param input The object of RomaVector.
+   * @param input The object of std::vector<std::string>.
    * @param is_wasm Whether this is targeted towards a wasm handler.
    * @return v8::Local<v8::String> The output of v8 Value.
    */
   static v8::Local<v8::Array> InputToLocalArgv(
-      const common::RomaVector<common::RomaString>& input,
+      const std::vector<std::string_view>& input,
       bool is_wasm = false) noexcept;
-
-  /**
-   * @brief Gets the execution result based on the exception_result and
-   * predefined_result. Returns the exception_result if it is defined.
-   * Otherwise, return the predefined_result.
-   *
-   * @param exception_result The exception_result from ReportException().
-   * @param defined_code The pre-defined status code.
-   * @return core::ExecutionResult
-   */
-  static core::ExecutionResult GetExecutionResult(
-      const core::ExecutionResult& exception_result,
-      core::StatusCode defined_code) noexcept;
 
   /**
    * @brief Read a value from WASM memory
@@ -138,5 +113,108 @@ class ExecutionUtils {
   static v8::Local<v8::Value> ReadFromWasmMemory(
       v8::Isolate* isolate, v8::Local<v8::Context>& context, int32_t offset,
       WasmDataType read_value_type);
+
+  /**
+   * @brief Extract the error message from v8::Message object.
+   *
+   * @param isolate
+   * @param message
+   * @return std::string
+   */
+  static std::string ExtractMessage(v8::Isolate* isolate,
+                                    v8::Local<v8::Message> message) noexcept;
+
+  /**
+   * @brief Parse the input using JSON::Parse to turn it into the right JS types
+   *
+   * @param input
+   * @return Local<Array> The array of parsed values
+   */
+  static v8::Local<v8::Array> ParseAsJsInput(
+      const std::vector<std::string_view>& input);
+
+  /**
+   * @brief Parse the handler input to be provided to a WASM handler.
+   * This function handles writing to the WASM memory if necessary.
+   *
+   * @param isolate
+   * @param context
+   * @param input
+   * @return Local<Array> The input arguments to be provided to the WASM
+   * handler.
+   */
+  static v8::Local<v8::Array> ParseAsWasmInput(
+      v8::Isolate* isolate, v8::Local<v8::Context>& context,
+      const std::vector<std::string_view>& input);
+
+  /**
+   * @brief Function that is used as the entry point to call user-provided
+   * C++ binding functions.
+   *
+   * @param info
+   */
+  static void GlobalV8FunctionCallback(
+      const v8::FunctionCallbackInfo<v8::Value>& info);
+
+  /**
+   * @brief Check if err_msg contains a WebAssembly ReferenceError.
+   *
+   * @param err_msg
+   * @return true
+   * @return false
+   */
+  static bool CheckErrorWithWebAssembly(std::string& err_msg) noexcept {
+    return err_msg.find(kJsWasmMixedError) != std::string::npos;
+  }
+
+  /**
+   * @brief Create an Unbound Script object.
+   *
+   * @param js
+   * @param err_msg
+   * @return core::ExecutionResult
+   */
+  static core::ExecutionResult CreateUnboundScript(
+      v8::Global<v8::UnboundScript>& unbound_script, v8::Isolate* isolate,
+      const std::string& js, std::string& err_msg) noexcept;
+
+  /**
+   * @brief Bind UnboundScript to current context and run it.
+   *
+   * @param err_msg
+   * @return core::ExecutionResult
+   */
+  static core::ExecutionResult BindUnboundScript(
+      const v8::Global<v8::UnboundScript>& global_unbound_script,
+      std::string& err_msg) noexcept;
+
+  /**
+   * @brief Generate an object that represents the WASM imports modules
+   *
+   * @param isolate
+   * @return Local<Object>
+   */
+  static v8::Local<v8::Object> GenerateWasmImports(v8::Isolate* isolate);
+
+  static std::string DescribeError(v8::Isolate* isolate,
+                                   v8::TryCatch* try_catch) noexcept;
+
+  /**
+   * @brief Get the WASM memory object that was registered in the global context
+   *
+   * @param isolate
+   * @param context
+   * @return Local<Value> The WASM memory object
+   */
+  static v8::Local<v8::Value> GetWasmMemoryObject(
+      v8::Isolate* isolate, v8::Local<v8::Context>& context);
+
+  static core::ExecutionResult V8PromiseHandler(v8::Isolate* isolate,
+                                                v8::Local<v8::Value>& result,
+                                                std::string& err_msg);
+
+ private:
+  static constexpr char kJsWasmMixedError[] =
+      "ReferenceError: WebAssembly is not defined";
 };
 }  // namespace google::scp::roma::worker

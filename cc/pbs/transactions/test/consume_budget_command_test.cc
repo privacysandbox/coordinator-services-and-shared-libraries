@@ -31,12 +31,13 @@
 #include "core/interface/nosql_database_provider_interface.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "pbs/budget_key/mock/mock_budget_key.h"
 #include "pbs/budget_key_provider/mock/mock_budget_key_provider.h"
 #include "pbs/budget_key_transaction_protocols/mock/mock_consume_budget_transaction_protocol.h"
 #include "pbs/transactions/mock/mock_consume_budget_command.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
@@ -53,13 +54,14 @@ using google::scp::core::common::Uuid;
 using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockMetricClient;
 using google::scp::pbs::ConsumeBudgetCommand;
 using google::scp::pbs::budget_key::mock::MockBudgetKey;
 using google::scp::pbs::budget_key::mock::MockConsumeBudgetTransactionProtocol;
 using google::scp::pbs::budget_key_provider::mock::MockBudgetKeyProvider;
-using google::scp::pbs::transactions::MockConsumeBudgetCommand;
+using google::scp::pbs::transactions::mock::MockConsumeBudgetCommand;
 using std::atomic;
 using std::make_shared;
 using std::shared_ptr;
@@ -77,7 +79,7 @@ TEST(ConsumeBudgetCommandTest, Prepare) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_key_provider = make_shared<MockBudgetKeyProvider>(
       mock_async_executor, journal_service, nosql_database_provider,
@@ -100,7 +102,8 @@ TEST(ConsumeBudgetCommandTest, Prepare) {
         mock_key_provider;
 
     MockConsumeBudgetCommand consume_budget_command(
-        transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+        transaction_id, budget_key_name,
+        ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
         mock_async_executor, budget_key_provider);
 
     TransactionCommandCallback callback = [](ExecutionResult&) {};
@@ -120,14 +123,15 @@ TEST(ConsumeBudgetCommandTest, OnPrepareGetBudgetKeyCallbackFailure) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
           mock_async_executor, journal_service, nosql_database_provider,
           mock_metric_client, mock_config_provider);
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>
@@ -136,7 +140,7 @@ TEST(ConsumeBudgetCommandTest, OnPrepareGetBudgetKeyCallbackFailure) {
 
   atomic<bool> condition = false;
   TransactionCommandCallback callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, FailureExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnPrepareGetBudgetKeyCallback(get_budget_key_context,
@@ -147,7 +151,7 @@ TEST(ConsumeBudgetCommandTest, OnPrepareGetBudgetKeyCallbackFailure) {
 
   condition = false;
   callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, RetryExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(RetryExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnPrepareGetBudgetKeyCallback(get_budget_key_context,
@@ -165,7 +169,7 @@ TEST(ConsumeBudgetCommandTest, OnPrepareGetBudgetKeyCallback) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -173,7 +177,8 @@ TEST(ConsumeBudgetCommandTest, OnPrepareGetBudgetKeyCallback) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {FailureExecutionResult(1234),
@@ -211,7 +216,7 @@ TEST(ConsumeBudgetCommandTest, OnPrepareGetBudgetKeyCallback) {
             EXPECT_EQ(execution_result.status_code,
                       core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES);
           } else {
-            EXPECT_EQ(execution_result, result);
+            EXPECT_THAT(execution_result, ResultIs(result));
           }
           condition = true;
         };
@@ -232,7 +237,7 @@ TEST(ConsumeBudgetCommandTest, OnPrepareConsumeBudgetCallback) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -240,7 +245,8 @@ TEST(ConsumeBudgetCommandTest, OnPrepareConsumeBudgetCallback) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
@@ -253,7 +259,7 @@ TEST(ConsumeBudgetCommandTest, OnPrepareConsumeBudgetCallback) {
     prepare_consume_budget_context.result = result;
     TransactionCommandCallback callback =
         [&](ExecutionResult& execution_result) {
-          EXPECT_EQ(execution_result, result);
+          EXPECT_THAT(execution_result, ResultIs(result));
         };
     consume_budget_command.OnPrepareConsumeBudgetCallback(
         prepare_consume_budget_context, callback);
@@ -270,7 +276,7 @@ TEST(ConsumeBudgetCommandTest, Commit) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_key_provider = make_shared<MockBudgetKeyProvider>(
       mock_async_executor, journal_service, nosql_database_provider,
@@ -294,7 +300,8 @@ TEST(ConsumeBudgetCommandTest, Commit) {
         mock_key_provider;
 
     MockConsumeBudgetCommand consume_budget_command(
-        transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+        transaction_id, budget_key_name,
+        ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
         mock_async_executor, budget_key_provider);
 
     TransactionCommandCallback callback = [](ExecutionResult&) {};
@@ -314,7 +321,7 @@ TEST(ConsumeBudgetCommandTest, OnCommitGetBudgetKeyCallbackFailure) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -322,7 +329,8 @@ TEST(ConsumeBudgetCommandTest, OnCommitGetBudgetKeyCallbackFailure) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>
@@ -331,7 +339,7 @@ TEST(ConsumeBudgetCommandTest, OnCommitGetBudgetKeyCallbackFailure) {
 
   atomic<bool> condition = false;
   TransactionCommandCallback callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, FailureExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnCommitGetBudgetKeyCallback(get_budget_key_context,
@@ -342,7 +350,7 @@ TEST(ConsumeBudgetCommandTest, OnCommitGetBudgetKeyCallbackFailure) {
 
   condition = false;
   callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, RetryExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(RetryExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnCommitGetBudgetKeyCallback(get_budget_key_context,
@@ -360,7 +368,7 @@ TEST(ConsumeBudgetCommandTest, OnCommitGetBudgetKeyCallback) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -368,7 +376,8 @@ TEST(ConsumeBudgetCommandTest, OnCommitGetBudgetKeyCallback) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {FailureExecutionResult(1234),
@@ -406,7 +415,7 @@ TEST(ConsumeBudgetCommandTest, OnCommitGetBudgetKeyCallback) {
             EXPECT_EQ(execution_result.status_code,
                       core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES);
           } else {
-            EXPECT_EQ(execution_result, result);
+            EXPECT_THAT(execution_result, ResultIs(result));
           }
           condition = true;
         };
@@ -427,14 +436,15 @@ TEST(ConsumeBudgetCommandTest, OnCommitConsumeBudgetCallback) {
   shared_ptr<JournalServiceInterface> journal_service;
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
           mock_async_executor, journal_service, nosql_database_provider,
           mock_metric_client, mock_config_provider);
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
@@ -447,7 +457,7 @@ TEST(ConsumeBudgetCommandTest, OnCommitConsumeBudgetCallback) {
     commit_consume_budget_context.result = result;
     TransactionCommandCallback callback =
         [&](ExecutionResult& execution_result) {
-          EXPECT_EQ(execution_result, result);
+          EXPECT_THAT(execution_result, ResultIs(result));
         };
     consume_budget_command.OnCommitConsumeBudgetCallback(
         commit_consume_budget_context, callback);
@@ -464,7 +474,7 @@ TEST(ConsumeBudgetCommandTest, Notify) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_key_provider = make_shared<MockBudgetKeyProvider>(
       mock_async_executor, journal_service, nosql_database_provider,
@@ -488,7 +498,8 @@ TEST(ConsumeBudgetCommandTest, Notify) {
         mock_key_provider;
 
     MockConsumeBudgetCommand consume_budget_command(
-        transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+        transaction_id, budget_key_name,
+        ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
         mock_async_executor, budget_key_provider);
 
     TransactionCommandCallback callback = [](ExecutionResult&) {};
@@ -508,7 +519,7 @@ TEST(ConsumeBudgetCommandTest, OnNotifyGetBudgetKeyCallbackFailure) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -516,7 +527,8 @@ TEST(ConsumeBudgetCommandTest, OnNotifyGetBudgetKeyCallbackFailure) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>
@@ -525,7 +537,7 @@ TEST(ConsumeBudgetCommandTest, OnNotifyGetBudgetKeyCallbackFailure) {
 
   atomic<bool> condition = false;
   TransactionCommandCallback callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, FailureExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnNotifyGetBudgetKeyCallback(get_budget_key_context,
@@ -536,7 +548,7 @@ TEST(ConsumeBudgetCommandTest, OnNotifyGetBudgetKeyCallbackFailure) {
 
   condition = false;
   callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, RetryExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(RetryExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnNotifyGetBudgetKeyCallback(get_budget_key_context,
@@ -554,7 +566,7 @@ TEST(ConsumeBudgetCommandTest, OnNotifyGetBudgetKeyCallback) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -562,7 +574,8 @@ TEST(ConsumeBudgetCommandTest, OnNotifyGetBudgetKeyCallback) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {FailureExecutionResult(1234),
@@ -598,7 +611,7 @@ TEST(ConsumeBudgetCommandTest, OnNotifyGetBudgetKeyCallback) {
             EXPECT_EQ(execution_result.status_code,
                       core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES);
           } else {
-            EXPECT_EQ(execution_result, result);
+            EXPECT_THAT(execution_result, ResultIs(result));
           }
           condition = true;
         };
@@ -619,7 +632,7 @@ TEST(ConsumeBudgetCommandTest, OnNotifyConsumeBudgetCallback) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -627,7 +640,8 @@ TEST(ConsumeBudgetCommandTest, OnNotifyConsumeBudgetCallback) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
@@ -640,7 +654,7 @@ TEST(ConsumeBudgetCommandTest, OnNotifyConsumeBudgetCallback) {
     notify_consume_budget_context.result = result;
     TransactionCommandCallback callback =
         [&](ExecutionResult& execution_result) {
-          EXPECT_EQ(execution_result, result);
+          EXPECT_THAT(execution_result, ResultIs(result));
         };
     consume_budget_command.OnNotifyConsumeBudgetCallback(
         notify_consume_budget_context, callback);
@@ -657,7 +671,7 @@ TEST(ConsumeBudgetCommandTest, Abort) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_key_provider = make_shared<MockBudgetKeyProvider>(
       mock_async_executor, journal_service, nosql_database_provider,
@@ -681,11 +695,12 @@ TEST(ConsumeBudgetCommandTest, Abort) {
         mock_key_provider;
 
     MockConsumeBudgetCommand consume_budget_command(
-        transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+        transaction_id, budget_key_name,
+        ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
         mock_async_executor, budget_key_provider);
 
     TransactionCommandCallback callback = [](ExecutionResult&) {};
-    EXPECT_EQ(consume_budget_command.Abort(callback), SuccessExecutionResult());
+    EXPECT_SUCCESS(consume_budget_command.Abort(callback));
     WaitUntil([&]() { return condition.load(); });
   }
 }
@@ -700,7 +715,7 @@ TEST(ConsumeBudgetCommandTest, OnAbortGetBudgetKeyCallbackFailure) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -708,7 +723,8 @@ TEST(ConsumeBudgetCommandTest, OnAbortGetBudgetKeyCallbackFailure) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>
@@ -717,7 +733,7 @@ TEST(ConsumeBudgetCommandTest, OnAbortGetBudgetKeyCallbackFailure) {
 
   atomic<bool> condition = false;
   TransactionCommandCallback callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, FailureExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnAbortGetBudgetKeyCallback(get_budget_key_context,
@@ -728,7 +744,7 @@ TEST(ConsumeBudgetCommandTest, OnAbortGetBudgetKeyCallbackFailure) {
 
   condition = false;
   callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, RetryExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(RetryExecutionResult(123)));
     condition = true;
   };
   consume_budget_command.OnAbortGetBudgetKeyCallback(get_budget_key_context,
@@ -746,7 +762,7 @@ TEST(ConsumeBudgetCommandTest, OnAbortGetBudgetKeyCallback) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -754,7 +770,8 @@ TEST(ConsumeBudgetCommandTest, OnAbortGetBudgetKeyCallback) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {FailureExecutionResult(1234),
@@ -790,7 +807,7 @@ TEST(ConsumeBudgetCommandTest, OnAbortGetBudgetKeyCallback) {
             EXPECT_EQ(execution_result.status_code,
                       core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES);
           } else {
-            EXPECT_EQ(execution_result, result);
+            EXPECT_THAT(execution_result, ResultIs(result));
           }
           condition = true;
         };
@@ -811,7 +828,7 @@ TEST(ConsumeBudgetCommandTest, OnAbortConsumeBudgetCallback) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -819,7 +836,8 @@ TEST(ConsumeBudgetCommandTest, OnAbortConsumeBudgetCallback) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
@@ -832,7 +850,7 @@ TEST(ConsumeBudgetCommandTest, OnAbortConsumeBudgetCallback) {
     abort_consume_budget_context.result = result;
     TransactionCommandCallback callback =
         [&](ExecutionResult& execution_result) {
-          EXPECT_EQ(execution_result, result);
+          EXPECT_THAT(execution_result, ResultIs(result));
         };
     consume_budget_command.OnAbortConsumeBudgetCallback(
         abort_consume_budget_context, callback);
@@ -849,7 +867,7 @@ TEST(ConsumeBudgetCommandTest, VerifyGetters) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<BudgetKeyProviderInterface> budget_key_provider =
       make_shared<MockBudgetKeyProvider>(
@@ -857,7 +875,8 @@ TEST(ConsumeBudgetCommandTest, VerifyGetters) {
           mock_metric_client, mock_config_provider);
 
   MockConsumeBudgetCommand consume_budget_command(
-      transaction_id, budget_key_name, time_bucket, total_budget_to_consume,
+      transaction_id, budget_key_name,
+      ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
       mock_async_executor, budget_key_provider);
   EXPECT_EQ(*consume_budget_command.GetBudgetKeyName(), *budget_key_name);
   EXPECT_EQ(consume_budget_command.GetTimeBucket(), time_bucket);

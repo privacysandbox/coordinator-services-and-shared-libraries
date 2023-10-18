@@ -16,11 +16,11 @@
 
 #pragma once
 
+#include <gmock/gmock.h>
+
 #include <functional>
 #include <memory>
 #include <string>
-
-#include <gmock/gmock.h>
 
 #include "core/interface/authorization_proxy_interface.h"
 

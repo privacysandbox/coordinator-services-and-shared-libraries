@@ -20,24 +20,29 @@
 
 #include "core/async_executor/mock/mock_async_executor.h"
 #include "core/message_router/src/message_router.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 namespace google::scp::cpio::mock {
 class MockMetricClientWithOverrides : public MetricClient {
  public:
   MockMetricClientWithOverrides(
       const std::shared_ptr<MetricClientOptions>& options)
-      : MetricClient(options) {
-    metric_client_provider_ =
-        std::make_shared<client_providers::mock::MockMetricClientProvider>();
+      : MetricClient(options) {}
+
+  core::ExecutionResult create_metric_client_provider_result =
+      core::SuccessExecutionResult();
+
+  core::ExecutionResult CreateMetricClientProvider() noexcept override {
+    if (create_metric_client_provider_result.Successful()) {
+      metric_client_provider_ = std::make_shared<MockMetricClient>();
+      return create_metric_client_provider_result;
+    }
+    return create_metric_client_provider_result;
   }
 
-  std::shared_ptr<client_providers::mock::MockMetricClientProvider>
-  GetMetricClientProvider() {
-    return std::dynamic_pointer_cast<
-        client_providers::mock::MockMetricClientProvider>(
-        metric_client_provider_);
+  std::shared_ptr<MockMetricClient> GetMetricClientProvider() {
+    return std::dynamic_pointer_cast<MockMetricClient>(metric_client_provider_);
   }
 };
 }  // namespace google::scp::cpio::mock

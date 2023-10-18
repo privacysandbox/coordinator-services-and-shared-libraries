@@ -24,6 +24,7 @@
 #include <aws/monitoring/CloudWatchClient.h>
 #include <aws/monitoring/CloudWatchErrors.h>
 #include <aws/monitoring/model/PutMetricDataRequest.h>
+#include <google/protobuf/util/time_util.h>
 
 #include "core/interface/async_context.h"
 #include "public/core/interface/execution_result.h"
@@ -37,6 +38,7 @@ using Aws::CloudWatch::Model::StandardUnit;
 using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
+using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
@@ -120,7 +122,9 @@ ExecutionResult AwsMetricClientUtils::ParseRequestToDatum(
       return record_metric_context.result;
     }
 
-    if (metric.timestamp_in_ms() < 0) {
+    auto input_timestamp_in_ms =
+        TimeUtil::TimestampToMilliseconds(metric.timestamp());
+    if (input_timestamp_in_ms < 0) {
       record_metric_context.result = FailureExecutionResult(
           SC_AWS_METRIC_CLIENT_PROVIDER_INVALID_TIMESTAMP);
       record_metric_context.Finish();
@@ -130,9 +134,9 @@ ExecutionResult AwsMetricClientUtils::ParseRequestToDatum(
     MetricDatum datum;
     // The default value of the timestamp is the current time.
     auto metric_timestamp = Aws::Utils::DateTime(system_clock::now());
-    if (metric.timestamp_in_ms() > 0) {
+    if (input_timestamp_in_ms > 0) {
       auto current_time = Aws::Utils::DateTime().Now();
-      metric_timestamp = Aws::Utils::DateTime(metric.timestamp_in_ms());
+      metric_timestamp = Aws::Utils::DateTime(input_timestamp_in_ms);
       auto difference =
           duration_cast<seconds>(current_time - metric_timestamp).count();
       // The valid timestamp of metric cannot be earlier than two weeks or

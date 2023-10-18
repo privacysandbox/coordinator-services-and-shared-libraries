@@ -16,15 +16,19 @@ load(
     "@com_google_googleapis_imports//:imports.bzl",
     "cc_grpc_library",
     "cc_proto_library",
+    "java_grpc_library",
 )
+load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//visibility:public"])
 
 proto_library(
     name = "blob_storage_service_proto",
     srcs = ["blob_storage_service.proto"],
     deps = [
         "//cc/core/common/proto:core_common_proto",
+        "@com_google_protobuf//:duration_proto",
     ],
 )
 
@@ -42,4 +46,18 @@ cc_grpc_library(
     generate_mocks = True,
     grpc_only = True,
     deps = [":blob_storage_service_cc_proto"],
+)
+
+##############################################################################
+# Java
+##############################################################################
+java_proto_library(
+    name = "blob_storage_service_java_proto",
+    deps = [":blob_storage_service_proto"],
+)
+
+java_grpc_library(
+    name = "blob_storage_service_java_grpc",
+    srcs = [":blob_storage_service_proto"],
+    deps = [":blob_storage_service_java_proto"],
 )

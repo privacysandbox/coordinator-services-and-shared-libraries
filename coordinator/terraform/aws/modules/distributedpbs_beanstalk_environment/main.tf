@@ -35,7 +35,7 @@ locals {
   # as solution stack versions do not remain available if they have not been
   # used by a given AWS account.
   # https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platform-history-docker.html
-  solution_stack_name                   = var.solution_stack_name != "" ? var.solution_stack_name : "64bit Amazon Linux 2 v3.5.3 running Docker"
+  solution_stack_name                   = var.solution_stack_name != "" ? var.solution_stack_name : "64bit Amazon Linux 2 v3.5.9 running Docker"
   alarming_sns_topic_permissions        = <<EOF
 ,
      {
@@ -53,6 +53,7 @@ locals {
     }
 EOF
   enable_alarming_sns_topic_permissions = var.enable_alarms ? local.alarming_sns_topic_permissions : ""
+  min_instances_in_service              = var.autoscaling_min_size - 1
   ignore_4xx_errors_in_elb              = "{\"Rules\": { \"Environment\": { \"Application\": { \"ApplicationRequests4xx\": { \"Enabled\": false } }, \"ELB\": { \"ELBRequests4xx\": {\"Enabled\": false } } } }, \"Version\": 1 }"
 }
 
@@ -825,14 +826,14 @@ resource "aws_elastic_beanstalk_environment" "beanstalk_app_environment" {
   setting {
     namespace = "aws:autoscaling:asg"
     name      = "MinSize"
-    value     = "3"
+    value     = var.autoscaling_min_size
     resource  = ""
   }
 
   setting {
     namespace = "aws:autoscaling:asg"
     name      = "MaxSize"
-    value     = "3"
+    value     = var.autoscaling_max_size
     resource  = ""
   }
 
@@ -856,7 +857,7 @@ resource "aws_elastic_beanstalk_environment" "beanstalk_app_environment" {
   setting {
     namespace = "aws:autoscaling:updatepolicy:rollingupdate"
     name      = "MinInstancesInService"
-    value     = "2"
+    value     = local.min_instances_in_service
     resource  = ""
   }
 
@@ -1071,6 +1072,13 @@ resource "aws_elastic_beanstalk_environment" "beanstalk_app_environment" {
       name      = setting.key
       value     = setting.value
       resource  = ""
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.autoscaling_max_size >= var.autoscaling_min_size
+      error_message = "The max size of the autoscaling group must be greater than or equal to the minimum size."
     }
   }
 

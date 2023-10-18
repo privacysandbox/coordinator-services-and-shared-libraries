@@ -36,6 +36,7 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyGeneratio
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_DB_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_DB_REGION;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_GENERATION_QUEUE_URL;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_ID_TYPE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_BASE_URL;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_URI;
 import static com.google.scp.shared.clients.configclient.Annotations.ApplicationRegionBinding;
@@ -57,15 +58,19 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.Annotations.CoordinatorBCredentialsProvider;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.CoordinatorBHttpClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyIdTypeName;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.HttpKeyStorageClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.aws.AwsCreateSplitKeyTask;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdType;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDbModule;
 import com.google.scp.shared.aws.credsprovider.AwsSessionCredentialsProvider;
 import com.google.scp.shared.aws.credsprovider.SelfAwsSessionCredentialsProvider;
 import com.google.scp.shared.aws.credsprovider.StsAwsSessionCredentialsProvider;
 import com.google.scp.shared.aws.util.AwsRequestSigner;
+import com.google.scp.shared.clients.DefaultHttpClientRetryStrategy;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.clients.configclient.aws.AwsClientConfigModule;
@@ -175,7 +180,8 @@ public final class AwsSplitKeyGenerationModule extends AbstractModule {
             .put(KMS_KEY_URI, args.getKmsKeyUri())
             .put(KEY_DB_NAME, args.getKeyDbName())
             .put(KEY_DB_REGION, args.getKeyDbRegion())
-            .put(ENCRYPTION_KEY_SIGNATURE_ALGORITHM, args.getSignatureAlgorithm());
+            .put(ENCRYPTION_KEY_SIGNATURE_ALGORITHM, args.getSignatureAlgorithm())
+            .put(KEY_ID_TYPE, args.getKeyIdType().orElse(""));
     if (args.getCoordinatorBAssumeRoleArn().isPresent()) {
       paramMap.put(COORDINATOR_B_ASSUME_ROLE_ARN, args.getCoordinatorBAssumeRoleArn().get());
     }
@@ -217,7 +223,7 @@ public final class AwsSplitKeyGenerationModule extends AbstractModule {
         .addInterceptorFirst(
             AwsRequestSigner.createRequestSignerInterceptor(
                 args.getCoordinatorBRegion(), credentialsProvider))
-        .setServiceUnavailableRetryStrategy(AwsClientConfigModule.HTTP_CLIENT_RETRY_STRATEGY)
+        .setServiceUnavailableRetryStrategy(DefaultHttpClientRetryStrategy.getInstance())
         .build();
   }
 
@@ -395,5 +401,27 @@ public final class AwsSplitKeyGenerationModule extends AbstractModule {
         throw new IllegalArgumentException(
             String.format("Invalid decryption client: %s", args.getDecryptionClient()));
     }
+  }
+
+  @Provides
+  @KeyIdTypeName
+  Optional<String> provideKeyIdTypeProvider(ParameterClient paramClient)
+      throws ParameterClientException {
+    return paramClient
+        .getParameter(KEY_ID_TYPE)
+        .filter(type -> !type.isEmpty())
+        .or(args::getKeyIdType);
+  }
+
+  @Provides
+  @Singleton
+  KeyIdFactory provideKeyIdFactoryProvider(@KeyIdTypeName Optional<String> keyIdType)
+      throws ParameterClientException {
+    return KeyIdType.fromString(keyIdType)
+        .orElseThrow(
+            () ->
+                new ParameterClientException(
+                    "Key ID Type %s not found", ErrorReason.MISSING_REQUIRED_PARAMETER))
+        .getKeyIdFactory();
   }
 }

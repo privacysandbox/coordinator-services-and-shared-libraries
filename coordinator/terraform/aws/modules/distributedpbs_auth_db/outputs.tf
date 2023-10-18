@@ -19,3 +19,13 @@ output "auth_dynamo_db_table_name" {
 output "auth_dynamo_db_table_arn" {
   value = aws_dynamodb_table.auth_table.arn
 }
+
+# The below outputs are for new DynamoDB table we create for hosting site based auth data.
+# We will eventually move to using the name `auth_dynamo_db_table_name` and `auth_dynamo_db_table_arn` once the old tables have been deprecated.
+output "authorization_dynamo_db_table_v2_name" {
+  value = aws_dynamodb_table.pbs_authorization_table_v2.name
+}
+
+output "authorization_dynamo_db_table_v2_arn" {
+  value = aws_dynamodb_table.pbs_authorization_table_v2.arn
+}

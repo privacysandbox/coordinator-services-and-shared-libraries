@@ -26,8 +26,11 @@ import com.google.acai.TestScoped;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.OptionalBinder;
 import com.google.protobuf.util.Durations;
 import com.google.scp.operator.cpio.jobclient.JobClient.JobClientException;
 import com.google.scp.operator.cpio.jobclient.JobHandlerModule.JobClientJobMaxNumAttemptsBinding;
@@ -41,6 +44,7 @@ import com.google.scp.operator.cpio.lifecycleclient.local.LocalLifecycleClient;
 import com.google.scp.operator.cpio.lifecycleclient.local.LocalLifecycleModule;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.local.LocalMetricClient;
+import com.google.scp.operator.cpio.notificationclient.NotificationClient;
 import com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
@@ -56,6 +60,9 @@ import com.google.scp.operator.shared.dao.jobqueue.testing.FakeJobQueue;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataDbException;
 import com.google.scp.operator.shared.dao.metadatadb.testing.FakeMetadataDb;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.local.Annotations.ParameterValues;
+import com.google.scp.shared.clients.configclient.local.LocalParameterClient;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Clock;
 import java.time.Duration;
@@ -81,6 +88,8 @@ public final class JobClientImplTest {
   @Inject JobClientImpl jobClient;
   @Inject FakeJobQueue jobQueue;
   @Inject FakeMetadataDb jobMetadataDb;
+  @Inject Optional<NotificationClient> notificationClient;
+  @Inject ParameterClient parameterClient;
 
   private JobQueueItem baseJobQueueItem;
   private JobMetadata baseJobMetadata;
@@ -523,6 +532,11 @@ public final class JobClientImplTest {
       install(new LocalLifecycleModule());
       bind(LifecycleClient.class).to(LocalLifecycleClient.class);
       bind(MetricClient.class).to(LocalMetricClient.class);
+      bind(new TypeLiteral<ImmutableMap<String, String>>() {})
+          .annotatedWith(ParameterValues.class)
+          .toInstance(ImmutableMap.of());
+      bind(ParameterClient.class).to(LocalParameterClient.class);
+      OptionalBinder.newOptionalBinder(binder(), Key.get(NotificationClient.class));
     }
 
     @Provides

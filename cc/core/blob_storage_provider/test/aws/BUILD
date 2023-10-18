@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
 package(default_visibility = ["//visibility:public"])
 
 TEST_SRCS = [
@@ -57,6 +59,7 @@ cc_test(
         "//cc/core/blob_storage_provider/src/common:core_blob_storage_provider_common_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

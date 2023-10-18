@@ -17,7 +17,7 @@
 #include "public/cpio/interface/cpio.h"
 
 #include <memory>
-#include <stdexcept>
+#include <utility>
 
 #include "core/common/global_logger/src/global_logger.h"
 #include "core/interface/logger_interface.h"
@@ -29,10 +29,7 @@
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/type_def.h"
 
-using google::scp::cpio::CpioOptions;
-using google::scp::cpio::LogOption;
-using std::make_unique;
-using std::unique_ptr;
+#include "cpio_utils.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::LoggerInterface;
@@ -41,10 +38,15 @@ using google::scp::core::common::GlobalLogger;
 using google::scp::core::logger::ConsoleLogProvider;
 using google::scp::core::logger::Logger;
 using google::scp::core::logger::log_providers::SyslogLogProvider;
+using google::scp::cpio::CpioOptions;
+using google::scp::cpio::LogOption;
 using google::scp::cpio::client_providers::CpioProviderFactory;
 using google::scp::cpio::client_providers::CpioProviderInterface;
 using google::scp::cpio::client_providers::GlobalCpio;
 using std::make_shared;
+using std::make_unique;
+using std::move;
+using std::unique_ptr;
 
 namespace google::scp::cpio {
 static ExecutionResult SetLogger(const CpioOptions& options) {
@@ -67,7 +69,7 @@ static ExecutionResult SetLogger(const CpioOptions& options) {
     if (!execution_result.Successful()) {
       return execution_result;
     }
-    GlobalLogger::SetGlobalLogger(logger_ptr);
+    GlobalLogger::SetGlobalLogger(std::move(logger_ptr));
   }
 
   return SuccessExecutionResult();
@@ -75,15 +77,8 @@ static ExecutionResult SetLogger(const CpioOptions& options) {
 
 static ExecutionResult SetGlobalCpio(const CpioOptions& options) {
   cpio_ptr = CpioProviderFactory::Create(make_shared<CpioOptions>(options));
-  auto execution_result = cpio_ptr->Init();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-  execution_result = cpio_ptr->Run();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-  GlobalCpio::SetGlobalCpio(cpio_ptr);
+  CpioUtils::RunAndSetGlobalCpio(move(cpio_ptr), options.cpu_async_executor,
+                                 options.io_async_executor);
 
   return SuccessExecutionResult();
 }

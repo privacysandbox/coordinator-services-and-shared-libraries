@@ -121,6 +121,9 @@ module "operator_service" {
   vpc_cidr                             = var.vpc_cidr
   vpc_availability_zones               = var.vpc_availability_zones
 
+  # Notifications
+  enable_job_completion_notifications = var.enable_job_completion_notifications
+
   # OpenTelemetry
   allowed_otel_metrics = var.allowed_otel_metrics
 }
@@ -142,4 +145,9 @@ output "create_job_endpoint" {
 
 output "get_job_endpoint" {
   value = module.operator_service.get_job_endpoint
+}
+
+output "notifications_sns_topic_arn" {
+  value       = module.operator_service.notifications_sns_topic_arn
+  description = "The ARN of the SNS notifications topic."
 }

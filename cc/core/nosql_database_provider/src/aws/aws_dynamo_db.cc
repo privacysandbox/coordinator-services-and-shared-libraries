@@ -201,11 +201,12 @@ void AwsDynamoDB::OnGetDatabaseItemCallback(
     const Outcome<QueryResult, DynamoDBError>& outcome,
     const shared_ptr<const AsyncCallerContext> async_context) noexcept {
   if (!outcome.IsSuccess()) {
-    DEBUG_CONTEXT(kDynamoDB, get_database_item_context,
-                  "DynamoDB get database item request failed. Error code: %d, "
-                  "message: %s",
-                  outcome.GetError().GetResponseCode(),
-                  outcome.GetError().GetMessage().c_str());
+    SCP_DEBUG_CONTEXT(
+        kDynamoDB, get_database_item_context,
+        "DynamoDB get database item request failed. Error code: %d, "
+        "message: %s",
+        outcome.GetError().GetResponseCode(),
+        outcome.GetError().GetMessage().c_str());
     get_database_item_context.result =
         AwsDynamoDBUtils::ConvertDynamoErrorToExecutionResult(
             outcome.GetError().GetErrorType());
@@ -435,7 +436,7 @@ void AwsDynamoDB::OnUpsertDatabaseItemCallback(
     const Outcome<UpdateItemResult, DynamoDBError>& outcome,
     const shared_ptr<const AsyncCallerContext> async_context) noexcept {
   if (!outcome.IsSuccess()) {
-    DEBUG_CONTEXT(
+    SCP_DEBUG_CONTEXT(
         kDynamoDB, upsert_database_item_context,
         "DynamoDB upsert database item request failed. Error code: %d, "
         "message: %s",

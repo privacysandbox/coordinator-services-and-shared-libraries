@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
 def import_aws_sdk_cpp():
@@ -32,23 +32,12 @@ def import_aws_sdk_cpp():
 
     maybe(
         http_archive,
-        name = "aws_c_common",
-        build_file = Label("//build_defs/cc/aws:aws_c_common.BUILD"),
-        sha256 = "6eb0b806c78b36a32eec9bcba8d2833e3973491a29d46fe3d11edc3f8d3e7f73",
-        strip_prefix = "aws-c-common-0.6.20",
-        urls = [
-            "https://github.com/awslabs/aws-c-common/archive/refs/tags/v0.6.20.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
         name = "aws_c_event_stream",
         build_file = Label("//build_defs/cc/aws:aws_c_event_stream.BUILD"),
-        sha256 = "31d880d1c868d3f3df1e1f4b45e56ac73724a4dc3449d04d47fc0746f6f077b6",
-        strip_prefix = "aws-c-event-stream-0.1.4",
+        sha256 = "f1b423a487b5d6dca118bfc0d0c6cc596dc476b282258a3228e73a8f730422d4",
+        strip_prefix = "aws-c-event-stream-0.1.5",
         urls = [
-            "https://github.com/awslabs/aws-c-event-stream/archive/v0.1.4.tar.gz",
+            "https://github.com/awslabs/aws-c-event-stream/archive/v0.1.5.tar.gz",
         ],
     )
 
@@ -57,6 +46,7 @@ def import_aws_sdk_cpp():
         name = "aws_sdk_cpp",
         build_file = Label("//build_defs/cc/aws:aws_sdk_cpp_source_code.BUILD"),
         patch_cmds = [
+            """sed -i.bak 's/UUID::RandomUUID/Aws::Utils::UUID::RandomUUID/g' aws-cpp-sdk-core/source/client/AWSClient.cpp""",
             # Apply fix in https://github.com/aws/aws-sdk-cpp/commit/9669a1c1d9a96621cd0846679cbe973c648a64b3
             """sed -i.bak 's/Tags\\.entry/Tag/g' aws-cpp-sdk-sqs/source/model/TagQueueRequest.cpp""",
         ],

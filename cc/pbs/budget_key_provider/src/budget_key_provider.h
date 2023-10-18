@@ -30,9 +30,12 @@
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/journal_service_interface.h"
 #include "core/interface/nosql_database_provider_interface.h"
+#include "core/interface/partition_types.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/budget_key_provider/src/proto/budget_key_provider.pb.h"
 #include "pbs/interface/budget_key_provider_interface.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 // TODO: Make the retry strategy configurable.
 static constexpr google::scp::core::TimeDuration
@@ -52,16 +55,36 @@ struct BudgetKeyProviderPair : public core::LoadableObject {
 class BudgetKeyProvider : public BudgetKeyProviderInterface {
  public:
   BudgetKeyProvider(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::JournalServiceInterface> journal_service,
-      std::shared_ptr<core::NoSQLDatabaseProviderInterface>
+      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<core::JournalServiceInterface>& journal_service,
+      const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
-      std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-          metric_client,
-      std::shared_ptr<core::ConfigProviderInterface> config_provider)
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      const core::PartitionId& partition_id = core::kGlobalPartitionId)
+      : BudgetKeyProvider(async_executor, journal_service,
+                          nosql_database_provider, nosql_database_provider,
+                          metric_client, config_provider, partition_id) {
+    // This construction does not make any distinction between background and
+    // live traffic NoSQL operations.
+  }
+
+  BudgetKeyProvider(
+      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<core::JournalServiceInterface>& journal_service,
+      const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
+          nosql_database_provider_for_background_operations,
+      const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
+          nosql_database_provider_for_live_traffic,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      const core::PartitionId& partition_id = core::kGlobalPartitionId)
       : async_executor_(async_executor),
         journal_service_(journal_service),
-        nosql_database_provider_(nosql_database_provider),
+        nosql_database_provider_for_background_operations_(
+            nosql_database_provider_for_background_operations),
+        nosql_database_provider_for_live_traffic_(
+            nosql_database_provider_for_live_traffic),
         budget_keys_(std::make_unique<core::common::AutoExpiryConcurrentMap<
                          std::string, std::shared_ptr<BudgetKeyProviderPair>>>(
             kBudgetKeyProviderCacheLifetimeSeconds,
@@ -77,7 +100,9 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
                                   kBudgetKeyProviderRetryStrategyDelayMs,
                                   kBudgetKeyProviderRetryStrategyTotalRetries)),
         metric_client_(metric_client),
-        config_provider_(config_provider) {}
+        config_provider_(config_provider),
+        partition_id_(partition_id),
+        activity_id_(core::common::Uuid::GenerateUuid()) {}
 
   /**
    * @brief Construct a new Budget Key Provider object for Checkpoint Service
@@ -91,16 +116,16 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
    * @param config_provider
    */
   BudgetKeyProvider(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::JournalServiceInterface> journal_service,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>
-          metric_client,
-      const std::shared_ptr<core::ConfigProviderInterface> config_provider)
+      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<core::JournalServiceInterface>& journal_service,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      const core::PartitionId& partition_id = core::kGlobalPartitionId)
       : BudgetKeyProvider(
             async_executor, journal_service,
             nullptr /* nosql_provider unused in checkpointing context */,
-            metric_client, config_provider) {}
+            nullptr /* nosql_provider unused in checkpointing context */,
+            metric_client, config_provider, partition_id) {}
 
   ~BudgetKeyProvider();
 
@@ -168,7 +193,8 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
    * @return ExecutionResult The execution result of the operation.
    */
   virtual core::ExecutionResult OnJournalServiceRecoverCallback(
-      const std::shared_ptr<core::BytesBuffer>& bytes_buffer) noexcept;
+      const std::shared_ptr<core::BytesBuffer>& bytes_buffer,
+      const core::common::Uuid& activity_id) noexcept;
 
   /**
    * @brief Is called when budget key is loading, before entering into the
@@ -225,7 +251,11 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
 
   /// An instance to the nosql database provider.
   std::shared_ptr<core::NoSQLDatabaseProviderInterface>
-      nosql_database_provider_;
+      nosql_database_provider_for_background_operations_;
+
+  /// An instance to the nosql database provider.
+  std::shared_ptr<core::NoSQLDatabaseProviderInterface>
+      nosql_database_provider_for_live_traffic_;
 
   /**
    * @brief  Concurrent map to map budget key names to the budget keys. This
@@ -239,10 +269,18 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
   core::common::OperationDispatcher operation_dispatcher_;
 
   /// Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-      metric_client_;
+  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
   /// An instance of the config provider;
   const std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+
+  /// The aggregate metric instance for counting load/unload of budget keys
+  std::shared_ptr<cpio::AggregateMetricInterface> budget_key_count_metric_;
+
+  /// Encapsulating partition
+  const core::PartitionId partition_id_;
+
+  /// Activity ID
+  const core::common::Uuid activity_id_;
 };
 }  // namespace google::scp::pbs

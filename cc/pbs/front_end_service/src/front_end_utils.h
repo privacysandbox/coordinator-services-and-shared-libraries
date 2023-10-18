@@ -215,13 +215,13 @@ class FrontEndUtils {
     auto result =
         ExtractRequestClaimedIdentity(request_headers, claimed_identity);
     if (!result.Successful()) {
-      ERROR(kFrontEndUtils, core::common::kZeroUuid, core::common::kZeroUuid,
-            result,
-            "This could theoretically cause requests with no claimed identity "
-            "to be marked as adtech requests. However, this should not be "
-            "possible in real-world as all requests hitting the "
-            "FrontEndService should have a claimed identity. Without it, they "
-            "should not cross the auth barrier.");
+      SCP_ERROR(
+          kFrontEndUtils, core::common::kZeroUuid, result,
+          "This could theoretically cause requests with no claimed identity "
+          "to be marked as adtech requests. However, this should not be "
+          "possible in real-world as all requests hitting the "
+          "FrontEndService should have a claimed identity. Without it, they "
+          "should not cross the auth barrier.");
       return false;
     }
     return claimed_identity == remote_coordinator_claimed_identity;
@@ -278,6 +278,21 @@ class FrontEndUtils {
     }
 
     transaction_secret = header_iter->second;
+    return core::SuccessExecutionResult();
+  }
+
+  static core::ExecutionResult ExtractTransactionOrigin(
+      const std::shared_ptr<core::HttpHeaders>& request_headers,
+      std::string& transaction_origin) noexcept {
+    static std::string transaction_origin_header(kTransactionOriginHeader);
+
+    auto header_iter = request_headers->find(transaction_origin_header);
+    if (header_iter == request_headers->end()) {
+      return core::FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
+    }
+
+    transaction_origin = header_iter->second;
     return core::SuccessExecutionResult();
   }
 

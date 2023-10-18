@@ -20,9 +20,8 @@
 #include <vector>
 
 #include <aws/kms/KMSClient.h>
-
-#include "external/tink_cc/aead.h"
-#include "external/tink_cc/util/statusor.h"
+#include <tink/aead.h>
+#include <tink/util/statusor.h>
 
 namespace google::scp::cpio::client_providers {
 

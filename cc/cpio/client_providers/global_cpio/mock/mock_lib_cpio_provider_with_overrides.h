@@ -20,13 +20,14 @@
 #include <memory>
 
 #include "cpio/client_providers/global_cpio/src/cpio_provider/lib_cpio_provider.h"
-#include "cpio/client_providers/instance_client_provider_new/mock/mock_instance_client_provider.h"
+#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockLibCpioProviderWithOverrides : public LibCpioProvider {
  public:
-  MockLibCpioProviderWithOverrides() : LibCpioProvider() {}
+  MockLibCpioProviderWithOverrides()
+      : LibCpioProvider(std::make_shared<CpioOptions>()) {}
 
   core::ExecutionResult GetInstanceClientProvider(
       std::shared_ptr<InstanceClientProviderInterface>&
@@ -36,11 +37,11 @@ class MockLibCpioProviderWithOverrides : public LibCpioProvider {
     return core::SuccessExecutionResult();
   }
 
-  std::shared_ptr<core::AsyncExecutorInterface> GetAsyncExecutorMember() {
-    return async_executor_;
+  std::shared_ptr<core::AsyncExecutorInterface> GetCpuAsyncExecutorMember() {
+    return cpu_async_executor_;
   }
 
-  std::shared_ptr<core::AsyncExecutorInterface> GetIOAsyncExecutorMember() {
+  std::shared_ptr<core::AsyncExecutorInterface> GetIoAsyncExecutorMember() {
     return io_async_executor_;
   }
 

@@ -128,5 +128,3 @@ resource "aws_cloudwatch_metric_alarm" "asg_max_instances_alarm" {
   }
   alarm_actions = [var.operator_sns_topic_arn]
 }
-
-

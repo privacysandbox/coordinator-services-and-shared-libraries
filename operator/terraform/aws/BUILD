@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load(":build_defs.bzl", "ami_params_tfvar_file")
 
 package(default_visibility = ["//visibility:public"])
-
-load(":build_defs.bzl", "ami_params_tfvar_file")
 
 # Shared ami_params.auto.tfvars value which contains the values configured the build flags.
 ami_params_tfvar_file(

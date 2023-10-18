@@ -61,7 +61,7 @@ public final class SqsJobQueue implements JobQueue {
 
   private static final Logger logger = LoggerFactory.getLogger(SqsJobQueue.class);
   private static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
-  private static final JsonFormat.Parser JSON_PARSER = JsonFormat.parser();
+  private static final JsonFormat.Parser JSON_PARSER = JsonFormat.parser().ignoringUnknownFields();
 
   private final SqsClient sqsClient;
   private final Provider<String> queueUrl;

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -27,9 +29,9 @@ cc_library(
     ],
     deps = [
         "//cc:cc_base_include_dir",
+        "//cc/core/common/time_provider/src:time_provider_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/interface:logger_interface_lib",
         "//cc/core/logger/src:logger_lib",
-        "//cc/core/test/utils:utils_lib",
     ],
 )

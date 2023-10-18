@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** {@code BlobStorageClient} fake for testing, using Jimfs. */
@@ -49,6 +50,12 @@ public class FSBlobStorageClient implements BlobStorageClient {
   }
 
   @Override
+  public InputStream getBlob(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    return getBlob(location);
+  }
+
+  @Override
   public void putBlob(DataLocation location, Path filePath) throws BlobStorageClientException {
     BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
     try {
@@ -65,6 +72,12 @@ public class FSBlobStorageClient implements BlobStorageClient {
     } catch (IOException e) {
       throw new BlobStorageClientException(e);
     }
+  }
+
+  @Override
+  public void putBlob(DataLocation location, Path filePath, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    putBlob(location, filePath);
   }
 
   @Override
@@ -99,6 +112,12 @@ public class FSBlobStorageClient implements BlobStorageClient {
   }
 
   @Override
+  public ImmutableList<String> listBlobs(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    return listBlobs(location);
+  }
+
+  @Override
   public void deleteBlob(DataLocation location) throws BlobStorageClientException {
     BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
     try {
@@ -106,6 +125,12 @@ public class FSBlobStorageClient implements BlobStorageClient {
     } catch (IOException e) {
       throw new BlobStorageClientException(e);
     }
+  }
+
+  @Override
+  public void deleteBlob(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    deleteBlob(location);
   }
 
   public synchronized Path getLastWrittenFile() {

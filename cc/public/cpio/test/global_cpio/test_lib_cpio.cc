@@ -22,6 +22,7 @@
 #include "cpio/client_providers/global_cpio/test/test_lib_cpio_provider.h"
 #include "cpio/client_providers/interface/cpio_provider_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/core/src/cpio_utils.h"
 #include "public/cpio/interface/cpio.h"
 #include "public/cpio/test/global_cpio/test_cpio_options.h"
 
@@ -36,15 +37,9 @@ namespace google::scp::cpio {
 static ExecutionResult SetGlobalCpio(const TestCpioOptions& options) {
   cpio_ptr =
       make_unique<TestLibCpioProvider>(make_shared<TestCpioOptions>(options));
-  auto execution_result = cpio_ptr->Init();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-  execution_result = cpio_ptr->Run();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-  GlobalCpio::SetGlobalCpio(cpio_ptr);
+
+  CpioUtils::RunAndSetGlobalCpio(move(cpio_ptr), options.cpu_async_executor,
+                                 options.io_async_executor);
 
   return SuccessExecutionResult();
 }

@@ -21,11 +21,12 @@
 #include <utility>
 #include <vector>
 
+#include <google/protobuf/util/time_util.h>
+
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/async_context.h"
 #include "core/interface/http_client_interface.h"
 #include "core/interface/http_types.h"
-#include "cpio/client_providers/global_cpio/src/global_cpio.h"
 #include "cpio/client_providers/interface/public_key_client_provider_interface.h"
 #include "cpio/client_providers/interface/type_def.h"
 #include "google/protobuf/any.pb.h"
@@ -40,6 +41,7 @@ using google::cmrt::sdk::public_key_service::v1::ListPublicKeysRequest;
 using google::cmrt::sdk::public_key_service::v1::ListPublicKeysResponse;
 using google::cmrt::sdk::public_key_service::v1::PublicKey;
 using google::protobuf::Any;
+using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
@@ -74,16 +76,16 @@ ExecutionResult PublicKeyClientProvider::Init() noexcept {
       !public_key_client_options_->endpoints.size()) {
     auto execution_result = FailureExecutionResult(
         SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_CONFIG_OPTIONS);
-    ERROR(kPublicKeyClientProvider, kZeroUuid, kZeroUuid, execution_result,
-          "Failed to init PublicKeyClientProvider.");
+    SCP_ERROR(kPublicKeyClientProvider, kZeroUuid, execution_result,
+              "Failed to init PublicKeyClientProvider.");
     return execution_result;
   }
 
   if (!http_client_) {
     auto execution_result = FailureExecutionResult(
         SC_PUBLIC_KEY_CLIENT_PROVIDER_HTTP_CLIENT_REQUIRED);
-    ERROR(kPublicKeyClientProvider, kZeroUuid, kZeroUuid, execution_result,
-          "Failed to init PublicKeyClientProvider.");
+    SCP_ERROR(kPublicKeyClientProvider, kZeroUuid, execution_result,
+              "Failed to init PublicKeyClientProvider.");
     return execution_result;
   }
 
@@ -95,9 +97,11 @@ void PublicKeyClientProvider::OnListPublicKeys(
   auto request = make_shared<ListPublicKeysRequest>();
   any_context.request->UnpackTo(request.get());
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
-      move(request), bind(CallbackToPackAnyResponse<ListPublicKeysRequest,
-                                                    ListPublicKeysResponse>,
-                          any_context, _1));
+      move(request),
+      bind(CallbackToPackAnyResponse<ListPublicKeysRequest,
+                                     ListPublicKeysResponse>,
+           any_context, _1),
+      any_context);
   context.result = ListPublicKeys(context);
 }
 
@@ -132,7 +136,8 @@ ExecutionResult PublicKeyClientProvider::ListPublicKeys(
         move(http_request),
         bind(&PublicKeyClientProvider::OnPerformRequestCallback, this,
              public_key_fetching_context, _1, got_success_result,
-             unfinished_counter));
+             unfinished_counter),
+        public_key_fetching_context);
 
     auto execution_result = http_client_->PerformRequest(http_client_context);
     if (execution_result.Successful()) {
@@ -140,16 +145,18 @@ ExecutionResult PublicKeyClientProvider::ListPublicKeys(
       // return success.
       result = SuccessExecutionResult();
     } else {
-      ERROR(kPublicKeyClientProvider, kZeroUuid, kZeroUuid, execution_result,
-            "Failed to perform request with endpoint %s.", uri.c_str());
+      SCP_ERROR_CONTEXT(kPublicKeyClientProvider, public_key_fetching_context,
+                        execution_result,
+                        "Failed to perform request with endpoint %s.",
+                        uri.c_str());
     }
   }
 
   if (!result.Successful()) {
     public_key_fetching_context.result = result;
-    ERROR_CONTEXT(kPublicKeyClientProvider, public_key_fetching_context,
-                  public_key_fetching_context.result,
-                  "Failed to perform request with config endpoints.");
+    SCP_ERROR_CONTEXT(kPublicKeyClientProvider, public_key_fetching_context,
+                      public_key_fetching_context.result,
+                      "Failed to perform request with config endpoints.");
     public_key_fetching_context.Finish();
   }
 
@@ -163,8 +170,8 @@ void ExecutionResultCheckingHelper(
   auto pervious_unfinished = unfinished_counter->fetch_sub(1);
   if (pervious_unfinished == 1) {
     context.result = result;
-    ERROR_CONTEXT(kPublicKeyClientProvider, context, context.result,
-                  "Failed to fetch public keys.");
+    SCP_ERROR_CONTEXT(kPublicKeyClientProvider, context, context.result,
+                      "Failed to fetch public keys.");
     context.Finish();
   }
 }
@@ -206,8 +213,8 @@ void PublicKeyClientProvider::OnPerformRequestCallback(
   if (got_success_result->compare_exchange_strong(got_result, true)) {
     public_key_fetching_context.response =
         make_shared<ListPublicKeysResponse>();
-    public_key_fetching_context.response->set_expiration_time_in_ms(
-        expired_time_in_s * kSToMsConversionBase);
+    *public_key_fetching_context.response->mutable_expiration_time() =
+        TimeUtil::SecondsToTimestamp(expired_time_in_s);
     public_key_fetching_context.response->mutable_public_keys()->Add(
         public_keys.begin(), public_keys.end());
     public_key_fetching_context.result = SuccessExecutionResult();

@@ -17,13 +17,16 @@
 package com.google.scp.operator.cpio.jobclient.aws;
 
 import com.google.inject.BindingAnnotation;
+import com.google.inject.Key;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.OptionalBinder;
 import com.google.scp.operator.cpio.jobclient.JobClient;
 import com.google.scp.operator.cpio.jobclient.JobClientImpl;
 import com.google.scp.operator.cpio.jobclient.JobHandlerModule;
 import com.google.scp.operator.cpio.jobclient.JobPullBackoff;
 import com.google.scp.operator.cpio.jobclient.JobPullBackoffImpl;
 import com.google.scp.operator.cpio.jobclient.JobValidatorModule;
+import com.google.scp.operator.cpio.notificationclient.NotificationClient;
 import com.google.scp.operator.shared.dao.jobqueue.aws.SqsJobQueue;
 import com.google.scp.operator.shared.dao.jobqueue.aws.SqsJobQueue.JobQueueSqsMaxWaitTimeSeconds;
 import com.google.scp.operator.shared.dao.jobqueue.aws.SqsJobQueue.JobQueueSqsQueueUrl;
@@ -70,6 +73,7 @@ public final class AwsJobHandlerModule extends JobHandlerModule {
     bind(JobMetadataDb.class).to(DynamoMetadataDb.class);
     bind(JobPullBackoff.class).to(JobPullBackoffImpl.class);
     bind(Integer.class).annotatedWith(MetadataDbDynamoTtlDays.class).toInstance(365);
+    OptionalBinder.newOptionalBinder(binder(), Key.get(NotificationClient.class));
     install(new JobValidatorModule());
   }
 

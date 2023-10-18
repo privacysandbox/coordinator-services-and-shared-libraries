@@ -16,7 +16,12 @@ syntax = "proto3";
 
 package google.cmrt.sdk.public_key_service.v1;
 
+option java_multiple_files = true;
+option java_outer_classname = "PublicKeyServiceProto";
+option java_package = "com.google.cmrt.sdk.public_key_service.v1";
+
 import "cc/core/common/proto/common.proto";
+import "google/protobuf/timestamp.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
@@ -37,7 +42,7 @@ message ListPublicKeysResponse {
   // PublicKey list.
   repeated PublicKey public_keys = 2;
   // The expiration time of the public keys.
-  int64 expiration_time_in_ms = 3;
+  google.protobuf.Timestamp expiration_time = 3;
 }
 
 // Wrap of public key.

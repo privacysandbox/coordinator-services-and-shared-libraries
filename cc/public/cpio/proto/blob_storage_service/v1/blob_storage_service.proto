@@ -16,7 +16,12 @@ syntax = "proto3";
 
 package google.cmrt.sdk.blob_storage_service.v1;
 
+option java_multiple_files = true;
+option java_outer_classname = "BlobStorageServiceProto";
+option java_package = "com.google.cmrt.sdk.blob_storage_service.v1";
+
 import "cc/core/common/proto/common.proto";
+import "google/protobuf/duration.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
@@ -26,11 +31,19 @@ service BlobStorageService {
   // TODO add bucket operations
   // Gets a blob from Blob Storage.
   rpc GetBlob(GetBlobRequest) returns (GetBlobResponse) {}
+  // Gets a blob from Blob Storage in a streaming manner.
+  // The blob portions are returned sequentially.
+  rpc GetBlobStream(GetBlobStreamRequest)
+      returns (stream GetBlobStreamResponse) {}
   // Lists blobs in Blob Storage.
   rpc ListBlobsMetadata(ListBlobsMetadataRequest)
       returns (ListBlobsMetadataResponse) {}
   // Puts a blob in Blob Storage.
   rpc PutBlob(PutBlobRequest) returns (PutBlobResponse) {}
+  // Streams a blob into Blob Storage. Portions of the blob must be provided
+  // in ascending order.
+  rpc PutBlobStream(stream PutBlobStreamRequest)
+      returns (PutBlobStreamResponse) {}
   // Deletes a blob from Blob Storage.
   rpc DeleteBlob(DeleteBlobRequest) returns (DeleteBlobResponse) {}
 }
@@ -96,10 +109,45 @@ message GetBlobResponse {
   Blob blob = 2;
 }
 
+// Request to get a blob as a stream from storage.
+message GetBlobStreamRequest {
+  // Metadata of the blob to interact with.
+  BlobMetadata blob_metadata = 1;
+
+  // Optional range of bytes of the blob to acquire. If not supplied, all of
+  // the bytes will be acquired.
+  optional ByteRange byte_range = 2;
+
+  // Optional maximum number of bytes to return in subsequent
+  // GetBlobStreamResponse objects. If not provided, this value will default to
+  // 64KB. This may not be the actual number of bytes returned
+  // i.e. if the Blob is smaller than this # or for the final portion of the
+  // Blob.
+  uint64 max_bytes_per_response = 3;
+}
+
+// Response of getting a blob stream from storage.
+message GetBlobStreamResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+
+  // Portion of the blob returned. data in this field will be either all or a
+  // portion of the Blob.
+  Blob blob_portion = 2;
+
+  // The range of bytes returned in this object. If byte_range was provided in
+  // the request, this field's upper and lower bounds are that of the supplied
+  // byte_range. This field indicates the range of bytes that are returned in
+  // blob_portion.
+  ByteRange byte_range = 3;
+}
+
 // Request to list the metadata of blobs in a bucket.
 message ListBlobsMetadataRequest {
-  // Name of the bucket to list blobs from.
-  string bucket_name = 1;
+  // bucket_name is the name of the bucket to search, blob_name in this
+  // context is used as a prefix - all returned blobs will start with
+  // this blob_name. Provide an empty blob_name to list all blobs.
+  BlobMetadata blob_metadata = 1;
 
   // Used to page a listing operation. The returned list will only include
   // keys that occur lexicographically after page_token.
@@ -137,8 +185,25 @@ message PutBlobResponse {
   scp.core.common.proto.ExecutionResult result = 1;
 }
 
+// Request to insert (part of) a blob in storage.
+message PutBlobStreamRequest {
+  // Contents (potentially only a part) and metadata of the blob to insert.
+  Blob blob_portion = 1;
+
+  // How long a session should last total. If this duration is exceeded, the
+  // call will fail. Maximum duration is 10 minutes and the default is 5
+  // minutes.
+  optional google.protobuf.Duration stream_keepalive_duration = 2;
+}
+
+// Response of putting a blob stream in storage.
+message PutBlobStreamResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+}
+
 message DeleteBlobRequest {
-  BlobMetadata base_request = 1;
+  BlobMetadata blob_metadata = 1;
 }
 
 message DeleteBlobResponse {

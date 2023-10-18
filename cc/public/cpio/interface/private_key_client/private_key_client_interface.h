@@ -24,34 +24,11 @@
 #include "core/interface/service_interface.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/type_def.h"
+#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
 #include "type_def.h"
 
 namespace google::scp::cpio {
-/// Request for ListPrivateKeysByIds.
-struct ListPrivateKeysByIdsRequest {
-  /// List of key IDs.
-  std::vector<PublicPrivateKeyPairId> key_ids;
-};
-
-/// Represent the private key object.
-struct PrivateKey {
-  /// The id of the private key.
-  PublicPrivateKeyPairId key_id;
-  /// The value of the public key encoded by base64.
-  PublicKeyValue public_key;
-  /// The value of the private key encoded by base64.
-  PrivateKeyValue private_key;
-  /// The expiration time of the private key in Unix time in milliseconds.
-  Timestamp expiration_time_in_ms;
-};
-
-/// Response for ListPrivateKeysByIds.
-struct ListPrivateKeysByIdsResponse {
-  /// List of private keys based on the key IDs.
-  std::vector<PrivateKey> private_keys;
-};
-
 /**
  * @brief Interface responsible for fetching private key from Key Management
  * Service.
@@ -73,9 +50,10 @@ class PrivateKeyClientInterface : public core::ServiceInterface {
    * including when the call fails.
    * @return core::ExecutionResult scheduling result returned synchronously.
    */
-  virtual core::ExecutionResult ListPrivateKeysByIds(
-      ListPrivateKeysByIdsRequest request,
-      Callback<ListPrivateKeysByIdsResponse> callback) noexcept = 0;
+  virtual core::ExecutionResult ListPrivateKeys(
+      cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest request,
+      Callback<cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>
+          callback) noexcept = 0;
 };
 
 /// Factory to create PrivateKeyClient.

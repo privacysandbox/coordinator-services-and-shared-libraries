@@ -63,45 +63,50 @@ variable "dynamo_keydb" {
   })
 }
 
-variable "get_encryption_key_logging_retention_days" {
+variable "logging_retention_days" {
   description = "Number of days to keep logs in Cloudwatch"
   type        = number
+}
+
+variable "get_encryption_key_lambda_ps_client_shim_enabled" {
+  description = <<-EOT
+        If true, enables shim to ensure response is compatible with privacy sandbox 0.51.x
+        clients. Newer fields such as activationTime is filtered out from the response.
+        This temporary variable will be removed in the future.
+      EOT
+  type        = bool
 }
 
 ################################################################################
 # Alarm Variables
 ################################################################################
-variable "sns_topic_arn" {
-  description = "SNS topic ARN to forward alerts to"
-  type        = string
-}
 
-variable "encryption_key_service_alarms_enabled" {
+variable "alarms_enabled" {
   description = "Enable alarms for private key service"
   type        = bool
 }
 
-variable "get_encryption_key_sns_topic_arn" {
+variable "sns_topic_arn" {
   description = "SNS topic ARN for alarm actions"
   type        = string
 }
 
-variable "get_encryption_key_alarm_eval_period_sec" {
+variable "alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
 }
 
-variable "get_encryption_key_lambda_error_threshold" {
+variable "lambda_error_threshold" {
   description = "Error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 
-variable "get_encryption_key_lambda_error_log_threshold" {
+variable "lambda_error_log_threshold" {
   description = "Error log sum greater than this to send alarm. Example: '0'."
   type        = string
 }
 
-variable "get_encryption_key_lambda_max_duration_threshold" {
+variable "lambda_max_duration_threshold" {
   description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
   type        = string
 }

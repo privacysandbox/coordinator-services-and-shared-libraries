@@ -184,7 +184,7 @@ variable "enclave_memory_mib" {
 }
 
 variable "allowed_otel_metrics" {
-  description = "Set of otel metrics would be exported."
+  description = "Set of otel metrics to be exported."
   type        = set(string)
-  default     = ["cpu_usage", "memory", "total_execution_time"]
+  default     = []
 }

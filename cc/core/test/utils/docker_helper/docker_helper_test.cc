@@ -49,6 +49,16 @@ TEST(DockerHelper, BuildStartContainerCmd) {
             "-p 9000:9000 -p 1234-1240:1234 "
             "--env host_address=0.0.0.0 --env host_port=8080 "
             "image_name");
+
+  EXPECT_EQ(BuildStartContainerCmd("network", "container_name", "image_name",
+                                   "9000:9000", "1234-1240:1234", envs,
+                                   "-v /tmp:/tmp"),
+            "docker -D run --rm -itd --privileged --network=network "
+            "--name=container_name "
+            "-p 9000:9000 -p 1234-1240:1234 "
+            "--env host_address=0.0.0.0 --env host_port=8080 "
+            "-v /tmp:/tmp "
+            "image_name");
 }
 
 TEST(DockerHelper, BuildCreateImageCmd) {
@@ -75,6 +85,6 @@ TEST(DockerHelper, BuildRemoveNetworkCmd) {
 
 TEST(DockerHelper, BuildStopContainerCmd) {
   EXPECT_EQ(BuildStopContainerCmd("container_name"),
-            "docker stop container_name");
+            "docker rm -f container_name");
 }
 }  // namespace google::scp::core::test

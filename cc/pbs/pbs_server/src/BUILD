@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_binary(
@@ -39,5 +41,7 @@ cc_binary(
         "//cc/core/logger/src:logger_lib",
         "//cc/core/logger/src/log_providers/syslog:syslog_lib",
         "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_lib",
+        "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_multi_partition_lib",
+        "@com_google_absl//absl/debugging:failure_signal_handler",
     ],
 )

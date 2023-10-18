@@ -1,0 +1,16 @@
+CBS_ASN1_TAG is not available in the boringSSL version our repo is using.
+This patch fixes the issue by replace with its actual primitive type uint32_t.
+
+diff --git a/source/cms.c b/source/cms.c
+index 6cf677d..6d2c303 100644
+--- a/source/cms.c
++++ b/source/cms.c
+@@ -26,7 +26,7 @@
+ static inline int get_any_ber_asn1_element(
+     CBS *cbs,
+     CBS *out,
+-    CBS_ASN1_TAG *out_tag,
++    uint32_t *out_tag,
+     size_t *out_header_len) {
+
+     /* TODO: out_indefinite is dereferenced by CBS_get_any_ber_asn1_element,

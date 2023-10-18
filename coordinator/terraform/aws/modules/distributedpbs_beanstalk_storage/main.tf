@@ -110,6 +110,8 @@ resource "aws_s3_bucket" "pbs_elb_access_logs" {
   bucket_prefix = "pbs-${var.environment_prefix}-elb-access-logs"
   acl           = "private"
 
+  force_destroy = var.beanstalk_app_bucket_force_destroy
+
   versioning {
     enabled = true
   }

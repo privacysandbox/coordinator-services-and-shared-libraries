@@ -33,8 +33,8 @@ alias(
 )
 
 alias(
-    name = "getEncryptionKeyLambdaDeploy",
-    actual = "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:GetEncryptionKeyApiGatewayHandlerDeploy",
+    name = "encryptionKeyServiceLambdaDeploy",
+    actual = "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:EncryptionKeyServiceLambdaDeploy",
 )
 
 alias(

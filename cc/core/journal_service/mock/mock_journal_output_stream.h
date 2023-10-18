@@ -24,17 +24,21 @@
 
 #include "core/interface/blob_storage_provider_interface.h"
 #include "core/journal_service/src/journal_output_stream.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::journal_service::mock {
 class MockJournalOutputStream : public core::JournalOutputStream {
  public:
   MockJournalOutputStream(
-      std::shared_ptr<std::string>& bucket_name,
-      std::shared_ptr<std::string>& partition_name,
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client)
-      : core::JournalOutputStream(bucket_name, partition_name, async_executor,
-                                  blob_storage_provider_client) {}
+      const std::shared_ptr<std::string>& bucket_name,
+      const std::shared_ptr<std::string>& partition_name,
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<BlobStorageClientInterface>&
+          blob_storage_provider_client)
+      : core::JournalOutputStream(
+            bucket_name, partition_name, async_executor,
+            blob_storage_provider_client,
+            std::make_shared<cpio::MockAggregateMetric>()) {}
 
   std::function<ExecutionResult(
       AsyncContext<journal_service::JournalStreamAppendLogRequest,

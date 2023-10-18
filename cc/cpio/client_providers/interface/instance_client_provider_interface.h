@@ -91,74 +91,6 @@ class InstanceClientProviderInterface : public core::ServiceInterface {
       const std::string& resource_name,
       cmrt::sdk::instance_service::v1::InstanceDetails&
           instance_details) noexcept = 0;
-
-  /**
-   * @brief Fetches the tag values for the given tag names and
-   * Instance ID.
-   * @param tag_names the given tag names.
-   * @param instance_id the given instance ID.
-   * @param tag_values_map returned tag values.
-   * @return core::ExecutionResult execution result.
-   */
-  virtual core::ExecutionResult GetTagsOfInstance(
-      const std::vector<std::string>& tag_names, const std::string& instance_id,
-      std::map<std::string, std::string>& tag_values_map) noexcept = 0;
-
-  /**
-   * @brief Get the Instance Id of this instance.
-   *
-   * @param instance_id returned instance ID.
-   * @return core::ExecutionResult execution result.
-   */
-  virtual core::ExecutionResult GetCurrentInstanceId(
-      std::string& instance_id) noexcept = 0;
-
-  /**
-   * @brief Gets the Region of this instance.
-   *
-   * @param region returned region.
-   * @return core::ExecutionResult execution result.
-   */
-  virtual core::ExecutionResult GetCurrentInstanceRegion(
-      std::string& region) noexcept = 0;
-
-  /**
-   * @brief Gets the public IP address of this instance.
-   *
-   * @param instance_public_ipv4_address returned public IP address.
-   * @return core::ExecutionResult execution result.
-   */
-  virtual core::ExecutionResult GetCurrentInstancePublicIpv4Address(
-      std::string& instance_public_ipv4_address) noexcept = 0;
-
-  /**
-   * @brief Gets the private IP address of this instance.
-   * The IP address would be of the default interface 'if/0'.
-   *
-   * @param instance_private_ipv4_address returned private IP address.
-   * @return core::ExecutionResult execution result.
-   */
-  virtual core::ExecutionResult GetCurrentInstancePrivateIpv4Address(
-      std::string& instance_private_ipv4_address) noexcept = 0;
-
-  /**
-   * @brief Get the Current Instance Project ID object. The owner project of
-   * current instance.
-   *
-   * @param project_id returned Project ID.
-   * @return core::ExecutionResult execution result.
-   */
-  virtual core::ExecutionResult GetCurrentInstanceProjectId(
-      std::string& project_id) noexcept = 0;
-
-  /**
-   * @brief Get the Current Instance Zone object
-   *
-   * @param instance_zone returned instance Zone.
-   * @return core::ExecutionResult execution result.
-   */
-  virtual core::ExecutionResult GetCurrentInstanceZone(
-      std::string& instance_zone) noexcept = 0;
 };
 
 class InstanceClientProviderFactory {
@@ -166,8 +98,8 @@ class InstanceClientProviderFactory {
   /**
    * @brief Factory to create InstanceClientProvider.
    *
-   * @return std::shared_ptr<InstanceClientProviderInterface> created
-   * InstanceClientProvider.
+   * @param http_client instance of http_client.
+   * @return std::shared_ptr<InstanceClientProviderInterface>
    */
   static std::shared_ptr<InstanceClientProviderInterface> Create(
       const std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider,

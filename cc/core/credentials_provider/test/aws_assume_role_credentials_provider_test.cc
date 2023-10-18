@@ -27,6 +27,7 @@
 #include "core/credentials_provider/mock/mock_aws_sts_client.h"
 #include "core/credentials_provider/src/error_codes.h"
 #include "core/interface/async_executor_interface.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;
@@ -115,11 +116,11 @@ TEST(AwsAssumeRoleCredentialsProviderTest, OnGetCredentialsCallback) {
           make_shared<GetCredentialsRequest>(),
           [&](AsyncContext<GetCredentialsRequest, GetCredentialsResponse>&
                   context) {
-            EXPECT_EQ(
+            EXPECT_THAT(
                 context.result,
-                FailureExecutionResult(
+                ResultIs(FailureExecutionResult(
                     errors::
-                        SC_CREDENTIALS_PROVIDER_FAILED_TO_FETCH_CREDENTIALS));
+                        SC_CREDENTIALS_PROVIDER_FAILED_TO_FETCH_CREDENTIALS)));
             is_called = true;
           });
 
@@ -160,7 +161,7 @@ TEST(AwsAssumeRoleCredentialsProviderTest, OnGetCredentialsCallbackSuccess) {
           make_shared<GetCredentialsRequest>(),
           [&](AsyncContext<GetCredentialsRequest, GetCredentialsResponse>&
                   context) {
-            EXPECT_EQ(context.result, SuccessExecutionResult());
+            EXPECT_SUCCESS(context.result);
             EXPECT_EQ(*context.response->access_key_id, "access_key");
             EXPECT_EQ(*context.response->access_key_secret, "secret_key");
             EXPECT_EQ(*context.response->security_token, "token");

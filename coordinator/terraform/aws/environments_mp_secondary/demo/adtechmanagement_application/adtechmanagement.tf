@@ -1,0 +1,1 @@
+../../shared/adtechmanagement_application/adtechmanagement.tf

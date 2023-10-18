@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -32,8 +34,9 @@ cc_library(
         "//cc/core/journal_service/src:core_journal_service_lib",
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-        "//cc/cpio/client_providers/metric_client_provider/interface:metric_utils_interface_lib",
         "//cc/pbs/budget_key_provider/src:pbs_budget_key_provider_lib",
         "//cc/pbs/transactions/src:pbs_transactions_lib",
+        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
+        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
     ],
 )

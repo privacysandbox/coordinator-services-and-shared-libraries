@@ -50,6 +50,10 @@ ExecutionResult ExecutionWatchDog::Run() noexcept {
 }
 
 ExecutionResult ExecutionWatchDog::Stop() noexcept {
+  if (is_stop_called_.load()) {
+    return SuccessExecutionResult();
+  }
+
   is_stop_called_.store(true);
   condition_variable_.notify_one();
   if (execution_watchdog_thread_.joinable()) {
@@ -59,10 +63,19 @@ ExecutionResult ExecutionWatchDog::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
+bool ExecutionWatchDog::IsTerminateCalled() noexcept {
+  return is_terminate_called_.load();
+}
+
 void ExecutionWatchDog::StartTimer(
-    core::TimeDuration ms_before_timeout) noexcept {
+    v8::Isolate* isolate, core::TimeDuration ms_before_timeout) noexcept {
   {
     lock_guard lock(mutex_);
+    // Cancel TerminateExecution in case there was a previous
+    // isolate->TerminateExecution() flag alive
+    isolate->CancelTerminateExecution();
+    v8_isolate_ = isolate;
+    is_terminate_called_.store(false);
     nanoseconds_before_timeout_ = ms_before_timeout * kMsToNsConversionBase;
     timeout_timestamp_ =
         TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks() +
@@ -84,6 +97,7 @@ void ExecutionWatchDog::WaitForTimeout() noexcept {
         TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks();
     if (current_timestamp > timeout_timestamp_) {
       v8_isolate_->TerminateExecution();
+      is_terminate_called_.store(true);
       timeout_timestamp_ = UINT64_MAX;
     }
 

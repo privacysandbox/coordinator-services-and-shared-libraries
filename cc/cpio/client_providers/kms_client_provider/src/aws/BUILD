@@ -12,12 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
-    name = "aws_kms_client_provider_lib",
+    name = "nontee_aws_kms_client_provider_lib",
     srcs = [
-        ":aws_kms_client_provider_srcs",
+        ":nontee_aws_kms_client_provider_srcs",
+    ],
+    copts = [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
+        "//cc/core/common/uuid/src:uuid_lib",
+        "//cc/core/interface:async_context_lib",
+        "//cc/core/interface:interface_lib",
+        "//cc/core/utils/src:core_utils",
+        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
+        "//cc/cpio/common/src/aws:aws_utils_lib",
+        "//cc/public/cpio/interface:cpio_errors",
+        "//cc/public/cpio/interface/kms_client:type_def",
+        "@aws_sdk_cpp//:kms",
+        "@tink_cc",
+    ],
+)
+
+cc_library(
+    name = "tee_aws_kms_client_provider_lib",
+    srcs = [
+        ":tee_aws_kms_client_provider_srcs",
     ],
     copts = [
         "-std=c++17",
@@ -28,11 +54,10 @@ cc_library(
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
-        "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
-        "//cc/cpio/client_providers/role_credentials_provider/src:role_credentials_provider_lib",
         "//cc/cpio/common/src/aws:aws_utils_lib",
         "//cc/public/cpio/interface:cpio_errors",
+        "//cc/public/cpio/interface/kms_client:type_def",
         "@aws_sdk_cpp//:kms",
         "@tink_cc",
     ],
@@ -41,18 +66,34 @@ cc_library(
 exports_files([
     "aws_kms_aead.h",
     "aws_kms_aead.cc",
-    "aws_kms_client_provider.h",
-    "aws_kms_client_provider.cc",
-    "error_codes.h",
+    "nontee_aws_kms_client_provider.h",
+    "nontee_aws_kms_client_provider.cc",
+    "nontee_error_codes.h",
+    "tee_aws_kms_client_provider.h",
+    "tee_aws_kms_client_provider.cc",
+    "tee_aws_kms_client_provider_utils.h",
+    "tee_aws_kms_client_provider_utils.cc",
+    "tee_error_codes.h",
 ])
 
 filegroup(
-    name = "aws_kms_client_provider_srcs",
+    name = "nontee_aws_kms_client_provider_srcs",
     srcs = [
         ":aws_kms_aead.cc",
         ":aws_kms_aead.h",
-        ":aws_kms_client_provider.cc",
-        ":aws_kms_client_provider.h",
-        ":error_codes.h",
+        ":nontee_aws_kms_client_provider.cc",
+        ":nontee_aws_kms_client_provider.h",
+        ":nontee_error_codes.h",
+    ],
+)
+
+filegroup(
+    name = "tee_aws_kms_client_provider_srcs",
+    srcs = [
+        ":tee_aws_kms_client_provider.cc",
+        ":tee_aws_kms_client_provider.h",
+        ":tee_aws_kms_client_provider_utils.cc",
+        ":tee_aws_kms_client_provider_utils.h",
+        ":tee_error_codes.h",
     ],
 )

@@ -30,10 +30,11 @@
 #include "core/utils/src/base64.h"
 #include "core/utils/src/error_codes.h"
 #include "cpio/client_providers/crypto_client_provider/src/error_codes.h"
-#include "external/tink_cc/proto/hpke.pb.h"
-#include "external/tink_cc/proto/tink.pb.h"
+#include "proto/hpke.pb.h"
+#include "proto/tink.pb.h"
 #include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/interface/crypto_client/type_def.h"
 #include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
 
 using absl::Base64Escape;
@@ -101,15 +102,16 @@ class CryptoClientProviderTest : public ScpTestBase {
     auto options = make_shared<CryptoClientOptions>();
     client_ = make_unique<CryptoClientProvider>(options);
 
-    EXPECT_THAT(client_->Init(), IsSuccessful());
-    EXPECT_THAT(client_->Run(), IsSuccessful());
+    EXPECT_SUCCESS(client_->Init());
+    EXPECT_SUCCESS(client_->Run());
   }
 
-  void TearDown() override { EXPECT_THAT(client_->Stop(), IsSuccessful()); }
+  void TearDown() override { EXPECT_SUCCESS(client_->Stop()); }
 
   AsyncContext<HpkeEncryptRequest, HpkeEncryptResponse>
   CreateHpkeEncryptContext(bool is_bidirectional,
                            const ExecutionResult& decrypt_private_key_result,
+                           const string& exporter_context = "",
                            HpkeParams hpke_params_from_request = HpkeParams(),
                            HpkeParams hpke_params_config = HpkeParams()) {
     auto request = make_shared<HpkeEncryptRequest>();
@@ -127,9 +129,10 @@ class CryptoClientProviderTest : public ScpTestBase {
     request->set_shared_info(string(kSharedInfo));
     request->set_payload(string(kPayload));
     request->set_is_bidirectional(is_bidirectional);
+    request->set_exporter_context(exporter_context);
     return AsyncContext<HpkeEncryptRequest, HpkeEncryptResponse>(
         move(request),
-        [hpke_params_from_request, hpke_params_config,
+        [exporter_context, hpke_params_from_request, hpke_params_config,
          decrypt_private_key_result,
          this](AsyncContext<HpkeEncryptRequest, HpkeEncryptResponse>& context) {
           if (!context.request->is_bidirectional()) {
@@ -142,7 +145,7 @@ class CryptoClientProviderTest : public ScpTestBase {
           auto decrypt_context = CreateHpkeDecryptContext(
               ciphertext, context.request->is_bidirectional(),
               context.response->secret(), decrypt_private_key_result,
-              hpke_params_from_request, hpke_params_config);
+              exporter_context, hpke_params_from_request, hpke_params_config);
           EXPECT_EQ(client_->HpkeDecrypt(decrypt_context),
                     decrypt_private_key_result);
         });
@@ -152,6 +155,7 @@ class CryptoClientProviderTest : public ScpTestBase {
   CreateHpkeDecryptContext(string_view ciphertext, bool is_bidirectional,
                            const string& secret,
                            const ExecutionResult& decrypt_private_key_result,
+                           const string& exporter_context,
                            HpkeParams hpke_params_from_request,
                            HpkeParams hpke_params_from_config) {
     auto request = make_shared<HpkeDecryptRequest>();
@@ -188,6 +192,7 @@ class CryptoClientProviderTest : public ScpTestBase {
     request->set_is_bidirectional(is_bidirectional);
     request->mutable_encrypted_data()->set_ciphertext(string(ciphertext));
     request->mutable_encrypted_data()->set_key_id(string(kKeyId));
+    request->set_exporter_context(exporter_context);
     return AsyncContext<HpkeDecryptRequest, HpkeDecryptResponse>(
         move(request),
         [decrypt_private_key_result, secret](
@@ -229,17 +234,17 @@ class CryptoClientProviderTest : public ScpTestBase {
 TEST_F(CryptoClientProviderTest, HpkeEncryptAndDecryptSuccessForOneDirection) {
   auto encrypt_context = CreateHpkeEncryptContext(false /*is_bidirectional*/,
                                                   SuccessExecutionResult());
-  EXPECT_THAT(client_->HpkeEncrypt(encrypt_context), IsSuccessful());
+  EXPECT_SUCCESS(client_->HpkeEncrypt(encrypt_context));
 }
 
 TEST_F(CryptoClientProviderTest,
        HpkeEncryptAndDecryptSuccessForInputHpkeParams) {
   HpkeParams hpke_params_from_request;
   hpke_params_from_request.set_aead(HpkeAead::CHACHA20_POLY1305);
-  auto encrypt_context = CreateHpkeEncryptContext(false /*is_bidirectional*/,
-                                                  SuccessExecutionResult(),
-                                                  hpke_params_from_request);
-  EXPECT_THAT(client_->HpkeEncrypt(encrypt_context), IsSuccessful());
+  auto encrypt_context = CreateHpkeEncryptContext(
+      false /*is_bidirectional*/, SuccessExecutionResult(),
+      "" /*exporter_context*/, hpke_params_from_request);
+  EXPECT_SUCCESS(client_->HpkeEncrypt(encrypt_context));
 }
 
 TEST_F(CryptoClientProviderTest,
@@ -251,15 +256,22 @@ TEST_F(CryptoClientProviderTest,
   client_ = make_unique<CryptoClientProvider>(options);
 
   auto encrypt_context = CreateHpkeEncryptContext(
-      false /*is_bidirectional*/, SuccessExecutionResult(), HpkeParams(),
-      options->hpke_params);
-  EXPECT_THAT(client_->HpkeEncrypt(encrypt_context), IsSuccessful());
+      false /*is_bidirectional*/, SuccessExecutionResult(),
+      "" /*exporter_context*/, HpkeParams(), options->hpke_params);
+  EXPECT_SUCCESS(client_->HpkeEncrypt(encrypt_context));
 }
 
 TEST_F(CryptoClientProviderTest, HpkeEncryptAndDecryptSuccessForTwoDirection) {
   auto encrypt_context = CreateHpkeEncryptContext(true /*is_bidirectional*/,
                                                   SuccessExecutionResult());
-  EXPECT_THAT(client_->HpkeEncrypt(encrypt_context), IsSuccessful());
+  EXPECT_SUCCESS(client_->HpkeEncrypt(encrypt_context));
+}
+
+TEST_F(CryptoClientProviderTest, HpkeEncryptAndDecryptWithInputExportContext) {
+  string exporter_context = "custom exporter";
+  auto encrypt_context = CreateHpkeEncryptContext(
+      true /*is_bidirectional*/, SuccessExecutionResult(), exporter_context);
+  EXPECT_SUCCESS(client_->HpkeEncrypt(encrypt_context));
 }
 
 TEST_F(CryptoClientProviderTest, CannotCreateKeyset) {
@@ -267,37 +279,37 @@ TEST_F(CryptoClientProviderTest, CannotCreateKeyset) {
       false /*is_bidirectional*/,
       FailureExecutionResult(
           SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE));
-  EXPECT_THAT(client_->HpkeEncrypt(encrypt_context), IsSuccessful());
+  EXPECT_SUCCESS(client_->HpkeEncrypt(encrypt_context));
 }
 
 TEST_F(CryptoClientProviderTest, FailedToDecodePrivateKey) {
   auto encrypt_context = CreateHpkeEncryptContext(
       false /*is_bidirectional*/,
       FailureExecutionResult(SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH));
-  EXPECT_THAT(client_->HpkeEncrypt(encrypt_context), IsSuccessful());
+  EXPECT_SUCCESS(client_->HpkeEncrypt(encrypt_context));
 }
 
 TEST_F(CryptoClientProviderTest, AeadEncryptAndDecryptSuccessFor128Secret) {
   auto encrypt_context = CreateAeadEncryptContext(kSecret128);
-  EXPECT_THAT(client_->AeadEncrypt(encrypt_context), IsSuccessful());
-  EXPECT_THAT(encrypt_context.result, IsSuccessful());
+  EXPECT_SUCCESS(client_->AeadEncrypt(encrypt_context));
+  EXPECT_SUCCESS(encrypt_context.result);
   auto ciphertext = encrypt_context.response->encrypted_data().ciphertext();
 
   auto decrypt_context = CreateAeadDecryptContext(kSecret128, ciphertext);
-  EXPECT_THAT(client_->AeadDecrypt(decrypt_context), IsSuccessful());
-  EXPECT_THAT(decrypt_context.result, IsSuccessful());
+  EXPECT_SUCCESS(client_->AeadDecrypt(decrypt_context));
+  EXPECT_SUCCESS(decrypt_context.result);
   EXPECT_EQ(decrypt_context.response->payload(), kPayload);
 }
 
 TEST_F(CryptoClientProviderTest, AeadEncryptAndDecryptSuccessFor256Secret) {
   auto encrypt_context = CreateAeadEncryptContext(kSecret256);
-  EXPECT_THAT(client_->AeadEncrypt(encrypt_context), IsSuccessful());
-  EXPECT_THAT(encrypt_context.result, IsSuccessful());
+  EXPECT_SUCCESS(client_->AeadEncrypt(encrypt_context));
+  EXPECT_SUCCESS(encrypt_context.result);
   auto ciphertext = encrypt_context.response->encrypted_data().ciphertext();
 
   auto decrypt_context = CreateAeadDecryptContext(kSecret256, ciphertext);
-  EXPECT_THAT(client_->AeadDecrypt(decrypt_context), IsSuccessful());
-  EXPECT_THAT(decrypt_context.result, IsSuccessful());
+  EXPECT_SUCCESS(client_->AeadDecrypt(decrypt_context));
+  EXPECT_SUCCESS(decrypt_context.result);
   EXPECT_EQ(decrypt_context.response->payload(), kPayload);
 }
 

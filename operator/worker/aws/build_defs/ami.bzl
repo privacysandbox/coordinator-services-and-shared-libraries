@@ -38,8 +38,8 @@ def _packer_worker_ami_impl(ctx):
         template = startup_script,
         output = ec2_provision_script,
         substitutions = {
-            "{docker_repo}": ctx.attr.enclave_container_image.label.package,
             "{container_file}": ctx.attr.enclave_container_image.label.name,
+            "{docker_repo}": ctx.attr.enclave_container_image.label.package,
             # Remove the .tar extension for the docker tag
             "{docker_tag}": ctx.attr.enclave_container_image.label.name.replace(".tar", ""),
         },
@@ -68,19 +68,19 @@ def _packer_worker_ami_impl(ctx):
         template = packer_template,
         output = packer_file,
         substitutions = {
-            "{ec2_instance}": ctx.attr.ec2_instance,
-            "{aws_region}": ctx.attr.aws_region[BuildSettingInfo].value,
-            "{container_path}": enclave_tar.short_path,
-            "{container_filename}": enclave_tar.basename,
-            "{provision_script}": ec2_provision_script.short_path,
-            "{enclave_allocator}": allocator_file_expanded.short_path,
-            "{ami_name}": ctx.attr.ami_name[BuildSettingInfo].value,
             "{ami_groups}": ctx.attr.ami_groups,
+            "{ami_name}": ctx.attr.ami_name[BuildSettingInfo].value,
+            "{aws_region}": ctx.attr.aws_region[BuildSettingInfo].value,
+            "{container_filename}": enclave_tar.basename,
+            "{container_path}": enclave_tar.short_path,
+            "{ec2_instance}": ctx.attr.ec2_instance,
             "{enable_worker_debug_mode}": "true" if ctx.attr.enable_worker_debug_mode else "false",
-            "{uninstall_ssh_server}": "true" if ctx.attr.uninstall_ssh_server else "false",
+            "{enclave_allocator}": allocator_file_expanded.short_path,
             "{licenses}": licenses_tar.short_path,
-            "{subnet_id}": ctx.attr.subnet_id[BuildSettingInfo].value,
+            "{provision_script}": ec2_provision_script.short_path,
             "{rpms}": '["' + '","'.join(rpm_list) + '"]',
+            "{subnet_id}": ctx.attr.subnet_id[BuildSettingInfo].value,
+            "{uninstall_ssh_server}": "true" if ctx.attr.uninstall_ssh_server else "false",
         },
     )
 
@@ -123,20 +123,31 @@ echo "-------------------------"
 packer_worker_ami = rule(
     implementation = _packer_worker_ami_impl,
     attrs = {
-        "enclave_container_image": attr.label(
-            mandatory = True,
-            allow_single_file = True,
+        "ami_groups": attr.string(
+            default = "[]",
         ),
         "ami_name": attr.label(
             mandatory = True,
             providers = [BuildSettingInfo],
         ),
-        "ami_groups": attr.string(
-            default = "[]",
+        "aws_region": attr.label(
+            mandatory = True,
+            providers = [BuildSettingInfo],
         ),
         "ec2_instance": attr.string(
             mandatory = True,
             default = "m5.xlarge",
+        ),
+        "enable_worker_debug_mode": attr.bool(
+            default = False,
+        ),
+        "enclave_allocator": attr.label(
+            default = Label("//build_defs/aws/enclave:allocator.template.yaml"),
+            allow_single_file = True,
+        ),
+        "enclave_container_image": attr.label(
+            mandatory = True,
+            allow_single_file = True,
         ),
         "enclave_cpus": attr.int(
             default = 2,
@@ -144,54 +155,43 @@ packer_worker_ami = rule(
         "enclave_memory_mib": attr.int(
             default = 7168,
         ),
-        "aws_region": attr.label(
+        "licenses": attr.label(
+            allow_single_file = True,
             mandatory = True,
-            providers = [BuildSettingInfo],
+        ),
+        "packer_ami_config": attr.label(
+            default = Label("//operator/worker/aws:aggregation_worker_ami.pkr.hcl"),
+            allow_single_file = True,
+        ),
+        "packer_binary": attr.label(
+            default = Label("@packer//:packer"),
+            executable = True,
+            cfg = "exec",
+            allow_single_file = True,
         ),
         "proxy_rpm": attr.label(
             default = Label("//cc/aws/proxy:vsockproxy_rpm"),
-            cfg = "host",
-            allow_single_file = True,
-        ),
-        "worker_watcher_rpm": attr.label(
-            default = Label("//operator/worker/aws/enclave:aggregate_worker_rpm"),
+            cfg = "exec",
             allow_single_file = True,
         ),
         "startup_script": attr.label(
             default = Label("//operator/worker/aws:setup_enclave.sh"),
             allow_single_file = True,
         ),
-        "enclave_allocator": attr.label(
-            default = Label("//build_defs/aws/enclave:allocator.template.yaml"),
-            allow_single_file = True,
-        ),
-        "packer_ami_config": attr.label(
-            default = Label("//operator/worker/aws:aggregation_worker_ami.pkr.hcl"),
-            allow_single_file = True,
-        ),
-        "enable_worker_debug_mode": attr.bool(
-            default = False,
-        ),
-        "uninstall_ssh_server": attr.bool(
-            default = False,
-        ),
-        "packer_binary": attr.label(
-            default = Label("@packer//:packer"),
-            executable = True,
-            cfg = "host",
-            allow_single_file = True,
-        ),
-        "licenses": attr.label(
-            allow_single_file = True,
-            mandatory = True,
-        ),
         "subnet_id": attr.label(
             mandatory = True,
             providers = [BuildSettingInfo],
         ),
+        "uninstall_ssh_server": attr.bool(
+            default = False,
+        ),
         "user_rpms": attr.label_list(
             allow_empty = True,
             default = [],
+        ),
+        "worker_watcher_rpm": attr.label(
+            default = Label("//operator/worker/aws/enclave:aggregate_worker_rpm"),
+            allow_single_file = True,
         ),
     },
     executable = True,

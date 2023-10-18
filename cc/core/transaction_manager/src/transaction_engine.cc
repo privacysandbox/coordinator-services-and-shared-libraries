@@ -39,7 +39,6 @@
 
 using google::scp::core::JournalServiceInterface;
 using google::scp::core::Version;
-using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::Serialization;
 using google::scp::core::common::TimeProvider;
 using google::scp::core::common::Uuid;
@@ -50,7 +49,7 @@ using google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLogType;
 using google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
-using google::scp::cpio::client_providers::MetricClientProviderInterface;
+using google::scp::cpio::MetricClientInterface;
 using std::atomic;
 using std::bind;
 using std::function;
@@ -64,9 +63,11 @@ using std::vector;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::placeholders::_1;
+using std::placeholders::_2;
 using std::this_thread::sleep_for;
 
-static constexpr size_t kStartupWaitIntervalMilliseconds = 100;
+static constexpr size_t kStartupWaitIntervalMilliseconds = 1000;
+static constexpr size_t kStopTransactionWaitLoopIntervalMilliseconds = 1000;
 static constexpr Version kCurrentVersion = {.major = 1, .minor = 0};
 // This value MUST NOT change forever.
 static Uuid kTransactionEngineId = {.high = 0xFFFFFFF1, .low = 0x00000004};
@@ -84,62 +85,63 @@ static constexpr char kTransactionPhaseAbortedStr[] = "ABORTED";
 static constexpr char kTransactionPhaseEndStr[] = "END";
 static constexpr char kTransactionPhaseUnknownStr[] = "UNKNOWN";
 
-#define INFO_CONTEXT_WITH_TRANSACTION_INFO(context, transaction, message, ...) \
-  {                                                                            \
-    std::shared_ptr<Transaction>& __transaction = transaction;                 \
-    std::string __transaction_id_string =                                      \
-        google::scp::core::common::ToString(__transaction->id);                \
-    std::string __transaction_phase =                                          \
-        TransactionPhaseToString(__transaction->current_phase.load());         \
-    INFO_CONTEXT(kTransactionEngine, context,                                  \
-                 "Txn ID: %s, Phase: %s, " message,                            \
-                 __transaction_id_string.c_str(), __transaction_phase.c_str(), \
-                 ##__VA_ARGS__);                                               \
-  }
-
-#define DEBUG_CONTEXT_WITH_TRANSACTION_INFO(context, transaction, message,    \
-                                            ...)                              \
+#define INFO_CONTEXT_WITH_TRANSACTION_SCP_INFO(context, transaction, message, \
+                                               ...)                           \
   {                                                                           \
     std::shared_ptr<Transaction>& __transaction = transaction;                \
     std::string __transaction_id_string =                                     \
         google::scp::core::common::ToString(__transaction->id);               \
     std::string __transaction_phase =                                         \
         TransactionPhaseToString(__transaction->current_phase.load());        \
-    size_t __transaction_last_execution_timestamp =                           \
-        __transaction->last_execution_timestamp;                              \
-    DEBUG_CONTEXT(kTransactionEngine, context,                                \
-                  "Txn ID: %s, Phase: %s, Last Execution TS: %llu, " message, \
-                  __transaction_id_string.c_str(),                            \
-                  __transaction_phase.c_str(),                                \
-                  __transaction_last_execution_timestamp, ##__VA_ARGS__);     \
+    SCP_INFO_CONTEXT(kTransactionEngine, context,                             \
+                     "Txn ID: %s, Phase: %s, " message,                       \
+                     __transaction_id_string.c_str(),                         \
+                     __transaction_phase.c_str(), ##__VA_ARGS__);             \
   }
 
-#define ALERT_CONTEXT_WITH_TRANSACTION_INFO(context, transaction,           \
-                                            execution_result, message, ...) \
-  {                                                                         \
-    std::shared_ptr<Transaction>& __transaction = transaction;              \
-    std::string __transaction_id_string =                                   \
-        google::scp::core::common::ToString(__transaction->id);             \
-    std::string __transaction_phase =                                       \
-        TransactionPhaseToString(__transaction->current_phase.load());      \
-    ALERT_CONTEXT(kTransactionEngine, context, execution_result,            \
-                  "Txn ID: %s, Phase: %s, " message,                        \
-                  __transaction_id_string.c_str(),                          \
-                  __transaction_phase.c_str(), ##__VA_ARGS__);              \
+#define DEBUG_CONTEXT_WITH_TRANSACTION_SCP_INFO(context, transaction, message, \
+                                                ...)                           \
+  {                                                                            \
+    std::shared_ptr<Transaction>& __transaction = transaction;                 \
+    std::string __transaction_id_string =                                      \
+        google::scp::core::common::ToString(__transaction->id);                \
+    std::string __transaction_phase =                                          \
+        TransactionPhaseToString(__transaction->current_phase.load());         \
+    size_t __transaction_last_execution_timestamp =                            \
+        __transaction->last_execution_timestamp;                               \
+    SCP_DEBUG_CONTEXT(                                                         \
+        kTransactionEngine, context,                                           \
+        "Txn ID: %s, Phase: %s, Last Execution TS: %llu, " message,            \
+        __transaction_id_string.c_str(), __transaction_phase.c_str(),          \
+        __transaction_last_execution_timestamp, ##__VA_ARGS__);                \
   }
 
-#define ERROR_CONTEXT_WITH_TRANSACTION_INFO(context, transaction,           \
-                                            execution_result, message, ...) \
-  {                                                                         \
-    std::shared_ptr<Transaction>& __transaction = transaction;              \
-    std::string __transaction_id_string =                                   \
-        google::scp::core::common::ToString(__transaction->id);             \
-    std::string __transaction_phase =                                       \
-        TransactionPhaseToString(__transaction->current_phase.load());      \
-    ERROR_CONTEXT(kTransactionEngine, context, execution_result,            \
-                  "Txn ID: %s, Phase: %s, " message,                        \
-                  __transaction_id_string.c_str(),                          \
-                  __transaction_phase.c_str(), ##__VA_ARGS__);              \
+#define ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(                       \
+    context, transaction, execution_result, message, ...)              \
+  {                                                                    \
+    std::shared_ptr<Transaction>& __transaction = transaction;         \
+    std::string __transaction_id_string =                              \
+        google::scp::core::common::ToString(__transaction->id);        \
+    std::string __transaction_phase =                                  \
+        TransactionPhaseToString(__transaction->current_phase.load()); \
+    SCP_ALERT_CONTEXT(kTransactionEngine, context, execution_result,   \
+                      "Txn ID: %s, Phase: %s, " message,               \
+                      __transaction_id_string.c_str(),                 \
+                      __transaction_phase.c_str(), ##__VA_ARGS__);     \
+  }
+
+#define ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(                       \
+    context, transaction, execution_result, message, ...)              \
+  {                                                                    \
+    std::shared_ptr<Transaction>& __transaction = transaction;         \
+    std::string __transaction_id_string =                              \
+        google::scp::core::common::ToString(__transaction->id);        \
+    std::string __transaction_phase =                                  \
+        TransactionPhaseToString(__transaction->current_phase.load()); \
+    SCP_ERROR_CONTEXT(kTransactionEngine, context, execution_result,   \
+                      "Txn ID: %s, Phase: %s, " message,               \
+                      __transaction_id_string.c_str(),                 \
+                      __transaction_phase.c_str(), ##__VA_ARGS__);     \
   }
 
 namespace google::scp::core {
@@ -149,7 +151,7 @@ TransactionEngine::TransactionEngine(
         transaction_command_serializer,
     shared_ptr<JournalServiceInterface>& journal_service,
     shared_ptr<RemoteTransactionManagerInterface>& remote_transaction_manager,
-    const shared_ptr<MetricClientProviderInterface>& metric_client,
+    const shared_ptr<MetricClientInterface>& metric_client,
     shared_ptr<ConfigProviderInterface> config_provider)
     : TransactionEngine(async_executor, transaction_command_serializer,
                         journal_service, make_shared<TransactionPhaseManager>(),
@@ -168,12 +170,32 @@ ExecutionResult TransactionEngine::Init() noexcept {
     skip_log_recovery_failures_ = false;
   }
 
-  INFO(kTransactionEngine, kZeroUuid, kZeroUuid,
-       "Should skip log recovery failures?: %d", skip_log_recovery_failures_);
+  execution_result = config_provider_->Get(
+      kTransactionTimeoutInSecondsConfigName, transaction_timeout_in_seconds_);
+  if (execution_result != SuccessExecutionResult()) {
+    // Config not present, continue with default seconds
+    transaction_timeout_in_seconds_ = kTransactionTimeoutSeconds;
+  }
+
+  execution_result =
+      config_provider_->Get(kTransactionResolutionWithRemoteEnabled,
+                            transaction_resolution_with_remote_enabled_);
+  if (execution_result != SuccessExecutionResult()) {
+    // Config not present, continue with default
+    transaction_resolution_with_remote_enabled_ = true;
+  }
+
+  SCP_INFO(
+      kTransactionEngine, activity_id_,
+      "Initializing Transaction Engine.. Configured Transaction Timeout is "
+      "%lld seconds, Transaction cache entry "
+      "lifetime is %lld seconds, Skipping log recovery failures: %d",
+      transaction_timeout_in_seconds_,
+      transaction_engine_cache_lifetime_seconds_, skip_log_recovery_failures_)
 
   return journal_service_->SubscribeForRecovery(
       kTransactionEngineId,
-      bind(&TransactionEngine::OnJournalServiceRecoverCallback, this, _1));
+      bind(&TransactionEngine::OnJournalServiceRecoverCallback, this, _1, _2));
 }
 
 ExecutionResult TransactionEngine::Run() noexcept {
@@ -183,6 +205,10 @@ ExecutionResult TransactionEngine::Run() noexcept {
   if (!execution_result.Successful()) {
     return execution_result;
   }
+
+  SCP_INFO(kTransactionEngine, activity_id_,
+           "Transaction Engine has '%llu' active transactions to be resolved.",
+           active_transactions_map_.Size());
 
   atomic<size_t> pending_calls(0);
 
@@ -232,14 +258,60 @@ ExecutionResult TransactionEngine::Run() noexcept {
   }
 
   while (pending_calls.load() != 0) {
+    SCP_INFO(kTransactionEngine, activity_id_,
+             "Transaction Engine has '%llu' pending transactions to be "
+             "resolved. Waiting...",
+             pending_calls.load());
     sleep_for(milliseconds(kStartupWaitIntervalMilliseconds));
   }
+
+  SCP_INFO(kTransactionEngine, activity_id_,
+           "Transaction Engine finished resolving pending transactions");
 
   return active_transactions_map_.Run();
 }
 
 ExecutionResult TransactionEngine::Stop() noexcept {
-  return active_transactions_map_.Stop();
+  SCP_INFO(kTransactionEngine, activity_id_, "Transaction Engine stopping...");
+
+  auto execution_result = active_transactions_map_.Stop();
+  if (!execution_result.Successful()) {
+    return execution_result;
+  }
+
+  // Wait for pending activities to finish on the transactions
+  vector<Uuid> active_transaction_ids;
+  execution_result = active_transactions_map_.Keys(active_transaction_ids);
+  if (!execution_result.Successful()) {
+    return execution_result;
+  }
+
+  SCP_INFO(kTransactionEngine, activity_id_,
+           "Transaction Engine checking '%llu' active transactions if there is "
+           "any pending work",
+           active_transaction_ids.size());
+
+  for (const auto& active_transaction_id : active_transaction_ids) {
+    shared_ptr<Transaction> transaction;
+    execution_result =
+        active_transactions_map_.Find(active_transaction_id, transaction);
+    if (!execution_result.Successful()) {
+      return execution_result;
+    }
+
+    // If transaction is not waiting for remote, it might be doing some
+    // activity, so wait until it finishes.
+    while (transaction->is_coordinated_remotely &&
+           !transaction->is_waiting_for_remote) {
+      SCP_INFO(kTransactionEngine, activity_id_,
+               "Transaction Engine waiting on an active transaction '%s' that "
+               "is busy doing some work",
+               ToString(transaction->id).c_str());
+      sleep_for(milliseconds(kStopTransactionWaitLoopIntervalMilliseconds));
+    }
+  }
+
+  return execution_result;
 }
 
 TransactionEngine::~TransactionEngine() {
@@ -294,7 +366,8 @@ void TransactionEngine::OnBeforeGarbageCollection(
 
 ExecutionResult TransactionEngine::ResolveTransaction(
     shared_ptr<Transaction>& transaction) noexcept {
-  if (!transaction->IsExpired() || transaction->blocked) {
+  if (!transaction->IsExpired() || transaction->blocked ||
+      !transaction_resolution_with_remote_enabled_) {
     return SuccessExecutionResult();
   }
 
@@ -302,17 +375,22 @@ ExecutionResult TransactionEngine::ResolveTransaction(
                                 ? *transaction->transaction_secret
                                 : string();
 
-  INFO_CONTEXT_WITH_TRANSACTION_INFO(
+  INFO_CONTEXT_WITH_TRANSACTION_SCP_INFO(
       transaction->context, transaction,
       "The transaction is expired and being auto-resolved. Secret: %s",
       transaction_secret.c_str());
 
   if (!transaction->is_coordinated_remotely) {
+    // When rolling forward locally coordinated transactions, we try to cancel
+    // the transaction if possible.
     if (CanCancel(transaction->current_phase)) {
-      // TODO: Change this to a better status code instead.
       transaction->current_phase_execution_result = FailureExecutionResult(
           errors::SC_TRANSACTION_MANAGER_TRANSACTION_TIMEOUT);
       transaction->current_phase_failed = true;
+      ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
+          transaction->context, transaction,
+          transaction->current_phase_execution_result,
+          "Locally coordinated transaction cancelled after timeout");
     }
     ProceedToNextPhase(transaction->current_phase, transaction);
     return SuccessExecutionResult();
@@ -320,7 +398,7 @@ ExecutionResult TransactionEngine::ResolveTransaction(
 
   auto pending_callbacks = transaction->pending_callbacks.load();
   if (pending_callbacks > 0) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction,
         FailureExecutionResult(
             errors::SC_TRANSACTION_MANAGER_TRANSACTION_HAS_PENDING_CALLBACKS),
@@ -332,14 +410,14 @@ ExecutionResult TransactionEngine::ResolveTransaction(
 
   auto execution_result = LockRemotelyCoordinatedTransaction(transaction);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(transaction->context, transaction,
-                                        execution_result,
-                                        "Cannot lock the transaction.");
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(transaction->context, transaction,
+                                            execution_result,
+                                            "Cannot lock the transaction.");
     return execution_result;
   }
 
-  INFO_CONTEXT_WITH_TRANSACTION_INFO(transaction->context, transaction,
-                                     "Dispatching get transaction status.");
+  INFO_CONTEXT_WITH_TRANSACTION_SCP_INFO(transaction->context, transaction,
+                                         "Dispatching get transaction status.");
 
   // Get status of the other transaction being executed.
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
@@ -347,11 +425,13 @@ ExecutionResult TransactionEngine::ResolveTransaction(
           make_shared<GetTransactionStatusRequest>(),
           bind(&TransactionEngine::OnGetRemoteTransactionStatusCallback, this,
                transaction, _1),
-          transaction->id);
+          transaction->context);
 
   get_transaction_status_context.request->transaction_id = transaction->id;
   get_transaction_status_context.request->transaction_secret =
       transaction->transaction_secret;
+  get_transaction_status_context.request->transaction_origin =
+      transaction->transaction_origin;
 
   operation_dispatcher_.Dispatch<
       AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>>(
@@ -378,7 +458,7 @@ void TransactionEngine::OnGetRemoteTransactionStatusCallback(
         get_transaction_status_context.result ==
             FailureExecutionResult(
                 errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND)) {
-      DEBUG_CONTEXT_WITH_TRANSACTION_INFO(
+      DEBUG_CONTEXT_WITH_TRANSACTION_SCP_INFO(
           get_transaction_status_context, transaction,
           "The transaction was not found on remote coordinator");
 
@@ -386,7 +466,7 @@ void TransactionEngine::OnGetRemoteTransactionStatusCallback(
       return;
     }
 
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         get_transaction_status_context, transaction,
         get_transaction_status_context.result,
         "Error finding transaction on remote coordinator.");
@@ -397,7 +477,7 @@ void TransactionEngine::OnGetRemoteTransactionStatusCallback(
   }
 
   if (!get_transaction_status_context.response->is_expired) {
-    INFO_CONTEXT_WITH_TRANSACTION_INFO(
+    INFO_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         get_transaction_status_context, transaction,
         "The transaction is found on remote and is not expired yet.");
     UnlockRemotelyCoordinatedTransaction(transaction);
@@ -412,11 +492,13 @@ void TransactionEngine::OnGetRemoteTransactionStatusCallback(
   // Check transactions to be in sync.
   if (!LocalAndRemoteTransactionsInSync(transaction->current_phase,
                                         remote_transaction_phase)) {
-    ALERT_CONTEXT_WITH_TRANSACTION_INFO(
+    ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         get_transaction_status_context, transaction,
         FailureExecutionResult(
             errors::SC_TRANSACTION_MANAGER_TRANSACTION_OUT_OF_SYNC),
-        "The local and remote transactions are out of sync!");
+        "The local and remote transactions are out of sync!, remote phase: %s. "
+        "Blocking the transaction!",
+        TransactionPhaseToString(remote_transaction_phase).c_str());
     transaction->blocked = true;
     UnlockRemotelyCoordinatedTransaction(transaction);
     return;
@@ -431,7 +513,7 @@ void TransactionEngine::OnGetRemoteTransactionStatusCallback(
   // At this stage, if any of the transactions have failed, there should be
   // manual recovery.
   if (transaction->current_phase_failed) {
-    ALERT_CONTEXT_WITH_TRANSACTION_INFO(
+    ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         get_transaction_status_context, transaction,
         FailureExecutionResult(
             errors::SC_TRANSACTION_MANAGER_TRANSACTION_STUCK),
@@ -474,14 +556,15 @@ void TransactionEngine::OnRemoteTransactionNotFound(
       transaction->current_phase != TransactionPhase::Aborted &&
       transaction->current_phase != TransactionPhase::Committed &&
       transaction->current_phase != TransactionPhase::End) {
-    ALERT_CONTEXT_WITH_TRANSACTION_INFO(
+    ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         get_transaction_status_context, transaction,
         FailureExecutionResult(
             errors::SC_TRANSACTION_MANAGER_TRANSACTION_OUT_OF_SYNC),
         "The remote transaction was not found and the local "
         "transaction is out of sync. "
-        "Transaction Expiration Timestamp: %zu",
-        transaction->expiration_time);
+        "Transaction Expiration Timestamp: %zu, current transaction phase "
+        "failed: %d. Blocking the transaction!",
+        transaction->expiration_time, transaction->current_phase_failed.load());
     transaction->blocked = true;
     UnlockRemotelyCoordinatedTransaction(transaction);
     return;
@@ -494,7 +577,7 @@ void TransactionEngine::OnRemoteTransactionNotFound(
           make_shared<TransactionPhaseRequest>(),
           [](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&) {
           },
-          transaction->id);
+          get_transaction_status_context);
 
   transaction_phase_context.request->transaction_id = transaction->id;
   transaction_phase_context.request->transaction_secret =
@@ -506,7 +589,7 @@ void TransactionEngine::OnRemoteTransactionNotFound(
   transaction_phase_context.request->last_execution_timestamp =
       transaction->last_execution_timestamp;
 
-  DEBUG_CONTEXT_WITH_TRANSACTION_INFO(
+  DEBUG_CONTEXT_WITH_TRANSACTION_SCP_INFO(
       get_transaction_status_context, transaction,
       "Automatically moving local transaction to END phase");
 
@@ -522,7 +605,7 @@ void TransactionEngine::OnRemoteTransactionNotFound(
 ExecutionResult TransactionEngine::RollForwardLocalTransaction(
     shared_ptr<Transaction>& transaction, TransactionExecutionPhase next_phase,
     bool next_phase_has_failure) noexcept {
-  INFO_CONTEXT_WITH_TRANSACTION_INFO(
+  INFO_CONTEXT_WITH_TRANSACTION_SCP_INFO(
       transaction->context, transaction,
       "Rolling forward the local transaction to the next phase %s",
       TransactionExecutionPhaseToString(next_phase).c_str());
@@ -533,7 +616,7 @@ ExecutionResult TransactionEngine::RollForwardLocalTransaction(
           make_shared<TransactionPhaseRequest>(),
           [](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&) {
           },
-          transaction->id);
+          transaction->context);
   transaction_phase_context.request->transaction_id = transaction->id;
   transaction_phase_context.request->transaction_secret =
       transaction->transaction_secret;
@@ -566,9 +649,10 @@ ExecutionResult TransactionEngine::RollForwardLocalTransaction(
 ExecutionResult TransactionEngine::RollForwardLocalAndRemoteTransactions(
     shared_ptr<Transaction>& transaction,
     Timestamp last_execution_timestamp_remote) noexcept {
-  INFO_CONTEXT_WITH_TRANSACTION_INFO(
+  INFO_CONTEXT_WITH_TRANSACTION_SCP_INFO(
       transaction->context, transaction,
-      "Rolling forward the remote and the local transactions to the next "
+      "Both local and remote transactions are on the same phase. Rolling "
+      "forward the remote and the local transactions to the next "
       "phase");
 
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
@@ -576,7 +660,7 @@ ExecutionResult TransactionEngine::RollForwardLocalAndRemoteTransactions(
           make_shared<TransactionPhaseRequest>(),
           bind(&TransactionEngine::OnRollForwardRemoteTransactionCallback, this,
                transaction, _1),
-          transaction->id);
+          transaction->context);
 
   remote_phase_context.request->transaction_execution_phase =
       ToTransactionExecutionPhase(transaction->current_phase);
@@ -584,9 +668,9 @@ ExecutionResult TransactionEngine::RollForwardLocalAndRemoteTransactions(
   if (CanCancel(transaction->current_phase)) {
     remote_phase_context.request->transaction_execution_phase =
         TransactionExecutionPhase::Abort;
-    DEBUG_CONTEXT_WITH_TRANSACTION_INFO(
+    DEBUG_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         remote_phase_context, transaction,
-        "Moving remote transaction to phase: %s",
+        "Aborting Transaction. Moving remote transaction to phase: %s",
         TransactionExecutionPhaseToString(
             remote_phase_context.request->transaction_execution_phase)
             .c_str());
@@ -623,10 +707,10 @@ void TransactionEngine::OnRollForwardRemoteTransactionCallback(
           make_shared<TransactionPhaseRequest>(),
           [](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&) {
           },
-          transaction->id);
+          transaction->context);
 
   if (!remote_transaction_context.result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         remote_transaction_context, transaction,
         remote_transaction_context.result,
         "Rolling forward the remote transaction failed.");
@@ -653,8 +737,8 @@ void TransactionEngine::OnRollForwardRemoteTransactionCallback(
 }
 
 ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
-    const shared_ptr<BytesBuffer>& bytes_buffer) noexcept {
-  auto activity_id = Uuid::GenerateUuid();
+    const shared_ptr<BytesBuffer>& bytes_buffer,
+    const Uuid& activity_id) noexcept {
   TransactionEngineLog transaction_engine_log;
   size_t offset = 0;
   size_t bytes_deserialized = 0;
@@ -663,17 +747,16 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
           *bytes_buffer, offset, bytes_buffer->length, transaction_engine_log,
           bytes_deserialized);
   if (!execution_result.Successful()) {
-    ERROR(kTransactionEngine, kTransactionEngineId, activity_id,
-          execution_result, "Log is corrupted, invalid TransactionEngineLog!");
+    SCP_ERROR(kTransactionEngine, activity_id, execution_result,
+              "Log is corrupted, invalid TransactionEngineLog!");
     return execution_result;
   }
 
   execution_result =
       Serialization::ValidateVersion(transaction_engine_log, kCurrentVersion);
   if (!execution_result.Successful()) {
-    ERROR(kTransactionEngine, kTransactionEngineId, activity_id,
-          execution_result,
-          "Log is corrupted, invalid TransactionEngineLog version!");
+    SCP_ERROR(kTransactionEngine, activity_id, execution_result,
+              "Log is corrupted, invalid TransactionEngineLog version!");
     return execution_result;
   }
 
@@ -684,9 +767,8 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
           transaction_engine_log.log_body(), transaction_engine_log_1_0,
           bytes_deserialized);
   if (!execution_result.Successful()) {
-    ERROR(kTransactionEngine, kTransactionEngineId, activity_id,
-          execution_result,
-          "Log is corrupted, invalid TransactionEngineLog_1_0!");
+    SCP_ERROR(kTransactionEngine, activity_id, execution_result,
+              "Log is corrupted, invalid TransactionEngineLog_1_0!");
     return execution_result;
   }
 
@@ -699,8 +781,8 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
             transaction_engine_log_1_0.log_body(), transaction_log_1_0,
             bytes_deserialized);
     if (!execution_result.Successful()) {
-      ERROR(kTransactionEngine, kTransactionEngineId, activity_id,
-            execution_result, "Log is corrupted, invalid TransactionLog_1_0!");
+      SCP_ERROR(kTransactionEngine, activity_id, execution_result,
+                "Log is corrupted, invalid TransactionLog_1_0!");
       return execution_result;
     }
 
@@ -710,9 +792,10 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
     transaction_id.low = transaction_log_1_0.id().low();
 
     auto transaction_id_string = common::ToString(transaction_id);
-    DEBUG(kTransactionEngine, kTransactionEngineId, activity_id,
-          "Recovering TRANSACTION_LOG for transaction %s, commands count: %zu",
-          transaction_id_string.c_str(), transaction_log_1_0.commands_size());
+    SCP_DEBUG(
+        kTransactionEngine, activity_id,
+        "Recovering TRANSACTION_LOG for transaction %s, commands count: %zu",
+        transaction_id_string.c_str(), transaction_log_1_0.commands_size());
 
     Timestamp timeout = transaction_log_1_0.timeout();
     bool is_coordinated_remotely =
@@ -724,14 +807,7 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
     AsyncContext<TransactionRequest, TransactionResponse> transaction_context(
         make_shared<TransactionRequest>(),
         [](AsyncContext<TransactionRequest, TransactionResponse>&) {},
-        transaction_id);
-
-    AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
-        transaction_phase_context(
-            make_shared<TransactionPhaseRequest>(),
-            [](AsyncContext<TransactionPhaseRequest,
-                            TransactionPhaseResponse>&) {},
-            transaction_id);
+        activity_id, activity_id);
 
     transaction_context.request->transaction_id = transaction_id;
     transaction_context.request->timeout_time = timeout;
@@ -756,10 +832,10 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
       transaction_context.request->commands.push_back(transaction_command);
     }
 
-    INFO(kTransactionEngine, kTransactionEngineId, activity_id,
-         "Successfully processed TRANSACTION_LOG, recovered transaction "
-         "with ID: %s",
-         transaction_id_string.c_str());
+    SCP_DEBUG(kTransactionEngine, activity_id,
+              "Successfully processed TRANSACTION_LOG, recovered transaction "
+              "with ID: %s",
+              transaction_id_string.c_str());
 
     // The transaction might already be initialized due to a previous
     // duplicate log. InitializeTransaction is idempotent.
@@ -787,10 +863,11 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
         ConvertProtoPhaseToPhase(transaction_phase_log_1_0.phase());
     auto transaction_id_string = common::ToString(transaction_id);
 
-    INFO(kTransactionEngine, kTransactionEngineId, activity_id,
-         "Recovering TRANSACTION_PHASE_LOG with phase: %s of transaction %s",
-         TransactionPhaseToString(target_transaction_phase).c_str(),
-         transaction_id_string.c_str());
+    SCP_DEBUG(
+        kTransactionEngine, activity_id,
+        "Recovering TRANSACTION_PHASE_LOG with phase: %s of transaction %s",
+        TransactionPhaseToString(target_transaction_phase).c_str(),
+        transaction_id_string.c_str());
 
     shared_ptr<Transaction> transaction;
     auto execution_result =
@@ -805,12 +882,11 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
       }
 
       // This should never happen. Raise alert.
-      ALERT(kTransactionEngine, kTransactionEngineId, activity_id,
-            execution_result,
-            "Cannot find the transaction with id %s for "
-            "TRANSACTION_PHASE_LOG phase: %s",
-            transaction_id_string.c_str(),
-            TransactionPhaseToString(target_transaction_phase).c_str());
+      SCP_ALERT(kTransactionEngine, activity_id, execution_result,
+                "Cannot find the transaction with id %s for "
+                "TRANSACTION_PHASE_LOG phase: %s",
+                transaction_id_string.c_str(),
+                TransactionPhaseToString(target_transaction_phase).c_str());
 
       return FailureExecutionResult(
           errors::SC_TRANSACTION_MANAGER_TRANSACTION_NOT_FOUND);
@@ -818,9 +894,8 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
 
     if (target_transaction_phase < transaction->current_phase) {
       // This should never happen. Raise alert.
-      ALERT(
-          kTransactionEngine, kTransactionEngineId, activity_id,
-          execution_result,
+      SCP_ALERT(
+          kTransactionEngine, activity_id, execution_result,
           "TRANSACTION_PHASE_LOG has stale phase %s. "
           "Current transaction phase is %s",
           TransactionPhaseToString(target_transaction_phase).c_str(),
@@ -839,16 +914,16 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
     transaction->transaction_execution_result.status_code =
         transaction_phase_log_1_0.result().status_code();
 
-    INFO(kTransactionEngine, kTransactionEngineId, activity_id,
-         "Successfully processed TRANSACTION_PHASE_LOG, recovered "
-         "transaction with ID: %s",
-         transaction_id_string.c_str());
+    SCP_DEBUG(kTransactionEngine, activity_id,
+              "Successfully processed TRANSACTION_PHASE_LOG, recovered "
+              "transaction with ID: %s",
+              transaction_id_string.c_str());
 
     // Remove the transaction if the end phase has been recovered.
     if (transaction->current_phase == TransactionPhase::End) {
-      INFO(kTransactionEngine, kTransactionEngineId, activity_id,
-           "Transaction recovery completed for transaction %s",
-           transaction_id_string.c_str());
+      SCP_INFO(kTransactionEngine, activity_id,
+               "Transaction recovery completed for transaction %s",
+               transaction_id_string.c_str());
       return active_transactions_map_.Erase(transaction_id);
     }
 
@@ -891,7 +966,7 @@ ExecutionResult TransactionEngine::InitializeTransaction(
   transaction->is_loaded = true;
   transaction->expiration_time =
       (TimeProvider::GetSteadyTimestampInNanoseconds() +
-       seconds(kTransactionLifetimeSeconds))
+       seconds(transaction_timeout_in_seconds_))
           .count();
   transaction->last_execution_timestamp =
       TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
@@ -899,9 +974,10 @@ ExecutionResult TransactionEngine::InitializeTransaction(
   auto execution_result = active_transactions_map_.Insert(pair, transaction);
   if (!execution_result.Successful()) {
     auto transaction_id_string = common::ToString(transaction->id);
-    ERROR_CONTEXT(kTransactionEngine, transaction->context, execution_result,
-                  "Failed to insert the transaction id: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kTransactionEngine, transaction->context,
+                      execution_result,
+                      "Failed to insert the transaction id: %s",
+                      transaction_id_string.c_str());
     if (execution_result.status_code ==
         core::errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS) {
       execution_result = FailureExecutionResult(
@@ -948,7 +1024,7 @@ ExecutionResult TransactionEngine::SerializeTransaction(
     auto execution_result = transaction_command_serializer_->Serialize(
         transaction->id, current_command, bytes_buffer);
     if (!execution_result.Successful()) {
-      ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+      ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
           transaction->context, transaction, execution_result,
           "Cannot serialize the transaction commands.");
       return execution_result;
@@ -967,7 +1043,7 @@ ExecutionResult TransactionEngine::SerializeTransaction(
           transaction_log_1_0_bytes_buffer, offset, transaction_log_1_0,
           bytes_serialized);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction, execution_result,
         "Cannot serialize the transaction log.");
     return execution_result;
@@ -987,7 +1063,7 @@ ExecutionResult TransactionEngine::SerializeTransaction(
           transaction_engine_log_1_0_bytes_buffer, offset,
           transaction_engine_log_1_0, bytes_serialized);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction, execution_result,
         "Cannot serialize the transaction engine log 1.0.");
     return execution_result;
@@ -1006,7 +1082,7 @@ ExecutionResult TransactionEngine::SerializeTransaction(
       transaction_engine_log_bytes_buffer, offset, transaction_engine_log,
       bytes_serialized);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction, execution_result,
         "Cannot serialize the transaction engine log.");
     return execution_result;
@@ -1026,7 +1102,8 @@ ExecutionResult TransactionEngine::LogTransactionAndProceedToNextPhase(
   }
 
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
-  journal_log_context.parent_activity_id = transaction->id;
+  journal_log_context.parent_activity_id = transaction->context.activity_id;
+  journal_log_context.correlation_id = transaction->context.correlation_id;
   journal_log_context.request = make_shared<JournalLogRequest>();
   journal_log_context.request->component_id = kTransactionEngineId;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
@@ -1054,9 +1131,9 @@ void TransactionEngine::OnLogTransactionCallback(
     TransactionPhase current_phase,
     shared_ptr<Transaction>& transaction) noexcept {
   if (!journal_log_context.result.Successful()) {
-    ERROR_CONTEXT(kTransactionEngine, journal_log_context,
-                  journal_log_context.result,
-                  "On log transaction callback failed.");
+    SCP_ERROR_CONTEXT(kTransactionEngine, journal_log_context,
+                      journal_log_context.result,
+                      "On log transaction callback failed.");
     operation_dispatcher_
         .Dispatch<AsyncContext<JournalLogRequest, JournalLogResponse>>(
             journal_log_context,
@@ -1103,7 +1180,7 @@ ExecutionResult TransactionEngine::SerializeState(
           transaction_phase_log_1_0_bytes_buffer, offset,
           transaction_phase_log_1_0, bytes_serialized);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction, execution_result,
         "Cannot serialize the transaction phase.");
     return execution_result;
@@ -1123,7 +1200,7 @@ ExecutionResult TransactionEngine::SerializeState(
           transaction_engine_log_1_0_bytes_buffer, offset,
           transaction_engine_log_1_0, bytes_serialized);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction, execution_result,
         "Cannot serialize the transaction engine log 1.0.");
     return execution_result;
@@ -1143,7 +1220,7 @@ ExecutionResult TransactionEngine::SerializeState(
       transaction_engine_log_bytes_buffer, offset, transaction_engine_log,
       bytes_serialized);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction, execution_result,
         "Cannot serialize the transaction engine log.");
     return execution_result;
@@ -1164,7 +1241,8 @@ ExecutionResult TransactionEngine::LogState(
   }
 
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
-  journal_log_context.parent_activity_id = transaction->id;
+  journal_log_context.parent_activity_id = transaction->context.activity_id;
+  journal_log_context.correlation_id = transaction->context.correlation_id;
   journal_log_context.request = make_shared<JournalLogRequest>();
   journal_log_context.request->component_id = kTransactionEngineId;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
@@ -1208,9 +1286,9 @@ void TransactionEngine::OnLogStateAndProceedToNextPhaseCallback(
     TransactionPhase current_phase,
     shared_ptr<Transaction>& transaction) noexcept {
   if (!journal_log_context.result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(journal_log_context, transaction,
-                                        journal_log_context.result,
-                                        "Transaction State WAL failed.");
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(journal_log_context, transaction,
+                                            journal_log_context.result,
+                                            "Transaction State WAL failed.");
     operation_dispatcher_
         .Dispatch<AsyncContext<JournalLogRequest, JournalLogResponse>>(
             journal_log_context,
@@ -1230,9 +1308,9 @@ void TransactionEngine::OnLogStateAndExecuteDistributedPhaseCallback(
     TransactionPhase current_phase,
     shared_ptr<Transaction>& transaction) noexcept {
   if (!journal_log_context.result.Successful()) {
-    ERROR_CONTEXT_WITH_TRANSACTION_INFO(journal_log_context, transaction,
-                                        journal_log_context.result,
-                                        "Transaction State WAL failed.");
+    ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(journal_log_context, transaction,
+                                            journal_log_context.result,
+                                            "Transaction State WAL failed.");
     operation_dispatcher_
         .Dispatch<AsyncContext<JournalLogRequest, JournalLogResponse>>(
             journal_log_context,
@@ -1315,7 +1393,7 @@ ExecutionResult TransactionEngine::ExecutePhaseInternal(
   if (transaction->is_waiting_for_remote ||
       !transaction->is_coordinated_remotely) {
     return FailureExecutionResult(
-        errors::SC_TRANSACTION_MANAGER_CURRENT_TRANSACTION_IS_RUNNING);
+        errors::SC_TRANSACTION_MANAGER_TRANSACTION_IS_NOT_LOCKED);
   }
 
   // There is a chance that a callback has removed this element from the map
@@ -1370,11 +1448,8 @@ ExecutionResult TransactionEngine::ExecutePhaseInternal(
   }
 
   if (requested_phase == TransactionExecutionPhase::Abort) {
-    if (transaction->current_phase != TransactionPhase::Begin &&
-        transaction->current_phase != TransactionPhase::Prepare &&
-        transaction->current_phase != TransactionPhase::Commit &&
-        transaction->current_phase != TransactionPhase::CommitNotify &&
-        transaction->current_phase != TransactionPhase::AbortNotify) {
+    if (!TransactionPhaseManager::CanProceedToAbortAtPhase(
+            transaction->current_phase)) {
       return FailureExecutionResult(
           errors::SC_TRANSACTION_MANAGER_INVALID_TRANSACTION_PHASE);
     }
@@ -1383,11 +1458,8 @@ ExecutionResult TransactionEngine::ExecutePhaseInternal(
   }
 
   if (requested_phase == TransactionExecutionPhase::End) {
-    if (transaction->current_phase != TransactionPhase::Begin &&
-        transaction->current_phase != TransactionPhase::Prepare &&
-        transaction->current_phase != TransactionPhase::Aborted &&
-        transaction->current_phase != TransactionPhase::Committed &&
-        transaction->current_phase != TransactionPhase::End) {
+    if (!TransactionPhaseManager::CanProceedToEndAtPhase(
+            transaction->current_phase)) {
       return FailureExecutionResult(
           errors::SC_TRANSACTION_MANAGER_INVALID_TRANSACTION_PHASE);
     }
@@ -1465,7 +1537,7 @@ ExecutionResult TransactionEngine::GetTransactionStatus(
   get_transaction_status_context.response->is_expired =
       transaction->IsExpired();
 
-  DEBUG_CONTEXT_WITH_TRANSACTION_INFO(
+  DEBUG_CONTEXT_WITH_TRANSACTION_SCP_INFO(
       get_transaction_status_context, transaction,
       "GetTransactionStatus Finished. IsExpired: %d, HasFailure: %d",
       get_transaction_status_context.response->is_expired,
@@ -1483,9 +1555,9 @@ ExecutionResult TransactionEngine::Checkpoint(
     return execution_result;
   }
 
-  DEBUG(kTransactionEngine, kZeroUuid, kZeroUuid,
-        "Number of active transactions in map to checkpoint: %llu",
-        active_transactions.size());
+  SCP_DEBUG(kTransactionEngine, activity_id_,
+            "Number of active transactions in map to checkpoint: %llu",
+            active_transactions.size());
   for (auto& active_transaction : active_transactions) {
     // 1) Serialize the transaction.
     // 2) Serialize the current state.
@@ -1603,7 +1675,7 @@ void TransactionEngine::ProceedToNextPhase(
       current_phase, transaction->current_phase_execution_result);
 
   if (next_phase == TransactionPhase::Unknown) {
-    ALERT_CONTEXT_WITH_TRANSACTION_INFO(
+    ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction,
         FailureExecutionResult(
             errors::SC_TRANSACTION_MANAGER_TRANSACTION_UNKNOWN),
@@ -1638,9 +1710,9 @@ void TransactionEngine::ProceedToNextPhase(
   // another phase only once.
   if (!transaction->current_phase.compare_exchange_strong(current_phase,
                                                           next_phase)) {
-    ALERT_CONTEXT_WITH_TRANSACTION_INFO(transaction->context, transaction,
-                                        FailureExecutionResult(SC_UNKNOWN),
-                                        "Dangling callback in TM");
+    ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(transaction->context, transaction,
+                                            FailureExecutionResult(SC_UNKNOWN),
+                                            "Dangling callback in TM");
     return;
   }
 
@@ -1664,10 +1736,6 @@ void TransactionEngine::ProceedToNextPhase(
           move(failed_indices);
       transaction->context.response->failed_commands = move(failed_commands);
       transaction->context.result = current_phase_execution_result;
-      // Since the next phase will be executed on the same thread, there is
-      // a chance that unlocking happens after execute phase which cause
-      // dead lock. By doing this before the callback, the dead lock will be
-      // avoided.
       UnlockRemotelyCoordinatedTransaction(transaction);
       transaction->context.Finish();
     } else {
@@ -1765,7 +1833,10 @@ void TransactionEngine::EndTransaction(
 
 void TransactionEngine::UnknownStateTransaction(
     shared_ptr<Transaction>& transaction) noexcept {
-  // TODO: Log this.
+  ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(
+      transaction->context, transaction,
+      FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_STATE_IS_INVALID),
+      "Transaction has reached unknown state");
 }
 
 void TransactionEngine::ExecuteDistributedPhase(
@@ -1785,7 +1856,7 @@ void TransactionEngine::ExecuteDistributedPhase(
         auto enqueue_execution_result =
             transaction->current_phase_failed_command_indices.TryEnqueue(i);
         if (!enqueue_execution_result.Successful()) {
-          ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+          ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
               transaction->context, transaction,
               FailureExecutionResult(
                   errors::SC_TRANSACTION_MANAGER_QUEUE_FAILURE),
@@ -1846,7 +1917,7 @@ void TransactionEngine::OnPhaseCallback(
   // All the retries must have happened before the TM. TM is not responsible
   // to retry the operation.
   if (execution_result.status == ExecutionStatus::Retry) {
-    ALERT_CONTEXT_WITH_TRANSACTION_INFO(
+    ALERT_CONTEXT_WITH_TRANSACTION_SCP_INFO(
         transaction->context, transaction,
         FailureExecutionResult(
             errors::SC_TRANSACTION_MANAGER_TRANSACTION_STUCK),
@@ -1860,7 +1931,7 @@ void TransactionEngine::OnPhaseCallback(
         transaction->current_phase_failed_command_indices.TryEnqueue(
             command_index);
     if (!enqueue_execution_result.Successful()) {
-      ERROR_CONTEXT_WITH_TRANSACTION_INFO(
+      ERROR_CONTEXT_WITH_TRANSACTION_SCP_INFO(
           transaction->context, transaction,
           FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_QUEUE_FAILURE),
           "Failed to insert command index %ld", command_index);

@@ -14,18 +14,17 @@
 
 #include "cpio/client_providers/auth_token_provider/src/aws/aws_auth_token_provider.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <string>
 #include <utility>
 
-#include <gmock/gmock.h>
-
 #include "core/curl_client/mock/mock_curl_client.h"
 #include "core/test/utils/conditional_wait.h"
 #include "cpio/client_providers/auth_token_provider/src/aws/error_codes.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::BytesBuffer;
@@ -110,7 +109,7 @@ TEST_F(AwsAuthTokenProviderTest,
 
   atomic_bool finished(false);
   fetch_token_context_.callback = [&finished](auto& context) {
-    EXPECT_THAT(context.result, IsSuccessful());
+    EXPECT_SUCCESS(context.result);
     ASSERT_TRUE(context.response);
     EXPECT_THAT(context.response->session_token,
                 Pointee(Eq(kHttpResponseMock)));

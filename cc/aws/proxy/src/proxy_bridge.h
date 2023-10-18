@@ -113,10 +113,12 @@ class ProxyBridge : public std::enable_shared_from_this<ProxyBridge> {
                         size_t bytes_written);
 
   Executor GetExecutor() { return client_sock_.get_executor(); }
+
   // Accept an inbound connection if this object was processing a BIND request.
   void AcceptInboundConnection(Socket sock);
   // Stop waiting to accept an inbound connection.
   void StopWaitingInbound(bool client_error = true);
+
  private:
   static std::atomic<uint64_t> connection_id_counter;
   const uint64_t connection_id_;

@@ -18,24 +18,25 @@
 
 #include "core/interface/errors.h"
 #include "core/interface/type_def.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::test::ResultIs;
 
 namespace google::scp::core::utils::test {
 TEST(ErrorUtilsTest, ConvertSuccessExecutionResult) {
-  EXPECT_EQ(ConvertToPublicExecutionResult(SuccessExecutionResult()),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(ConvertToPublicExecutionResult(SuccessExecutionResult()));
 }
 
 TEST(ErrorUtilsTest, ConvertFailureExecutionResult) {
   FailureExecutionResult failure(SC_UNKNOWN);
-  EXPECT_EQ(ConvertToPublicExecutionResult(failure), failure);
+  EXPECT_THAT(ConvertToPublicExecutionResult(failure), ResultIs(failure));
 }
 
 TEST(ErrorUtilsTest, ConvertRetryExecutionResult) {
   RetryExecutionResult failure(SC_UNKNOWN);
-  EXPECT_EQ(ConvertToPublicExecutionResult(failure), failure);
+  EXPECT_THAT(ConvertToPublicExecutionResult(failure), ResultIs(failure));
 }
 }  // namespace google::scp::core::utils::test

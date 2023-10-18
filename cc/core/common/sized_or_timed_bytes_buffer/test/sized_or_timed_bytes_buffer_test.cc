@@ -26,9 +26,11 @@
 #include "core/interface/async_context.h"
 #include "core/interface/async_executor_interface.h"
 #include "core/test/utils/conditional_wait.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::common::SizedOrTimedBytesBuffer;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using std::atomic;
 using std::function;
@@ -77,7 +79,7 @@ TEST(SizedOrTimedBytesBufferTest, InitFunction) {
             async_executor, get_data_size_function, serialize_function,
             flush_function, 1000, 1234);
 
-    EXPECT_EQ(sized_or_timed_bytes_buffer->Init(), result);
+    EXPECT_THAT(sized_or_timed_bytes_buffer->Init(), ResultIs(result));
     WaitUntil([&]() { return condition.load(); });
   }
 }
@@ -124,16 +126,16 @@ TEST(SizedOrTimedBytesBufferTest, AppendDataWithMaxSize) {
           flush_function, 0, 1234);
 
   AsyncContext<Request, Response> context;
-  EXPECT_EQ(sized_or_timed_bytes_buffer->Append(context),
-            FailureExecutionResult(
-                errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_INITIALIZED));
+  EXPECT_THAT(sized_or_timed_bytes_buffer->Append(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_INITIALIZED)));
 
   sized_or_timed_bytes_buffer->Init();
   WaitUntil([&]() { return schedule_for_condition.load(); });
 
-  EXPECT_EQ(sized_or_timed_bytes_buffer->Append(context),
-            FailureExecutionResult(
-                errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_ENOUGH_SPACE));
+  EXPECT_THAT(sized_or_timed_bytes_buffer->Append(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_ENOUGH_SPACE)));
   WaitUntil([&]() { return schedule_condition.load(); });
 }
 
@@ -181,15 +183,14 @@ TEST(SizedOrTimedBytesBufferTest, AppendDataWithMaxSizeNoCapacityAvaialble) {
           flush_function, 1000, 1234);
 
   AsyncContext<Request, Response> context;
-  EXPECT_EQ(sized_or_timed_bytes_buffer->Append(context),
-            FailureExecutionResult(
-                errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_INITIALIZED));
+  EXPECT_THAT(sized_or_timed_bytes_buffer->Append(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_INITIALIZED)));
 
   sized_or_timed_bytes_buffer->Init();
   WaitUntil([&]() { return schedule_for_condition.load(); });
 
-  EXPECT_EQ(sized_or_timed_bytes_buffer->Append(context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(sized_or_timed_bytes_buffer->Append(context));
 }
 
 TEST(SizedOrTimedBytesBufferTest, FlushData) {
@@ -238,18 +239,18 @@ TEST(SizedOrTimedBytesBufferTest, FlushData) {
           flush_function, 0, 1234);
 
   AsyncContext<Request, Response> context;
-  EXPECT_EQ(sized_or_timed_bytes_buffer->Append(context),
-            FailureExecutionResult(
-                errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_INITIALIZED));
+  EXPECT_THAT(sized_or_timed_bytes_buffer->Append(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_NOT_INITIALIZED)));
 
   sized_or_timed_bytes_buffer->Init();
   WaitUntil([&]() { return schedule_for_condition.load(); });
 
   sized_or_timed_bytes_buffer->Flush();
 
-  EXPECT_EQ(sized_or_timed_bytes_buffer->Append(context),
-            FailureExecutionResult(
-                errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_BUFFER_IS_SEALED));
+  EXPECT_THAT(sized_or_timed_bytes_buffer->Append(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_SIZED_OR_TIMED_BYTES_BUFFER_BUFFER_IS_SEALED)));
 }
 
 TEST(SizedOrTimedBytesBufferTest, AppendBeforeFlushData) {
@@ -306,7 +307,7 @@ TEST(SizedOrTimedBytesBufferTest, AppendBeforeFlushData) {
   AsyncContext<Request, Response> context;
   atomic<bool> condition = false;
   context.callback = [&](AsyncContext<Request, Response>& context) {
-    EXPECT_EQ(context.result, FailureExecutionResult(1234));
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1234)));
     condition = true;
   };
 
@@ -373,7 +374,7 @@ TEST(SizedOrTimedBytesBufferTest, FlushFailure) {
   AsyncContext<Request, Response> context;
   atomic<bool> condition = false;
   context.callback = [&](AsyncContext<Request, Response>& context) {
-    EXPECT_EQ(context.result, FailureExecutionResult(1234));
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1234)));
     condition = true;
   };
 
@@ -443,7 +444,7 @@ TEST(SizedOrTimedBytesBufferTest, ProperFlushData) {
   AsyncContext<Request, Response> context;
   atomic<bool> condition = false;
   context.callback = [&](AsyncContext<Request, Response>& context) {
-    EXPECT_EQ(context.result, FailureExecutionResult(1234));
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1234)));
     condition = true;
   };
 

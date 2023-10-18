@@ -168,23 +168,7 @@ class FunctionBindingObject : public FunctionBindingObjectBase {
 
     // Call the user-provided function and capture the output
     TReturn function_output;
-    try {
-      function_output = function(arguments_tuple);
-    } catch (const std::exception& e) {
-      auto error_message =
-          "(" + function_name +
-          ") Error encountered while executing c++ function: " + e.what();
-      isolate->ThrowError(
-          TypeConverter<std::string>::ToV8(isolate, error_message)
-              .As<v8::String>());
-      return;
-    } catch (...) {
-      auto error_message = "(" + function_name + ")" +
-                           "Error encountered while executing c++ function";
-      isolate->ThrowError(
-          TypeConverter<std::string>::ToV8(isolate, error_message)
-              .As<v8::String>());
-    }
+    function_output = function(arguments_tuple);
     // Convert the output to a JS type so that it can be returned by the JS
     // function
     auto js_output = TypeConverter<TReturn>::ToV8(isolate, function_output);

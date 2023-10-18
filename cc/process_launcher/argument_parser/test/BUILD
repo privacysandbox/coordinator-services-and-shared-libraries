@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_test(
@@ -25,6 +27,7 @@ cc_test(
         "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/process_launcher/argument_parser/src:argument_parser_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

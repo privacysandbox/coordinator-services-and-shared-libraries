@@ -58,6 +58,16 @@ struct UuidCompare {
 };
 
 /**
+ * @brief A Uuid hash generator that can be used for STL containers,
+ * such as std::unordered_map and std::unordered_set
+ */
+struct UuidHash {
+  size_t operator()(const Uuid& uuid) const noexcept {
+    return uuid.high ^ uuid.low;
+  }
+};
+
+/**
  * @brief Converts a Uuid object to string. The format of the output is a guid
  * 00000000-0000-0000-0000-000000000000.
  *

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 cc_test(
     name = "blob_storage_provider_mock_test",
     size = "small",
@@ -24,6 +26,7 @@ cc_test(
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
-        "@com_google_googletest//:gtest_main",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_googletest//:gtest",
     ],
 )

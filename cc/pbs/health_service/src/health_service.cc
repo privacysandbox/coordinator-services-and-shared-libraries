@@ -24,7 +24,12 @@
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_split.h"
+#include "core/common/time_provider/src/time_provider.h"
 #include "pbs/interface/configuration_keys.h"
+#include "pbs/interface/metrics_def.h"
+#include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
+#include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
+#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 #include "error_codes.h"
 
@@ -42,6 +47,7 @@ using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
+using google::scp::core::common::TimeProvider;
 using google::scp::core::errors::GetErrorMessage;
 using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO;
@@ -57,13 +63,25 @@ using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED;
 using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
+using google::scp::cpio::kCountUnit;
+using google::scp::cpio::MetricDefinition;
+using google::scp::cpio::MetricLabels;
+using google::scp::cpio::MetricLabelsBase;
+using google::scp::cpio::MetricName;
+using google::scp::cpio::MetricUnit;
+using google::scp::cpio::MetricUtils;
+using google::scp::cpio::MetricValue;
 using google::scp::pbs::kPBSHealthServiceEnableMemoryAndStorageCheck;
 using std::bind;
 using std::error_code;
+using std::getline;
 using std::ifstream;
+using std::make_shared;
 using std::string;
 using std::stringstream;
+using std::to_string;
 using std::vector;
+using std::chrono::seconds;
 using std::filesystem::space;
 using std::filesystem::space_info;
 using std::placeholders::_1;
@@ -80,6 +98,8 @@ static constexpr char kMemInfoLineSeparator[] = " ";
 static constexpr char kServiceName[] = "HealthCheckService";
 static constexpr char kVarLogDirectory[] = "/var/log";
 
+static constexpr size_t kDefaultInstanceHealthMetricPushIntervalInSeconds = 10;
+
 namespace google::scp::pbs {
 ExecutionResult HealthService::Init() noexcept {
   HttpHandler check_health_handler =
@@ -89,21 +109,38 @@ ExecutionResult HealthService::Init() noexcept {
                                         check_health_handler);
 
   if (PerformMemoryAndStorageUsageCheck()) {
-    DEBUG(kServiceName, kZeroUuid, kZeroUuid,
-          "Perform active memory and storage check: YES");
+    SCP_DEBUG(kServiceName, kZeroUuid,
+              "Perform active memory and storage check: YES");
   } else {
-    DEBUG(kServiceName, kZeroUuid, kZeroUuid,
-          "Perform active memory and storage check: NO");
+    SCP_DEBUG(kServiceName, kZeroUuid,
+              "Perform active memory and storage check: NO");
   }
 
+  instance_memory_usage_metric_ = MetricUtils::RegisterSimpleMetric(
+      async_executor_, metric_client_, kMetricNameInstanceHealthMemory,
+      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
+      kCountUnit);
+
+  instance_filesystem_storage_usage_metric_ = MetricUtils::RegisterSimpleMetric(
+      async_executor_, metric_client_,
+      kMetricNameInstanceHealthFileSystemLogStorageUsage,
+      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
+      kCountUnit);
+
+  RETURN_IF_FAILURE(instance_memory_usage_metric_->Init());
+  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Init());
   return SuccessExecutionResult();
 }
 
 ExecutionResult HealthService::Run() noexcept {
+  RETURN_IF_FAILURE(instance_memory_usage_metric_->Run());
+  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Run());
   return SuccessExecutionResult();
 }
 
 ExecutionResult HealthService::Stop() noexcept {
+  RETURN_IF_FAILURE(instance_memory_usage_metric_->Stop());
+  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Stop());
   return SuccessExecutionResult();
 }
 
@@ -130,14 +167,8 @@ ExecutionResult HealthService::CheckMemoryAndStorageUsage() noexcept {
   auto used_memory_percentage = GetMemoryUsagePercentage();
   if (!used_memory_percentage.Successful()) {
     result = used_memory_percentage.result();
-    CRITICAL(kServiceName, kZeroUuid, kZeroUuid, result,
-             "Failed to read memory info from meminfo file.");
-    return result;
-  } else if (*used_memory_percentage > kMemoryUsagePercentageHealthyThreshold) {
-    result = FailureExecutionResult(
-        SC_PBS_HEALTH_SERVICE_HEALTHY_MEMORY_USAGE_THRESHOLD_EXCEEDED);
-    CRITICAL(kServiceName, kZeroUuid, kZeroUuid, result,
-             "Healthy memory usage threshold was exceeded.");
+    SCP_CRITICAL(kServiceName, kZeroUuid, result,
+                 "Failed to read memory info from meminfo file.");
     return result;
   }
 
@@ -145,16 +176,37 @@ ExecutionResult HealthService::CheckMemoryAndStorageUsage() noexcept {
       GetFileSystemStorageUsagePercentage(kVarLogDirectory);
   if (!used_storage_percentage.result().Successful()) {
     result = used_storage_percentage.result();
-    CRITICAL(kServiceName, kZeroUuid, kZeroUuid, result,
-             "Failed to read filesystem storage info.");
+    SCP_CRITICAL(kServiceName, kZeroUuid, result,
+                 "Failed to read filesystem storage info.");
     return result;
+  }
 
-  } else if (*used_storage_percentage >
-             kFileSystemStorageUsagePercentageHealthyThreshold) {
+  // Emit metric.
+  if (TimeProvider::GetSteadyTimestampInNanoseconds() -
+          last_metric_push_steady_ns_timestamp_ >
+      seconds(kDefaultInstanceHealthMetricPushIntervalInSeconds)) {
+    instance_memory_usage_metric_->Push(
+        make_shared<MetricValue>(to_string(*used_memory_percentage)));
+    instance_filesystem_storage_usage_metric_->Push(
+        make_shared<MetricValue>(to_string(*used_storage_percentage)));
+    last_metric_push_steady_ns_timestamp_ =
+        TimeProvider::GetSteadyTimestampInNanoseconds();
+  }
+
+  if (*used_memory_percentage > kMemoryUsagePercentageHealthyThreshold) {
+    result = FailureExecutionResult(
+        SC_PBS_HEALTH_SERVICE_HEALTHY_MEMORY_USAGE_THRESHOLD_EXCEEDED);
+    SCP_CRITICAL(kServiceName, kZeroUuid, result,
+                 "Healthy memory usage threshold was exceeded.");
+    return result;
+  }
+
+  if (*used_storage_percentage >
+      kFileSystemStorageUsagePercentageHealthyThreshold) {
     result = FailureExecutionResult(
         SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED);
-    CRITICAL(kServiceName, kZeroUuid, kZeroUuid, result,
-             "Healthy storage usage threshold was exceeded.");
+    SCP_CRITICAL(kServiceName, kZeroUuid, result,
+                 "Healthy storage usage threshold was exceeded.");
     return result;
   }
 
@@ -170,7 +222,7 @@ bool HealthService::PerformMemoryAndStorageUsageCheck() noexcept {
   return config_exists && check_mem_and_storage;
 }
 
-std::string HealthService::GetMemInfoFilePath() noexcept {
+string HealthService::GetMemInfoFilePath() noexcept {
   return string(kMemInfoFileName);
 }
 
@@ -222,11 +274,11 @@ ExecutionResultOr<int> HealthService::GetMemoryUsagePercentage() noexcept {
   // ...
   // So we parse the lines of interest to compute the used percentage.
 
-  std::string line = "";
+  string line = "";
   uint64_t total_usable_mem_kb = 0;
   uint64_t total_available_mem_kb = 0;
 
-  while (std::getline(meminfo_file, line)) {
+  while (getline(meminfo_file, line)) {
     if (StrContains(line, kTotalUsableMemory)) {
       auto mem_value = GetMemInfoLineEntryKb(line);
       if (mem_value.Successful()) {
@@ -251,9 +303,9 @@ ExecutionResultOr<int> HealthService::GetMemoryUsagePercentage() noexcept {
         SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO);
   }
 
-  DEBUG(kServiceName, kZeroUuid, kZeroUuid,
-        "Memory : { \"total\": \"%lu kb\", \"available\": \"%lu kb\" }",
-        total_usable_mem_kb, total_available_mem_kb);
+  SCP_DEBUG(kServiceName, kZeroUuid,
+            "Memory : { \"total\": \"%lu kb\", \"available\": \"%lu kb\" }",
+            total_usable_mem_kb, total_available_mem_kb);
 
   return ComputePercentage(total_available_mem_kb, total_usable_mem_kb);
 }
@@ -265,9 +317,9 @@ ExecutionResultOr<space_info> HealthService::GetFileSystemSpaceInfo(
   if (ec) {
     auto result = FailureExecutionResult(
         SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO);
-    ERROR(kServiceName, kZeroUuid, kZeroUuid, result,
-          "Failed to read the filesystem information: %s",
-          ec.message().c_str());
+    SCP_ERROR(kServiceName, kZeroUuid, result,
+              "Failed to read the filesystem information: %s",
+              ec.message().c_str());
     return result;
   }
 
@@ -287,9 +339,9 @@ ExecutionResultOr<int> HealthService::GetFileSystemStorageUsagePercentage(
         SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO);
   }
 
-  DEBUG(kServiceName, kZeroUuid, kZeroUuid,
-        "Storage : { \"total\": \"%lu b\", \"available\": \"%lu b\" }",
-        info_object.capacity, info_object.available);
+  SCP_DEBUG(kServiceName, kZeroUuid,
+            "Storage : { \"total\": \"%lu b\", \"available\": \"%lu b\" }",
+            info_object.capacity, info_object.available);
 
   return ComputePercentage(info_object.available, info_object.capacity);
 }

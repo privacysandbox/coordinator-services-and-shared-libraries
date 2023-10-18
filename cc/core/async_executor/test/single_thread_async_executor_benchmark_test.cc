@@ -19,6 +19,7 @@
 
 #include "core/async_executor/src/single_thread_async_executor.h"
 #include "core/common/time_provider/src/time_provider.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
@@ -45,8 +46,8 @@ class SingleThreadAsyncExecutorBenchmarkTest : public ::testing::Test {
     bool drop_tasks_on_stop = false;
     async_executor_ =
         make_shared<SingleThreadAsyncExecutor>(queue_size, drop_tasks_on_stop);
-    EXPECT_EQ(async_executor_->Init(), SuccessExecutionResult());
-    EXPECT_EQ(async_executor_->Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(async_executor_->Init());
+    EXPECT_SUCCESS(async_executor_->Run());
   }
 
   int num_threads_scheduling_tasks_ = 10;
@@ -69,9 +70,8 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTask) {
   auto task_queueing_function = [&](int id) {
     while (!start) {}
     for (int i = 0; i < task_schedule_count_per_thread_; i++) {
-      EXPECT_EQ(
-          async_executor_->Schedule(test_work_function_, AsyncPriority::High),
-          SuccessExecutionResult());
+      EXPECT_SUCCESS(
+          async_executor_->Schedule(test_work_function_, AsyncPriority::High));
     }
   };
 
@@ -92,7 +92,7 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTask) {
   cout << (duration_cast<milliseconds>(end_ns - start_ns)).count()
        << " milliseconds elapsed" << endl;
 
-  EXPECT_EQ(async_executor_->Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(async_executor_->Stop());
   EXPECT_EQ(execution_count_.load(), 5 * num_threads_scheduling_tasks_ *
                                          task_schedule_count_per_thread_);
   for (int i = 0; i < num_threads_scheduling_tasks_; i++) {
@@ -111,8 +111,7 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTaskMixedPriority) {
           TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks());
       auto priority = ((rand_r(&seed) % 2) == 0) ? AsyncPriority::High
                                                  : AsyncPriority::Normal;
-      EXPECT_EQ(async_executor_->Schedule(test_work_function_, priority),
-                SuccessExecutionResult());
+      EXPECT_SUCCESS(async_executor_->Schedule(test_work_function_, priority));
     }
   };
 
@@ -133,7 +132,7 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTaskMixedPriority) {
   cout << (duration_cast<milliseconds>(end_ns - start_ns)).count()
        << " milliseconds elapsed" << endl;
 
-  EXPECT_EQ(async_executor_->Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(async_executor_->Stop());
   EXPECT_EQ(execution_count_.load(), 5 * num_threads_scheduling_tasks_ *
                                          task_schedule_count_per_thread_);
   for (int i = 0; i < num_threads_scheduling_tasks_; i++) {

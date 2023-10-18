@@ -35,4 +35,10 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface CacheControlMaximum {}
+
+  /** Binds disable activaiotn time */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface DisableActivationTime {}
 }

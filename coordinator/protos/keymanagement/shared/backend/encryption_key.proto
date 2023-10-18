@@ -60,6 +60,9 @@ message EncryptionKey {
   // Date in epoch milliseconds when Key is created
   int64 creation_time = 7;
 
+  // Date in epoch milliseconds when the key becomes active and available for encryption.
+  int64 activation_time = 12;
+
   // Date in epoch milliseconds when Key expires
   int64 expiration_time = 8;
 

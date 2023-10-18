@@ -24,8 +24,11 @@
 #include <aws/dynamodb/model/UpdateItemRequest.h>
 
 #include "absl/strings/str_format.h"
+#include "core/interface/configuration_keys.h"
 #include "core/test/utils/aws_helper/aws_helper.h"
 #include "core/test/utils/docker_helper/docker_helper.h"
+#include "pbs/interface/configuration_keys.h"
+#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/test_configuration_keys.h"
 
 using Aws::Map;
 using Aws::String;
@@ -61,8 +64,6 @@ static constexpr char kPbsServerImageLocation[] =
     "cc/pbs/deploy/pbs_server/build_defs/pbs_container_aws.tar";
 static constexpr char kPbsServerImageName[] =
     "bazel/cc/pbs/deploy/pbs_server/build_defs:pbs_container_aws";
-
-static constexpr char kPBSPartitionLockTableLockIdKeyName[] = "LockId";
 
 namespace google::scp::pbs::test::e2e {
 static vector<AttributeDefinition> BuildAttributesForBudgetKeyTable() {
@@ -137,8 +138,9 @@ void CreateDefaultPartitionLockTableRow(
   dynamo_db_client->UpdateItem(update_item_request);
 }
 
-int TestPbsServerStarter::RunTwoPbsServers(const TestPbsConfig& pbs_config,
-                                           bool setup_data) {
+int TestPbsServerStarter::RunTwoPbsServers(
+    const TestPbsConfig& pbs_config, bool setup_data,
+    std::map<std::string, std::string> env_overrides) {
   if (setup_data) {
     // Sets up DynamoDB and S3 data.
     string localstack_endpoint =
@@ -171,39 +173,52 @@ int TestPbsServerStarter::RunTwoPbsServers(const TestPbsConfig& pbs_config,
     CreateBucket(s3_client, pbs_config.pbs2_journal_bucket_name);
   }
 
+  std::cout << "Loading PBS image" << std::endl;
   auto result = LoadImage(kPbsServerImageLocation);
   if (result != 0) return result;
 
-  result = RunPbsServer1(pbs_config);
+  std::cout << "Starting PBS 1" << std::endl;
+  result = RunPbsServer1(pbs_config, env_overrides);
   if (result != 0) return result;
 
-  return RunPbsServer2(pbs_config);
+  std::cout << "Starting PBS 2" << std::endl;
+  return RunPbsServer2(pbs_config, env_overrides);
 }
 
-int TestPbsServerStarter::RunPbsServer1(const TestPbsConfig& pbs_config) {
-  return StartContainer(
-      config_.network_name, pbs_config.pbs1_container_name, kPbsServerImageName,
-      PortMapToSelf(pbs_config.pbs1_port),
-      PortMapToSelf(pbs_config.pbs1_health_port),
-      CreatePbsEnvVariables(pbs_config.pbs1_budget_key_table_name,
-                            pbs_config.pbs1_partition_lock_table_name,
-                            pbs_config.pbs1_journal_bucket_name,
-                            pbs_config.pbs1_port, pbs_config.pbs1_health_port,
-                            "http://" + pbs_config.pbs2_container_name,
-                            pbs_config.pbs2_port));
+int TestPbsServerStarter::RunPbsServer1(
+    const TestPbsConfig& pbs_config,
+    std::map<std::string, std::string> env_overrides) {
+  auto env = CreatePbsEnvVariables(
+      pbs_config.pbs1_budget_key_table_name,
+      pbs_config.pbs1_partition_lock_table_name,
+      pbs_config.pbs1_journal_bucket_name, pbs_config.pbs1_port,
+      pbs_config.pbs1_health_port, "http://" + pbs_config.pbs2_container_name,
+      pbs_config.pbs2_port);
+  for (auto& env_override : env_overrides) {
+    env[env_override.first] = env_override.second;
+  }
+  return StartContainer(config_.network_name, pbs_config.pbs1_container_name,
+                        kPbsServerImageName,
+                        PortMapToSelf(pbs_config.pbs1_port),
+                        PortMapToSelf(pbs_config.pbs1_health_port), env);
 }
 
-int TestPbsServerStarter::RunPbsServer2(const TestPbsConfig& pbs_config) {
-  return StartContainer(
-      config_.network_name, pbs_config.pbs2_container_name, kPbsServerImageName,
-      PortMapToSelf(pbs_config.pbs2_port),
-      PortMapToSelf(pbs_config.pbs2_health_port),
-      CreatePbsEnvVariables(pbs_config.pbs2_budget_key_table_name,
-                            pbs_config.pbs2_partition_lock_table_name,
-                            pbs_config.pbs2_journal_bucket_name,
-                            pbs_config.pbs2_port, pbs_config.pbs2_health_port,
-                            "http://" + pbs_config.pbs1_container_name,
-                            pbs_config.pbs1_port));
+int TestPbsServerStarter::RunPbsServer2(
+    const TestPbsConfig& pbs_config,
+    std::map<std::string, std::string> env_overrides) {
+  auto env = CreatePbsEnvVariables(
+      pbs_config.pbs2_budget_key_table_name,
+      pbs_config.pbs2_partition_lock_table_name,
+      pbs_config.pbs2_journal_bucket_name, pbs_config.pbs2_port,
+      pbs_config.pbs2_health_port, "http://" + pbs_config.pbs1_container_name,
+      pbs_config.pbs1_port);
+  for (const auto& env_override : env_overrides) {
+    env[env_override.first] = env_override.second;
+  }
+  return StartContainer(config_.network_name, pbs_config.pbs2_container_name,
+                        kPbsServerImageName,
+                        PortMapToSelf(pbs_config.pbs2_port),
+                        PortMapToSelf(pbs_config.pbs2_health_port), env);
 }
 
 int TestPbsServerStarter::Setup() {
@@ -247,45 +262,44 @@ map<string, string> TestPbsServerStarter::CreatePbsEnvVariables(
 
   // Useless dummy endpoint.
   string dummy_auth_server_endpoint = "http://dummy.auth.com";
-  env_variables["google_scp_core_s3_endpoint_override"] =
+  env_variables[kS3EndpointOverride] = localstack_endpoint_in_container;
+  env_variables[kDynamoDbEndpointOverride] = localstack_endpoint_in_container;
+  env_variables[kCloudwatchEndpointOverride] = localstack_endpoint_in_container;
+  env_variables[kEC2MetadataEndpointOverride] =
       localstack_endpoint_in_container;
-  env_variables["google_scp_core_dynamo_db_endpoint_override"] =
-      localstack_endpoint_in_container;
-  env_variables["google_scp_core_cloudwatch_endpoint_override"] =
-      localstack_endpoint_in_container;
-  env_variables["google_scp_core_ec2_metadata_endpoint_override"] =
-      localstack_endpoint_in_container;
-  env_variables["google_scp_pbs_partition_lock_table_name"] =
-      partition_lock_table;
-  env_variables["google_scp_pbs_partition_lease_duration_in_seconds"] = "5";
-  env_variables["google_scp_core_cloud_region"] = config_.region;
-  env_variables["google_scp_pbs_budget_key_table_name"] = budget_key_table;
-  env_variables["google_scp_pbs_journal_service_bucket_name"] = journal_bucket;
-  env_variables["google_scp_pbs_host_port"] = host_port;
-  env_variables["google_scp_pbs_health_port"] = health_port;
-  env_variables["google_scp_pbs_auth_endpoint"] = dummy_auth_server_endpoint;
-  env_variables["google_scp_pbs_remote_host_address"] =
+  env_variables[kPBSPartitionLockTableNameConfigName] = partition_lock_table;
+  env_variables[core::kTransactionTimeoutInSecondsConfigName] =
+      std::to_string(120);
+  env_variables[kPBSPartitionLeaseDurationInSeconds] = "5";
+  env_variables[core::kCloudServiceRegion] = config_.region;
+  env_variables[kBudgetKeyTableName] = budget_key_table;
+  env_variables[kJournalServiceBucketName] = journal_bucket;
+  env_variables[kPrivacyBudgetServiceHostPort] = host_port;
+  env_variables[kPrivacyBudgetServiceHealthPort] = health_port;
+  env_variables[kAuthServiceEndpoint] = dummy_auth_server_endpoint;
+  env_variables[kRemotePrivacyBudgetServiceHostAddress] =
       remote_host + ":" + remote_host_port;
-  env_variables["google_scp_pbs_remote_cloud_region"] = config_.region;
-  env_variables["google_scp_pbs_remote_auth_endpoint"] =
+  env_variables[kRemotePrivacyBudgetServiceCloudServiceRegion] = config_.region;
+  env_variables[kRemotePrivacyBudgetServiceAuthServiceEndpoint] =
       dummy_auth_server_endpoint;
-  env_variables["google_scp_pbs_remote_claimed_identity"] =
+  env_variables[kRemotePrivacyBudgetServiceClaimedIdentity] =
       config_.reporting_origin;
-  env_variables["google_scp_pbs_remote_assume_role_arn"] = "arn";
-  env_variables["google_scp_pbs_remote_assume_role_external_id"] =
+  env_variables[kRemotePrivacyBudgetServiceAssumeRoleArn] = "arn";
+  env_variables[kRemotePrivacyBudgetServiceAssumeRoleExternalId] =
       "external_id";
 
-  env_variables["google_scp_pbs_async_executor_queue_size"] = "1000";
-  env_variables["google_scp_pbs_async_executor_threads_count"] = "2";
-  env_variables["google_scp_pbs_io_async_executor_queue_size"] = "1000";
-  env_variables["google_scp_pbs_io_async_executor_threads_count"] = "2";
-  env_variables["google_scp_pbs_transaction_manager_capacity"] = "1000";
-  env_variables["google_scp_pbs_metrics_namespace"] = "PBS";
-  env_variables["google_scp_core_http2server_threads_count"] = "2";
-  env_variables["google_scp_pbs_journal_service_partition_name"] = "partition";
-  env_variables["google_scp_pbs_host_address"] = "0.0.0.0";
-  env_variables["google_scp_pbs_multi_instance_mode_disabled"] = "true";
-  env_variables["google_scp_pbs_multi_instance_mode_enabled"] = "false";
+  env_variables[kAsyncExecutorQueueSize] = "1000";
+  env_variables[kAsyncExecutorThreadsCount] = "2";
+  env_variables[kIOAsyncExecutorQueueSize] = "1000";
+  env_variables[kIOAsyncExecutorThreadsCount] = "2";
+  env_variables[kTransactionManagerCapacity] = "1000";
+  env_variables[kServiceMetricsNamespace] = "PBS";
+  env_variables[kTotalHttp2ServerThreadsCount] = "2";
+  env_variables[kPBSPartitionLockTableNameConfigName] = "partition_lock_table";
+  env_variables[kJournalServicePartitionName] =
+      "00000000-0000-0000-0000-000000000000";
+  env_variables[kPrivacyBudgetServiceHostAddress] = "0.0.0.0";
+  env_variables[kPBSMultiInstanceModeDisabledConfigKey] = "true";
   return env_variables;
 }
 }  // namespace google::scp::pbs::test::e2e

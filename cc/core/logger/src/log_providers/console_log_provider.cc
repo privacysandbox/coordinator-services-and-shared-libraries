@@ -21,9 +21,11 @@
 #include <string_view>
 #include <vector>
 
+#include "core/common/time_provider/src/time_provider.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/logger/src/log_utils.h"
 
+using google::scp::core::common::TimeProvider;
 using google::scp::core::common::ToString;
 using google::scp::core::common::Uuid;
 using std::cout;
@@ -32,6 +34,8 @@ using std::string;
 using std::string_view;
 using std::vector;
 using std::vsnprintf;
+
+constexpr size_t nano_seconds_multiplier = (1000 * 1000 * 1000);
 
 namespace google::scp::core::logger {
 
@@ -48,15 +52,21 @@ ExecutionResult ConsoleLogProvider::Stop() noexcept {
 }
 
 void ConsoleLogProvider::Log(
-    const LogLevel& level, const Uuid& parent_activity_id,
-    const Uuid& activity_id, const string_view& component_name,
-    const string_view& machine_name, const string_view& cluster_name,
-    const string_view& location, const string_view& message,
-    va_list args) noexcept {
+    const LogLevel& level, const Uuid& correlation_id,
+    const Uuid& parent_activity_id, const Uuid& activity_id,
+    const string_view& component_name, const string_view& machine_name,
+    const string_view& cluster_name, const string_view& location,
+    const string_view& message, va_list args) noexcept {
+  auto current_timestamp =
+      TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
+  auto current_timestamp_seconds = current_timestamp / nano_seconds_multiplier;
+  auto remainder_nano_seconds = (current_timestamp % nano_seconds_multiplier);
   std::stringstream output;
-  output << ToString(parent_activity_id) + "|" + ToString(activity_id) << "|"
-         << component_name << "|" << machine_name << "|" << cluster_name << "|"
-         << location << "|" << static_cast<int>(level) << ": ";
+  output << current_timestamp_seconds << "." << remainder_nano_seconds << "|"
+         << cluster_name << "|" << machine_name << "|" << component_name << "|"
+         << ToString(correlation_id) << "|" << ToString(parent_activity_id)
+         << "|" << ToString(activity_id) << "|" << location << "|"
+         << static_cast<int>(level) << ": ";
 
   va_list size_args;
   va_copy(size_args, args);

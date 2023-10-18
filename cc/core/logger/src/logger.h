@@ -44,38 +44,45 @@ class Logger : public LoggerInterface {
   ExecutionResult Stop() noexcept override;
 
   void Info(const std::string_view& component_name,
+            const common::Uuid& correlation_id,
             const common::Uuid& parent_activity_id,
             const common::Uuid& activity_id, const std::string_view& location,
             const std::string_view& message, ...) noexcept override;
 
   void Debug(const std::string_view& component_name,
+             const common::Uuid& correlation_id,
              const common::Uuid& parent_activity_id,
              const common::Uuid& activity_id, const std::string_view& location,
              const std::string_view& message, ...) noexcept override;
 
   void Warning(const std::string_view& component_name,
+               const common::Uuid& correlation_id,
                const common::Uuid& parent_activity_id,
                const common::Uuid& activity_id,
                const std::string_view& location,
                const std::string_view& message, ...) noexcept override;
 
   void Error(const std::string_view& component_name,
+             const common::Uuid& correlation_id,
              const common::Uuid& parent_activity_id,
              const common::Uuid& activity_id, const std::string_view& location,
              const std::string_view& message, ...) noexcept override;
 
   void Alert(const std::string_view& component_name,
+             const common::Uuid& correlation_id,
              const common::Uuid& parent_activity_id,
              const common::Uuid& activity_id, const std::string_view& location,
              const std::string_view& message, ...) noexcept override;
 
   void Critical(const std::string_view& component_name,
+                const common::Uuid& correlation_id,
                 const common::Uuid& parent_activity_id,
                 const common::Uuid& activity_id,
                 const std::string_view& location,
                 const std::string_view& message, ...) noexcept override;
 
   void Emergency(const std::string_view& component_name,
+                 const common::Uuid& correlation_id,
                  const common::Uuid& parent_activity_id,
                  const common::Uuid& activity_id,
                  const std::string_view& location,
@@ -84,18 +91,5 @@ class Logger : public LoggerInterface {
  protected:
   /// A unique pointer to the log provider instance.
   std::unique_ptr<logger::LogProviderInterface> log_provider_;
-  /**
-   * @brief The machine name to include in the logs.  This is a placeholder for
-   * now.
-   *
-   */
-  const std::string machine_name = "MACHINE";
-
-  /**
-   * @brief The cluster name to include in the logs.  This is a placeholder for
-   * now.
-   *
-   */
-  const std::string cluster_name = "CLUSTER";
 };
 }  // namespace google::scp::core::logger

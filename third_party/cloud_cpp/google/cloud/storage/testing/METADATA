@@ -1,0 +1,21 @@
+name: "Mock Client for Google Cloud Storage"
+description:
+    "The Mock Client allows users to simulate what a Client might actually "
+    "do when interacting with it."
+
+third_party {
+  url {
+    type: HOMEPAGE
+    value: "https://google.com/"
+  }
+  url {
+    type: GIT
+    value: "https://github.com/googleapis/google-cloud-cpp/tree/main/google/cloud/storage"
+  }
+  version: "2.4.0"
+  last_upgrade_date { year: 2022 month: 11 day: 1 }
+  license_type: NOTICE
+  local_modifications: "Remove references to virtual options method as our "
+  "instance does not have that. Fix the #ifndef header to be compatible with "
+  "our version. Add some includes to be compatible with our linter."
+}

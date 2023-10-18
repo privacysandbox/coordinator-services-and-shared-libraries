@@ -56,7 +56,7 @@ variable "ami_owners" {
 
 variable "change_handler_lambda" {
   description = <<-EOT
-        Change handler lambda path. If not provided defaults to locally built jar file. 
+        Change handler lambda path. If not provided defaults to locally built jar file.
         Build with `bazel build //operator/terraform/aws/applications/operator-service:all`.
       EOT
   type        = string
@@ -64,7 +64,7 @@ variable "change_handler_lambda" {
 
 variable "frontend_lambda" {
   description = <<-EOT
-        Frontend lambda path. If not provided defaults to locally built jar file. 
+        Frontend lambda path. If not provided defaults to locally built jar file.
         Build with `bazel build //operator/terraform/aws/applications/operator-service:all`.
       EOT
   type        = string
@@ -72,7 +72,7 @@ variable "frontend_lambda" {
 
 variable "sqs_write_failure_cleanup_lambda" {
   description = <<-EOT
-        SQS write failure cleanup lambda path. If not provided defaults to locally built jar file. 
+        SQS write failure cleanup lambda path. If not provided defaults to locally built jar file.
         Build with `bazel build //operator/terraform/aws/applications/operator-service:all`.
       EOT
   type        = string
@@ -407,12 +407,20 @@ variable "vpc_availability_zones" {
 }
 
 ################################################################################
+# Notifications Variables.
+################################################################################
+
+variable "enable_job_completion_notifications" {
+  description = "Determines if the SNS topic should be created for job completion notifications."
+  type        = bool
+}
+
+################################################################################
 # OpenTelemetry related variables
 ################################################################################
 
 variable "allowed_otel_metrics" {
-  description = "Set of otel metrics would be exported."
+  description = "Set of otel metrics to be exported."
   type        = set(string)
-  default     = ["cpu_usage", "memory", "total_execution_time"]
+  default     = []
 }
-

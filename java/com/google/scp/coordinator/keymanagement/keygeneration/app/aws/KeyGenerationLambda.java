@@ -35,7 +35,10 @@ import com.google.scp.shared.api.exception.ServiceException;
  * KMS symmetric key, and the encrypted key is stored in DynamoDB.
  *
  * <p>Intended to be used with CloudWatchEvents to periodically invoke this function.
+ *
+ * @deprecated Single-party key features are deprecated. Pending removal b/282204533.
  */
+@Deprecated
 public final class KeyGenerationLambda implements RequestHandler<ScheduledEvent, String> {
 
   private final Integer keyGenerationKeyCount;

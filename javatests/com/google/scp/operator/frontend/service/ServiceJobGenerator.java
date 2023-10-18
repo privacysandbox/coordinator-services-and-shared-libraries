@@ -40,6 +40,7 @@ public final class ServiceJobGenerator {
   private static final String POSTBACK_URL = "http://postback.com";
   private static final String ATTRIBUTION_REPORT_TO = "foo.com";
   private static final String DEBUG_PRIVACY_BUDGET_LIMIT = "5";
+  private static final String ACCOUNT_IDENTITY = "service-account@testing.com";
   private static final Timestamp REQUEST_RECEIVED_AT =
       Timestamps.parseUnchecked("2019-10-01T08:25:24.00Z");
   private static final Timestamp REQUEST_UPDATED_AT =
@@ -101,6 +102,14 @@ public final class ServiceJobGenerator {
                     DEBUG_PRIVACY_BUDGET_LIMIT))
             .build();
 
+    return createJobRequest;
+  }
+
+  public static CreateJobRequest createFakeCreateJobRequestWithAccountIdentity(String requestId) {
+    CreateJobRequest createJobRequest =
+        createFakeCreateJobRequest(requestId).toBuilder()
+            .setAccountIdentity(ACCOUNT_IDENTITY)
+            .build();
     return createJobRequest;
   }
 

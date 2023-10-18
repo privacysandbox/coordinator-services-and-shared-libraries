@@ -46,18 +46,23 @@
 #include "pbs/budget_key_provider/src/budget_key_provider.h"
 #include "pbs/checkpoint_service/src/checkpoint_service.h"
 #include "pbs/front_end_service/src/front_end_service.h"
+#include "pbs/front_end_service/src/transaction_request_router.h"
 #include "pbs/health_service/src/health_service.h"
 #include "pbs/interface/cloud_platform_dependency_factory_interface.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
+#include "pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
+#include "pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
 #include "pbs/remote_transaction_manager/src/remote_transaction_manager.h"
+#include "pbs/transactions/src/consume_budget_command_factory.h"
+#include "pbs/transactions/src/consume_budget_command_factory_interface.h"
 #include "pbs/transactions/src/transaction_command_serializer.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 #if defined(PBS_GCP)
 #include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
 #elif defined(PBS_GCP_INTEGRATION_TEST)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
+#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/gcp_integration_test_dependency_factory.h"
 #elif defined(PBS_AWS)
 #include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
 #elif defined(PBS_AWS_INTEGRATION_TEST)
@@ -68,11 +73,10 @@
 
 #include "error_codes.h"
 
+using google::cmrt::sdk::instance_service::v1::InstanceDetails;
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;
 using google::scp::core::AsyncExecutorInterface;
-
-using google::cmrt::sdk::instance_service::v1::InstanceDetails;
 using google::scp::core::BlobStorageProviderInterface;
 using google::scp::core::CheckpointServiceInterface;
 using google::scp::core::ConfigProvider;
@@ -104,6 +108,7 @@ using google::scp::core::TrafficForwarderInterface;
 using google::scp::core::TransactionCommandSerializerInterface;
 using google::scp::core::TransactionManager;
 using google::scp::core::TransactionManagerInterface;
+using google::scp::core::TransactionRequestRouterInterface;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::Uuid;
 using google::scp::pbs::BudgetKeyProvider;
@@ -119,6 +124,7 @@ using std::atomic;
 using std::bind;
 using std::function;
 using std::make_shared;
+using std::make_unique;
 using std::move;
 using std::mutex;
 using std::optional;
@@ -132,194 +138,25 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 using std::this_thread::sleep_for;
 
-#define INIT_PBS_COMPONENT(component)                                \
-  if (auto execution_result = component->Init();                     \
-      !execution_result.Successful()) {                              \
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,   \
-             "PBS component '" #component "' failed to initialize"); \
-    return execution_result;                                         \
-  } else {                                                           \
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,                         \
-         "PBS component '" #component "'successfully initialized");  \
-  }
-
-#define RUN_PBS_COMPONENT(component)                               \
-  if (auto execution_result = component->Run();                    \
-      !execution_result.Successful()) {                            \
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result, \
-             "PBS component '" #component "' failed to run");      \
-    return execution_result;                                       \
-  } else {                                                         \
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,                       \
-         "PBS component '" #component "'successfully ran");        \
-  }
-
-#define STOP_PBS_COMPONENT(component)                              \
-  if (auto execution_result = component->Stop();                   \
-      !execution_result.Successful()) {                            \
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result, \
-             "PBS component '" #component "' failed to stop");     \
-    return execution_result;                                       \
-  } else {                                                         \
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,                       \
-         "PBS component '" #component "'successfully stopped");    \
-  }
-
 namespace google::scp::pbs {
-
-static constexpr char kPBSInstance[] = "PBSInstance";
-
-ExecutionResult PBSInstance::ReadConfigurations() noexcept {
-  auto execution_result = config_provider_->Get(
-      kAsyncExecutorQueueSize, pbs_instance_config_.async_executor_queue_size);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read async executor queue size.");
-    return execution_result;
-  }
-
-  execution_result = config_provider_->Get(
-      kAsyncExecutorThreadsCount, pbs_instance_config_.thread_pool_size);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read async executor thread pool size.");
-    return execution_result;
-  }
-
-  execution_result =
-      config_provider_->Get(kIOAsyncExecutorQueueSize,
-                            pbs_instance_config_.io_async_executor_queue_size);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read io async executor queue size.");
-    return execution_result;
-  }
-
-  execution_result = config_provider_->Get(
-      kIOAsyncExecutorThreadsCount, pbs_instance_config_.io_thread_pool_size);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read io async executor thread pool size.");
-    return execution_result;
-  }
-
-  execution_result =
-      config_provider_->Get(kTransactionManagerCapacity,
-                            pbs_instance_config_.transaction_manager_capacity);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read transaction manager capacity.");
-    return execution_result;
-  }
-
-  pbs_instance_config_.journal_bucket_name = make_shared<string>();
-  execution_result = config_provider_->Get(
-      kJournalServiceBucketName, *pbs_instance_config_.journal_bucket_name);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read journal bucket name.");
-    return execution_result;
-  }
-
-  pbs_instance_config_.journal_partition_name = make_shared<string>();
-  execution_result =
-      config_provider_->Get(kJournalServicePartitionName,
-                            *pbs_instance_config_.journal_partition_name);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read journal partition name.");
-    return execution_result;
-  }
-
-  pbs_instance_config_.host_address = make_shared<string>();
-  execution_result = config_provider_->Get(kPrivacyBudgetServiceHostAddress,
-                                           *pbs_instance_config_.host_address);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read host address.");
-    return execution_result;
-  }
-
-  pbs_instance_config_.host_port = make_shared<string>();
-  execution_result = config_provider_->Get(kPrivacyBudgetServiceHostPort,
-                                           *pbs_instance_config_.host_port);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read host port.");
-    return execution_result;
-  }
-
-  pbs_instance_config_.health_port = make_shared<string>();
-  execution_result = config_provider_->Get(kPrivacyBudgetServiceHealthPort,
-                                           *pbs_instance_config_.health_port);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read health port.");
-    return execution_result;
-  }
-
-  pbs_instance_config_.external_exposed_host_port = make_shared<string>();
-  execution_result =
-      config_provider_->Get(kPrivacyBudgetServiceExternalExposedHostPort,
-                            *pbs_instance_config_.external_exposed_host_port);
-  if (!execution_result.Successful()) {
-    // Go with a default port of 80.
-    pbs_instance_config_.external_exposed_host_port = make_shared<string>("80");
-  }
-
-  execution_result =
-      config_provider_->Get(kTotalHttp2ServerThreadsCount,
-                            pbs_instance_config_.http2server_thread_pool_size);
-  if (!execution_result.Successful()) {
-    CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-             "Failed to read http2 server thread pool size.");
-    return execution_result;
-  }
-
-  pbs_instance_config_.http2_server_private_key_file_path =
-      make_shared<string>("");
-  pbs_instance_config_.http2_server_certificate_file_path =
-      make_shared<string>("");
-  // If the "use tls" key exists, then the path to the private key and
-  // certificate must be valid, non-empty strings. Otherwise, we just assume the
-  // default of false for "use tls"
-  if (config_provider_
-          ->Get(kHttp2ServerUseTls, pbs_instance_config_.http2_server_use_tls)
-          .Successful() &&
-      pbs_instance_config_.http2_server_use_tls) {
-    if (!config_provider_
-             ->Get(kHttp2ServerPrivateKeyFilePath,
-                   *pbs_instance_config_.http2_server_private_key_file_path)
-             .Successful() ||
-        pbs_instance_config_.http2_server_private_key_file_path->empty()) {
-      return FailureExecutionResult(
-          core::errors::SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH);
-    }
-
-    if (!config_provider_
-             ->Get(kHttp2ServerCertificateFilePath,
-                   *pbs_instance_config_.http2_server_certificate_file_path)
-             .Successful() ||
-        pbs_instance_config_.http2_server_certificate_file_path->empty()) {
-      return FailureExecutionResult(
-          core::errors::SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH);
-    }
-  }
-
-  return SuccessExecutionResult();
-}
 
 ExecutionResult PBSInstance::CreateComponents() noexcept {
   instance_id_ = Uuid::GenerateUuid();
 
-  RETURN_IF_FAILURE(ReadConfigurations());
+  // Read configurations
+  auto pbs_instance_config_or =
+      GetPBSInstanceConfigFromConfigProvider(config_provider_);
+  if (!pbs_instance_config_or.Successful()) {
+    return pbs_instance_config_or.result();
+  }
+  pbs_instance_config_ = *pbs_instance_config_or;
 
   // Construct foundational components
   async_executor_ = make_shared<AsyncExecutor>(
-      pbs_instance_config_.thread_pool_size,
+      pbs_instance_config_.async_executor_thread_pool_size,
       pbs_instance_config_.async_executor_queue_size);
   io_async_executor_ = make_shared<AsyncExecutor>(
-      pbs_instance_config_.io_thread_pool_size,
+      pbs_instance_config_.io_async_executor_thread_pool_size,
       pbs_instance_config_.io_async_executor_queue_size);
   http1_client_ =
       make_shared<Http1CurlClient>(async_executor_, io_async_executor_);
@@ -336,25 +173,25 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
           pbs_instance_config_.async_executor_queue_size_for_lease_db_requests);
 
 #if defined(PBS_GCP)
-  DEBUG(kPBSInstance, kZeroUuid, kZeroUuid, "Running GCP PBS Instance.");
+  SCP_DEBUG(kPBSInstance, kZeroUuid, "Running GCP PBS Instance.");
   auto platform_dependency_factory =
       std::make_unique<GcpDependencyFactory>(config_provider_);
 #elif defined(PBS_GCP_INTEGRATION_TEST)
-  DEBUG(kPBSInstance, kZeroUuid, kZeroUuid,
-        "Running GCP Integration Test PBS Instance.");
+  SCP_DEBUG(kPBSInstance, kZeroUuid,
+            "Running GCP Integration Test PBS Instance.");
   auto platform_dependency_factory =
-      std::make_unique<GcpDependencyFactory>(config_provider_);
+      std::make_unique<GcpIntegrationTestDependencyFactory>(config_provider_);
 #elif defined(PBS_AWS)
-  DEBUG(kPBSInstance, kZeroUuid, kZeroUuid, "Running AWS PBS Instance.");
+  SCP_DEBUG(kPBSInstance, kZeroUuid, "Running AWS PBS Instance.");
   auto platform_dependency_factory =
       std::make_unique<AwsDependencyFactory>(config_provider_);
 #elif defined(PBS_AWS_INTEGRATION_TEST)
-  DEBUG(kPBSInstance, kZeroUuid, kZeroUuid,
-        "Running AWS Integration Test PBS Instance.");
+  SCP_DEBUG(kPBSInstance, kZeroUuid,
+            "Running AWS Integration Test PBS Instance.");
   auto platform_dependency_factory =
       std::make_unique<AwsIntegrationTestDependencyFactory>(config_provider_);
-#else
-  DEBUG(kPBSInstance, kZeroUuid, kZeroUuid, "Running Local PBS Instance.");
+#elif defined(PBS_LOCAL)
+  SCP_DEBUG(kPBSInstance, kZeroUuid, "Running Local PBS Instance.");
   auto platform_dependency_factory =
       std::make_unique<LocalDependencyFactory>(config_provider_);
 #endif
@@ -405,6 +242,8 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
       pbs_instance_config_.journal_partition_name, async_executor_,
       blob_storage_provider_for_journal_service_, metric_client_,
       config_provider_);
+  // TODO: b/297262889 Make a distinction between the live-traffic and
+  // background NoSQL operations.
   budget_key_provider_ = make_shared<BudgetKeyProvider>(
       async_executor_, journal_service_, nosql_database_provider_,
       metric_client_, config_provider_);
@@ -418,26 +257,34 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
 
   pass_thru_authorization_proxy_ = make_shared<PassThruAuthorizationProxy>();
 
+  core::Http2ServerOptions http2_server_options(
+      pbs_instance_config_.http2_server_use_tls,
+      pbs_instance_config_.http2_server_private_key_file_path,
+      pbs_instance_config_.http2_server_certificate_file_path);
+
   http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
-      authorization_proxy_, metric_client_,
-      pbs_instance_config_.http2_server_use_tls,
-      *pbs_instance_config_.http2_server_private_key_file_path,
-      *pbs_instance_config_.http2_server_certificate_file_path);
+      authorization_proxy_, metric_client_, config_provider_,
+      http2_server_options);
   health_http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       1 /* one thread needed */, async_executor_,
-      pass_thru_authorization_proxy_, nullptr /* metric_client */,
-      pbs_instance_config_.http2_server_use_tls,
-      *pbs_instance_config_.http2_server_private_key_file_path,
-      *pbs_instance_config_.http2_server_certificate_file_path);
+      pass_thru_authorization_proxy_,
+      nullptr /* metric_client, no metric recording for health http server */,
+      config_provider_, http2_server_options);
 
-  health_service_ =
-      make_shared<HealthService>(health_http_server_, config_provider_);
+  health_service_ = make_shared<HealthService>(
+      health_http_server_, config_provider_, async_executor_, metric_client_);
+
+  auto consume_budget_command_factory =
+      make_unique<ConsumeBudgetCommandFactory>(async_executor_,
+                                               budget_key_provider_);
+  auto transaction_request_router =
+      make_unique<TransactionRequestRouter>(transaction_manager_);
   front_end_service_ = make_shared<FrontEndService>(
-      http_server_, async_executor_, transaction_manager_, budget_key_provider_,
-      metric_client_, config_provider_);
+      http_server_, async_executor_, move(transaction_request_router),
+      move(consume_budget_command_factory), metric_client_, config_provider_);
 
   checkpoint_service_ = make_shared<CheckpointService>(
       pbs_instance_config_.journal_bucket_name,
@@ -473,31 +320,31 @@ void PBSInstance::InitializeLeaseInformation() noexcept {
 
   if (instance_id.empty()) {
     instance_id = ToString(instance_id_);
-    ERROR(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-          "Failed to obtain instance ID from cloud. "
-          "Continue with default instance ID.");
+    SCP_ERROR(kPBSInstance, kZeroUuid, execution_result,
+              "Failed to obtain instance ID from cloud. "
+              "Continue with default instance ID.");
   }
   if (ipv4_address.empty()) {
     ipv4_address = "0.0.0.0";
-    ERROR(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-          "Failed to obtain instance private ipv4 address from cloud. "
-          "Continue with default IP address.");
+    SCP_ERROR(kPBSInstance, kZeroUuid, execution_result,
+              "Failed to obtain instance private ipv4 address from cloud. "
+              "Continue with default IP address.");
   }
 
   lease_info_.lease_acquirer_id = instance_id;
   lease_info_.service_endpoint_address = absl::StrCat(
       ipv4_address, ":", *pbs_instance_config_.external_exposed_host_port);
-  INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-       "Initialized Lease Acquirer information. Acquirer ID: %s Service "
-       "Endpoint Address: %s",
-       lease_info_.lease_acquirer_id.c_str(),
-       lease_info_.service_endpoint_address.c_str());
+  SCP_INFO(kPBSInstance, kZeroUuid,
+           "Initialized Lease Acquirer information. Acquirer ID: %s Service "
+           "Endpoint Address: %s",
+           lease_info_.lease_acquirer_id.c_str(),
+           lease_info_.service_endpoint_address.c_str());
 }
 
 ExecutionResult PBSInstance::Init() noexcept {
   RETURN_IF_FAILURE(CreateComponents());
 
-  INFO(kPBSInstance, kZeroUuid, kZeroUuid, "PBS Initializing......");
+  SCP_INFO(kPBSInstance, kZeroUuid, "PBS Initializing......");
 
   INIT_PBS_COMPONENT(async_executor_);
   INIT_PBS_COMPONENT(io_async_executor_);
@@ -533,11 +380,11 @@ ExecutionResult PBSInstance::Init() noexcept {
                             is_multi_instance_mode_disabled_in_config);
   if (!execution_result.Successful()) {
     // If config is not present, continue with multi-instance mode.
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-         "%s flag not specified. Initializing PBS in multi-instance "
-         "deployment "
-         "mode",
-         kPBSMultiInstanceModeDisabledConfigKey);
+    SCP_INFO(kPBSInstance, kZeroUuid,
+             "%s flag not specified. Initializing PBS in multi-instance "
+             "deployment "
+             "mode",
+             kPBSMultiInstanceModeDisabledConfigKey);
   }
 
   is_multi_instance_mode_ = !is_multi_instance_mode_disabled_in_config;
@@ -548,7 +395,7 @@ ExecutionResult PBSInstance::Init() noexcept {
     INIT_PBS_COMPONENT(traffic_forwarder_);
   }
 
-  INFO(kPBSInstance, kZeroUuid, kZeroUuid, "PBS Instance Initialized");
+  SCP_INFO(kPBSInstance, kZeroUuid, "PBS Instance Initialized");
 
   return SuccessExecutionResult();
 }
@@ -559,34 +406,36 @@ void PBSInstance::LeaseTransitionFunction(
     function<void()> process_termination_function,
     LeaseTransitionType lease_transition_type, optional<LeaseInfo> lease_info) {
   if (lease_transition_type == LeaseTransitionType::kAcquired) {
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid, "Lease ACQUIRED");
+    SCP_INFO(kPBSInstance, kZeroUuid, "Lease ACQUIRED");
     *is_lease_acquired = true;
   } else if (lease_transition_type == LeaseTransitionType::kLost) {
     // Kill the process when lease is lost
     // NOTE: Graceful termination almost always doesn't work correctly
     // leading to two instances holding lease, so going with
     // ungraceful termination.
-    EMERGENCY(kPBSInstance, kZeroUuid, kZeroUuid,
-              FailureExecutionResult(core::errors::SC_PBS_LEASE_LOST),
-              "Lease LOST. Terminating the process...");
+    SCP_EMERGENCY(kPBSInstance, kZeroUuid,
+                  FailureExecutionResult(core::errors::SC_PBS_LEASE_LOST),
+                  "Lease LOST. Terminating the process...");
     process_termination_function();
   } else if (lease_transition_type == LeaseTransitionType::kNotAcquired) {
     if (lease_info.has_value()) {
-      INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-           "Lease NOTACQUIRED. Will forward traffic to %s",
-           lease_info->service_endpoint_address.c_str());
+      SCP_INFO(kPBSInstance, kZeroUuid,
+               "Lease NOTACQUIRED. Will forward traffic to %s",
+               lease_info->service_endpoint_address.c_str());
       auto execution_result = traffic_forwarder->ResetForwardingAddress(
           lease_info->service_endpoint_address);
       if (!execution_result.Successful()) {
-        INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-             "Unable to reset the Traffic Forwarder's address to: %s. "
-             "Terminating..",
-             lease_info->service_endpoint_address.c_str());
+        SCP_INFO(kPBSInstance, kZeroUuid,
+                 "Unable to reset the Traffic Forwarder's address to: %s. "
+                 "Terminating..",
+                 lease_info->service_endpoint_address.c_str());
         process_termination_function();
       }
     }
+  } else if (lease_transition_type == LeaseTransitionType::kRenewed) {
+    SCP_INFO(kPBSInstance, kZeroUuid, "Lease RENEWED");
   } else {
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid, "Lease RENEWED");
+    // Other lease transitions are not consumed.
   }
 }
 
@@ -607,7 +456,7 @@ ExecutionResult PBSInstance::RunLeaseManagerAndWaitUntilLeaseIsAcquired(
   RUN_PBS_COMPONENT(lease_manager_service);
 
   while (!*is_lease_acquired) {
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid, "Waiting on lease acquisition...");
+    SCP_INFO(kPBSInstance, kZeroUuid, "Waiting on lease acquisition...");
     sleep_for(seconds(1));
   }
   return SuccessExecutionResult();
@@ -618,7 +467,7 @@ ExecutionResult PBSInstance::Run() noexcept {
     return FailureExecutionResult(core::errors::SC_PBS_SERVICE_ALREADY_RUNNING);
   }
 
-  INFO(kPBSInstance, kZeroUuid, kZeroUuid, "Starting PBS components");
+  SCP_INFO(kPBSInstance, kZeroUuid, "Starting PBS components");
 
   RUN_PBS_COMPONENT(async_executor_);
   RUN_PBS_COMPONENT(io_async_executor_);
@@ -634,34 +483,11 @@ ExecutionResult PBSInstance::Run() noexcept {
     // Run traffic fowarder until the lease is acquired on the PBS lock.
     RUN_PBS_COMPONENT(traffic_forwarder_);
 
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-         "Starting lease manager and then will wait on lease acquisition");
+    SCP_INFO(kPBSInstance, kZeroUuid,
+             "Starting lease manager and then will wait on lease acquisition");
 
-    std::string table_name;
-    auto execution_result = config_provider_->Get(
-        pbs::kPBSPartitionLockTableNameConfigName, table_name);
-    if (!execution_result.Successful()) {
-      return execution_result;
-    }
-
-    if (table_name.empty()) {
-      CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-               "Failed to obtain table name for the PartitionLockTable.");
-      return execution_result;
-    }
-
-    core::TimeDuration configured_lease_duration_in_seconds = 10;
-    execution_result =
-        config_provider_->Get(pbs::kPBSPartitionLeaseDurationInSeconds,
-                              configured_lease_duration_in_seconds);
-    if (!execution_result.Successful()) {
-      ERROR(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-            "Failed to obtain kPBSPartitionLeaseDurationInSeconds from config. "
-            "Using a default value.");
-    }
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-         "Using lease duration of '%ld' seconds",
-         configured_lease_duration_in_seconds);
+    SCP_INFO(kPBSInstance, kZeroUuid, "Using lease duration of '%ld' seconds",
+             pbs_instance_config_.partition_lease_duration_in_seconds);
 
     // The system's availability depends on the Leasable Lock, so any requests
     // that the lock makes to the nosqldatabase must get priority over other
@@ -675,35 +501,36 @@ ExecutionResult PBSInstance::Run() noexcept {
     InitializeLeaseInformation();
 
     auto leaseable_lock = make_shared<LeasableLockOnNoSQLDatabase>(
-        nosql_database_provider_for_leasable_lock_, lease_info_, table_name,
+        nosql_database_provider_for_leasable_lock_, lease_info_,
+        *pbs_instance_config_.partition_lease_table_name,
         kPBSPartitionLockTableRowKeyForGlobalPartition,
-        seconds(configured_lease_duration_in_seconds));
-    execution_result = RunLeaseManagerAndWaitUntilLeaseIsAcquired(
+        pbs_instance_config_.partition_lease_duration_in_seconds);
+    auto execution_result = RunLeaseManagerAndWaitUntilLeaseIsAcquired(
         lease_manager_service_, leaseable_lock, traffic_forwarder_, []() {
-          EMERGENCY(kPBSInstance, kZeroUuid, kZeroUuid,
-                    FailureExecutionResult(core::errors::SC_PBS_LEASE_LOST),
-                    "Terminating the process.");
+          SCP_EMERGENCY(kPBSInstance, kZeroUuid,
+                        FailureExecutionResult(core::errors::SC_PBS_LEASE_LOST),
+                        "Terminating the process.");
           std::abort();
         });
     if (!execution_result.Successful()) {
-      CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, execution_result,
-               "Failed to wait on lease acquisition.");
+      SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
+                   "Failed to wait on lease acquisition.");
       return execution_result;
     }
 
     // Stop traffic forwarder as this instance now holds the lease and is
     // allowed to start the PBS service
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-         "Lease acquired, stopping traffic forwarder");
+    SCP_INFO(kPBSInstance, kZeroUuid,
+             "Lease acquired, stopping traffic forwarder");
     STOP_PBS_COMPONENT(traffic_forwarder_);
 
     // Wait for a couple of lease duration cycles to ensure existing lease
     // holders have terminated
-    INFO(kPBSInstance, kZeroUuid, kZeroUuid,
-         "Lease acquired, waiting for %lld milliseconds before starting "
-         "log "
-         "recovery",
-         leaseable_lock->GetConfiguredLeaseDurationInMilliseconds() * 2);
+    SCP_INFO(kPBSInstance, kZeroUuid,
+             "Lease acquired, waiting for %lld milliseconds before starting "
+             "log "
+             "recovery",
+             leaseable_lock->GetConfiguredLeaseDurationInMilliseconds() * 2);
     sleep_for(milliseconds(
         leaseable_lock->GetConfiguredLeaseDurationInMilliseconds() * 2));
   }
@@ -711,33 +538,38 @@ ExecutionResult PBSInstance::Run() noexcept {
   // Start the storage service required for processing the logs
   RUN_PBS_COMPONENT(blob_storage_provider_for_journal_service_);
 
-  INFO(kPBSInstance, kZeroUuid, kZeroUuid, "Starting log recovery");
+  SCP_INFO(kPBSInstance, kZeroUuid, "Starting log recovery");
 
-  bool recovery_completed = false;
-  bool recovery_failed = false;
+  std::atomic<bool> recovery_completed = false;
+  std::atomic<bool> recovery_failed = false;
   AsyncContext<JournalRecoverRequest, JournalRecoverResponse> recovery_context;
   recovery_context.request = make_shared<JournalRecoverRequest>();
-  recovery_context.parent_activity_id = Uuid::GenerateUuid();
+  auto activity_id = Uuid::GenerateUuid();
+  recovery_context.parent_activity_id = activity_id;
+  recovery_context.correlation_id = activity_id;
   recovery_context.callback =
       [&](AsyncContext<JournalRecoverRequest, JournalRecoverResponse>&
               recovery_context) {
         if (!recovery_context.result.Successful()) {
-          CRITICAL(kPBSInstance, kZeroUuid, kZeroUuid, recovery_context.result,
-                   "Log recovery failed.");
+          SCP_CRITICAL(kPBSInstance, kZeroUuid, recovery_context.result,
+                       "Log recovery failed.");
           recovery_failed = true;
         }
         recovery_completed = true;
       };
 
   // Recovering the service
-  auto execution_result = journal_service_->Recover(recovery_context);
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
+
+  // Recovery metrics needs to be separately Run because the journal_service_ is
+  // not yet Run().
+  RETURN_IF_FAILURE(journal_service_->RunRecoveryMetrics());
+  RETURN_IF_FAILURE(journal_service_->Recover(recovery_context));
 
   while (!recovery_completed) {
     sleep_for(milliseconds(250));
   }
+
+  RETURN_IF_FAILURE(journal_service_->StopRecoveryMetrics());
 
   if (recovery_failed) {
     return FailureExecutionResult(core::errors::SC_PBS_SERVICE_RECOVERY_FAILED);
@@ -758,7 +590,7 @@ ExecutionResult PBSInstance::Run() noexcept {
   RUN_PBS_COMPONENT(blob_storage_provider_for_checkpoint_service_);
   RUN_PBS_COMPONENT(checkpoint_service_);
 
-  INFO(kPBSInstance, kZeroUuid, kZeroUuid, "PBS Instance Running");
+  SCP_INFO(kPBSInstance, kZeroUuid, "PBS Instance Running");
 
   return SuccessExecutionResult();
 }

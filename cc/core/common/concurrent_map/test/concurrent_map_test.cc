@@ -24,9 +24,11 @@
 
 #include "core/common/uuid/src/uuid.h"
 #include "core/test/scp_test_base.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::common::ConcurrentMap;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
 using std::atomic;
 using std::make_pair;
@@ -44,7 +46,7 @@ TEST_F(ConcurrentMapTests, InsertElement) {
   int i;
   auto result = map.Insert(make_pair(1, 1), i);
 
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ(i, 1);
 }
 
@@ -55,8 +57,8 @@ TEST_F(ConcurrentMapTests, InsertExistingElement) {
   auto result = map.Insert(make_pair(1, 1), i);
   result = map.Insert(make_pair(1, 1), i);
 
-  EXPECT_EQ(result, FailureExecutionResult(
-                        errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS));
+  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                          errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 }
 
 TEST_F(ConcurrentMapTests, DeleteExistingElement) {
@@ -66,19 +68,19 @@ TEST_F(ConcurrentMapTests, DeleteExistingElement) {
   auto result = map.Insert(make_pair(key, val), val);
   result = map.Erase(key);
 
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
 
   result = map.Find(key, val);
-  EXPECT_EQ(result, FailureExecutionResult(
-                        errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
+  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                          errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(ConcurrentMapTests, DeleteNonExistingElement) {
   ConcurrentMap<int, int> map;
   int i = 0;
   auto result = map.Erase(i);
-  EXPECT_EQ(result, FailureExecutionResult(
-                        errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
+  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                          errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(ConcurrentMapTests, FindAnExistingElement) {
@@ -89,7 +91,7 @@ TEST_F(ConcurrentMapTests, FindAnExistingElement) {
   auto result = map.Insert(make_pair(1, 1), i);
   result = map.Find(i, value);
 
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ(value, 1);
 }
 
@@ -103,7 +105,7 @@ TEST_F(ConcurrentMapTests, FindAnExistingElementUuid) {
   auto result = map.Insert(make_pair(uuid_key, uuid_value), uuid_value);
   result = map.Find(uuid_key, value);
 
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ(value, uuid_value);
 }
 
@@ -117,14 +119,14 @@ TEST_F(ConcurrentMapTests, GetKeys) {
   Uuid uuid_value1 = Uuid::GenerateUuid();
 
   auto result = map.Insert(make_pair(uuid_key, uuid_value), uuid_value);
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
 
   result = map.Insert(make_pair(uuid_key1, uuid_value1), uuid_value1);
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
 
   vector<Uuid> keys;
   result = map.Keys(keys);
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
 
   if (keys[0] == uuid_key) {
     EXPECT_EQ(keys[1], uuid_key1);

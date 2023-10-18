@@ -70,7 +70,7 @@ public final class SqsKeyGenerationService extends AbstractExecutionThreadServic
           Thread.sleep(THREAD_SLEEP_TIME_MILLIS);
         } else {
           logger.info("Key generation message pulled");
-          createSplitKeyTask.replaceExpiringKeys(numDesiredKeys, validityInDays, ttlInDays);
+          createSplitKeyTask.create(numDesiredKeys, validityInDays, ttlInDays);
           sqsKeyGenerationQueue.acknowledgeKeyGenerationCompletion(item.get());
         }
 

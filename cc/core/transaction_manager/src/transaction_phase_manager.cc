@@ -74,4 +74,33 @@ TransactionPhase TransactionPhaseManager::ProceedToNextPhaseInternal(
   }
 }
 
+bool TransactionPhaseManager::CanProceedToAbortAtPhase(
+    TransactionPhase transaction_phase) {
+  // NOTE:
+  // For BEGIN and PREPARE, although transaction can proceed to ABORT NOTIFY and
+  // then eventually END phase, ideally the transaction SHOULD proceed to END
+  // directly since the transaction did not prepare anything on
+  // Resources/Resource Managers and executing ABORT NOTIFY phase is
+  // unnecessary.
+  return (transaction_phase == TransactionPhase::Begin ||
+          transaction_phase == TransactionPhase::Prepare ||
+          transaction_phase == TransactionPhase::Commit ||
+          transaction_phase == TransactionPhase::CommitNotify ||
+          transaction_phase == TransactionPhase::AbortNotify);
+}
+
+bool TransactionPhaseManager::CanProceedToEndAtPhase(
+    TransactionPhase transaction_phase) {
+  // If current phase is COMMIT phase which could either mean that COMMIT phase
+  // has not started or started but not completed successfully on all
+  // resource managers, so we should be pessimistic and clean up any modified
+  // state by proceeding to ABORT NOTIFY instead of proceeding to END phase
+  // directly.
+  return (transaction_phase == TransactionPhase::Begin ||
+          transaction_phase == TransactionPhase::Prepare ||
+          transaction_phase == TransactionPhase::Aborted ||
+          transaction_phase == TransactionPhase::Committed ||
+          transaction_phase == TransactionPhase::End);
+}
+
 }  // namespace google::scp::core

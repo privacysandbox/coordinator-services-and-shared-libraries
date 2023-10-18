@@ -31,6 +31,8 @@ resource "aws_cloudwatch_metric_alarm" "total_queue_messages_high_alarm" {
   #Unit for threshold
   threshold     = var.total_queue_messages_high_threshold
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
+
 
   tags = {
     environment = var.environment

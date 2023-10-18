@@ -48,7 +48,7 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::Version;
 using google::scp::core::common::Serialization;
 using google::scp::core::common::Uuid;
-using google::scp::cpio::client_providers::MetricClientProviderInterface;
+using google::scp::cpio::MetricClientInterface;
 using google::scp::pbs::budget_key::proto::BudgetKeyLog;
 using google::scp::pbs::budget_key::proto::BudgetKeyLog_1_0;
 using std::bind;
@@ -58,6 +58,7 @@ using std::move;
 using std::shared_ptr;
 using std::vector;
 using std::placeholders::_1;
+using std::placeholders::_2;
 
 static constexpr Version kCurrentVersion = {.major = 1, .minor = 0};
 static constexpr char kBudgetKey[] = "BudgetKey";
@@ -67,25 +68,33 @@ BudgetKey::BudgetKey(
     const shared_ptr<BudgetKeyName>& name, const Uuid& id,
     const shared_ptr<AsyncExecutorInterface>& async_executor,
     const shared_ptr<JournalServiceInterface>& journal_service,
-    const shared_ptr<NoSQLDatabaseProviderInterface>& nosql_database_provider,
-    const shared_ptr<MetricClientProviderInterface>& metric_client,
-    const shared_ptr<ConfigProviderInterface>& config_provider)
+    const shared_ptr<NoSQLDatabaseProviderInterface>&
+        nosql_database_provider_for_background_operations,
+    const shared_ptr<NoSQLDatabaseProviderInterface>&
+        nosql_database_provider_for_live_traffic,
+    const shared_ptr<MetricClientInterface>& metric_client,
+    const shared_ptr<ConfigProviderInterface>& config_provider,
+    const shared_ptr<cpio::AggregateMetricInterface>& budget_key_count_metric)
     : name_(name),
       id_(id),
       async_executor_(async_executor),
       journal_service_(journal_service),
-      nosql_database_provider_(nosql_database_provider),
+      nosql_database_provider_for_background_operations_(
+          nosql_database_provider_for_background_operations),
+      nosql_database_provider_for_live_traffic_(
+          nosql_database_provider_for_live_traffic),
       operation_dispatcher_(async_executor,
                             core::common::RetryStrategy(
                                 core::common::RetryStrategyType::Exponential,
                                 kBudgetKeyRetryStrategyDelayMs,
                                 kBudgetKeyRetryStrategyTotalRetries)),
       metric_client_(metric_client),
-      config_provider_(config_provider) {}
+      config_provider_(config_provider),
+      budget_key_count_metric_(budget_key_count_metric) {}
 
 ExecutionResult BudgetKey::Init() noexcept {
   return journal_service_->SubscribeForRecovery(
-      id_, bind(&BudgetKey::OnJournalServiceRecoverCallback, this, _1));
+      id_, bind(&BudgetKey::OnJournalServiceRecoverCallback, this, _1, _2));
 }
 
 ExecutionResult BudgetKey::Run() noexcept {
@@ -119,12 +128,13 @@ Uuid BudgetKey::GetTimeframeManagerId() noexcept {
 }
 
 ExecutionResult BudgetKey::OnJournalServiceRecoverCallback(
-    const shared_ptr<BytesBuffer>& bytes_buffer) noexcept {
-  auto activity_id = Uuid::GenerateUuid();
-  DEBUG(kBudgetKey, id_, activity_id,
-        "Recovering budget key from the stored logs. The current bytes size: "
-        "%zu.",
-        bytes_buffer->length);
+    const shared_ptr<BytesBuffer>& bytes_buffer,
+    const Uuid& activity_id) noexcept {
+  SCP_DEBUG(
+      kBudgetKey, activity_id,
+      "Recovering budget key from the stored logs. The current bytes size: "
+      "%zu.",
+      bytes_buffer->length);
 
   BudgetKeyLog budget_key_log;
   size_t bytes_deserialized = 0;
@@ -156,14 +166,16 @@ ExecutionResult BudgetKey::OnJournalServiceRecoverCallback(
 
   auto budget_key_id = core::common::ToString(id_);
   auto timeframe_manager_id_str = core::common::ToString(timeframe_manager_id);
-  DEBUG(kBudgetKey, id_, activity_id,
-        "Budget key %s Timeframe manager recovered: "
-        "%s.",
-        budget_key_id.c_str(), timeframe_manager_id_str.c_str());
+  SCP_DEBUG(kBudgetKey, activity_id,
+            "Budget key %s Timeframe manager recovered: "
+            "%s.",
+            budget_key_id.c_str(), timeframe_manager_id_str.c_str());
 
   budget_key_timeframe_manager_ = make_shared<BudgetKeyTimeframeManager>(
       name_, timeframe_manager_id, async_executor_, journal_service_,
-      nosql_database_provider_, metric_client_, config_provider_);
+      nosql_database_provider_for_background_operations_,
+      nosql_database_provider_for_live_traffic_, metric_client_,
+      config_provider_, budget_key_count_metric_);
   consume_budget_transaction_protocol_ =
       make_shared<ConsumeBudgetTransactionProtocol>(
           budget_key_timeframe_manager_);
@@ -238,13 +250,15 @@ ExecutionResult BudgetKey::LoadBudgetKey(
   auto budget_key_id = core::common::ToString(id_);
   auto budget_key_timeframe_manager_id =
       core::common::ToString(timeframe_manager_id);
-  DEBUG_CONTEXT(kBudgetKey, load_budget_key_context,
-                "Loading budget key with id: %s and timeframe manager id: %s",
-                budget_key_id.c_str(), budget_key_timeframe_manager_id.c_str());
+  SCP_DEBUG_CONTEXT(
+      kBudgetKey, load_budget_key_context,
+      "Loading budget key with id: %s and timeframe manager id: %s",
+      budget_key_id.c_str(), budget_key_timeframe_manager_id.c_str());
 
   // Sending log request to the journal service.
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
   journal_log_context.parent_activity_id = load_budget_key_context.activity_id;
+  journal_log_context.correlation_id = load_budget_key_context.correlation_id;
   journal_log_context.request = make_shared<JournalLogRequest>();
   journal_log_context.request->component_id = id_;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
@@ -286,7 +300,9 @@ void BudgetKey::OnLogLoadBudgetKeyCallback(
   // Construct the budget key timeframe manager with id.
   budget_key_timeframe_manager_ = make_shared<BudgetKeyTimeframeManager>(
       name_, budget_key_timeframe_manager_id, async_executor_, journal_service_,
-      nosql_database_provider_, metric_client_, config_provider_);
+      nosql_database_provider_for_background_operations_,
+      nosql_database_provider_for_live_traffic_, metric_client_,
+      config_provider_, budget_key_count_metric_);
   consume_budget_transaction_protocol_ =
       make_shared<ConsumeBudgetTransactionProtocol>(
           budget_key_timeframe_manager_);
@@ -305,7 +321,7 @@ ExecutionResult BudgetKey::GetBudget(
       load_budget_key_timeframe_context(
           make_shared<LoadBudgetKeyTimeframeRequest>(move(request)),
           bind(&BudgetKey::OnBudgetLoaded, this, get_budget_context, _1),
-          get_budget_context.activity_id);
+          get_budget_context);
 
   operation_dispatcher_.Dispatch<AsyncContext<LoadBudgetKeyTimeframeRequest,
                                               LoadBudgetKeyTimeframeResponse>>(

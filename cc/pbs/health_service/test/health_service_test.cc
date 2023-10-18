@@ -16,6 +16,7 @@
 
 #include "pbs/health_service/src/health_service.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -23,14 +24,18 @@
 #include <memory>
 #include <string>
 
-#include <gmock/gmock.h>
-
 #include "cc/pbs/health_service/src/error_codes.h"
+#include "core/async_executor/src/async_executor.h"
+#include "core/http2_server/mock/mock_http2_server.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/http_server_interface.h"
 #include "pbs/interface/configuration_keys.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
+using google::scp::core::AsyncExecutor;
+using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ConfigKey;
 using google::scp::core::ConfigProviderInterface;
 using google::scp::core::ExecutionResult;
@@ -54,6 +59,10 @@ using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED;
 using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
+using google::scp::core::http2_server::mock::MockHttp2Server;
+using google::scp::core::test::ResultIs;
+using google::scp::cpio::MetricClientInterface;
+using google::scp::cpio::MockMetricClient;
 using google::scp::pbs::kPBSHealthServiceEnableMemoryAndStorageCheck;
 using std::list;
 using std::make_shared;
@@ -122,9 +131,12 @@ class HealthServiceForTests : public HealthService {
 
   HealthServiceForTests() : HealthService() {}
 
-  HealthServiceForTests(std::shared_ptr<core::HttpServerInterface>& http_server,
-                        shared_ptr<ConfigProviderInterface>& config_provider)
-      : HealthService(http_server, config_provider) {}
+  HealthServiceForTests(shared_ptr<HttpServerInterface>& http_server,
+                        shared_ptr<ConfigProviderInterface>& config_provider,
+                        shared_ptr<AsyncExecutorInterface>& async_executor,
+                        shared_ptr<MetricClientInterface>& metric_client)
+      : HealthService(http_server, config_provider, async_executor,
+                      metric_client) {}
 
   void SetMemInfoFilePath(const string& meminfo_file_path) {
     meminfo_file_path_ = meminfo_file_path;
@@ -167,113 +179,130 @@ class HealthServiceForTests : public HealthService {
 };
 
 class HealthServiceTest : public ::testing::Test {
- public:
-  HealthServiceForTests health_service;
-  shared_ptr<ConfigProviderInterface> config_provider_mock;
+ protected:
+  HealthServiceTest() {
+    config_provider_mock_ = make_shared<NiceMock<ConfigProviderMock>>();
+    metric_client_mock_ = make_shared<MockMetricClient>();
+    http_server_ = make_shared<MockHttp2Server>();
+    // TODO: b/297077044 Metric needs a real executor until this is implemented.
+    async_executor_ =
+        make_shared<AsyncExecutor>(2 /* thread count */, 10000 /* queue cap */);
+    EXPECT_SUCCESS(async_executor_->Init());
+    EXPECT_SUCCESS(async_executor_->Run());
 
-  void SetUp() override {
-    shared_ptr<HttpServerInterface> http_server;
-    config_provider_mock = make_shared<NiceMock<ConfigProviderMock>>();
     // Make memory and storage checking enabled by default
-    ON_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock.get()),
+    ON_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock_.get()),
             Get(kPBSHealthServiceEnableMemoryAndStorageCheck, _))
         .WillByDefault(
             DoAll(SetArgReferee<1>(true), Return(SuccessExecutionResult())));
-    health_service = HealthServiceForTests(http_server, config_provider_mock);
+
+    health_service_ =
+        HealthServiceForTests(http_server_, config_provider_mock_,
+                              async_executor_, metric_client_mock_);
 
     // Always be good on memory and drive usage
-    health_service.SetMemInfoFilePath(
+    health_service_.SetMemInfoFilePath(
         "cc/pbs/health_service/test/files/five_percent_meminfo_file.txt");
     space_info fs_space_info;
     fs_space_info.capacity = 100;
     fs_space_info.available = 80;
-    health_service.SetFileSystemSpaceInfo(fs_space_info);
+    health_service_.SetFileSystemSpaceInfo(fs_space_info);
+
+    EXPECT_SUCCESS(health_service_.Init());
   }
+
+  ~HealthServiceTest() { EXPECT_SUCCESS(async_executor_->Stop()); }
+
+  HealthServiceForTests health_service_;
+  shared_ptr<HttpServerInterface> http_server_;
+  shared_ptr<ConfigProviderInterface> config_provider_mock_;
+  shared_ptr<MetricClientInterface> metric_client_mock_;
+  shared_ptr<AsyncExecutorInterface> async_executor_;
 };
 
 TEST_F(HealthServiceTest,
        ShouldReturnHealthyWhenMemoryAndStorageUsageAreBelowThreshold) {
   AsyncContext<HttpRequest, HttpResponse> context;
-  auto result = health_service.CheckHealth(context);
-  EXPECT_TRUE(health_service.mem_and_storage_health_was_checked);
-  EXPECT_TRUE(result.Successful());
-  EXPECT_TRUE(context.result.Successful());
+  auto result = health_service_.CheckHealth(context);
+  EXPECT_TRUE(health_service_.mem_and_storage_health_was_checked);
+  EXPECT_SUCCESS(result);
+  EXPECT_SUCCESS(context.result);
 }
 
 TEST_F(HealthServiceTest, ShouldNotCheckMemOrStorageIfCheckingDisabled) {
   // Return false for mem and storage checking
-  EXPECT_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock.get()),
+  EXPECT_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock_.get()),
               Get(kPBSHealthServiceEnableMemoryAndStorageCheck, _))
       .WillOnce(
           DoAll(SetArgReferee<1>(false), Return(SuccessExecutionResult())));
 
   AsyncContext<HttpRequest, HttpResponse> context;
-  auto result = health_service.CheckHealth(context);
+  auto result = health_service_.CheckHealth(context);
 
-  EXPECT_FALSE(health_service.mem_and_storage_health_was_checked);
-  EXPECT_TRUE(result.Successful());
-  EXPECT_TRUE(context.result.Successful());
+  EXPECT_FALSE(health_service_.mem_and_storage_health_was_checked);
+  EXPECT_SUCCESS(result);
+  EXPECT_SUCCESS(context.result);
 }
 
 TEST_F(HealthServiceTest, ShouldNotCheckMemOrStorageIfConfigDoesNotExist) {
   // Failure execution result when reading the config key
-  EXPECT_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock.get()),
+  EXPECT_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock_.get()),
               Get(kPBSHealthServiceEnableMemoryAndStorageCheck, _))
       .WillOnce(Return(FailureExecutionResult(SC_UNKNOWN)));
 
   AsyncContext<HttpRequest, HttpResponse> context;
-  auto result = health_service.CheckHealth(context);
+  auto result = health_service_.CheckHealth(context);
 
-  EXPECT_FALSE(health_service.mem_and_storage_health_was_checked);
-  EXPECT_TRUE(result.Successful());
-  EXPECT_TRUE(context.result.Successful());
+  EXPECT_FALSE(health_service_.mem_and_storage_health_was_checked);
+  EXPECT_SUCCESS(result);
+  EXPECT_SUCCESS(context.result);
 }
 
 TEST_F(HealthServiceTest, ShouldParseMemInfoFileWhenInfoIsAvailable) {
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath(
+  health_service_.SetMemInfoFilePath(
       "cc/pbs/health_service/test/files/five_percent_meminfo_file.txt");
 
-  auto mem_usage_percentage = health_service.GetMemoryUsagePercentage();
-  EXPECT_TRUE(mem_usage_percentage.Successful());
+  auto mem_usage_percentage = health_service_.GetMemoryUsagePercentage();
+  EXPECT_SUCCESS(mem_usage_percentage);
   EXPECT_EQ(*mem_usage_percentage, 5);
 
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath(
+  health_service_.SetMemInfoFilePath(
       "cc/pbs/health_service/test/files/ninety_six_percent_meminfo_file.txt");
 
-  mem_usage_percentage = health_service.GetMemoryUsagePercentage();
-  EXPECT_TRUE(mem_usage_percentage.Successful());
+  mem_usage_percentage = health_service_.GetMemoryUsagePercentage();
+  EXPECT_SUCCESS(mem_usage_percentage);
   EXPECT_EQ(*mem_usage_percentage, 96);
 }
 
 TEST_F(HealthServiceTest, ShouldIfMemInfoFileIsNotFound) {
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath("file/that/does/not/exist.txt");
+  health_service_.SetMemInfoFilePath("file/that/does/not/exist.txt");
 
-  auto mem_usage_percentage = health_service.GetMemoryUsagePercentage();
+  auto mem_usage_percentage = health_service_.GetMemoryUsagePercentage();
 
-  EXPECT_EQ(mem_usage_percentage.result(),
-            FailureExecutionResult(
-                SC_PBS_HEALTH_SERVICE_COULD_NOT_OPEN_MEMINFO_FILE));
+  EXPECT_THAT(mem_usage_percentage.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_HEALTH_SERVICE_COULD_NOT_OPEN_MEMINFO_FILE)));
 }
 
 TEST_F(HealthServiceTest,
        ShouldFailIfAnExpectedFieldIsMissingFromTheMemInfoFile) {
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath(
+  health_service_.SetMemInfoFilePath(
       "cc/pbs/health_service/test/files/missing_total_meminfo_file.txt");
 
-  auto mem_usage_percentage = health_service.GetMemoryUsagePercentage();
+  auto mem_usage_percentage = health_service_.GetMemoryUsagePercentage();
   EXPECT_EQ(
       mem_usage_percentage.result(),
       FailureExecutionResult(SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO));
 
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath(
+  health_service_.SetMemInfoFilePath(
       "cc/pbs/health_service/test/files/missing_available_meminfo_file.txt");
 
-  mem_usage_percentage = health_service.GetMemoryUsagePercentage();
+  mem_usage_percentage = health_service_.GetMemoryUsagePercentage();
   EXPECT_EQ(
       mem_usage_percentage.result(),
       FailureExecutionResult(SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO));
@@ -281,22 +310,22 @@ TEST_F(HealthServiceTest,
 
 TEST_F(HealthServiceTest, ShouldFailIfMemInfoFileLineIsNotInTheExpectedFormat) {
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath(
+  health_service_.SetMemInfoFilePath(
       "cc/pbs/health_service/test/files/invalid_format_meminfo_file.txt");
 
-  auto mem_usage_percentage = health_service.GetMemoryUsagePercentage();
-  EXPECT_EQ(mem_usage_percentage.result(),
-            FailureExecutionResult(
-                SC_PBS_HEALTH_SERVICE_COULD_NOT_PARSE_MEMINFO_LINE));
+  auto mem_usage_percentage = health_service_.GetMemoryUsagePercentage();
+  EXPECT_THAT(mem_usage_percentage.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_HEALTH_SERVICE_COULD_NOT_PARSE_MEMINFO_LINE)));
 }
 
 TEST_F(HealthServiceTest, ShouldFailHealthCheckIfReadingFromMemInfoFileFails) {
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath("file/that/does/not/exist.txt");
+  health_service_.SetMemInfoFilePath("file/that/does/not/exist.txt");
 
   AsyncContext<HttpRequest, HttpResponse> context;
-  auto result = health_service.CheckHealth(context);
-  EXPECT_TRUE(result.Successful());
+  auto result = health_service_.CheckHealth(context);
+  EXPECT_SUCCESS(result);
   // Request response fails
   EXPECT_FALSE(context.result.Successful());
 }
@@ -304,12 +333,12 @@ TEST_F(HealthServiceTest, ShouldFailHealthCheckIfReadingFromMemInfoFileFails) {
 TEST_F(HealthServiceTest,
        ShouldFailHealthCheckIfHealthyMemThresholdIsExceeded) {
   // Set the path to the file to read meminfo from
-  health_service.SetMemInfoFilePath(
+  health_service_.SetMemInfoFilePath(
       "cc/pbs/health_service/test/files/ninety_six_percent_meminfo_file.txt");
 
   AsyncContext<HttpRequest, HttpResponse> context;
-  auto result = health_service.CheckHealth(context);
-  EXPECT_TRUE(result.Successful());
+  auto result = health_service_.CheckHealth(context);
+  EXPECT_SUCCESS(result);
   // Request response fails
   EXPECT_EQ(context.result,
             FailureExecutionResult(
@@ -317,60 +346,60 @@ TEST_F(HealthServiceTest,
 }
 
 TEST_F(HealthServiceTest, ShouldFailFsStoragePercentageIfReadingInfoFails) {
-  health_service.SetFileSystemSpaceInfo(FailureExecutionResult(
+  health_service_.SetFileSystemSpaceInfo(FailureExecutionResult(
       SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO));
 
-  auto info = health_service.GetFileSystemStorageUsagePercentage("dir");
-  EXPECT_EQ(info.result(),
-            FailureExecutionResult(
-                SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO));
+  auto info = health_service_.GetFileSystemStorageUsagePercentage("dir");
+  EXPECT_THAT(info.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO)));
 }
 
 TEST_F(HealthServiceTest, ShouldFailIfFsStorageInfoReadingIsInvalid) {
   space_info fs_space_info;
   fs_space_info.capacity = 0;
   fs_space_info.available = 50;
-  health_service.SetFileSystemSpaceInfo(fs_space_info);
+  health_service_.SetFileSystemSpaceInfo(fs_space_info);
 
-  auto info = health_service.GetFileSystemStorageUsagePercentage("dir");
-  EXPECT_EQ(info.result(),
-            FailureExecutionResult(
-                SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO));
+  auto info = health_service_.GetFileSystemStorageUsagePercentage("dir");
+  EXPECT_THAT(info.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO)));
 
   fs_space_info.capacity = 50;
   fs_space_info.available = 0;
-  health_service.SetFileSystemSpaceInfo(fs_space_info);
+  health_service_.SetFileSystemSpaceInfo(fs_space_info);
 
-  info = health_service.GetFileSystemStorageUsagePercentage("dir");
-  EXPECT_EQ(info.result(),
-            FailureExecutionResult(
-                SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO));
+  info = health_service_.GetFileSystemStorageUsagePercentage("dir");
+  EXPECT_THAT(info.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO)));
 }
 
 TEST_F(HealthServiceTest, ShouldGetFsStoragePercentage) {
   space_info fs_space_info;
   fs_space_info.capacity = 100;
   fs_space_info.available = 50;
-  health_service.SetFileSystemSpaceInfo(fs_space_info);
+  health_service_.SetFileSystemSpaceInfo(fs_space_info);
 
-  auto percent = health_service.GetFileSystemStorageUsagePercentage("dir");
-  EXPECT_TRUE(percent.result().Successful());
+  auto percent = health_service_.GetFileSystemStorageUsagePercentage("dir");
+  EXPECT_SUCCESS(percent.result());
   EXPECT_EQ(50, *percent);
 
   fs_space_info.capacity = 100;
   fs_space_info.available = 95;
-  health_service.SetFileSystemSpaceInfo(fs_space_info);
+  health_service_.SetFileSystemSpaceInfo(fs_space_info);
 
-  percent = health_service.GetFileSystemStorageUsagePercentage("dir");
-  EXPECT_TRUE(percent.result().Successful());
+  percent = health_service_.GetFileSystemStorageUsagePercentage("dir");
+  EXPECT_SUCCESS(percent.result());
   EXPECT_EQ(5, *percent);
 
   fs_space_info.capacity = 100;
   fs_space_info.available = 5;
-  health_service.SetFileSystemSpaceInfo(fs_space_info);
+  health_service_.SetFileSystemSpaceInfo(fs_space_info);
 
-  percent = health_service.GetFileSystemStorageUsagePercentage("dir");
-  EXPECT_TRUE(percent.result().Successful());
+  percent = health_service_.GetFileSystemStorageUsagePercentage("dir");
+  EXPECT_SUCCESS(percent.result());
   EXPECT_EQ(95, *percent);
 }
 
@@ -380,11 +409,11 @@ TEST_F(HealthServiceTest,
   // Results in 96% utilization
   fs_space_info.capacity = 100;
   fs_space_info.available = 4;
-  health_service.SetFileSystemSpaceInfo(fs_space_info);
+  health_service_.SetFileSystemSpaceInfo(fs_space_info);
 
   AsyncContext<HttpRequest, HttpResponse> context;
-  auto result = health_service.CheckHealth(context);
-  EXPECT_TRUE(result.Successful());
+  auto result = health_service_.CheckHealth(context);
+  EXPECT_SUCCESS(result);
   // Request response fails
   EXPECT_EQ(
       context.result,
@@ -393,12 +422,12 @@ TEST_F(HealthServiceTest,
 }
 
 TEST_F(HealthServiceTest, ShouldFailHealthCheckIfFilesystemInfoCantBeRead) {
-  health_service.SetFileSystemSpaceInfo(FailureExecutionResult(SC_UNKNOWN));
+  health_service_.SetFileSystemSpaceInfo(FailureExecutionResult(SC_UNKNOWN));
 
   AsyncContext<HttpRequest, HttpResponse> context;
-  auto result = health_service.CheckHealth(context);
-  EXPECT_TRUE(result.Successful());
+  auto result = health_service_.CheckHealth(context);
+  EXPECT_SUCCESS(result);
   // Request response fails
-  EXPECT_EQ(context.result, FailureExecutionResult(SC_UNKNOWN));
+  EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(SC_UNKNOWN)));
 }
 }  // namespace google::scp::pbs::test

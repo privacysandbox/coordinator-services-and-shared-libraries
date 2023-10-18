@@ -101,4 +101,15 @@ DEFINE_ERROR_CODE(SC_JOURNAL_SERVICE_INPUT_STREAM_INVALID_LISTING,
                   "The blob/checkpoint listing is invalid.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
+DEFINE_ERROR_CODE(
+    SC_JOURNAL_SERVICE_NO_OUTPUT_STREAM, SC_JOURNAL_SERVICE, 0x0013,
+    "No JournalOutputStream is available in JournalServer. This could happen "
+    "when logs recovery process is not yet completed",
+    HttpStatusCode::INTERNAL_SERVER_ERROR)
+
+DEFINE_ERROR_CODE(SC_JOURNAL_SERVICE_FAILED_TO_FLUSH_BATCH_OF_LOGS,
+                  SC_JOURNAL_SERVICE, 0x0014,
+                  "The batch of logs to flush failed.",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+
 }  // namespace google::scp::core::errors

@@ -46,7 +46,7 @@ ExecutionResult ClientConsumeBudgetCommand::Begin(
           bind(&ClientConsumeBudgetCommand::
                    OnInitiateConsumeBudgetTransactionCallback,
                this, _1, callback),
-          parent_activity_id_);
+          parent_activity_id_, parent_activity_id_);
 
   consume_budget_transaction_context.request->transaction_id = transaction_id_;
   consume_budget_transaction_context.request->transaction_secret =
@@ -65,18 +65,19 @@ ExecutionResult ClientConsumeBudgetCommand::Begin(
 
   auto transaction_id_string = core::common::ToString(transaction_id_);
   auto command_id_string = core::common::ToString(command_id);
-  DEBUG_CONTEXT(kClientConsumeBudgetCommand, consume_budget_transaction_context,
-                "Begin transaction for command id: %s transaction id: %s",
-                command_id_string.c_str(), transaction_id_string.c_str());
+  SCP_DEBUG_CONTEXT(kClientConsumeBudgetCommand,
+                    consume_budget_transaction_context,
+                    "Begin transaction for command id: %s transaction id: %s",
+                    command_id_string.c_str(), transaction_id_string.c_str());
 
   return SuccessExecutionResult();
 }
 
 void ClientConsumeBudgetCommand::OnInitiateConsumeBudgetTransactionCallback(
-    core::AsyncContext<ConsumeBudgetTransactionRequest,
-                       ConsumeBudgetTransactionResponse>&
+    AsyncContext<ConsumeBudgetTransactionRequest,
+                 ConsumeBudgetTransactionResponse>&
         consume_budget_transaction_context,
-    core::TransactionCommandCallback& callback) noexcept {
+    TransactionCommandCallback& callback) noexcept {
   if (consume_budget_transaction_context.result.Successful()) {
     last_execution_timestamp_ =
         consume_budget_transaction_context.response->last_execution_timestamp;
@@ -84,7 +85,7 @@ void ClientConsumeBudgetCommand::OnInitiateConsumeBudgetTransactionCallback(
 
   auto transaction_id_string = core::common::ToString(transaction_id_);
   auto command_id_string = core::common::ToString(command_id);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kClientConsumeBudgetCommand, consume_budget_transaction_context,
       "Begin transaction callback for command id: %s transaction id: %s last "
       "execution time: %llu",
@@ -127,16 +128,17 @@ ExecutionResult ClientConsumeBudgetCommand::ExecuteTransactionPhase(
           make_shared<TransactionPhaseRequest>(),
           bind(&ClientConsumeBudgetCommand::OnPhaseExecutionCallback, this, _1,
                transaction_phase_callback),
-          parent_activity_id_);
+          parent_activity_id_, parent_activity_id_);
 
   auto transaction_id_string = core::common::ToString(transaction_id_);
   auto command_id_string = core::common::ToString(command_id);
-  DEBUG_CONTEXT(kClientConsumeBudgetCommand, transaction_phase_context,
-                "Executing transaction phase for command id: %s transaction "
-                "id: %s last "
-                "execution time: %llu",
-                command_id_string.c_str(), transaction_id_string.c_str(),
-                last_execution_timestamp_);
+  SCP_DEBUG_CONTEXT(
+      kClientConsumeBudgetCommand, transaction_phase_context,
+      "Executing transaction phase for command id: %s transaction "
+      "id: %s last "
+      "execution time: %llu",
+      command_id_string.c_str(), transaction_id_string.c_str(),
+      last_execution_timestamp_);
 
   transaction_phase_context.request->transaction_id = transaction_id_;
   transaction_phase_context.request->transaction_secret = transaction_secret_;
@@ -170,7 +172,8 @@ void ClientConsumeBudgetCommand::OnPhaseExecutionCallback(
             bind(&ClientConsumeBudgetCommand::
                      OnExecuteTransactionPhaseGetStatusCallback,
                  this, transaction_phase_context, _1,
-                 transaction_phase_callback));
+                 transaction_phase_callback),
+            transaction_phase_context);
 
     get_transaction_status_context.request->transaction_id =
         transaction_phase_context.request->transaction_id;
@@ -192,7 +195,7 @@ void ClientConsumeBudgetCommand::OnPhaseExecutionCallback(
 
   auto transaction_id_string = core::common::ToString(transaction_id_);
   auto command_id_string = core::common::ToString(command_id);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kClientConsumeBudgetCommand, transaction_phase_context,
       "OnPhaseExecutionCallback for command id: %s transaction id: %s last "
       "execution time: %llu",
@@ -203,8 +206,7 @@ void ClientConsumeBudgetCommand::OnPhaseExecutionCallback(
 }
 
 void ClientConsumeBudgetCommand::OnExecuteTransactionPhaseGetStatusCallback(
-    core::AsyncContext<core::TransactionPhaseRequest,
-                       core::TransactionPhaseResponse>&
+    AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
         transaction_phase_context,
     AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>&
         get_transaction_status_context,

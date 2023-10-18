@@ -136,11 +136,11 @@ void AwsS3Client::OnGetObjectCallback(
     const GetObjectOutcome& get_object_outcome,
     const shared_ptr<const AsyncCallerContext> async_context) noexcept {
   if (!get_object_outcome.IsSuccess()) {
-    DEBUG_CONTEXT(kAwsS3Provider, get_blob_context,
-                  "AwsS3Provider get blob request failed. Error code: %d, "
-                  "message: %s",
-                  get_object_outcome.GetError().GetResponseCode(),
-                  get_object_outcome.GetError().GetMessage().c_str());
+    SCP_DEBUG_CONTEXT(kAwsS3Provider, get_blob_context,
+                      "AwsS3Provider get blob request failed. Error code: %d, "
+                      "message: %s",
+                      get_object_outcome.GetError().GetResponseCode(),
+                      get_object_outcome.GetError().GetMessage().c_str());
 
     get_blob_context.result = AwsS3Utils::ConvertS3ErrorToExecutionResult(
         get_object_outcome.GetError().GetErrorType());
@@ -215,11 +215,12 @@ void AwsS3Client::OnListObjectsCallback(
     const ListObjectsOutcome& list_objects_outcome,
     const shared_ptr<const AsyncCallerContext> async_context) noexcept {
   if (!list_objects_outcome.IsSuccess()) {
-    DEBUG_CONTEXT(kAwsS3Provider, list_blobs_context,
-                  "AwsS3Provider list blobs request failed. Error code: %d, "
-                  "message: %s",
-                  list_objects_outcome.GetError().GetResponseCode(),
-                  list_objects_outcome.GetError().GetMessage().c_str());
+    SCP_DEBUG_CONTEXT(
+        kAwsS3Provider, list_blobs_context,
+        "AwsS3Provider list blobs request failed. Error code: %d, "
+        "message: %s",
+        list_objects_outcome.GetError().GetResponseCode(),
+        list_objects_outcome.GetError().GetMessage().c_str());
     list_blobs_context.result = AwsS3Utils::ConvertS3ErrorToExecutionResult(
         list_objects_outcome.GetError().GetErrorType());
     if (!async_executor_
@@ -279,20 +280,16 @@ ExecutionResult AwsS3Client::PutBlob(
   put_object_request.SetBucket(bucket_name);
   put_object_request.SetKey(blob_name);
 
-  string md5_checksum;
-  auto execution_result =
-      utils::CalculateMd5Hash(*put_blob_context.request->buffer, md5_checksum);
-  if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kAwsS3Provider, put_blob_context, execution_result,
-                  "MD5 Hash generation failed");
-    return execution_result;
-  }
+  ASSIGN_OR_LOG_AND_RETURN_CONTEXT(
+      string md5_checksum,
+      utils::CalculateMd5Hash(*put_blob_context.request->buffer),
+      kAwsS3Provider, put_blob_context, "MD5 Hash generation failed");
 
   string base64_md5_checksum;
-  execution_result = Base64Encode(md5_checksum, base64_md5_checksum);
+  auto execution_result = Base64Encode(md5_checksum, base64_md5_checksum);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kAwsS3Provider, put_blob_context, execution_result,
-                  "Encoding MD5 to base64 failed");
+    SCP_ERROR_CONTEXT(kAwsS3Provider, put_blob_context, execution_result,
+                      "Encoding MD5 to base64 failed");
     return execution_result;
   }
 
@@ -319,11 +316,11 @@ void AwsS3Client::OnPutObjectCallback(
     const PutObjectOutcome& put_object_outcome,
     const shared_ptr<const AsyncCallerContext> async_context) noexcept {
   if (!put_object_outcome.IsSuccess()) {
-    DEBUG_CONTEXT(kAwsS3Provider, put_blob_context,
-                  "AwsS3Provider put blob request failed. Error code: %d, "
-                  "message: %s",
-                  put_object_outcome.GetError().GetResponseCode(),
-                  put_object_outcome.GetError().GetMessage().c_str());
+    SCP_DEBUG_CONTEXT(kAwsS3Provider, put_blob_context,
+                      "AwsS3Provider put blob request failed. Error code: %d, "
+                      "message: %s",
+                      put_object_outcome.GetError().GetResponseCode(),
+                      put_object_outcome.GetError().GetMessage().c_str());
     put_blob_context.result = AwsS3Utils::ConvertS3ErrorToExecutionResult(
         put_object_outcome.GetError().GetErrorType());
     if (!async_executor_
@@ -370,11 +367,12 @@ void AwsS3Client::OnDeleteObjectCallback(
     const DeleteObjectOutcome& delete_object_outcome,
     const shared_ptr<const AsyncCallerContext> async_context) noexcept {
   if (!delete_object_outcome.IsSuccess()) {
-    DEBUG_CONTEXT(kAwsS3Provider, delete_blob_context,
-                  "AwsS3Provider delete blob request failed. Error code: %d, "
-                  "message: %s",
-                  delete_object_outcome.GetError().GetResponseCode(),
-                  delete_object_outcome.GetError().GetMessage().c_str());
+    SCP_DEBUG_CONTEXT(
+        kAwsS3Provider, delete_blob_context,
+        "AwsS3Provider delete blob request failed. Error code: %d, "
+        "message: %s",
+        delete_object_outcome.GetError().GetResponseCode(),
+        delete_object_outcome.GetError().GetMessage().c_str());
     delete_blob_context.result = AwsS3Utils::ConvertS3ErrorToExecutionResult(
         delete_object_outcome.GetError().GetErrorType());
     if (!async_executor_

@@ -42,8 +42,14 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Generates keys and stores in datastore. */
+/**
+ * Generates keys and stores in datastore.
+ *
+ * @deprecated Single-party key features are deprecated. Pending removal b/282204533.
+ */
+@Deprecated
 public class CreateKeysTask {
+
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateKeysTask.class);
   private final KeyDb keyDb;
   private final Aead kmsKeyAead;
@@ -76,7 +82,10 @@ public class CreateKeysTask {
    *
    * <p>For key regeneration {@link CreateKeysTask#replaceExpiringKeys(int, int, int)} should be
    * used.
+   *
+   * @deprecated Single-party key features are deprecated. Pending removal b/282204533.
    */
+  @Deprecated
   public void createKeys(int count, int validityInDays, int ttlInDays) throws ServiceException {
     ImmutableList<EncryptionKey> keys = generateKeys(count, validityInDays, ttlInDays);
     keyDb.createKeys(keys);

@@ -1,0 +1,31 @@
+
+The logic of using port from VSOCK is always failing.
+This is because VSOCK port is 32bit, but aws_socket_endpoint.port is only 16bit.
+This patch fixes this issue by set the port as 0, follow the logic in older
+version of aws-c-io, before it supports VSOCK.
+
+diff --git a/source/posix/socket.c b/source/posix/socket.c
+index 088bfab..9d97713 100644
+--- a/source/posix/socket.c
++++ b/source/posix/socket.c
+@@ -339,19 +339,7 @@ static int s_update_local_endpoint(struct aws_socket *socket) {
+ #if USE_VSOCK
+     } else if (address.ss_family == AF_VSOCK) {
+         struct sockaddr_vm *s = (struct sockaddr_vm *)&address;
+-
+-        /* VSOCK port is 32bit, but aws_socket_endpoint.port is only 16bit.
+-         * Hopefully this isn't an issue, since users can only pass in 16bit values.
+-         * But if it becomes an issue, we'll need to make aws_socket_endpoint more flexible */
+-        if (s->svm_port > UINT16_MAX) {
+-            AWS_LOGF_ERROR(
+-                AWS_LS_IO_SOCKET,
+-                "id=%p fd=%d: aws_socket_endpoint can't deal with VSOCK port > UINT16_MAX",
+-                (void *)socket,
+-                socket->io_handle.data.fd);
+-            return aws_raise_error(AWS_IO_SOCKET_INVALID_ADDRESS);
+-        }
+-        tmp_endpoint.port = (uint16_t)s->svm_port;
++        tmp_endpoint.port = 0;
+
+         snprintf(tmp_endpoint.address, sizeof(tmp_endpoint.address), "%" PRIu32, s->svm_cid);
+         return AWS_OP_SUCCESS;

@@ -24,20 +24,21 @@
 #include <utility>
 
 #include "core/interface/http_types.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
+using google::cmrt::sdk::public_key_service::v1::PublicKey;
 using google::scp::core::BytesBuffer;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::HttpHeaders;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::Uri;
 using google::scp::core::errors::
     SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED;
 using google::scp::core::errors::
     SC_PUBLIC_KEY_CLIENT_PROVIDER_PUBLIC_KEYS_FETCH_FAILED;
-using google::cmrt::sdk::public_key_service::v1::PublicKey;
+using google::scp::core::test::ResultIs;
 using std::get_time;
 using std::istringstream;
 using std::mktime;
@@ -65,7 +66,7 @@ TEST(PublicKeyClientUtilsTest, ParseExpiredTimeFromHeadersSuccess) {
   uint64_t expired_time;
   auto result =
       PublicKeyClientUtils::ParseExpiredTimeFromHeaders(headers, expired_time);
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ(expired_time, kExpectedExpiredTimeSecs);
 }
 
@@ -76,9 +77,9 @@ TEST(PublicKeyClientUtilsTest, HeadersMissDate) {
   uint64_t expired_time;
   auto result =
       PublicKeyClientUtils::ParseExpiredTimeFromHeaders(headers, expired_time);
-  EXPECT_EQ(result,
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED)));
 }
 
 TEST(PublicKeyClientUtilsTest, HeadersMissCacheControl) {
@@ -88,9 +89,9 @@ TEST(PublicKeyClientUtilsTest, HeadersMissCacheControl) {
   uint64_t expired_time;
   auto result =
       PublicKeyClientUtils::ParseExpiredTimeFromHeaders(headers, expired_time);
-  EXPECT_EQ(result,
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED)));
 }
 
 TEST(PublicKeyClientUtilsTest, HeadersWithBadDateStr) {
@@ -101,9 +102,9 @@ TEST(PublicKeyClientUtilsTest, HeadersWithBadDateStr) {
   uint64_t expired_time;
   auto result =
       PublicKeyClientUtils::ParseExpiredTimeFromHeaders(headers, expired_time);
-  EXPECT_EQ(result,
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED)));
 }
 
 TEST(PublicKeyClientUtilsTest, HeadersWithBadCacheControlStr) {
@@ -114,9 +115,9 @@ TEST(PublicKeyClientUtilsTest, HeadersWithBadCacheControlStr) {
   uint64_t expired_time;
   auto result =
       PublicKeyClientUtils::ParseExpiredTimeFromHeaders(headers, expired_time);
-  EXPECT_EQ(result,
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_EXPIRED_TIME_FETCH_FAILED)));
 }
 
 TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodySuccess) {
@@ -129,7 +130,7 @@ TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodySuccess) {
   auto result =
       PublicKeyClientUtils::ParsePublicKeysFromBody(bytes, public_keys);
 
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ(public_keys.size(), 2);
   EXPECT_EQ(public_keys[0].key_id(), "1234");
   EXPECT_EQ(public_keys[0].public_key(), "abcdefg");
@@ -147,9 +148,9 @@ TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoKeys) {
   auto result =
       PublicKeyClientUtils::ParsePublicKeysFromBody(bytes, public_keys);
 
-  EXPECT_EQ(result,
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_PUBLIC_KEYS_FETCH_FAILED));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_PUBLIC_KEYS_FETCH_FAILED)));
 }
 
 TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoId) {
@@ -162,9 +163,9 @@ TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoId) {
   auto result =
       PublicKeyClientUtils::ParsePublicKeysFromBody(bytes, public_keys);
 
-  EXPECT_EQ(result,
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_PUBLIC_KEYS_FETCH_FAILED));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_PUBLIC_KEYS_FETCH_FAILED)));
 }
 
 TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoKey) {
@@ -177,9 +178,9 @@ TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoKey) {
   auto result =
       PublicKeyClientUtils::ParsePublicKeysFromBody(bytes, public_keys);
 
-  EXPECT_EQ(result,
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_PUBLIC_KEYS_FETCH_FAILED));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_PUBLIC_KEYS_FETCH_FAILED)));
 }
 
 }  // namespace google::scp::cpio::client_providers::test

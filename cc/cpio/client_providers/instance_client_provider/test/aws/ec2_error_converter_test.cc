@@ -18,6 +18,7 @@
 
 #include "cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
 #include "cpio/common/src/aws/error_codes.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using Aws::EC2::EC2Errors;
 using google::scp::core::FailureExecutionResult;
@@ -27,48 +28,51 @@ using google::scp::core::errors::SC_AWS_INVALID_REQUEST;
 using google::scp::core::errors::SC_AWS_REQUEST_LIMIT_REACHED;
 using google::scp::core::errors::SC_AWS_SERVICE_UNAVAILABLE;
 using google::scp::core::errors::SC_AWS_VALIDATION_FAILED;
+using google::scp::core::test::ResultIs;
 
 namespace google::scp::cpio::client_providers::test {
 TEST(EC2ErrorConverter, SucceededToConvertHandledEC2Errors) {
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(EC2Errors::VALIDATION, "error"),
-            FailureExecutionResult(SC_AWS_VALIDATION_FAILED));
-  EXPECT_EQ(
+  EXPECT_THAT(
+      EC2ErrorConverter::ConvertEC2Error(EC2Errors::VALIDATION, "error"),
+      ResultIs(FailureExecutionResult(SC_AWS_VALIDATION_FAILED)));
+  EXPECT_THAT(
       EC2ErrorConverter::ConvertEC2Error(EC2Errors::ACCESS_DENIED, "error"),
-      FailureExecutionResult(SC_AWS_INVALID_CREDENTIALS));
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(
-                EC2Errors::INVALID_PARAMETER_COMBINATION, "error"),
-            FailureExecutionResult(SC_AWS_INVALID_REQUEST));
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(
-                EC2Errors::INVALID_QUERY_PARAMETER, "error"),
-            FailureExecutionResult(SC_AWS_INVALID_REQUEST));
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(
-                EC2Errors::INVALID_PARAMETER_VALUE, "error"),
-            FailureExecutionResult(SC_AWS_INVALID_REQUEST));
-  EXPECT_EQ(
+      ResultIs(FailureExecutionResult(SC_AWS_INVALID_CREDENTIALS)));
+  EXPECT_THAT(EC2ErrorConverter::ConvertEC2Error(
+                  EC2Errors::INVALID_PARAMETER_COMBINATION, "error"),
+              ResultIs(FailureExecutionResult(SC_AWS_INVALID_REQUEST)));
+  EXPECT_THAT(EC2ErrorConverter::ConvertEC2Error(
+                  EC2Errors::INVALID_QUERY_PARAMETER, "error"),
+              ResultIs(FailureExecutionResult(SC_AWS_INVALID_REQUEST)));
+  EXPECT_THAT(EC2ErrorConverter::ConvertEC2Error(
+                  EC2Errors::INVALID_PARAMETER_VALUE, "error"),
+              ResultIs(FailureExecutionResult(SC_AWS_INVALID_REQUEST)));
+  EXPECT_THAT(
       EC2ErrorConverter::ConvertEC2Error(EC2Errors::INTERNAL_FAILURE, "error"),
-      FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR));
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(EC2Errors::SERVICE_UNAVAILABLE,
-                                               "error"),
-            FailureExecutionResult(SC_AWS_SERVICE_UNAVAILABLE));
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(EC2Errors::NETWORK_CONNECTION,
-                                               "error"),
-            FailureExecutionResult(SC_AWS_SERVICE_UNAVAILABLE));
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(EC2Errors::THROTTLING, "error"),
-            FailureExecutionResult(SC_AWS_REQUEST_LIMIT_REACHED));
-  EXPECT_EQ(
+      ResultIs(FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR)));
+  EXPECT_THAT(EC2ErrorConverter::ConvertEC2Error(EC2Errors::SERVICE_UNAVAILABLE,
+                                                 "error"),
+              ResultIs(FailureExecutionResult(SC_AWS_SERVICE_UNAVAILABLE)));
+  EXPECT_THAT(EC2ErrorConverter::ConvertEC2Error(EC2Errors::NETWORK_CONNECTION,
+                                                 "error"),
+              ResultIs(FailureExecutionResult(SC_AWS_SERVICE_UNAVAILABLE)));
+  EXPECT_THAT(
+      EC2ErrorConverter::ConvertEC2Error(EC2Errors::THROTTLING, "error"),
+      ResultIs(FailureExecutionResult(SC_AWS_REQUEST_LIMIT_REACHED)));
+  EXPECT_THAT(
       EC2ErrorConverter::ConvertEC2Error(EC2Errors::INTERNAL_FAILURE, "error"),
-      FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR));
+      ResultIs(FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR)));
 }
 
 TEST(EC2ErrorConverter, SucceededToConvertNonHandledEC2Errors) {
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(
-                EC2Errors::INVALID_GROUP_ID__MALFORMED, "error"),
-            FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR));
-  EXPECT_EQ(
+  EXPECT_THAT(EC2ErrorConverter::ConvertEC2Error(
+                  EC2Errors::INVALID_GROUP_ID__MALFORMED, "error"),
+              ResultIs(FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR)));
+  EXPECT_THAT(
       EC2ErrorConverter::ConvertEC2Error(EC2Errors::DRY_RUN_OPERATION, "error"),
-      FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR));
-  EXPECT_EQ(EC2ErrorConverter::ConvertEC2Error(
-                EC2Errors::OPERATION_NOT_PERMITTED, "error"),
-            FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR));
+      ResultIs(FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR)));
+  EXPECT_THAT(EC2ErrorConverter::ConvertEC2Error(
+                  EC2Errors::OPERATION_NOT_PERMITTED, "error"),
+              ResultIs(FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR)));
 }
 }  // namespace google::scp::cpio::client_providers::test

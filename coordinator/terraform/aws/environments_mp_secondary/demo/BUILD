@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 pkg_filegroup(
     name = "mp_secondary_coordinator_demo",
     srcs = [
+        "//coordinator/terraform/aws/environments_mp_secondary/demo/adtechmanagement_application:adtechmanagement_demo",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_demo",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_link",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_outputs_link",
@@ -27,6 +28,10 @@ pkg_filegroup(
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_base:distributedpbs_base_link",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_base:distributedpbs_base_outputs_link",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_base:distributedpbs_base_variables_link",
+        "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_prober:distributedpbs_prober_demo",
+        "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_prober:distributedpbs_prober_link",
+        "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_prober:distributedpbs_prober_outputs_link",
+        "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_prober:distributedpbs_prober_variables_link",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/domainrecords:domain_records_demo_files",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/domainrecords:domain_records_link",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/domainrecords:domain_records_outputs_link",

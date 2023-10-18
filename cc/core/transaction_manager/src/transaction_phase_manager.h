@@ -30,6 +30,28 @@ class TransactionPhaseManager
       transaction_manager::TransactionPhase current_phase,
       ExecutionResult current_phase_result) noexcept override;
 
+  /**
+   * @brief Helper function to determine if transaction can be moved to Abort
+   * phase from the current phase
+   *
+   * @param phase
+   * @return true
+   * @return false
+   */
+  static bool CanProceedToAbortAtPhase(
+      transaction_manager::TransactionPhase phase);
+
+  /**
+   * @brief Helper function to determine if transaction can be moved to End
+   * phase from the current phase
+   *
+   * @param phase
+   * @return true
+   * @return false
+   */
+  static bool CanProceedToEndAtPhase(
+      transaction_manager::TransactionPhase phase);
+
  private:
   transaction_manager::TransactionPhase ProceedToNextPhaseInternal(
       transaction_manager::TransactionPhase current_phase,

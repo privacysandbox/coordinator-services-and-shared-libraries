@@ -47,6 +47,18 @@ TEST(ERRORS, ErrorMessageReturn) {
   EXPECT_EQ(error_message, "Component error message test");
 }
 
+TEST(ERRORS, ErrorMessageSuccessErrorCode) {
+  EXPECT_STREQ("Success", GetErrorMessage(SC_OK));
+}
+
+TEST(ERRORS, ErrorMessageUnknownErrorCode) {
+  EXPECT_STREQ("Unknown Error", GetErrorMessage(SC_UNKNOWN));
+}
+
+TEST(ERRORS, ErrorMessageUndefinedErrorCode) {
+  EXPECT_STREQ("InvalidErrorCode", GetErrorMessage(UINT64_MAX));
+}
+
 TEST(ERRORS, MapErrorCodePublic) {
   REGISTER_COMPONENT_CODE(PUBLIC_COMPONENT_NAME, 0x7EFF)
 

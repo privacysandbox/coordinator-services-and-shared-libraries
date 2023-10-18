@@ -19,7 +19,9 @@
 #include <map>
 #include <memory>
 
+#include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/interface/metric_client/type_def.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
@@ -31,6 +33,6 @@ class MetricClientUtils {
 
   static core::ExecutionResult ValidateRequest(
       const cmrt::sdk::metric_service::v1::PutMetricsRequest& request,
-      const std::shared_ptr<MetricClientOptions>& options);
+      const std::shared_ptr<MetricBatchingOptions>& options);
 };
 }  // namespace google::scp::cpio::client_providers

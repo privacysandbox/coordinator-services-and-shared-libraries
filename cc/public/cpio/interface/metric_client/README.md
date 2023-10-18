@@ -1,6 +1,6 @@
 # MetricClient
 
-Responsible for recording custom metrics to cloud.  
+Responsible for recording custom metrics to cloud.
 Batching recording is supported. Set the time duration carefully based on the system's QPS and how much quota you have in cloud.
 
 # Build

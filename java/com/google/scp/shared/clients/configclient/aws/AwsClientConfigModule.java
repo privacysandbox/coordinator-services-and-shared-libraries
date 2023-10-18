@@ -26,18 +26,11 @@ import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
-import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.time.Duration;
-import org.apache.hc.client5.http.HttpRequestRetryStrategy;
-import org.apache.hc.core5.http.HttpRequest;
-import org.apache.hc.core5.http.HttpResponse;
-import org.apache.hc.core5.http.protocol.HttpContext;
-import org.apache.hc.core5.util.TimeValue;
-import org.apache.http.client.ServiceUnavailableRetryStrategy;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -57,58 +50,6 @@ public class AwsClientConfigModule extends AbstractModule {
   public static final Duration CLIENT_MAX_BACKOFF_TIME = Duration.ofSeconds(30);
   // The base delay for exponential backoff retry policy.
   public static final Duration CLIENT_BASE_DELAY = Duration.ofSeconds(2);
-  public static final int HTTP_CLIENT_MAX_RETRY_COUNT = 5;
-
-  public static final ServiceUnavailableRetryStrategy HTTP_CLIENT_RETRY_STRATEGY =
-      new ServiceUnavailableRetryStrategy() {
-        @Override
-        public boolean retryRequest(
-            org.apache.http.HttpResponse response,
-            int executionCount,
-            org.apache.http.protocol.HttpContext context) {
-          int statusCode = response.getStatusLine().getStatusCode();
-          // Only retry on 5xx status codes.
-          if (statusCode < 500 || statusCode > 599) {
-            return false;
-          }
-          return executionCount < HTTP_CLIENT_MAX_RETRY_COUNT;
-        }
-
-        @Override
-        public long getRetryInterval() {
-          // Retries after 2000 milliseconds.
-          return 2000;
-        }
-      };
-
-  // TODO(b/240352063)
-  public static final HttpRequestRetryStrategy HTTP_CLIENT_5_RETRY_STRATEGY =
-      new HttpRequestRetryStrategy() {
-
-        @Override
-        public boolean retryRequest(
-            HttpRequest httpRequest, IOException e, int execCount, HttpContext httpContext) {
-          // Do not retry if there is IOException
-          return false;
-        }
-
-        @Override
-        public boolean retryRequest(
-            HttpResponse httpResponse, int execCount, HttpContext httpContext) {
-          int statusCode = httpResponse.getCode();
-          // Only retry on 5xx status codes.
-          if (statusCode < 500 || statusCode > 599) {
-            return false;
-          }
-          return execCount < HTTP_CLIENT_MAX_RETRY_COUNT;
-        }
-
-        @Override
-        public TimeValue getRetryInterval(
-            HttpResponse httpResponse, int execCount, HttpContext httpContext) {
-          return TimeValue.ofMilliseconds(2000);
-        }
-      };
 
   /**
    * Provides a {@link RetryPolicy} object for AWS service clients.

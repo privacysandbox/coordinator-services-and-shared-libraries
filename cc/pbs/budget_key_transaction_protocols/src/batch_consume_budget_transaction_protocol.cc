@@ -110,7 +110,7 @@ ExecutionResult BatchConsumeBudgetTransactionProtocol::Prepare(
               move(load_timeframes_request)),
           bind(&BatchConsumeBudgetTransactionProtocol::OnPrepareBudgetKeyLoaded,
                this, prepare_batch_consume_budget_context, _1),
-          prepare_batch_consume_budget_context.activity_id);
+          prepare_batch_consume_budget_context);
 
   return budget_key_timeframe_manager_->Load(load_budget_key_timeframe_context);
 }
@@ -167,9 +167,9 @@ void BatchConsumeBudgetTransactionProtocol::OnPrepareBudgetKeyLoaded(
               prepare_batch_consume_budget_context);
           !result.Successful()) {
         // Log and continue
-        ERROR_CONTEXT(kTransactionProtocol,
-                      prepare_batch_consume_budget_context, result,
-                      "Cannot populate failed budget indices in response");
+        SCP_ERROR_CONTEXT(kTransactionProtocol,
+                          prepare_batch_consume_budget_context, result,
+                          "Cannot populate failed budget indices in response");
       }
       prepare_batch_consume_budget_context.Finish();
       return;
@@ -220,7 +220,7 @@ ExecutionResult BatchConsumeBudgetTransactionProtocol::Commit(
               move(load_timeframes_request)),
           bind(&BatchConsumeBudgetTransactionProtocol::OnCommitBudgetKeyLoaded,
                this, commit_batch_consume_budget_context, _1),
-          commit_batch_consume_budget_context.activity_id);
+          commit_batch_consume_budget_context);
 
   return budget_key_timeframe_manager_->Load(load_budget_key_timeframe_context);
 }
@@ -306,9 +306,9 @@ void BatchConsumeBudgetTransactionProtocol::OnCommitBudgetKeyLoaded(
               commit_batch_consume_budget_context);
           !result.Successful()) {
         // Log and continue
-        ERROR_CONTEXT(kTransactionProtocol, commit_batch_consume_budget_context,
-                      result,
-                      "Cannot populate failed budget indices in response");
+        SCP_ERROR_CONTEXT(kTransactionProtocol,
+                          commit_batch_consume_budget_context, result,
+                          "Cannot populate failed budget indices in response");
       }
       commit_batch_consume_budget_context.Finish();
       return;
@@ -322,6 +322,8 @@ void BatchConsumeBudgetTransactionProtocol::OnCommitBudgetKeyLoaded(
       make_shared<UpdateBudgetKeyTimeframeRequest>();
   update_budget_key_timeframe_context.parent_activity_id =
       commit_batch_consume_budget_context.activity_id;
+  update_budget_key_timeframe_context.correlation_id =
+      commit_batch_consume_budget_context.correlation_id;
 
   for (unsigned int i = 0; i < budget_key_timeframes.size(); i++) {
     update_budget_key_timeframe_context.request->timeframes_to_update
@@ -398,7 +400,7 @@ ExecutionResult BatchConsumeBudgetTransactionProtocol::Notify(
           make_shared<LoadBudgetKeyTimeframeRequest>(move(request)),
           bind(&BatchConsumeBudgetTransactionProtocol::OnNotifyBudgetKeyLoaded,
                this, notify_batch_consume_budget_context, _1),
-          notify_batch_consume_budget_context.activity_id);
+          notify_batch_consume_budget_context);
 
   return budget_key_timeframe_manager_->Load(load_budget_key_timeframe_context);
 }
@@ -454,6 +456,8 @@ void BatchConsumeBudgetTransactionProtocol::OnNotifyBudgetKeyLoaded(
       update_budget_key_timeframe_context;
   update_budget_key_timeframe_context.activity_id =
       notify_batch_consume_budget_context.activity_id;
+  update_budget_key_timeframe_context.correlation_id =
+      notify_batch_consume_budget_context.correlation_id;
   update_budget_key_timeframe_context.request =
       make_shared<UpdateBudgetKeyTimeframeRequest>();
   update_budget_key_timeframe_context.request->timeframes_to_update =
@@ -561,6 +565,8 @@ void BatchConsumeBudgetTransactionProtocol::OnAbortBudgetKeyLoaded(
       update_budget_key_timeframe_context;
   update_budget_key_timeframe_context.parent_activity_id =
       load_budget_key_timeframe_context.activity_id;
+  update_budget_key_timeframe_context.correlation_id =
+      load_budget_key_timeframe_context.correlation_id;
   update_budget_key_timeframe_context.request =
       make_shared<UpdateBudgetKeyTimeframeRequest>();
   update_budget_key_timeframe_context.request->timeframes_to_update =

@@ -50,8 +50,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Implementation for retrieving and decrypting keys from the aggregate service KMS. This version
- * uses the encryption key API which also supports multi-party keys.
+ * Implementation for retrieving and decrypting keys from the KMS. This version uses the encryption
+ * key API which also supports multi-party keys.
  */
 public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeyService {
 

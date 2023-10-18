@@ -22,7 +22,16 @@
 
 namespace google::scp::core::test {
 
-#define SC_TESTING_UTILS_TIMEOUT 21
+/**
+ * @brief Timeout exception object thrown by WaitUntil
+ *
+ */
+class TestTimeoutException : public std::exception {
+  const char* what() const noexcept override {
+    static constexpr char exception_name[] = "TestTimeoutException";
+    return exception_name;
+  }
+};
 
 /**
  * @brief Waits util the given condition is met.
@@ -32,4 +41,15 @@ namespace google::scp::core::test {
  */
 void WaitUntil(std::function<bool()> condition,
                DurationMs timeout = UNIT_TEST_TIME_OUT_MS);
+
+/**
+ * @brief Waits util the given condition is met. This is a no exception version
+ * of WaitUntil.
+ *
+ * @param condition when the condition is met, stop waiting.
+ * @param timeout the maximum time before stop waiting.
+ */
+ExecutionResult WaitUntilOrReturn(
+    std::function<bool()> condition,
+    DurationMs timeout = UNIT_TEST_TIME_OUT_MS) noexcept;
 }  // namespace google::scp::core::test

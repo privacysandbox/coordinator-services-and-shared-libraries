@@ -71,4 +71,39 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface GetDataKeyBaseUrlOverride {}
+
+  /** Key storage service cloud function url */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KeyStorageServiceCloudfunctionUrl {}
+
+  /** Uri of KMS key */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KmsKeyUri {}
+
+  /** Uri of KMS key for peer coordinator */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface PeerCoordinatorKmsKeyUri {}
+
+  /** Service account of peer coordinator */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface PeerCoordinatorServiceAccount {}
+
+  /** Service account of peer coordinator */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface PeerCoordinatorWipProvider {}
+
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KeyIdTypeName {}
 }

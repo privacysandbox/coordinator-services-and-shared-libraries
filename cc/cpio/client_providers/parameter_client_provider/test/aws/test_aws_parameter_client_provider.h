@@ -24,35 +24,26 @@
 
 #include "cpio/client_providers/interface/parameter_client_provider_interface.h"
 #include "cpio/client_providers/parameter_client_provider/src/aws/aws_parameter_client_provider.h"
+#include "public/cpio/test/parameter_client/test_aws_parameter_client_options.h"
 
 namespace google::scp::cpio::client_providers {
-/// ParameterClientOptions for testing on AWS.
-struct TestAwsParameterClientOptions : public ParameterClientOptions {
-  std::shared_ptr<std::string> ssm_endpoint_override;
-};
-
 /*! @copydoc AwsParameterClientInterface
  */
 class TestAwsParameterClientProvider : public AwsParameterClientProvider {
  public:
   TestAwsParameterClientProvider(
-      const std::shared_ptr<TestAwsParameterClientOptions>&
-          parameter_client_options,
+      const std::shared_ptr<TestAwsParameterClientOptions>& test_options,
       const std::shared_ptr<InstanceClientProviderInterface>&
-          instance_client_provider)
-      : AwsParameterClientProvider(parameter_client_options,
-                                   instance_client_provider),
-        ssm_endpoint_override_(
-            parameter_client_options &&
-                    parameter_client_options->ssm_endpoint_override
-                ? parameter_client_options->ssm_endpoint_override
-                : std::make_shared<std::string>("")) {}
+          instance_client_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor)
+      : AwsParameterClientProvider(test_options, instance_client_provider,
+                                   io_async_executor),
+        test_options_(test_options) {}
 
  protected:
-  core::ExecutionResult CreateClientConfiguration(
-      std::shared_ptr<Aws::Client::ClientConfiguration>&
-          client_parameter) noexcept override;
+  std::shared_ptr<Aws::Client::ClientConfiguration> CreateClientConfiguration(
+      const std::string& region) noexcept override;
 
-  std::shared_ptr<std::string> ssm_endpoint_override_;
+  std::shared_ptr<TestAwsParameterClientOptions> test_options_;
 };
 }  // namespace google::scp::cpio::client_providers

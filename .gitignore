@@ -20,3 +20,15 @@ bazel-*
 /target
 /bin
 /tools/opensource/license_headers/addlicenses_output.txt
+
+# Ignore node modules
+/node_modules
+typescript/node_modules
+
+
+#Ignore generated cache from depedency and licenses check
+/tools/opensource/__pycache__/
+/tools/opensource/deps.txt
+
+#Ignore release notes file
+release_diff_*.txt

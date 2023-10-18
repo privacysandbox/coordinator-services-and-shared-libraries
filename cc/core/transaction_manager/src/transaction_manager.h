@@ -27,12 +27,14 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/journal_service_interface.h"
+#include "core/interface/partition_types.h"
 #include "core/interface/remote_transaction_manager_interface.h"
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "core/interface/transaction_manager_interface.h"
 #include "core/transaction_manager/interface/transaction_engine_interface.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cpio/client_providers/metric_client_provider/interface/aggregate_metric_interface.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::core {
 /*! @copydoc TransactionManagerInterface
@@ -48,9 +50,9 @@ class TransactionManager : public TransactionManagerInterface {
       std::shared_ptr<RemoteTransactionManagerInterface>&
           remote_transaction_manager,
       size_t max_concurrent_transactions,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
-      std::shared_ptr<ConfigProviderInterface> config_provider);
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<ConfigProviderInterface> config_provider,
+      const PartitionId& partition_id = kGlobalPartitionId);
 
   ExecutionResult Init() noexcept override;
 
@@ -72,7 +74,7 @@ class TransactionManager : public TransactionManagerInterface {
       AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>&
           get_transaction_status_context) noexcept override;
 
-  ExecutionResult GetStatus(
+  ExecutionResult GetTransactionManagerStatus(
       const GetTransactionManagerStatusRequest& request,
       GetTransactionManagerStatusResponse& response) noexcept override;
 
@@ -86,8 +88,7 @@ class TransactionManager : public TransactionManagerInterface {
    * @return ExecutionResult
    */
   virtual ExecutionResult RegisterAggregateMetric(
-      std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metrics_instance,
+      std::shared_ptr<cpio::AggregateMetricInterface>& metrics_instance,
       const std::string& name) noexcept;
 
   TransactionManager(
@@ -95,16 +96,20 @@ class TransactionManager : public TransactionManagerInterface {
       std::shared_ptr<transaction_manager::TransactionEngineInterface>
           transaction_engine,
       size_t max_concurrent_transactions,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
-      std::shared_ptr<ConfigProviderInterface> config_provider)
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<ConfigProviderInterface> config_provider,
+      const PartitionId& partition_id = kGlobalPartitionId)
       : max_concurrent_transactions_(max_concurrent_transactions),
         async_executor_(async_executor),
         transaction_engine_(transaction_engine),
         active_transactions_count_(0),
         started_(false),
         metric_client_(metric_client),
-        config_provider_(config_provider) {}
+        config_provider_(config_provider),
+        partition_id_(partition_id),
+        activity_id_(partition_id),  // Use partition ID as the activity ID for
+                                     // the lifetime of this object
+        aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs) {}
 
   /// Max concurrent transactions count.
   const size_t max_concurrent_transactions_;
@@ -126,14 +131,22 @@ class TransactionManager : public TransactionManagerInterface {
   std::atomic<bool> started_;
 
   /// Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-      metric_client_;
+  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
   /// The AggregateMetric instance for number of active transactions.
-  std::shared_ptr<cpio::client_providers::AggregateMetricInterface>
-      active_transactions_metric_;
+  std::shared_ptr<cpio::AggregateMetricInterface> active_transactions_metric_;
 
   /// Configurations for Transaction Manager are obtained from this.
   std::shared_ptr<ConfigProviderInterface> config_provider_;
+
+  /// Id of the encapsulating partition (if any). Defaults to a global
+  /// partition.
+  core::common::Uuid partition_id_;
+
+  /// Activity Id of the background activities
+  core::common::Uuid activity_id_;
+
+  /// The time interval for metrics aggregation.
+  TimeDuration aggregated_metric_interval_ms_;
 };
 }  // namespace google::scp::core

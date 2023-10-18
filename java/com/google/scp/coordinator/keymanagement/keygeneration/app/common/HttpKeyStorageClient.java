@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.keygeneration.app.common;
 import static com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.GetDataKeyBaseUrlOverride;
 import static com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
 
+import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -53,7 +54,8 @@ import org.slf4j.LoggerFactory;
  */
 public final class HttpKeyStorageClient implements KeyStorageClient {
 
-  private static final int REQUEST_TIMEOUT_DURATION = Duration.ofMinutes(1).toMillisPart();
+  private static final int REQUEST_TIMEOUT_DURATION =
+      Ints.checkedCast(Duration.ofMinutes(1).toMillis());
   private static final RequestConfig REQUEST_CONFIG =
       RequestConfig.custom()
           // Timeout for requesting a connection from internal connection manager

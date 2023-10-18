@@ -18,8 +18,10 @@
 #define SCP_CPIO_INTERFACE_TYPE_DEFS_H_
 
 #include <functional>
+#include <memory>
 #include <string>
 
+#include "core/interface/async_executor_interface.h"
 #include "public/core/interface/execution_result.h"
 
 namespace google::scp::cpio {
@@ -39,12 +41,33 @@ enum class LogOption {
   kSysLog = 3,
 };
 
+/// Option for whether to initialize cloud in Cpio. Customers can configure it
+/// in case they need to do initialization and shutdown in their side. In AWS,
+/// Cpio will call Aws::InitAPI and Aws::ShutdownAPI. In GCP, no init or
+/// shutdown are needed.
+enum class CloudInitOption {
+  /// Doesn't initialize cloud in CPIO.
+  kNoInitInCpio = 1,
+  /// Initializes cloud in CPIO.
+  kInitInCpio = 2,
+};
+
 /// Global options for CPIO.
 struct CpioOptions {
   virtual ~CpioOptions() = default;
 
   /// Default is kNoLog.
   LogOption log_option = LogOption::kNoLog;
+
+  /// Default is kInitInCpio.
+  CloudInitOption cloud_init_option = CloudInitOption::kInitInCpio;
+
+  /// Optional CPU thread pool. If not set, an internal thread pool will be
+  /// used.
+  std::shared_ptr<core::AsyncExecutorInterface> cpu_async_executor;
+
+  /// Optional IO thread pool. If not set, an internal thread pool will be used.
+  std::shared_ptr<core::AsyncExecutorInterface> io_async_executor;
 };
 
 template <typename TResponse>

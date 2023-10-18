@@ -28,6 +28,7 @@ import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
@@ -42,13 +43,11 @@ import com.google.scp.shared.util.KeySplitUtil;
 import com.google.scp.shared.util.PublicKeyConversionUtil;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,19 +57,15 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
-  /**
-   * Amount of time a key must be valid for to not be refreshed. Keys that expire before (now +
-   * keyRefreshWindow) should be replaced with a new key.
-   */
-  private static final Duration KEY_REFRESH_WINDOW = Duration.ofDays(1);
-
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateSplitKeyTaskBase.class);
+  private static final int KEY_ID_CONFLICT_MAX_RETRY = 5;
 
   protected final Aead keyEncryptionKeyAead;
   protected final String keyEncryptionKeyUri;
   protected final Optional<PublicKeySign> signatureKey;
   protected final KeyDb keyDb;
   protected final KeyStorageClient keyStorageClient;
+  protected final KeyIdFactory keyIdFactory;
 
   static {
     try {
@@ -85,12 +80,14 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       String keyEncryptionKeyUri,
       Optional<PublicKeySign> signatureKey,
       KeyDb keyDb,
-      KeyStorageClient keyStorageClient) {
+      KeyStorageClient keyStorageClient,
+      KeyIdFactory keyIdFactory) {
     this.keyEncryptionKeyAead = keyEncryptionKeyAead;
     this.keyEncryptionKeyUri = keyEncryptionKeyUri;
     this.signatureKey = signatureKey;
     this.keyDb = keyDb;
     this.keyStorageClient = keyStorageClient;
+    this.keyIdFactory = keyIdFactory;
   }
 
   /**
@@ -130,7 +127,48 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       return;
     }
 
-    createSplitKey(numKeysToCreate, validityInDays, ttlInDays);
+    createSplitKey(numKeysToCreate, validityInDays, ttlInDays, Instant.now());
+  }
+
+  public void create(int numDesiredKeys, int validityInDays, int ttlInDays)
+      throws ServiceException {
+    // Anchor one consistent definition of now for the creation process.
+    Instant now = Instant.now();
+
+    // Check if there are enough number of active keys, if not, create any missing keys.
+    ImmutableList<EncryptionKey> activeKeys = keyDb.getActiveKeys(numDesiredKeys, now);
+    if (activeKeys.size() < numDesiredKeys) {
+      createSplitKey(numDesiredKeys - activeKeys.size(), validityInDays, ttlInDays, now);
+    }
+    activeKeys = keyDb.getActiveKeys(numDesiredKeys, now);
+    if (activeKeys.size() < numDesiredKeys) {
+      throw new AssertionError("Enough keys should have been created to meet the desired number.");
+    }
+
+    // Check if there will be enough number of active keys when each active key expires, if not,
+    // create any missing pending-active keys.
+    ImmutableList<Instant> expirations =
+        activeKeys.stream()
+            .map(EncryptionKey::getExpirationTime)
+            .map(Instant::ofEpochMilli)
+            .sorted()
+            .collect(toImmutableList());
+
+    for (Instant expiration : expirations) {
+      int actual = keyDb.getActiveKeys(numDesiredKeys, expiration).size();
+      if (actual < numDesiredKeys) {
+        createSplitKey(
+            numDesiredKeys - actual,
+            validityInDays,
+            ttlInDays,
+            expiration.minus(KEY_REFRESH_WINDOW));
+      }
+      actual = keyDb.getActiveKeys(numDesiredKeys, expiration).size();
+      if (actual < numDesiredKeys) {
+        throw new AssertionError(
+            "Enough pending-active keys should have been created to meet the desired number.");
+      }
+    }
   }
 
   /**
@@ -138,65 +176,101 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
    * and database persistence with signatures. Coordinator B encryption and key storage creation are
    * handled by abstract methods implemented in each cloud provider.
    *
+   * @param activation the instant when the key should be active for encryption.
    * @param dataKey Passed to encryptPeerCoordinatorSplit and sendKeySplitToPeerCoordinator as
    *     needed for each cloud provider.
    */
-  protected void createSplitKeyBase(
-      int count, int validityInDays, int ttlInDays, Optional<DataKey> dataKey)
+  protected final void createSplitKeyBase(
+      int count, int validityInDays, int ttlInDays, Instant activation, Optional<DataKey> dataKey)
+      throws ServiceException {
+    LOGGER.info(String.format("Trying to generate %d keys.", count));
+    for (int i = 0; i < count; i++) {
+      createSplitKeyBase(validityInDays, ttlInDays, activation, dataKey, 0);
+    }
+    LOGGER.info(
+        String.format("Successfully generated %s keys to be active on %s.", count, activation));
+  }
+
+  private void createSplitKeyBase(
+      int validityInDays,
+      int ttlInDays,
+      Instant activation,
+      Optional<DataKey> dataKey,
+      int keyIdConflictRetryCount)
       throws ServiceException {
     Instant creationTime = Instant.now();
+    EncryptionKey unsignedCoordinatorAKey;
+    EncryptionKey unsignedCoordinatorBKey;
+    String encryptedKeySplitB;
+    try {
+      var keyTemplate = KeyParams.getDefaultKeyTemplate();
+      KeysetHandle privateKeysetHandle = KeysetHandle.generateNew(keyTemplate);
+      KeysetHandle publicKeysetHandle = privateKeysetHandle.getPublicKeysetHandle();
 
-    for (int i = 0; i < count; i++) {
-      EncryptionKey unsignedCoordinatorAKey;
-      EncryptionKey unsignedCoordinatorBKey;
-      String encryptedKeySplitB;
-      try {
-        var keyTemplate = KeyParams.getDefaultKeyTemplate();
-        KeysetHandle privateKeysetHandle = KeysetHandle.generateNew(keyTemplate);
-        KeysetHandle publicKeysetHandle = privateKeysetHandle.getPublicKeysetHandle();
+      ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(privateKeysetHandle, 2);
+      EncryptionKey key =
+          buildEncryptionKey(
+              keyIdFactory.getNextKeyId(keyDb),
+              creationTime,
+              activation,
+              validityInDays,
+              ttlInDays,
+              publicKeysetHandle,
+              keyEncryptionKeyUri,
+              signatureKey);
+      unsignedCoordinatorAKey =
+          createCoordinatorAKey(keySplits.get(0), key, keyEncryptionKeyAead, keyEncryptionKeyUri);
+      unsignedCoordinatorBKey = createCoordinatorBKey(key);
 
-        ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(privateKeysetHandle, 2);
-
-        EncryptionKey key =
-            buildEncryptionKey(
-                creationTime,
-                validityInDays,
-                ttlInDays,
-                publicKeysetHandle,
-                keyEncryptionKeyUri,
-                signatureKey);
-        unsignedCoordinatorAKey =
-            createCoordinatorAKey(keySplits.get(0), key, keyEncryptionKeyAead, keyEncryptionKeyUri);
-        unsignedCoordinatorBKey = createCoordinatorBKey(key);
-
-        encryptedKeySplitB =
-            encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
-      } catch (GeneralSecurityException | IOException e) {
-        String msg = "Error generating keys.";
-        throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);
-      }
-
-      // Send Coordinator B its key split
-      EncryptionKey partyBResponse =
-          sendKeySplitToPeerCoordinator(unsignedCoordinatorBKey, encryptedKeySplitB, dataKey);
-
-      // Accumulate signatures and store to KeyDB
-      EncryptionKey signedCoordinatorAKey =
-          unsignedCoordinatorAKey.toBuilder()
-              // Need to clear KeySplitData before adding the combined KeySplitData list.
-              .clearKeySplitData()
-              .addAllKeySplitData(
-                  combineKeySplitData(
-                      partyBResponse.getKeySplitDataList(),
-                      unsignedCoordinatorAKey.getKeySplitDataList()))
-              .build();
-
-      // Note: We want to store the keys as they are generated and signed, so the call to keyDb is
-      // inside the loop.  If we run into an exception halfway through count, we want the
-      // already-generated keys to be stored.
-      keyDb.createKey(signedCoordinatorAKey);
+      encryptedKeySplitB =
+          encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
+    } catch (GeneralSecurityException | IOException e) {
+      String msg = "Error generating keys.";
+      throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);
     }
-    LOGGER.info(String.format("Successfully generated %s keys", count));
+
+    try {
+      // Reserve the key ID with a placeholder key that's not valid yet. Will be made valid at a
+      // later step once key-split is successfully delivered to coordinator B.
+      keyDb.createKey(
+          unsignedCoordinatorAKey.toBuilder()
+              // Setting activation_time to expiration_time such that the key is invalid for now.
+              .setActivationTime(unsignedCoordinatorAKey.getExpirationTime())
+              .build(),
+          false);
+    } catch (ServiceException e) {
+      if (e.getErrorCode().equals(Code.ALREADY_EXISTS)
+          && keyIdConflictRetryCount < KEY_ID_CONFLICT_MAX_RETRY) {
+        LOGGER.warn(
+            String.format(
+                "Failed to insert placeholder key split with keyId %s, retry count: %d, error "
+                    + "message: %s",
+                unsignedCoordinatorAKey.getKeyId(), keyIdConflictRetryCount, e.getErrorReason()));
+        createSplitKeyBase(
+            validityInDays, ttlInDays, activation, dataKey, keyIdConflictRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Failed to insert placeholder key due to database error");
+      throw e;
+    }
+
+    // Send Coordinator B valid key split
+    EncryptionKey partyBResponse =
+        sendKeySplitToPeerCoordinator(unsignedCoordinatorBKey, encryptedKeySplitB, dataKey);
+
+    // Accumulate signatures and store to KeyDB
+    EncryptionKey signedCoordinatorAKey =
+        unsignedCoordinatorAKey.toBuilder()
+            // Need to clear KeySplitData before adding the combined KeySplitData list.
+            .clearKeySplitData()
+            .addAllKeySplitData(
+                combineKeySplitData(
+                    partyBResponse.getKeySplitDataList(),
+                    unsignedCoordinatorAKey.getKeySplitDataList()))
+            .build();
+
+    // Note: We want to store the keys as they are generated and signed.
+    keyDb.createKey(signedCoordinatorAKey, true);
   }
 
   /**
@@ -229,16 +303,17 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
    * with a key split data containing Coordinator A's signature of the public key material.
    */
   private static EncryptionKey buildEncryptionKey(
+      String keyId,
       Instant creationTime,
+      Instant activation,
       int validityInDays,
       int ttlInDays,
       KeysetHandle publicKeysetHandle,
       String keyEncryptionKeyUri,
       Optional<PublicKeySign> signatureKey)
       throws ServiceException, IOException {
-    String keyId = UUID.randomUUID().toString();
-    Instant expiration = creationTime.plus(validityInDays, ChronoUnit.DAYS);
-    Instant ttlSec = creationTime.plus(ttlInDays, ChronoUnit.DAYS);
+    Instant expiration = activation.plus(validityInDays, ChronoUnit.DAYS);
+    Instant ttlSec = activation.plus(ttlInDays, ChronoUnit.DAYS);
 
     String publicKeyMaterial = PublicKeyConversionUtil.getPublicKey(publicKeysetHandle);
     EncryptionKey unsignedEncryptionKey =
@@ -248,6 +323,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             .setPublicKeyMaterial(publicKeyMaterial)
             .setStatus(EncryptionKeyStatus.ACTIVE)
             .setCreationTime(creationTime.toEpochMilli())
+            .setActivationTime(activation.toEpochMilli())
             .setExpirationTime(expiration.toEpochMilli())
             // TTL Time must be in seconds due to DynamoDB TTL requirements
             .setTtlTime(ttlSec.getEpochSecond())

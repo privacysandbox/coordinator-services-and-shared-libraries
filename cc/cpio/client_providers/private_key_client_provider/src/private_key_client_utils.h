@@ -23,7 +23,7 @@
 
 #include "core/interface/http_types.h"
 #include "cpio/client_providers/interface/kms_client_provider_interface.h"
-#include "cpio/client_providers/interface/private_key_fetching_client_provider_interface.h"
+#include "cpio/client_providers/interface/private_key_fetcher_provider_interface.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
@@ -36,23 +36,23 @@ class PrivateKeyClientUtils {
   /**
    * @brief Get the Kms Decrypt Request object.
    *
-   * @param response PrivateKeyFetchingResponse response object.
+   * @param encryption_key EncryptionKey object.
    * @param[out] kms_decrypt_request KmsDecryptRequest object.
    * @return core::ExecutionResult
    */
   static core::ExecutionResult GetKmsDecryptRequest(
-      const std::shared_ptr<PrivateKeyFetchingResponse>& response,
-      KmsDecryptRequest& kms_decrypt_request) noexcept;
+      const std::shared_ptr<EncryptionKey>& encryption_key,
+      cmrt::sdk::kms_service::v1::DecryptRequest& kms_decrypt_request) noexcept;
 
   /**
    * @brief Get the Private Key object with unencrypt information.
    *
-   * @param response PrivateKeyFetchingResponse response object.
+   * @param encryption_key EncryptionKey object.
    * @param[out] private_key PrivateKey object for private key split.
    * @return core::ExecutionResult
    */
   static core::ExecutionResult GetPrivateKeyInfo(
-      const std::shared_ptr<PrivateKeyFetchingResponse>& response,
+      const std::shared_ptr<EncryptionKey>& encryption_key,
       cmrt::sdk::private_key_service::v1::PrivateKey& private_key) noexcept;
 
   /**

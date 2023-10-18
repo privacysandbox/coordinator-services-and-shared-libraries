@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 cc_test(
     name = "lease_manager_test",
     size = "small",
@@ -26,11 +28,38 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/lease_manager/mock:core_lease_manager_mock",
         "//cc/core/lease_manager/src:core_lease_manager_lib",
+        "//cc/core/lease_manager/src/v2:core_lease_manager_v2_lib",
         "//cc/core/logger/interface:logger_interface_lib",
         "//cc/core/logger/mock:logger_mock",
         "//cc/core/logger/src:logger_lib",
         "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
         "//cc/core/test:core_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "lease_manager_v2_test",
+    size = "small",
+    srcs = [
+        "lease_liveness_enforcer_test.cc",
+        "lease_manager_v2_test.cc",
+        "lease_refresher_test.cc",
+    ],
+    copts = [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:interface_lib",
+        "//cc/core/lease_manager/mock:core_lease_manager_mock",
+        "//cc/core/lease_manager/src/v2:core_lease_manager_v2_lib",
+        "//cc/core/logger/interface:logger_interface_lib",
+        "//cc/core/logger/src:logger_lib",
+        "//cc/core/test:core_test_lib",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

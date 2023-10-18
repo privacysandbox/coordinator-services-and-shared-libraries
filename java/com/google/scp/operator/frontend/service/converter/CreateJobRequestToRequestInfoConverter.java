@@ -41,6 +41,7 @@ public final class CreateJobRequestToRequestInfoConverter
         .setOutputDataBucketName(createJobRequest.getOutputDataBucketName())
         .setOutputDataBlobPrefix(createJobRequest.getOutputDataBlobPrefix())
         .setPostbackUrl(createJobRequest.getPostbackUrl())
+        .setAccountIdentity(createJobRequest.getAccountIdentity())
         .putAllJobParameters(createJobRequest.getJobParametersMap())
         .build();
   }
@@ -56,6 +57,7 @@ public final class CreateJobRequestToRequestInfoConverter
         .setOutputDataBucketName(requestInfo.getOutputDataBucketName())
         .setOutputDataBlobPrefix(requestInfo.getOutputDataBlobPrefix())
         .setPostbackUrl(requestInfo.getPostbackUrl())
+        .setAccountIdentity(requestInfo.getAccountIdentity())
         .putAllJobParameters(ImmutableMap.copyOf(jobParameters))
         .build();
   }

@@ -21,6 +21,7 @@ import static com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotation
 
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.DisableActivationTime;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDbModule;
@@ -51,6 +52,9 @@ public final class AwsKeyServiceModule extends AbstractModule {
   /** Environment variable containing cache control maximum in seconds. */
   private static final String CACHE_CONTROL_MAXIMUM_ENV_VAR = "CACHE_CONTROL_MAXIMUM";
 
+  /** Environment variable disabling activationTime field in Encryption Key proto. */
+  private static final String DISABLE_ACTIVATION_TIME_VAR = "DISABLE_ACTIVATION_TIME";
+
   /** Environment variable containing endpoint override for DDB. Used for testing. */
   private static final String ENDPOINT_OVERRIDE_ENV_VAR = "KEYSTORE_ENDPOINT_OVERRIDE";
 
@@ -79,6 +83,15 @@ public final class AwsKeyServiceModule extends AbstractModule {
     return Long.valueOf(env.getOrDefault(CACHE_CONTROL_MAXIMUM_ENV_VAR, "604800"));
   }
 
+  /**
+   * Returns DISABLE_ACTIVATION_TIME_VAR as boolean from environment var.
+   * Default value is false.
+   */
+  private static Boolean getDisableActivationTime() {
+    Map<String, String> env = System.getenv();
+    return Boolean.valueOf(env.getOrDefault(DISABLE_ACTIVATION_TIME_VAR, "false"));
+  }
+
   @Override
   protected void configure() {
     bind(SdkHttpClient.class).toInstance(UrlConnectionHttpClient.builder().build());
@@ -95,5 +108,6 @@ public final class AwsKeyServiceModule extends AbstractModule {
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(getKeyLimit());
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(getCacheControlMaximum());
     bind(KeyDb.class).to(DynamoKeyDb.class);
+    bind(Boolean.class).annotatedWith(DisableActivationTime.class).toInstance(getDisableActivationTime());
   }
 }

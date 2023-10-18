@@ -16,50 +16,32 @@
 
 #pragma once
 
-#include <functional>
+#include <gmock/gmock.h>
+
 #include <memory>
 
-#include <google/protobuf/util/message_differencer.h>
-
 #include "cpio/client_providers/interface/parameter_client_provider_interface.h"
-#include "public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockParameterClientProvider : public ParameterClientProviderInterface {
  public:
-  core::ExecutionResult Init() noexcept override {
-    return core::SuccessExecutionResult();
+  MockParameterClientProvider() {
+    ON_CALL(*this, Init)
+        .WillByDefault(testing::Return(core::SuccessExecutionResult()));
+    ON_CALL(*this, Run)
+        .WillByDefault(testing::Return(core::SuccessExecutionResult()));
+    ON_CALL(*this, Stop)
+        .WillByDefault(testing::Return(core::SuccessExecutionResult()));
   }
 
-  core::ExecutionResult Run() noexcept override {
-    return core::SuccessExecutionResult();
-  }
+  MOCK_METHOD(core::ExecutionResult, Init, (), (override, noexcept));
+  MOCK_METHOD(core::ExecutionResult, Run, (), (override, noexcept));
+  MOCK_METHOD(core::ExecutionResult, Stop, (), (override, noexcept));
 
-  core::ExecutionResult Stop() noexcept override {
-    return core::SuccessExecutionResult();
-  }
-
-  cmrt::sdk::parameter_service::v1::GetParameterRequest
-      get_parameter_request_mock;
-  cmrt::sdk::parameter_service::v1::GetParameterResponse
-      get_parameter_response_mock;
-  core::ExecutionResult get_parameter_result_mock =
-      core::SuccessExecutionResult();
-
-  core::ExecutionResult GetParameter(
-      core::AsyncContext<
-          cmrt::sdk::parameter_service::v1::GetParameterRequest,
-          cmrt::sdk::parameter_service::v1::GetParameterResponse>&
-          context) noexcept override {
-    context.result = get_parameter_result_mock;
-    if (google::protobuf::util::MessageDifferencer::Equals(
-            get_parameter_request_mock, *context.request)) {
-      context.response = std::make_shared<
-          cmrt::sdk::parameter_service::v1::GetParameterResponse>(
-          get_parameter_response_mock);
-    }
-    context.Finish();
-    return core::SuccessExecutionResult();
-  }
+  MOCK_METHOD(core::ExecutionResult, GetParameter,
+              ((core::AsyncContext<
+                  cmrt::sdk::parameter_service::v1::GetParameterRequest,
+                  cmrt::sdk::parameter_service::v1::GetParameterResponse>&)),
+              (override, noexcept));
 };
 }  // namespace google::scp::cpio::client_providers::mock

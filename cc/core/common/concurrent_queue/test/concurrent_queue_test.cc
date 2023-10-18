@@ -23,9 +23,11 @@
 #include <vector>
 
 #include "core/test/scp_test_base.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::common::ConcurrentQueue;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
 
 using std::atomic;
@@ -49,8 +51,8 @@ TEST_F(ConcurrentQueueTests, ErrorOnMaxSize) {
   int i = 1;
   auto result = queue.TryEnqueue(i);
 
-  EXPECT_EQ(result,
-            FailureExecutionResult(errors::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE));
+  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                          errors::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE)));
 }
 
 TEST_F(ConcurrentQueueTests, ErrorOnNoElement) {
@@ -59,8 +61,8 @@ TEST_F(ConcurrentQueueTests, ErrorOnNoElement) {
   int i;
   auto result = queue.TryDequeue(i);
 
-  EXPECT_EQ(result,
-            FailureExecutionResult(errors::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE));
+  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                          errors::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE)));
 }
 
 TEST_F(ConcurrentQueueTests, MultiThreadedEnqueue) {

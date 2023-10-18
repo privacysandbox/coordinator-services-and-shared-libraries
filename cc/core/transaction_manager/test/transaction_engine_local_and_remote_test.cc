@@ -35,8 +35,9 @@
 #include "core/transaction_manager/mock/mock_transaction_engine.h"
 #include "core/transaction_manager/src/proto/transaction_engine.pb.h"
 #include "core/transaction_manager/src/transaction_phase_manager.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;
@@ -68,7 +69,7 @@ using google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLogType;
 using google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockMetricClient;
 using std::atomic;
 using std::function;
 using std::make_pair;
@@ -79,6 +80,7 @@ using std::static_pointer_cast;
 using std::string;
 using std::thread;
 using std::vector;
+using std::weak_ptr;
 using std::chrono::milliseconds;
 using std::this_thread::sleep_for;
 
@@ -112,7 +114,7 @@ void CreateLocalRemoteTransactionManagers(
           make_shared<MockTransactionCommandSerializer>();
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager_2 =
       make_shared<TransactionPhaseManager>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_remote_transaction_manager_2 =
       make_shared<MockRemoteTransactionManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager_2 =
@@ -134,31 +136,33 @@ void CreateLocalRemoteTransactionManagers(
   shared_ptr<TransactionEngineInterface> transaction_engine_2 =
       mock_transaction_engine_2;
 
-  mock_remote_transaction_manager_1->transaction_engine = transaction_engine_1;
-  mock_remote_transaction_manager_2->transaction_engine = transaction_engine_2;
+  mock_remote_transaction_manager_1->transaction_engine =
+      weak_ptr<TransactionEngineInterface>(transaction_engine_1);
+  mock_remote_transaction_manager_2->transaction_engine =
+      weak_ptr<TransactionEngineInterface>(transaction_engine_2);
 
   init_function = [async_executor_1, async_executor_2, transaction_engine_1,
                    transaction_engine_2]() {
-    EXPECT_EQ(async_executor_1->Init(), SuccessExecutionResult());
-    EXPECT_EQ(async_executor_2->Init(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_engine_1->Init(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_engine_2->Init(), SuccessExecutionResult());
+    EXPECT_SUCCESS(async_executor_1->Init());
+    EXPECT_SUCCESS(async_executor_2->Init());
+    EXPECT_SUCCESS(transaction_engine_1->Init());
+    EXPECT_SUCCESS(transaction_engine_2->Init());
   };
 
   run_function = [async_executor_1, async_executor_2, transaction_engine_1,
                   transaction_engine_2]() {
-    EXPECT_EQ(async_executor_1->Run(), SuccessExecutionResult());
-    EXPECT_EQ(async_executor_2->Run(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_engine_1->Run(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_engine_2->Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(async_executor_1->Run());
+    EXPECT_SUCCESS(async_executor_2->Run());
+    EXPECT_SUCCESS(transaction_engine_1->Run());
+    EXPECT_SUCCESS(transaction_engine_2->Run());
   };
 
   stop_function = [async_executor_1, async_executor_2, transaction_engine_1,
                    transaction_engine_2]() {
-    EXPECT_EQ(transaction_engine_1->Stop(), SuccessExecutionResult());
-    EXPECT_EQ(async_executor_1->Stop(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_engine_2->Stop(), SuccessExecutionResult());
-    EXPECT_EQ(async_executor_2->Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_engine_1->Stop());
+    EXPECT_SUCCESS(async_executor_1->Stop());
+    EXPECT_SUCCESS(transaction_engine_2->Stop());
+    EXPECT_SUCCESS(async_executor_2->Stop());
   };
 }
 
@@ -198,6 +202,7 @@ TEST(TransactionEngineLocalAndRemoteTest,
   init_function();
   run_function();
 
+  // Both transactions are remotely coordinated transactions
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
   transaction_context.request = make_shared<TransactionRequest>();
   transaction_context.request->is_coordinated_remotely = true;
@@ -215,13 +220,11 @@ TEST(TransactionEngineLocalAndRemoteTest,
                     transaction_remote);
 
   transaction_local->pending_callbacks++;
-  transaction_local->is_coordinated_remotely = true;
   auto pair_local = make_pair(transaction_id, transaction_local);
   mock_transaction_engine_1->GetActiveTransactionsMap().Insert(
       pair_local, transaction_local);
 
   transaction_remote->pending_callbacks++;
-  transaction_local->is_coordinated_remotely = true;
   auto pair_remote = make_pair(transaction_id, transaction_remote);
   mock_transaction_engine_2->GetActiveTransactionsMap().Insert(
       pair_remote, transaction_remote);
@@ -252,6 +255,12 @@ TEST(TransactionEngineLocalAndRemoteTest,
 
   transaction_local->expiration_time = 0;
   transaction_remote->expiration_time = 0;
+
+  // A remote transaction should be waiting for remote once it has done with
+  // phase execution. stop_function() on Transaction Engine ensures that all
+  // remote transactions are waiting for remote TM to issue commands to execute.
+  transaction_remote->is_waiting_for_remote = true;
+  transaction_local->is_waiting_for_remote = true;
 
   WaitUntil([&]() { return transaction_1_called && transaction_2_called; });
   stop_function();

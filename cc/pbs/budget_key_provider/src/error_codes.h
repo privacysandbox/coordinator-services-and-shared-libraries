@@ -29,4 +29,9 @@ DEFINE_ERROR_CODE(SC_BUDGET_KEY_PROVIDER_INVALID_OPERATION_TYPE,
                   SC_BUDGET_KEY_PROVIDER, 0x0002, "Invalid operation type.",
                   HttpStatusCode::BAD_REQUEST)
 
+DEFINE_ERROR_CODE(SC_BUDGET_KEY_PROVIDER_CANNOT_STOP_COMPLETELY,
+                  SC_BUDGET_KEY_PROVIDER, 0x0003,
+                  "Cannot be stopped completely.",
+                  HttpStatusCode::SERVICE_UNAVAILABLE)
+
 }  // namespace google::scp::core::errors

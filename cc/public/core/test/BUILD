@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_test(
@@ -32,9 +34,22 @@ cc_test(
     srcs = ["execution_result_test.cc"],
     deps = [
         "//cc:cc_base_include_dir",
+        "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/common/proto:core_common_proto_lib",
+        "//cc/core/logger/mock:logger_mock",
         "//cc/public/core/interface:execution_result",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "struct_matchers_test",
+    size = "small",
+    srcs = ["struct_matchers_test.cc"],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/public/core/test/interface:struct_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -16,10 +16,19 @@
 
 #include "pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
 
-#include <gtest/gtest.h>
+#include <gmock/gmock-matchers.h>
+#include <gtest/gtest-matchers.h>
+#include <gtest/gtest-message.h>
+#include <gtest/gtest-test-part.h>
+#include <gtest/gtest_pred_impl.h>
 
+#include <array>
+#include <initializer_list>
+#include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -28,9 +37,10 @@
 #include "absl/strings/str_join.h"
 #include "core/authorization_service/src/error_codes.h"
 #include "core/http2_client/src/aws/aws_v4_signer.h"
+#include "core/interface/type_def.h"
 #include "core/utils/src/base64.h"
 #include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AuthorizationMetadata;
 using google::scp::core::AuthorizedMetadata;
@@ -67,14 +77,13 @@ constexpr char kAccessKey[] = "access_key";
 constexpr char kSignature[] = "signature";
 constexpr char kAmzDate[] = "amz_date";
 constexpr char kSecurityToken[] = "security_token";
-constexpr char* kSignedHeaders[] = {"host", "x-amz-date"};
+constexpr std::array kSignedHeaders = {"host", "x-amz-date"};
 
 constexpr char kAuthorizationHeader[] = "Authorization";
 
 class AwsHttpRequestResponseAuthInterceptorTest : public testing::Test {
  protected:
-  AwsHttpRequestResponseAuthInterceptorTest()
-      : subject_(kRegion) {
+  AwsHttpRequestResponseAuthInterceptorTest() : subject_(kRegion) {
     token_json_ = json::parse(R"""({
         "access_key": "accesskey",
         "signature": "signature",
@@ -98,10 +107,9 @@ class AwsHttpRequestResponseAuthInterceptorTest : public testing::Test {
   HttpRequest http_request_;
 };
 
-TEST_F(AwsHttpRequestResponseAuthInterceptorTest, AddHeadersToRequest) {
-  EXPECT_THAT(
-      subject_.AddHeadersToRequest(authorization_metadata_, http_request_),
-      IsSuccessful());
+TEST_F(AwsHttpRequestResponseAuthInterceptorTest, PrepareRequest) {
+  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+              IsSuccessful());
 
   const auto& headers = *http_request_.headers;
 
@@ -116,14 +124,13 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest, AddHeadersToRequest) {
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
-       AddHeadersToRequestWithSecurityToken) {
+       PrepareRequestWithSecurityToken) {
   token_json_[kSecurityToken] = "securitytoken";
   ASSERT_THAT(Base64Encode(token_json_.dump(),
                            authorization_metadata_.authorization_token),
               IsSuccessful());
-  EXPECT_THAT(
-      subject_.AddHeadersToRequest(authorization_metadata_, http_request_),
-      IsSuccessful());
+  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+              IsSuccessful());
 
   const auto& headers = *http_request_.headers;
 
@@ -138,37 +145,35 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
-       AddHeadersToRequestFailsIfBadMetadata) {
+       PrepareRequestFailsIfBadMetadata) {
   AuthorizationMetadata bad_metadata;
-  EXPECT_THAT(subject_.AddHeadersToRequest(bad_metadata, http_request_),
+  EXPECT_THAT(subject_.PrepareRequest(bad_metadata, http_request_),
               ResultIs(core::FailureExecutionResult(
                   core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   bad_metadata.authorization_token = "some_token";
-  EXPECT_THAT(subject_.AddHeadersToRequest(bad_metadata, http_request_),
+  EXPECT_THAT(subject_.PrepareRequest(bad_metadata, http_request_),
               ResultIs(core::FailureExecutionResult(
                   core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
-       AddHeadersToRequestFailsIfBadJson) {
+       PrepareRequestFailsIfBadJson) {
   for (const auto& key : {kAccessKey, kSignature, kAmzDate}) {
     json incomplete_json = token_json_;
     incomplete_json.erase(key);
     EXPECT_THAT(Base64Encode(incomplete_json.dump(),
                              authorization_metadata_.authorization_token),
                 IsSuccessful());
-    EXPECT_THAT(
-        subject_.AddHeadersToRequest(authorization_metadata_, http_request_),
-        ResultIs(core::FailureExecutionResult(
-            core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+    EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+                ResultIs(core::FailureExecutionResult(
+                    core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
   }
 
   authorization_metadata_.authorization_token = "bad_json";
-  EXPECT_THAT(
-      subject_.AddHeadersToRequest(authorization_metadata_, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+              ResultIs(core::FailureExecutionResult(
+                  core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest, ObtainAuthorizedMetadata) {
@@ -177,9 +182,11 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest, ObtainAuthorizedMetadata) {
     })""");
   auto response_json_str = response_json.dump();
 
+  AuthorizationMetadata request_auth_metadata;
   HttpResponse http_response;
   http_response.body = core::BytesBuffer(response_json_str);
-  EXPECT_THAT(subject_.ObtainAuthorizedMetadataFromResponse(http_response),
+  EXPECT_THAT(subject_.ObtainAuthorizedMetadataFromResponse(
+                  request_auth_metadata, http_response),
               IsSuccessfulAndHolds(FieldsAre(Pointee(Eq("domain")))));
 }
 
@@ -188,9 +195,11 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
   json response_json = json::parse(R"""({})""");
   auto response_json_str = response_json.dump();
 
+  AuthorizationMetadata request_auth_metadata;
   HttpResponse http_response;
   http_response.body = core::BytesBuffer(response_json_str);
-  EXPECT_THAT(subject_.ObtainAuthorizedMetadataFromResponse(http_response),
+  EXPECT_THAT(subject_.ObtainAuthorizedMetadataFromResponse(
+                  request_auth_metadata, http_response),
               ResultIs(core::FailureExecutionResult(
                   core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }

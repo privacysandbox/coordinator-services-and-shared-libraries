@@ -182,6 +182,15 @@ variable "enable_public_key_signature" {
   type        = bool
 }
 
+variable "get_encryption_key_lambda_ps_client_shim_enabled" {
+  description = <<-EOT
+        If true, enables shim to ensure response is compatible with privacy sandbox 0.51.x
+        clients. Newer fields such as activationTime is filtered out from the response.
+        This temporary variable will be removed in the future.
+      EOT
+  type        = bool
+}
+
 ################################################################################
 # Shared Alarm Variables.
 ################################################################################

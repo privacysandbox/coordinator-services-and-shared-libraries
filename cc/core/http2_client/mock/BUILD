@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "http2_client_mock",
+    testonly = True,
     srcs = glob(
         [
             "*.cc",
@@ -28,5 +31,7 @@ cc_library(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_googletest//:gtest_main",
     ],
 )

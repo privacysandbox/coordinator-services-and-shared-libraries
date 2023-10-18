@@ -30,7 +30,7 @@ cc_test(
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
         "//cc/pbs/pbs_client/mock:pbs_client_mock",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

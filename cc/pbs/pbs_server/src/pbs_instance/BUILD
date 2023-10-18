@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -47,10 +48,13 @@ deps = [
     "//cc/core/interface:interface_lib",
     "//cc/core/journal_service/src:core_journal_service_lib",
     "//cc/core/lease_manager/src:core_lease_manager_lib",
+    "//cc/core/lease_manager/src/v2:core_lease_manager_v2_lib",
+    "//cc/pbs/partition_lease_event_sink/src:pbs_partition_lease_event_sink_lib",
     "//cc/core/tcp_traffic_forwarder/src:core_tcp_traffic_forwarder",
+    "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
     "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
     "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-    "//cc/cpio/client_providers/metric_client_provider/interface:metric_utils_interface_lib",
+    "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
     "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
     "//cc/pbs/budget_key_provider/src:pbs_budget_key_provider_lib",
     "//cc/pbs/checkpoint_service/src:pbs_checkpoint_service_lib",
@@ -60,6 +64,10 @@ deps = [
     "//cc/pbs/remote_transaction_manager/src:pbs_remote_transaction_manager_lib",
     "//cc/public/cpio/interface/metric_client",
     "@com_google_absl//absl/strings",
+    "//cc/core/http2_forwarder/src:core_http2_forwarder_lib",
+    "//cc/pbs/partition_namespace/src:pbs_partition_namespace_lib",
+    "//cc/pbs/partition_request_router/src:pbs_partition_request_router_lib",
+    "//cc/pbs/partition_lease_preference_applier/src:pbs_partition_lease_preference_applier_lib",
 ]
 
 aws_deps = deps + [
@@ -75,7 +83,7 @@ gcp_deps = deps + [
 ]
 
 gcp_integration_test_deps = deps + [
-    "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp:pbs_gcp_cloud_platform_dependency_factory_lib",
+    "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test:pbs_gcp_integration_test_cloud_platform_dependency_factory_lib",
 ]
 
 local_deps = deps + [
@@ -86,8 +94,62 @@ cc_library(
     name = "pbs_instance_lib",
     srcs = glob(
         [
-            "*.cc",
-            "*.h",
+            "pbs_instance.cc",
+            "pbs_instance.h",
+            "error_codes.h",
+            "pbs_instance_configuration.h",
+            "pbs_instance_logging.h",
+        ],
+    ),
+    copts = cloud_platform_copts + [
+        "-std=c++17",
+    ],
+    deps = select({
+        "cloud_platform_aws": aws_deps,
+        "cloud_platform_aws_integration_test": aws_integration_test_deps,
+        "cloud_platform_gcp": gcp_deps,
+        "cloud_platform_gcp_integration_test": gcp_integration_test_deps,
+        "cloud_platform_local": local_deps,
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "pbs_instance_v2_lib",
+    srcs = glob(
+        [
+            "pbs_instance_v2.cc",
+            "pbs_instance_v2.h",
+            "error_codes.h",
+            "pbs_instance_configuration.h",
+            "pbs_instance_logging.h",
+        ],
+    ),
+    copts = cloud_platform_copts + [
+        "-std=c++17",
+    ],
+    deps = select({
+        "cloud_platform_aws": aws_deps,
+        "cloud_platform_aws_integration_test": aws_integration_test_deps,
+        "cloud_platform_gcp": gcp_deps,
+        "cloud_platform_gcp_integration_test": gcp_integration_test_deps,
+        "cloud_platform_local": local_deps,
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "pbs_instance_multi_partition_lib",
+    srcs = glob(
+        [
+            "pbs_instance_multi_partition.cc",
+            "pbs_instance_multi_partition.h",
+            "synchronous_executor.h",
+            "pbs_instance_multi_partition_platform_wrapper.cc",
+            "pbs_instance_multi_partition_platform_wrapper.h",
+            "error_codes.h",
+            "pbs_instance_configuration.h",
+            "pbs_instance_logging.h",
         ],
     ),
     copts = cloud_platform_copts + [
@@ -105,7 +167,7 @@ cc_library(
 
 string_flag(
     name = "platform",
-    build_setting_default = "aws",
+    build_setting_default = "local",
     values = [
         "aws",
         "aws_integration_test",

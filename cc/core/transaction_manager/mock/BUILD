@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -30,7 +32,7 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-        "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
-        "//cc/cpio/client_providers/metric_client_provider/mock/utils:metric_utils_mock",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
+        "//cc/public/cpio/utils/metric_aggregation/mock:metric_aggregation_mock",
     ],
 )

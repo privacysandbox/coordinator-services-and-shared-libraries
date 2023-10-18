@@ -13,8 +13,6 @@
 // limitations under the License.
 #pragma once
 
-#pragma once
-
 #include "core/interface/errors.h"
 #include "public/core/interface/execution_result.h"
 

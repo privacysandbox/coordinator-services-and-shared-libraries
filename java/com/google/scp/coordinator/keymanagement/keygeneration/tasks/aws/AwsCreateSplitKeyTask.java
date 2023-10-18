@@ -28,6 +28,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annot
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -36,6 +37,7 @@ import com.google.scp.shared.api.model.Code;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import com.google.scp.shared.util.Base64Util;
 import java.security.GeneralSecurityException;
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -54,8 +56,15 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       @EncryptionKeySignatureKey Optional<PublicKeySign> signatureKey,
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
+      KeyIdFactory keyIdFactory,
       CloudAeadSelector aeadSelector) {
-    super(keyEncryptionKeyAead, keyEncryptionKeyUri, signatureKey, keyDb, keyStorageClient);
+    super(
+        keyEncryptionKeyAead,
+        keyEncryptionKeyUri,
+        signatureKey,
+        keyDb,
+        keyStorageClient,
+        keyIdFactory);
     this.aeadSelector = aeadSelector;
   }
 
@@ -66,11 +75,15 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    *
    * <p>For key regeneration {@link CreateSplitKeyTaskBase#replaceExpiringKeys(int, int, int)}
    * should be used.
+   *
+   * @see CreateSplitKeyTaskBase#createSplitKey(int, int, int, Instant)
    */
-  public void createSplitKey(int count, int validityInDays, int ttlInDays) throws ServiceException {
+  @Override
+  public void createSplitKey(int count, int validityInDays, int ttlInDays, Instant activation)
+      throws ServiceException {
     // Reuse same data key for key batch.
     var dataKey = fetchDataKey();
-    createSplitKeyBase(count, validityInDays, ttlInDays, Optional.of(dataKey));
+    createSplitKeyBase(count, validityInDays, ttlInDays, activation, Optional.of(dataKey));
   }
 
   @Override

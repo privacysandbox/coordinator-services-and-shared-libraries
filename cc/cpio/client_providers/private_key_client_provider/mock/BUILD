@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
     name = "private_key_client_provider_mock",
+    testonly = True,
     srcs = glob(
         [
             "*.cc",
@@ -31,9 +34,7 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/kms_client_provider/mock:kms_client_provider_mock",
         "//cc/cpio/client_providers/private_key_client_provider/src:private_key_client_provider_lib",
-        "//cc/cpio/client_providers/private_key_fetching_client_provider/mock:private_key_fetching_client_provider_mock",
-        "//cc/cpio/client_providers/role_credentials_provider/mock:role_credentials_provider_mock",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/cpio/client_providers/private_key_fetcher_provider/mock:private_key_fetcher_provider_mock",
         "@com_google_protobuf//:protobuf",
     ],
 )

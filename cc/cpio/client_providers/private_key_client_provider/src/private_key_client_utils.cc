@@ -25,39 +25,54 @@
 #include <utility>
 #include <vector>
 
+#include <google/protobuf/util/time_util.h>
+
 #include "core/interface/http_types.h"
-#include "cpio/client_providers/interface/private_key_fetching_client_provider_interface.h"
-#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
+#include "cpio/client_providers/interface/private_key_fetcher_provider_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
 #include "error_codes.h"
 
+using google::cmrt::sdk::kms_service::v1::DecryptRequest;
+using google::cmrt::sdk::private_key_service::v1::PrivateKey;
+using google::protobuf::util::TimeUtil;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::HttpHeaders;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::errors::
+    SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_KEY_RESOURCE_NAME;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_KEY_DATA_NOT_FOUND;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_SECRET_PIECE_SIZE_UNMATCHED;
 using google::scp::cpio::client_providers::KeyData;
 using google::scp::cpio::client_providers::PrivateKeyFetchingResponse;
-using google::cmrt::sdk::private_key_service::v1::PrivateKey;
 using std::byte;
 using std::shared_ptr;
 using std::string;
 using std::vector;
 
-static constexpr char kEncryptionKeyPrefix[] = "encryptionKeys/";
+namespace {
+// The keyUri returned from KeyVendingService contains prefix "gcp-kms://" or
+// "aws-kms://", and we need to remove it before sending for decryption.
+constexpr int kKeyArnPrefixSize = 10;
+}  // namespace
 
 namespace google::scp::cpio::client_providers {
 ExecutionResult PrivateKeyClientUtils::GetKmsDecryptRequest(
-    const shared_ptr<PrivateKeyFetchingResponse>& response,
-    KmsDecryptRequest& kms_decrypt_request) noexcept {
-  for (auto key_data : response->key_data) {
+    const shared_ptr<EncryptionKey>& encryption_key,
+    DecryptRequest& kms_decrypt_request) noexcept {
+  for (auto key_data : encryption_key->key_data) {
     if (key_data->key_material && !key_data->key_material->empty()) {
-      kms_decrypt_request.key_arn = key_data->key_encryption_key_uri;
-      kms_decrypt_request.ciphertext = key_data->key_material;
+      if (key_data->key_encryption_key_uri->size() < kKeyArnPrefixSize) {
+        return FailureExecutionResult(
+            SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_KEY_RESOURCE_NAME);
+      }
+      kms_decrypt_request.set_key_resource_name(
+          key_data->key_encryption_key_uri->substr(kKeyArnPrefixSize));
+      kms_decrypt_request.set_ciphertext(*key_data->key_material);
       return SuccessExecutionResult();
     }
   }
@@ -67,16 +82,14 @@ ExecutionResult PrivateKeyClientUtils::GetKmsDecryptRequest(
 }
 
 ExecutionResult PrivateKeyClientUtils::GetPrivateKeyInfo(
-    const shared_ptr<PrivateKeyFetchingResponse>& response,
+    const shared_ptr<EncryptionKey>& encryption_key,
     PrivateKey& private_key) noexcept {
-  auto resource_name = *response->resource_name;
-  if (resource_name.find(kEncryptionKeyPrefix) == 0) {
-    resource_name = resource_name.substr(strlen(kEncryptionKeyPrefix));
-  }
-
-  private_key.set_key_id(resource_name);
-  private_key.set_public_key(*response->public_key_material);
-  private_key.set_expiration_time_in_ms(response->expiration_time_ms);
+  private_key.set_key_id(*encryption_key->key_id);
+  private_key.set_public_key(*encryption_key->public_key_material);
+  *private_key.mutable_expiration_time() =
+      TimeUtil::MillisecondsToTimestamp(encryption_key->expiration_time_in_ms);
+  *private_key.mutable_creation_time() =
+      TimeUtil::MillisecondsToTimestamp(encryption_key->creation_time_in_ms);
 
   return SuccessExecutionResult();
 }

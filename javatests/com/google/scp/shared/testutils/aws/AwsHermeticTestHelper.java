@@ -26,6 +26,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
@@ -190,6 +191,12 @@ public final class AwsHermeticTestHelper {
   }
 
   public static void createDynamoDbTable(DynamoDbClient dynamoDbClient) {
+    // Attempt to delete the table before creating it to take care of potentially leaked state
+    try {
+      dynamoDbClient.deleteTable(
+          DeleteTableRequest.builder().tableName(DYNAMO_DB_TABLE_NAME).build());
+    } catch (Exception e) {
+    }
     // Create the table with a stream
     CreateTableRequest createTableRequest =
         CreateTableRequest.builder()

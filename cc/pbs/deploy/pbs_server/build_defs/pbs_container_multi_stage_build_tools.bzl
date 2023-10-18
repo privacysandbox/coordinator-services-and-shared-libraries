@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
 load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
-load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer", "container_run_and_extract")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
 
 def load_pbs_container_multi_stage_container_build_tools():
     pbs_packages_socat_extract_commands = [
@@ -98,6 +98,63 @@ def load_pbs_container_multi_stage_container_build_tools():
         "cd /extracted_files && tar -zcvf rsyslog_and_dependencies.tar * && cp rsyslog_and_dependencies.tar /",
     ]
 
+    pbs_packages_logrotate_prepare_commands = [
+        "mkdir -p /extracted_files/usr/sbin/",
+        "mkdir -p /extracted_files/lib/x86_64-linux-gnu/",
+        "mkdir -p /extracted_files/usr/lib/x86_64-linux-gnu/",
+        "mkdir -p /extracted_files/var/lib/logrotate/",
+        "cp /usr/sbin/logrotate /extracted_files/usr/sbin/",
+        "cp /usr/lib/x86_64-linux-gnu/libacl.so.1 /extracted_files/usr/lib/x86_64-linux-gnu/",
+        "cp /usr/lib/x86_64-linux-gnu/$(readlink /usr/lib/x86_64-linux-gnu/libacl.so.1) /extracted_files/usr/lib/x86_64-linux-gnu/",
+        "cp /lib/x86_64-linux-gnu/libselinux.so.1 /extracted_files/lib/x86_64-linux-gnu/",
+        "cp /usr/lib/x86_64-linux-gnu/libpopt.so.0 /extracted_files/usr/lib/x86_64-linux-gnu/",
+        "cp /lib/x86_64-linux-gnu/libc.so.6 /extracted_files/lib/x86_64-linux-gnu/",
+        "cp /lib/x86_64-linux-gnu/$(readlink /lib/x86_64-linux-gnu/libc.so.6) /extracted_files/lib/x86_64-linux-gnu/",
+        "cp /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0 /extracted_files/usr/lib/x86_64-linux-gnu/",
+        "cp /usr/lib/x86_64-linux-gnu/$(readlink /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0) /extracted_files/usr/lib/x86_64-linux-gnu/",
+        "cp /lib/x86_64-linux-gnu/libdl.so.2 /extracted_files/lib/x86_64-linux-gnu/",
+        "cp /lib/x86_64-linux-gnu/$(readlink /lib/x86_64-linux-gnu/libdl.so.2) /extracted_files/lib/x86_64-linux-gnu/",
+        "cp /lib/x86_64-linux-gnu/libpthread.so.0 /extracted_files/lib/x86_64-linux-gnu/",
+        "cp /lib/x86_64-linux-gnu/$(readlink /lib/x86_64-linux-gnu/libpthread.so.0) /extracted_files/lib/x86_64-linux-gnu/",
+    ]
+
+    pbs_packages_logrotate_config_prepare_commands = [
+        "mkdir -p /extracted_files/etc/logrotatepbs/",
+        "touch /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '/var/log/* {' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  su root root' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  rotate 1' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  missingok' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  notifempty' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  copytruncate' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  dateext' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  dateformat %s' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '  olddir /tmp/rotated_logs/' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "echo '}' >> /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+        "chmod 000644 /extracted_files/etc/logrotatepbs/logrotate.pbs.conf",
+    ]
+
+    pbs_packages_logrotate_script_prepare_commands = [
+        "mkdir -p /extracted_files/usr/local/bin/",
+        "mkdir -p /extracted_files/tmp/rotated_logs/",
+        "touch /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo '#!/bin/sh' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo 'while true; do' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo '  # Wait 10 minutes before rotating.' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo '  sleep 600' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo '  # Delete all currently rotated log files.' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo '  /busybox/rm /tmp/rotated_logs/*' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo '  # Perform log rotation.' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo '  /usr/sbin/logrotate -f /etc/logrotatepbs/logrotate.pbs.conf' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "echo 'done' >> /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+        "chmod 000755 /extracted_files/usr/local/bin/force_pbs_log_rotation.sh",
+    ]
+
+    pbs_packages_logrotate_extract_commands = pbs_packages_logrotate_prepare_commands + \
+                                              pbs_packages_logrotate_config_prepare_commands + \
+                                              pbs_packages_logrotate_script_prepare_commands + \
+                                              ["cd /extracted_files && tar -zcvf logrotate_and_dependencies.tar * && cp logrotate_and_dependencies.tar /"]
+
     pbs_packages_shared_objects_extract_commands = [
         "mkdir -p /extracted_files/lib/x86_64-linux-gnu/",
         "mkdir -p /extracted_files/usr/lib/x86_64-linux-gnu/",
@@ -117,6 +174,8 @@ def load_pbs_container_multi_stage_container_build_tools():
         "rm /rsyslog_and_dependencies.tar",
         "cd / && tar -xf socat_and_dependencies.tar",
         "rm /socat_and_dependencies.tar",
+        "cd / && tar -xf logrotate_and_dependencies.tar",
+        "rm /logrotate_and_dependencies.tar",
     ]
 
     pkg_tar(
@@ -147,6 +206,7 @@ def load_pbs_container_multi_stage_container_build_tools():
         image_tar = "@debian_11//image",
         packages = [
             "libatomic1",
+            "logrotate",
             "rsyslog",
             "socat",
         ],
@@ -179,6 +239,15 @@ def load_pbs_container_multi_stage_container_build_tools():
         tags = ["manual"],
     )
 
+    # Gather logrotate and all the dependencies it needs to run into a tar so that it can be copied into the runtime container
+    container_run_and_extract(
+        name = "pbs_packages_logrotate_extract",
+        commands = pbs_packages_logrotate_extract_commands,
+        extract_file = "/logrotate_and_dependencies.tar",
+        image = ":apt_pkgs_install.tar",
+        tags = ["manual"],
+    )
+
     # Gather shared object needed by PBS so that they can be copied to the runtime container
     container_run_and_extract(
         name = "pbs_packages_shared_objects_extract",
@@ -193,6 +262,7 @@ def load_pbs_container_multi_stage_container_build_tools():
         name = "pbs_container_base_image",
         base = "@debian_11_runtime//image",
         files = [
+            ":pbs_packages_logrotate_extract/logrotate_and_dependencies.tar",
             ":pbs_packages_rsyslog_extract/rsyslog_and_dependencies.tar",
             ":pbs_packages_shared_objects_extract/shared_objects.tar",
             ":pbs_packages_socat_extract/socat_and_dependencies.tar",
@@ -202,17 +272,24 @@ def load_pbs_container_multi_stage_container_build_tools():
 
     container_cmd = ["/opt/google/pbs/scp_process_launcher"]
     rsyslog_daemon = {
-        "file_name": "/usr/sbin/rsyslogd",
         "args": [
             # Run in the foreground
             "-n",
         ],
+        "file_name": "/usr/sbin/rsyslogd",
+    }
+    rotate_pbs_logs = {
+        "args": [
+            "/usr/local/bin/force_pbs_log_rotation.sh",
+        ],
+        "file_name": "/bin/sh",
     }
     pbs_executable = {
-        "file_name": "/opt/google/pbs/privacy_budget_service",
         "args": [],
+        "file_name": "/opt/google/pbs/privacy_budget_service",
     }
     container_cmd.append(executable_struct_to_json_str(rsyslog_daemon))
+    container_cmd.append(executable_struct_to_json_str(rotate_pbs_logs))
     container_cmd.append(executable_struct_to_json_str(pbs_executable))
 
     #
@@ -226,6 +303,7 @@ def load_pbs_container_multi_stage_container_build_tools():
         "aws_integration_test",
         "gcp",
         "gcp_integration_test",
+        "local",
     ]
 
     [

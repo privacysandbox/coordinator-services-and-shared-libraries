@@ -76,6 +76,14 @@ resource "aws_instance" "test" {
     enabled = true
   }
 
+  # Enforce IMDSv2.
+  metadata_options {
+    http_endpoint          = "enabled"
+    http_tokens            = "required"
+    http_put_response_hop_limit = 2
+    instance_metadata_tags = "enabled"
+  }
+
   iam_instance_profile = aws_iam_instance_profile.test_profile.name
   key_name = var.key_pair_name
 

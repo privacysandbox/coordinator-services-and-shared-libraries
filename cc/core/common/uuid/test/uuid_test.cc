@@ -21,7 +21,9 @@
 #include <string>
 
 #include "core/common/uuid/src/error_codes.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
+using google::scp::core::test::ResultIs;
 using std::string;
 
 namespace google::scp::core::common::test {
@@ -37,26 +39,30 @@ TEST(UuidTests, UuidToString) {
 
   auto uuid_string = ToString(uuid);
   Uuid parsed_uuid;
-  EXPECT_EQ(FromString(uuid_string, parsed_uuid), SuccessExecutionResult());
+  EXPECT_SUCCESS(FromString(uuid_string, parsed_uuid));
   EXPECT_EQ(parsed_uuid, uuid);
 }
 
 TEST(UuidTests, InvalidUuidString) {
   string uuid_string = "123";
   Uuid parsed_uuid;
-  EXPECT_EQ(FromString(uuid_string, parsed_uuid),
-            FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
+  EXPECT_THAT(
+      FromString(uuid_string, parsed_uuid),
+      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09r48EDrA355rD346rAD7DC6CB0909";
-  EXPECT_EQ(FromString(uuid_string, parsed_uuid),
-            FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
+  EXPECT_THAT(
+      FromString(uuid_string, parsed_uuid),
+      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09-48RD-A355-D346-AD7DC6CB0909";
-  EXPECT_EQ(FromString(uuid_string, parsed_uuid),
-            FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
+  EXPECT_THAT(
+      FromString(uuid_string, parsed_uuid),
+      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09-48Ed-A355-D346-AD7DC6CB0909";
-  EXPECT_EQ(FromString(uuid_string, parsed_uuid),
-            FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
+  EXPECT_THAT(
+      FromString(uuid_string, parsed_uuid),
+      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
 }
 }  // namespace google::scp::core::common::test

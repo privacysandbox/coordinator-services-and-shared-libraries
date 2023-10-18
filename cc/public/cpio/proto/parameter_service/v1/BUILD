@@ -16,7 +16,10 @@ load(
     "@com_google_googleapis_imports//:imports.bzl",
     "cc_grpc_library",
     "cc_proto_library",
+    "java_grpc_library",
 )
+load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -42,4 +45,18 @@ cc_grpc_library(
     generate_mocks = True,
     grpc_only = True,
     deps = [":parameter_service_cc_proto"],
+)
+
+##############################################################################
+# Java
+##############################################################################
+java_proto_library(
+    name = "parameter_service_java_proto",
+    deps = [":parameter_service_proto"],
+)
+
+java_grpc_library(
+    name = "parameter_service_java_grpc",
+    srcs = [":parameter_service_proto"],
+    deps = [":parameter_service_java_proto"],
 )

@@ -18,6 +18,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -49,11 +50,13 @@ struct HttpRequest {
 
   /// Represents the http method.
   HttpMethod method;
-  /// Represents the HTTP URI path.
+  /// Represents the HTTP URI's host and target path within the host.
+  /// e.g. https://example.com/user?id=123&org=456, "https://example.com/user"
+  /// would be the host and the target path within the host.
   std::shared_ptr<Uri> path;
   /// Represents the query parameters, e.g.
-  /// https://example.com/user?id=123&org=456, "/user" would be the path, and
-  /// "id=123&org=456" would be the query parameters.
+  /// https://example.com/user?id=123&org=456, "/user" would be the path within
+  /// the host, and "id=123&org=456" would be the query parameters.
   std::shared_ptr<std::string> query;
   /// Represents the collection of all the request headers.
   std::shared_ptr<HttpHeaders> headers;

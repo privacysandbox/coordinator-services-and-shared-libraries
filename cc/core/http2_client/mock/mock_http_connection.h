@@ -26,12 +26,20 @@ class MockHttpConnection : public HttpConnection {
  public:
   MockHttpConnection(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      const std::string& host, const std::string& service, bool https)
-      : HttpConnection(async_executor, host, service, https) {}
+      const std::string& host, const std::string& service, bool is_https)
+      : HttpConnection(async_executor, host, service, is_https) {}
 
   void CancelPendingCallbacks() noexcept {
     HttpConnection::CancelPendingCallbacks();
   }
+
+  void SetIsDropped() { is_dropped_ = true; }
+
+  void SetIsNotDropped() { is_dropped_ = false; }
+
+  void SetIsNotReady() { is_ready_ = false; }
+
+  void SetIsReady() { is_ready_ = true; }
 
   auto& GetPendingNetworkCallbacks() { return pending_network_calls_; }
 };

@@ -35,13 +35,9 @@ locals {
     memory    = "process.runtime.jvm.memory.utilization_ratio"
   }
   // Replace the metric name to match the real name in OTel
-  prod_otel_metrics = [
+  all_otel_metrics = [
     for metric in var.allowed_otel_metrics : try(local.metrics_map[metric], metric)
   ]
-  // Currently, all the debug metrics/traces would be exported if running debug jar.
-  debug_otel_metrics = ["reports_process_time", "summary_write_time", "pbs_latency", "decryption_time_per_report"]
-  all_otel_metrics   = concat(local.prod_otel_metrics, local.debug_otel_metrics)
-
   otel_metrics = [
     for metric in local.all_otel_metrics : metric if contains(values(local.metrics_map), metric)
   ]
@@ -280,6 +276,13 @@ data "aws_iam_policy_document" "enclave_policy_doc" {
       "xray:PutTelemetryRecords",
       "xray:PutTraceSegments",
     ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "AllowSNSPublishing"
+    effect    = "Allow"
+    actions   = ["sns:Publish"]
     resources = ["*"]
   }
 

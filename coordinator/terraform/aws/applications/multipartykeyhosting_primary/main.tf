@@ -29,12 +29,12 @@ provider "aws" {
 
 locals {
   public_key_service_jar             = var.public_key_service_jar != "" ? var.public_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/PublicKeyApiGatewayHandlerLambda_deploy.jar"
-  encryption_key_service_jar         = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
+  encryption_key_service_jar         = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/EncryptionKeyServiceLambda_deploy.jar"
   use_sns_to_sqs                     = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != "" && var.primary_region == "us-east-1"
   keydb_table_name                   = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
   keyhosting_api_gateway_name        = "unified_key_hosting"
-  key_rotation_job_queue_name        = "key-rotation-queue.fifo"
   keyhosting_api_gateway_alarm_label = "UnifiedKeyHosting"
+  key_rotation_job_queue_name        = "key-rotation-queue.fifo"
   account_id                         = data.aws_caller_identity.current.account_id
 }
 
@@ -162,6 +162,7 @@ module "split_key_generation_service" {
   keydb_table_name        = local.keydb_table_name
   keydb_region            = var.primary_region
   keydb_arn               = module.keydb.key_db_arn
+  key_id_type             = var.key_id_type
 
   coordinator_b_assume_role_arn = var.coordinator_b_assume_role_arn
   enable_public_key_signature   = var.enable_public_key_signature
@@ -272,16 +273,16 @@ module "encryptionkeyservice" {
   keymanagement_package_bucket = module.keymanagementpackagebucket_primary.bucket_id
   api_version                  = var.api_version
 
-  get_encryption_key_logging_retention_days        = var.cloudwatch_logging_retention_days
-  encryption_key_service_alarms_enabled            = var.alarms_enabled
-  get_encryption_key_sns_topic_arn                 = var.alarms_enabled ? aws_sns_topic.mpkhs[0].arn : null
-  get_encryption_key_alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
-  get_encryption_key_lambda_error_threshold        = var.mpkhs_lambda_error_threshold
-  get_encryption_key_lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
-  get_encryption_key_lambda_max_duration_threshold = var.mpkhs_lambda_max_duration_threshold
-
+  logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
-  sns_topic_arn = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  alarms_enabled                = var.alarms_enabled
+  sns_topic_arn                 = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
+  lambda_error_threshold        = var.mpkhs_lambda_error_threshold
+  lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
+  lambda_max_duration_threshold = var.mpkhs_lambda_max_duration_threshold
+
+  get_encryption_key_lambda_ps_client_shim_enabled = var.get_encryption_key_lambda_ps_client_shim_enabled
 
   api_gateway_id            = module.apigateway.api_gateway_id
   api_gateway_execution_arn = module.apigateway.api_gateway_execution_arn

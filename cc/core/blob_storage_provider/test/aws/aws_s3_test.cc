@@ -32,6 +32,7 @@
 #include "core/blob_storage_provider/mock/aws/mock_s3_client.h"
 #include "core/blob_storage_provider/src/common/error_codes.h"
 #include "core/test/utils/conditional_wait.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::IOStream;
@@ -102,7 +103,7 @@ TEST_F(AwsS3Tests, GetBlob) {
   get_blob_context.request->blob_name = make_shared<string>("blob_name");
   get_blob_context.request->bucket_name = make_shared<string>("bucket_name");
 
-  EXPECT_EQ(aws_s3_client.GetBlob(get_blob_context), SuccessExecutionResult());
+  EXPECT_SUCCESS(aws_s3_client.GetBlob(get_blob_context));
 }
 
 TEST_F(AwsS3Tests, OnGetObjectCallbackWithError) {
@@ -118,9 +119,9 @@ TEST_F(AwsS3Tests, OnGetObjectCallbackWithError) {
   get_blob_context.request->bucket_name = make_shared<string>("bucket_name");
   get_blob_context.callback =
       [](AsyncContext<GetBlobRequest, GetBlobResponse>& get_blob_context) {
-        EXPECT_EQ(get_blob_context.result,
-                  FailureExecutionResult(
-                      errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR));
+        EXPECT_THAT(get_blob_context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR)));
       };
 
   GetObjectRequest get_object_request;
@@ -153,7 +154,7 @@ TEST_F(AwsS3Tests, OnGetObjectCallback) {
     get_blob_context.request->bucket_name = make_shared<string>("bucket_name");
     get_blob_context.callback =
         [](AsyncContext<GetBlobRequest, GetBlobResponse>& get_blob_context) {
-          EXPECT_EQ(get_blob_context.result, SuccessExecutionResult());
+          EXPECT_SUCCESS(get_blob_context.result);
           EXPECT_EQ(get_blob_context.response->buffer->length, 12);
           EXPECT_EQ(get_blob_context.response->buffer->capacity, 12);
           EXPECT_EQ(get_blob_context.response->buffer->bytes->size(), 12);
@@ -191,8 +192,7 @@ TEST_F(AwsS3Tests, ListBlobs) {
   list_blobs_context.request = make_shared<ListBlobsRequest>();
   list_blobs_context.request->bucket_name = make_shared<string>("bucket_name");
 
-  EXPECT_EQ(aws_s3_client.ListBlobs(list_blobs_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(aws_s3_client.ListBlobs(list_blobs_context));
 }
 
 TEST_F(AwsS3Tests, ListBlobsWithPrefix) {
@@ -215,8 +215,7 @@ TEST_F(AwsS3Tests, ListBlobsWithPrefix) {
   list_blobs_context.request->blob_name = make_shared<string>("blob_name");
   list_blobs_context.request->bucket_name = make_shared<string>("bucket_name");
 
-  EXPECT_EQ(aws_s3_client.ListBlobs(list_blobs_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(aws_s3_client.ListBlobs(list_blobs_context));
 }
 
 TEST_F(AwsS3Tests, ListBlobsMarker) {
@@ -240,8 +239,7 @@ TEST_F(AwsS3Tests, ListBlobsMarker) {
   list_blobs_context.request->bucket_name = make_shared<string>("bucket_name");
   list_blobs_context.request->marker = make_shared<string>("marker");
 
-  EXPECT_EQ(aws_s3_client.ListBlobs(list_blobs_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(aws_s3_client.ListBlobs(list_blobs_context));
 }
 
 TEST_F(AwsS3Tests, OnListObjectsCallbackWithError) {
@@ -258,9 +256,9 @@ TEST_F(AwsS3Tests, OnListObjectsCallbackWithError) {
   list_blobs_context.callback =
       [](AsyncContext<ListBlobsRequest, ListBlobsResponse>&
              list_blobs_context) {
-        EXPECT_EQ(list_blobs_context.result,
-                  FailureExecutionResult(
-                      errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR));
+        EXPECT_THAT(list_blobs_context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR)));
       };
 
   ListObjectsRequest list_objects_request;
@@ -285,9 +283,7 @@ TEST_F(AwsS3Tests, OnListObjectsCallback) {
   list_blobs_context.request->bucket_name = make_shared<string>("bucket_name");
   list_blobs_context.callback =
       [](AsyncContext<ListBlobsRequest, ListBlobsResponse>&
-             list_blobs_context) {
-        EXPECT_EQ(list_blobs_context.result, SuccessExecutionResult());
-      };
+             list_blobs_context) { EXPECT_SUCCESS(list_blobs_context.result); };
 
   ListObjectsRequest list_objects_request;
   ListObjectsResult list_objects_result;
@@ -330,7 +326,7 @@ TEST_F(AwsS3Tests, PutBlob) {
   put_blob_context.request->buffer->length = 10;
   put_blob_context.request->buffer->capacity = 10;
 
-  EXPECT_EQ(aws_s3_client.PutBlob(put_blob_context), SuccessExecutionResult());
+  EXPECT_SUCCESS(aws_s3_client.PutBlob(put_blob_context));
 }
 
 TEST_F(AwsS3Tests, OnPutObjectCallbackWithError) {
@@ -346,9 +342,9 @@ TEST_F(AwsS3Tests, OnPutObjectCallbackWithError) {
   put_blob_context.request->bucket_name = make_shared<string>("bucket_name");
   put_blob_context.callback =
       [](AsyncContext<PutBlobRequest, PutBlobResponse>& put_blob_context) {
-        EXPECT_EQ(put_blob_context.result,
-                  FailureExecutionResult(
-                      errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR));
+        EXPECT_THAT(put_blob_context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR)));
       };
 
   PutObjectRequest put_object_request;
@@ -372,7 +368,7 @@ TEST_F(AwsS3Tests, OnPutObjectCallback) {
   put_blob_context.request->bucket_name = make_shared<string>("bucket_name");
   put_blob_context.callback =
       [](AsyncContext<PutBlobRequest, PutBlobResponse>& put_blob_context) {
-        EXPECT_EQ(put_blob_context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(put_blob_context.result);
       };
 
   PutObjectRequest put_object_request;
@@ -401,8 +397,7 @@ TEST_F(AwsS3Tests, DeleteBlob) {
   delete_blob_context.request->blob_name = make_shared<string>("blob_name");
   delete_blob_context.request->bucket_name = make_shared<string>("bucket_name");
 
-  EXPECT_EQ(aws_s3_client.DeleteBlob(delete_blob_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(aws_s3_client.DeleteBlob(delete_blob_context));
 }
 
 TEST_F(AwsS3Tests, OnDeleteObjectCallbackWithError) {
@@ -419,9 +414,9 @@ TEST_F(AwsS3Tests, OnDeleteObjectCallbackWithError) {
   delete_blob_context.callback =
       [](AsyncContext<DeleteBlobRequest, DeleteBlobResponse>&
              delete_blob_context) {
-        EXPECT_EQ(delete_blob_context.result,
-                  FailureExecutionResult(
-                      errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR));
+        EXPECT_THAT(delete_blob_context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR)));
       };
 
   DeleteObjectRequest delete_object_request;
@@ -447,7 +442,7 @@ TEST_F(AwsS3Tests, OnDeleteObjectCallback) {
   delete_blob_context.callback =
       [](AsyncContext<DeleteBlobRequest, DeleteBlobResponse>&
              delete_blob_context) {
-        EXPECT_EQ(delete_blob_context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(delete_blob_context.result);
       };
 
   DeleteObjectRequest delete_object_request;

@@ -16,24 +16,28 @@
 
 #pragma once
 
+#include <gmock/gmock.h>
+
 #include <memory>
 
 #include <aws/ec2/EC2Client.h>
+#include <aws/ec2/model/DescribeInstancesRequest.h>
 #include <aws/ec2/model/DescribeTagsRequest.h>
 
 namespace google::scp::cpio::client_providers::mock {
 class MockEC2Client : public Aws::EC2::EC2Client {
  public:
-  Aws::EC2::Model::DescribeTagsOutcome DescribeTags(
-      const Aws::EC2::Model::DescribeTagsRequest& request) const override {
-    if (request.SerializePayload() ==
-        describe_tags_request_mock.SerializePayload()) {
-      return describe_tags_outcome_mock;
-    }
-    return Aws::EC2::Model::DescribeTagsOutcome();
-  }
+  MOCK_METHOD(void, DescribeInstancesAsync,
+              (const Aws::EC2::Model::DescribeInstancesRequest&,
+               const Aws::EC2::DescribeInstancesResponseReceivedHandler&,
+               const std::shared_ptr<const Aws::Client::AsyncCallerContext>&),
+              (const, override));
 
-  Aws::EC2::Model::DescribeTagsRequest describe_tags_request_mock;
-  Aws::EC2::Model::DescribeTagsOutcome describe_tags_outcome_mock;
+  MOCK_METHOD(void, DescribeTagsAsync,
+              (const Aws::EC2::Model::DescribeTagsRequest&,
+               const Aws::EC2::DescribeTagsResponseReceivedHandler&,
+               const std::shared_ptr<const Aws::Client::AsyncCallerContext>&),
+              (const, override));
 };
+
 }  // namespace google::scp::cpio::client_providers::mock

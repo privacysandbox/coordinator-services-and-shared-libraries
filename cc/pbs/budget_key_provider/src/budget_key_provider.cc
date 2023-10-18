@@ -23,13 +23,19 @@
 #include <vector>
 
 #include "core/common/auto_expiry_concurrent_map/src/error_codes.h"
+#include "core/common/concurrent_map/src/error_codes.h"
 #include "core/common/serialization/src/serialization.h"
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/common/uuid/src/uuid.h"
+#include "core/interface/configuration_keys.h"
 #include "core/interface/journal_service_interface.h"
 #include "pbs/budget_key/src/budget_key.h"
 #include "pbs/budget_key/src/error_codes.h"
 #include "pbs/budget_key_provider/src/proto/budget_key_provider.pb.h"
+#include "pbs/interface/metrics_def.h"
+#include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
+#include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
+#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 #include "error_codes.h"
 
@@ -47,7 +53,16 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::Version;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::Serialization;
+using google::scp::core::common::TimeProvider;
 using google::scp::core::common::Uuid;
+using google::scp::cpio::kCountUnit;
+using google::scp::cpio::MetricDefinition;
+using google::scp::cpio::MetricLabels;
+using google::scp::cpio::MetricLabelsBase;
+using google::scp::cpio::MetricName;
+using google::scp::cpio::MetricUnit;
+using google::scp::cpio::MetricUtils;
+using google::scp::cpio::MetricValue;
 using google::scp::pbs::budget_key_provider::proto::BudgetKeyProviderLog;
 using google::scp::pbs::budget_key_provider::proto::BudgetKeyProviderLog_1_0;
 using google::scp::pbs::budget_key_provider::proto::OperationType;
@@ -61,6 +76,8 @@ using std::shared_ptr;
 using std::string;
 using std::vector;
 using std::placeholders::_1;
+using std::placeholders::_2;
+using std::this_thread::sleep_for;
 
 static constexpr Version kCurrentVersion = {.major = 1, .minor = 0};
 // This value MUST NOT change forever.
@@ -69,12 +86,40 @@ static constexpr char kBudgetKeyProvider[] = "BudgetKeyProvider";
 
 namespace google::scp::pbs {
 ExecutionResult BudgetKeyProvider::Init() noexcept {
+  size_t metric_aggregation_interval_milliseconds;
+  if (!config_provider_
+           ->Get(core::kAggregatedMetricIntervalMs,
+                 metric_aggregation_interval_milliseconds)
+           .Successful()) {
+    metric_aggregation_interval_milliseconds =
+        core::kDefaultAggregatedMetricIntervalMs;
+  }
+
+  // TODO: b/297077044 to avoid this. Construction of this should come from a
+  // factory, and otherwise we cannot mock this causing tests to fail for any
+  // changes to AggregateMetric class.
+  budget_key_count_metric_ = MetricUtils::RegisterAggregateMetric(
+      async_executor_, metric_client_, kMetricNameBudgetKeyCount,
+      kMetricComponentNameAndPartitionNamePrefixForBudgetKey +
+          ToString(partition_id_),
+      kMetricMethodLoadUnload, kCountUnit,
+      {kMetricEventLoadFromDBScheduled, kMetricEventLoadFromDBSuccess,
+       kMetricEventLoadFromDBFailed, kMetricEventUnloadFromDBScheduled,
+       kMetricEventUnloadFromDBSuccess, kMetricEventUnloadFromDBFailed},
+      metric_aggregation_interval_milliseconds);
+  RETURN_IF_FAILURE(budget_key_count_metric_->Init());
+
   return journal_service_->SubscribeForRecovery(
       kBudgetKeyProviderId,
-      bind(&BudgetKeyProvider::OnJournalServiceRecoverCallback, this, _1));
+      bind(&BudgetKeyProvider::OnJournalServiceRecoverCallback, this, _1, _2));
 }
 
 ExecutionResult BudgetKeyProvider::Run() noexcept {
+  // TODO: b/297077044 to avoid this if case
+  if (budget_key_count_metric_) {
+    RETURN_IF_FAILURE(budget_key_count_metric_->Run());
+  }
+
   // Before running the system, all the recovered budget keys must be reloaded.
   vector<string> keys;
   auto execution_result = budget_keys_->Keys(keys);
@@ -112,6 +157,9 @@ ExecutionResult BudgetKeyProvider::Run() noexcept {
 }
 
 ExecutionResult BudgetKeyProvider::Stop() noexcept {
+  RETURN_IF_FAILURE(budget_key_count_metric_->Stop());
+  RETURN_IF_FAILURE(budget_keys_->Stop());
+
   vector<string> keys;
   auto execution_result = budget_keys_->Keys(keys);
   if (!execution_result.Successful()) {
@@ -125,13 +173,14 @@ ExecutionResult BudgetKeyProvider::Stop() noexcept {
       return execution_result;
     }
 
+    // If a budget key cannot be stopped, return error.
     auto execution_result = budget_key_provider_pair->budget_key->Stop();
-    if (execution_result.Successful()) {
-      continue;
+    if (!execution_result.Successful()) {
+      return execution_result;
     }
   }
 
-  return budget_keys_->Stop();
+  return SuccessExecutionResult();
 }
 
 BudgetKeyProvider::~BudgetKeyProvider() {
@@ -216,14 +265,15 @@ void BudgetKeyProvider::OnBeforeGarbageCollection(
   auto activity_id = Uuid::GenerateUuid();
   auto budget_key_id_str =
       core::common::ToString(budget_key_provider_pair->budget_key->GetId());
-  DEBUG(kBudgetKeyProvider, budget_key_provider_pair->budget_key->GetId(),
-        activity_id, "Unloading budget key name %s with id: %s",
-        budget_key_provider_pair->budget_key->GetName()->c_str(),
-        budget_key_id_str.c_str());
+  SCP_DEBUG(kBudgetKeyProvider, activity_id,
+            "Unloading budget key name %s with id: %s",
+            budget_key_provider_pair->budget_key->GetName()->c_str(),
+            budget_key_id_str.c_str());
 
   // Sending to the journal service.
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
   journal_log_context.parent_activity_id = Uuid::GenerateUuid();
+  journal_log_context.correlation_id = kBudgetKeyProviderId;
   journal_log_context.request = make_shared<JournalLogRequest>();
   journal_log_context.request->component_id = kBudgetKeyProviderId;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
@@ -239,28 +289,28 @@ void BudgetKeyProvider::OnBeforeGarbageCollection(
       bind(&BudgetKeyProvider::OnRemoveEntryFromCacheLogged, this,
            should_delete_entry, budget_key_provider_pair, _1);
 
-  operation_dispatcher_
-      .Dispatch<AsyncContext<JournalLogRequest, JournalLogResponse>>(
-          journal_log_context,
-          [journal_service = journal_service_](
-              AsyncContext<JournalLogRequest, JournalLogResponse>&
-                  journal_log_context) {
-            return journal_service->Log(journal_log_context);
-          });
+  // Request-level retry is not necessary here. If the request is unsuccessful,
+  // retry in next round of OnBeforeGarbageCollection.
+  execution_result = journal_service_->Log(journal_log_context);
+  if (!execution_result.Successful()) {
+    should_delete_entry(false);
+    return;
+  }
 }
 
 void BudgetKeyProvider::OnRemoveEntryFromCacheLogged(
     std::function<void(bool)> should_delete_entry,
     shared_ptr<BudgetKeyProviderPair>& budget_key_provider_pair,
-    core::AsyncContext<core::JournalLogRequest, core::JournalLogResponse>&
+    AsyncContext<JournalLogRequest, JournalLogResponse>&
         journal_log_context) noexcept {
   auto successful = false;
   if (journal_log_context.result.Successful()) {
     successful = true;
     auto execution_result = budget_key_provider_pair->budget_key->Stop();
     if (!execution_result.Successful()) {
-      ERROR_CONTEXT(kBudgetKeyProvider, journal_log_context, execution_result,
-                    "Cannot stop the budget key before deletion.");
+      SCP_ERROR_CONTEXT(kBudgetKeyProvider, journal_log_context,
+                        execution_result,
+                        "Cannot stop the budget key before deletion.");
     }
   }
 
@@ -268,7 +318,8 @@ void BudgetKeyProvider::OnRemoveEntryFromCacheLogged(
 }
 
 ExecutionResult BudgetKeyProvider::OnJournalServiceRecoverCallback(
-    const shared_ptr<BytesBuffer>& bytes_buffer) noexcept {
+    const shared_ptr<BytesBuffer>& bytes_buffer,
+    const Uuid& activity_id) noexcept {
   BudgetKeyProviderLog budget_key_provider_log;
   size_t offset = 0;
   size_t bytes_deserialized = 0;
@@ -302,15 +353,15 @@ ExecutionResult BudgetKeyProvider::OnJournalServiceRecoverCallback(
   budget_key_id.high = budget_key_provider_log_1_0.id().high();
   budget_key_id.low = budget_key_provider_log_1_0.id().low();
 
-  auto activity_id = Uuid::GenerateUuid();
   auto budget_key_id_str = core::common::ToString(budget_key_id);
-  DEBUG(kBudgetKeyProvider, budget_key_id, activity_id,
-        "Budget key recovered: %s %s.", budget_key_id_str.c_str(),
-        budget_key_name->c_str());
+  SCP_DEBUG(kBudgetKeyProvider, activity_id, "Budget key recovered: %s %s.",
+            budget_key_id_str.c_str(), budget_key_name->c_str());
 
   auto budget_key = make_shared<BudgetKey>(
       budget_key_name, budget_key_id, async_executor_, journal_service_,
-      nosql_database_provider_, metric_client_, config_provider_);
+      nosql_database_provider_for_background_operations_,
+      nosql_database_provider_for_live_traffic_, metric_client_,
+      config_provider_, budget_key_count_metric_);
 
   if (budget_key_provider_log_1_0.operation_type() ==
       OperationType::LOAD_INTO_CACHE) {
@@ -366,8 +417,9 @@ ExecutionResult BudgetKeyProvider::GetBudgetKey(
   auto budget_key_provider_pair = make_shared<BudgetKeyProviderPair>();
   budget_key_provider_pair->budget_key = make_shared<BudgetKey>(
       get_budget_key_context.request->budget_key_name, key_id, async_executor_,
-      journal_service_, nosql_database_provider_, metric_client_,
-      config_provider_);
+      journal_service_, nosql_database_provider_for_background_operations_,
+      nosql_database_provider_for_live_traffic_, metric_client_,
+      config_provider_, budget_key_count_metric_);
 
   auto budget_key_pair =
       make_pair(*get_budget_key_context.request->budget_key_name,
@@ -424,10 +476,10 @@ ExecutionResult BudgetKeyProvider::GetBudgetKey(
   }
 
   auto budget_key_id_str = core::common::ToString(key_id);
-  DEBUG_CONTEXT(kBudgetKeyProvider, get_budget_key_context,
-                "Loading budget key name %s with id: %s",
-                get_budget_key_context.request->budget_key_name->c_str(),
-                budget_key_id_str.c_str());
+  SCP_DEBUG_CONTEXT(kBudgetKeyProvider, get_budget_key_context,
+                    "Loading budget key name %s with id: %s",
+                    get_budget_key_context.request->budget_key_name->c_str(),
+                    budget_key_id_str.c_str());
 
   return LogLoadBudgetKeyIntoCache(get_budget_key_context,
                                    budget_key_provider_pair);
@@ -448,6 +500,7 @@ ExecutionResult BudgetKeyProvider::LogLoadBudgetKeyIntoCache(
   // Sending to the journal service.
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
   journal_log_context.parent_activity_id = get_budget_key_context.activity_id;
+  journal_log_context.correlation_id = get_budget_key_context.correlation_id;
   journal_log_context.request = make_shared<JournalLogRequest>();
   journal_log_context.request->component_id = kBudgetKeyProviderId;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
@@ -485,9 +538,10 @@ void BudgetKeyProvider::OnLogLoadBudgetKeyIntoCacheCallback(
     auto execution_result = budget_keys_->EnableEviction(
         *budget_key_provider_pair->budget_key->GetName());
     if (!execution_result.Successful()) {
-      ERROR_CONTEXT(kBudgetKeyProvider, get_budget_key_context,
-                    execution_result, "Cache eviction failed for %s",
-                    budget_key_provider_pair->budget_key->GetName()->c_str());
+      SCP_ERROR_CONTEXT(
+          kBudgetKeyProvider, get_budget_key_context, execution_result,
+          "Cache eviction failed for %s",
+          budget_key_provider_pair->budget_key->GetName()->c_str());
     }
 
     get_budget_key_context.result = journal_log_context.result;
@@ -499,6 +553,8 @@ void BudgetKeyProvider::OnLogLoadBudgetKeyIntoCacheCallback(
       load_budget_key_context;
   load_budget_key_context.parent_activity_id =
       get_budget_key_context.activity_id;
+  load_budget_key_context.correlation_id =
+      get_budget_key_context.correlation_id;
   load_budget_key_context.callback =
       bind(&BudgetKeyProvider::OnLoadBudgetKeyCallback, this,
            get_budget_key_context, budget_key_provider_pair, _1);
@@ -523,9 +579,9 @@ void BudgetKeyProvider::OnLoadBudgetKeyCallback(
   auto execution_result = budget_keys_->EnableEviction(
       *budget_key_provider_pair->budget_key->GetName());
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kBudgetKeyProvider, get_budget_key_context, execution_result,
-                  "Cache eviction failed for %s",
-                  budget_key_provider_pair->budget_key->GetName()->c_str());
+    SCP_ERROR_CONTEXT(kBudgetKeyProvider, get_budget_key_context,
+                      execution_result, "Cache eviction failed for %s",
+                      budget_key_provider_pair->budget_key->GetName()->c_str());
   }
 
   if (!load_budget_key_context.result.Successful()) {
@@ -560,9 +616,9 @@ ExecutionResult BudgetKeyProvider::Checkpoint(
     return execution_result;
   }
 
-  DEBUG(kBudgetKeyProvider, kZeroUuid, kZeroUuid,
-        "Number of active budget keys in map to checkpoint: %llu",
-        budget_keys.size());
+  SCP_INFO(kBudgetKeyProvider, activity_id_,
+           "Number of active budget keys in map to checkpoint: %llu",
+           budget_keys.size());
   for (auto budget_key : budget_keys) {
     shared_ptr<BudgetKeyProviderPair> budget_key_provider_pair;
     execution_result = budget_keys_->Find(budget_key, budget_key_provider_pair);

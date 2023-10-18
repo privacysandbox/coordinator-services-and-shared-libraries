@@ -29,8 +29,9 @@
 #include "core/transaction_manager/mock/mock_transaction_engine.h"
 #include "core/transaction_manager/mock/mock_transaction_manager.h"
 #include "core/transaction_manager/src/error_codes.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncOperation;
 using google::scp::core::CheckpointLog;
@@ -47,7 +48,7 @@ using google::scp::core::transaction_manager::mock::
     MockTransactionCommandSerializer;
 using google::scp::core::transaction_manager::mock::MockTransactionEngine;
 using google::scp::core::transaction_manager::mock::MockTransactionManager;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockMetricClient;
 using std::atomic;
 using std::list;
 using std::make_shared;
@@ -71,7 +72,7 @@ class TransactionManagerTests : public testing::Test {
     mock_transaction_command_serializer =
         make_shared<MockTransactionCommandSerializer>();
     async_executor = make_shared<MockAsyncExecutor>();
-    auto metric_client = make_shared<MockMetricClientProvider>();
+    auto metric_client = make_shared<MockMetricClient>();
     mock_transaction_engine_ = make_shared<MockTransactionEngine>(
         async_executor, mock_transaction_command_serializer,
         mock_journal_service, remote_transaction_manager, metric_client);
@@ -89,7 +90,7 @@ TEST_F(TransactionManagerTests, InitValidation) {
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
   auto async_executor =
       static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<TransactionCommandSerializerInterface>
@@ -114,7 +115,8 @@ TEST_F(TransactionManagerTests, InitValidation) {
         async_executor, transaction_engine, 0, mock_metric_client);
     auto code = errors::
         SC_TRANSACTION_MANAGER_INVALID_MAX_CONCURRENT_TRANSACTIONS_VALUE;
-    EXPECT_EQ(transaction_manager.Init(), FailureExecutionResult(code));
+    EXPECT_THAT(transaction_manager.Init(),
+                ResultIs(FailureExecutionResult(code)));
   }
 
   {
@@ -124,18 +126,18 @@ TEST_F(TransactionManagerTests, InitValidation) {
     mock_async_executor->schedule_mock = [](const AsyncOperation&) {
       return SuccessExecutionResult();
     };
-    EXPECT_EQ(transaction_manager.Init(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_manager.Run(), SuccessExecutionResult());
-    EXPECT_EQ(
-        transaction_manager.Init(),
-        FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_ALREADY_STARTED));
-    EXPECT_EQ(transaction_manager.Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Init());
+    EXPECT_SUCCESS(transaction_manager.Run());
+    EXPECT_THAT(transaction_manager.Init(),
+                ResultIs(FailureExecutionResult(
+                    errors::SC_TRANSACTION_MANAGER_ALREADY_STARTED)));
+    EXPECT_SUCCESS(transaction_manager.Stop());
   }
 }
 
 TEST_F(TransactionManagerTests, RunValidation) {
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto async_executor =
       static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
   shared_ptr<JournalServiceInterface> mock_journal_service =
@@ -163,17 +165,17 @@ TEST_F(TransactionManagerTests, RunValidation) {
     mock_async_executor->schedule_mock = [](const AsyncOperation&) {
       return SuccessExecutionResult();
     };
-    EXPECT_EQ(transaction_manager.Init(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_manager.Run(), SuccessExecutionResult());
-    EXPECT_EQ(
-        transaction_manager.Run(),
-        FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_ALREADY_STARTED));
-    EXPECT_EQ(transaction_manager.Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Init());
+    EXPECT_SUCCESS(transaction_manager.Run());
+    EXPECT_THAT(transaction_manager.Run(),
+                ResultIs(FailureExecutionResult(
+                    errors::SC_TRANSACTION_MANAGER_ALREADY_STARTED)));
+    EXPECT_SUCCESS(transaction_manager.Stop());
   }
 }
 
 TEST_F(TransactionManagerTests, ExecuteValidation) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   {
     auto mock_async_executor = make_shared<MockAsyncExecutor>();
     auto async_executor =
@@ -206,9 +208,9 @@ TEST_F(TransactionManagerTests, ExecuteValidation) {
     AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
     transaction_context.request = make_shared<TransactionRequest>();
     transaction_context.request->transaction_id = Uuid::GenerateUuid();
-    EXPECT_EQ(
-        transaction_manager.Execute(transaction_context),
-        FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_NOT_STARTED));
+    EXPECT_THAT(transaction_manager.Execute(transaction_context),
+                ResultIs(FailureExecutionResult(
+                    errors::SC_TRANSACTION_MANAGER_NOT_STARTED)));
   }
 
   {
@@ -238,20 +240,21 @@ TEST_F(TransactionManagerTests, ExecuteValidation) {
     };
     MockTransactionManager transaction_manager(
         mock_async_executor, transaction_engine, 1, mock_metric_client);
-    EXPECT_EQ(transaction_manager.Init(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_manager.Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Init());
+    EXPECT_SUCCESS(transaction_manager.Run());
     AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
     transaction_context.request = make_shared<TransactionRequest>();
     transaction_context.request->transaction_id = Uuid::GenerateUuid();
     transaction_manager.GetActiveTransactionsCount()++;
     transaction_manager.GetActiveTransactionsCount()++;
-    EXPECT_EQ(transaction_manager.Execute(transaction_context),
-              RetryExecutionResult(
-                  errors::SC_TRANSACTION_MANAGER_CANNOT_ACCEPT_NEW_REQUESTS));
+    EXPECT_THAT(
+        transaction_manager.Execute(transaction_context),
+        ResultIs(RetryExecutionResult(
+            errors::SC_TRANSACTION_MANAGER_CANNOT_ACCEPT_NEW_REQUESTS)));
 
     transaction_manager.GetActiveTransactionsCount()--;
     transaction_manager.GetActiveTransactionsCount()--;
-    EXPECT_EQ(transaction_manager.Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Stop());
   }
 
   {
@@ -296,20 +299,19 @@ TEST_F(TransactionManagerTests, ExecuteValidation) {
       return SuccessExecutionResult();
     };
 
-    EXPECT_EQ(transaction_manager.Init(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_manager.Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Init());
+    EXPECT_SUCCESS(transaction_manager.Run());
 
     for (size_t i = 0; i < 5; ++i) {
       AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
       transaction_context.request = make_shared<TransactionRequest>();
       transaction_context.request->transaction_id = Uuid::GenerateUuid();
       transaction_context.callback = [&](auto& context) { total++; };
-      EXPECT_EQ(transaction_manager.Execute(transaction_context),
-                SuccessExecutionResult());
+      EXPECT_SUCCESS(transaction_manager.Execute(transaction_context));
     }
 
     WaitUntil([&]() { return total.load() == 5; });
-    EXPECT_EQ(transaction_manager.Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Stop());
     for (size_t i = 0; i < threads.size(); ++i) {
       if (threads[i].joinable()) {
         threads[i].join();
@@ -319,7 +321,7 @@ TEST_F(TransactionManagerTests, ExecuteValidation) {
 }
 
 TEST_F(TransactionManagerTests, StopValidation) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
   auto async_executor =
       static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
@@ -345,9 +347,9 @@ TEST_F(TransactionManagerTests, StopValidation) {
   {
     MockTransactionManager transaction_manager(
         async_executor, transaction_engine, 1, mock_metric_client);
-    EXPECT_EQ(
-        transaction_manager.Stop(),
-        FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_ALREADY_STOPPED));
+    EXPECT_THAT(transaction_manager.Stop(),
+                ResultIs(FailureExecutionResult(
+                    errors::SC_TRANSACTION_MANAGER_ALREADY_STOPPED)));
   }
 
   {
@@ -355,8 +357,8 @@ TEST_F(TransactionManagerTests, StopValidation) {
     MockTransactionManager transaction_manager(
         mock_async_executor, transaction_engine, 1, mock_metric_client);
 
-    EXPECT_EQ(transaction_manager.Init(), SuccessExecutionResult());
-    EXPECT_EQ(transaction_manager.Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Init());
+    EXPECT_SUCCESS(transaction_manager.Run());
 
     transaction_manager.GetActiveTransactionsCount()++;
     transaction_manager.GetActiveTransactionsCount()++;
@@ -367,7 +369,7 @@ TEST_F(TransactionManagerTests, StopValidation) {
       finished = true;
     });
 
-    EXPECT_EQ(transaction_manager.Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(transaction_manager.Stop());
     EXPECT_TRUE(finished.load());
 
     if (decrement_active_transactions.joinable()) {
@@ -377,7 +379,7 @@ TEST_F(TransactionManagerTests, StopValidation) {
 }
 
 TEST_F(TransactionManagerTests, CannotCheckpointIfRunning) {
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
   auto async_executor =
       static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
@@ -404,15 +406,14 @@ TEST_F(TransactionManagerTests, CannotCheckpointIfRunning) {
                                              1, mock_metric_client);
   transaction_manager.Init();
   auto checkpoint_logs = make_shared<list<CheckpointLog>>();
-  EXPECT_EQ(transaction_manager.Checkpoint(checkpoint_logs),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(transaction_manager.Checkpoint(checkpoint_logs));
 
   transaction_manager.Run();
-  EXPECT_EQ(
+  EXPECT_THAT(
       transaction_manager.Checkpoint(checkpoint_logs),
-      FailureExecutionResult(
+      ResultIs(FailureExecutionResult(
           errors::
-              SC_TRANSACTION_MANAGER_CANNOT_CREATE_CHECKPOINT_WHEN_STARTED));
+              SC_TRANSACTION_MANAGER_CANNOT_CREATE_CHECKPOINT_WHEN_STARTED)));
 
   transaction_manager.Stop();
 }
@@ -421,10 +422,10 @@ TEST_F(TransactionManagerTests,
        GetStatusReturnsFailureIfTransactionManagerHasNotStarted) {
   GetTransactionManagerStatusRequest request;
   GetTransactionManagerStatusResponse response;
-  EXPECT_EQ(
-      mock_transaction_manager_->GetStatus(request, response),
-      FailureExecutionResult(
-          core::errors::SC_TRANSACTION_MANAGER_STATUS_CANNOT_BE_OBTAINED));
+  EXPECT_THAT(
+      mock_transaction_manager_->GetTransactionManagerStatus(request, response),
+      ResultIs(FailureExecutionResult(
+          core::errors::SC_TRANSACTION_MANAGER_STATUS_CANNOT_BE_OBTAINED)));
 }
 
 TEST_F(TransactionManagerTests, GetStatusReturnsZeroPendingTransactionsCount) {
@@ -438,11 +439,11 @@ TEST_F(TransactionManagerTests, GetStatusReturnsZeroPendingTransactionsCount) {
     return SuccessExecutionResult();
   };
 
-  EXPECT_EQ(mock_transaction_manager_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(mock_transaction_manager_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_transaction_manager_->Init());
+  EXPECT_SUCCESS(mock_transaction_manager_->Run());
 
-  EXPECT_EQ(mock_transaction_manager_->GetStatus(request, response),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_transaction_manager_->GetTransactionManagerStatus(
+      request, response));
   EXPECT_EQ(response.pending_transactions_count, 0);
 }
 
@@ -457,8 +458,8 @@ TEST_F(TransactionManagerTests,
     return SuccessExecutionResult();
   };
 
-  EXPECT_EQ(mock_transaction_manager_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(mock_transaction_manager_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_transaction_manager_->Init());
+  EXPECT_SUCCESS(mock_transaction_manager_->Run());
 
   // Add 1 transaction
   transaction_context.request = make_shared<TransactionRequest>();
@@ -467,8 +468,8 @@ TEST_F(TransactionManagerTests,
 
   GetTransactionManagerStatusRequest request;
   GetTransactionManagerStatusResponse response;
-  EXPECT_EQ(mock_transaction_manager_->GetStatus(request, response),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_transaction_manager_->GetTransactionManagerStatus(
+      request, response));
   EXPECT_EQ(response.pending_transactions_count, 1);
 }
 

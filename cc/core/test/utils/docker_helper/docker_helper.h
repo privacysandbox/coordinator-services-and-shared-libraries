@@ -26,12 +26,17 @@ int StartLocalStackContainer(const std::string& network,
                              const std::string& container_name,
                              const std::string& exposed_port);
 
+int StartGcpContainer(const std::string& network,
+                      const std::string& container_name,
+                      const std::string& exposed_port);
+
 int StartContainer(
     const std::string& network, const std::string& container_name,
     const std::string& image_name, const std::string& port_mapping1,
     const std::string& port_mapping2 = "",
     const std::map<std::string, std::string>& environment_variables =
-        std::map<std::string, std::string>({}));
+        std::map<std::string, std::string>({}),
+    const std::string& addition_args = "");
 
 int CreateImage(const std::string& image_target, const std::string& args = "");
 
@@ -59,5 +64,26 @@ std::string BuildStartContainerCmd(
     const std::string& image_name, const std::string& port_mapping1,
     const std::string& port_mapping2 = "",
     const std::map<std::string, std::string>& environment_variables =
-        std::map<std::string, std::string>({}));
+        std::map<std::string, std::string>({}),
+    const std::string& addition_args = "");
+
+/**
+ * @brief Get the Ip Address of a docker container.
+ *
+ * @param network_name the network the container is in.
+ * @param container_name the container name.
+ * @return std::string the returned IP address.
+ */
+std::string GetIpAddress(const std::string& network_name,
+                         const std::string& container_name);
+
+/**
+ * @brief Run docker command to grant 666 permission to the given folder inside
+ * the given container.
+ *
+ * @param container_name the name of the given container.
+ * @param folder the given folder.
+ */
+void GrantPermissionToFolder(const std::string& container_name,
+                             const std::string& folder);
 }  // namespace google::scp::core::test

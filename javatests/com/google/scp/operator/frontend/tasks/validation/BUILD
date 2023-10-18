@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_test")
+
 package(default_visibility = ["//visibility:public"])
 
 java_test(
@@ -36,6 +38,8 @@ java_test(
         "//java/com/google/scp/operator/shared/model",
         "//java/external:google_truth8",
         "//java/external:guava",
+        # Needs snakeyaml dependency here to choose the right snakeyaml version.
+        "//java/external:snakeyaml",
         "//java/external:test_parameter_injector",
         "//operator/protos/shared/backend:java_proto",
     ],

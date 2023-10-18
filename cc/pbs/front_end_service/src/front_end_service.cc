@@ -31,17 +31,18 @@
 #include "core/common/global_logger/src/global_logger.h"
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/common/uuid/src/uuid.h"
-#include "core/interface/transaction_manager_interface.h"
+#include "core/interface/configuration_keys.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cpio/client_providers/metric_client_provider/interface/aggregate_metric_interface.h"
-#include "cpio/client_providers/metric_client_provider/interface/type_def.h"
-#include "cpio/client_providers/metric_client_provider/src/utils/aggregate_metric.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/front_end_service_interface.h"
 #include "pbs/transactions/src/batch_consume_budget_command.h"
 #include "pbs/transactions/src/consume_budget_command.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 
 #include "error_codes.h"
 #include "front_end_utils.h"
@@ -59,6 +60,7 @@ using google::scp::core::HttpHandler;
 using google::scp::core::HttpMethod;
 using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
+using google::scp::core::kAggregatedMetricIntervalMs;
 using google::scp::core::kDefaultAggregatedMetricIntervalMs;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::TimeDuration;
@@ -73,14 +75,14 @@ using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::TimeProvider;
 using google::scp::core::common::ToString;
 using google::scp::core::common::Uuid;
+using google::scp::cpio::AggregateMetric;
+using google::scp::cpio::AggregateMetricInterface;
+using google::scp::cpio::kCountSecond;
+using google::scp::cpio::MetricDefinition;
 using google::scp::cpio::MetricLabels;
+using google::scp::cpio::MetricLabelsBase;
 using google::scp::cpio::MetricName;
 using google::scp::cpio::MetricUnit;
-using google::scp::cpio::client_providers::AggregateMetric;
-using google::scp::cpio::client_providers::AggregateMetricInterface;
-using google::scp::cpio::client_providers::kCountSecond;
-using google::scp::cpio::client_providers::MetricDefinition;
-using google::scp::cpio::client_providers::MetricLabelsBase;
 using google::scp::pbs::FrontEndUtils;
 using std::any_of;
 using std::bind;
@@ -108,22 +110,22 @@ namespace google::scp::pbs {
 FrontEndService::FrontEndService(
     shared_ptr<core::HttpServerInterface>& http_server,
     shared_ptr<core::AsyncExecutorInterface>& async_executor,
-    shared_ptr<core::TransactionManagerInterface>& transaction_manager,
-    shared_ptr<BudgetKeyProviderInterface>& budget_key_provider,
-    const shared_ptr<cpio::client_providers::MetricClientProviderInterface>&
-        metric_client,
+    std::unique_ptr<core::TransactionRequestRouterInterface>
+        transaction_request_router,
+    std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+        consume_budget_command_factory,
+    const shared_ptr<cpio::MetricClientInterface>& metric_client,
     const shared_ptr<core::ConfigProviderInterface>& config_provider)
     : http_server_(http_server),
       async_executor_(async_executor),
-      transaction_manager_(transaction_manager),
-      budget_key_provider_(budget_key_provider),
+      transaction_request_router_(move(transaction_request_router)),
+      consume_budget_command_factory_(move(consume_budget_command_factory)),
       metric_client_(metric_client),
       config_provider_(config_provider),
       aggregated_metric_interval_ms_(core::kDefaultAggregatedMetricIntervalMs),
       generate_batch_budget_consume_commands_per_day_(false) {}
 
-core::ExecutionResultOr<
-    std::shared_ptr<cpio::client_providers::AggregateMetricInterface>>
+core::ExecutionResultOr<std::shared_ptr<cpio::AggregateMetricInterface>>
 FrontEndService::RegisterAggregateMetric(const string& name,
                                          const string& phase) noexcept {
   auto metric_name = make_shared<MetricName>(name);
@@ -135,11 +137,10 @@ FrontEndService::RegisterAggregateMetric(const string& name,
   vector<string> labels_list = {kMetricLabelValueOperator,
                                 kMetricLabelValueCoordinator};
   shared_ptr<AggregateMetricInterface> metric_instance =
-      make_shared<AggregateMetric>(
-          async_executor_, metric_client_, metric_info,
-          aggregated_metric_interval_ms_,
-          make_shared<vector<string>>(move(labels_list)),
-          kMetricLabelKeyReportingOrigin);
+      make_shared<AggregateMetric>(async_executor_, metric_client_, metric_info,
+                                   aggregated_metric_interval_ms_,
+                                   make_shared<vector<string>>(labels_list),
+                                   kMetricLabelKeyReportingOrigin);
   return metric_instance;
 }
 
@@ -174,10 +175,9 @@ ExecutionResult FrontEndService::Init() noexcept {
     generate_batch_budget_consume_commands_per_day_ = false;
   }
   if (generate_batch_budget_consume_commands_per_day_) {
-    INFO(kFrontEndService, kZeroUuid, kZeroUuid,
-         "Command batching per day is enabled",
-         kEnableBatchBudgetCommandsPerDayConfigName,
-         generate_batch_budget_consume_commands_per_day_)
+    SCP_INFO(kFrontEndService, kZeroUuid, "Command batching per day is enabled",
+             kEnableBatchBudgetCommandsPerDayConfigName,
+             generate_batch_budget_consume_commands_per_day_)
   }
 
   execution_result =
@@ -236,11 +236,17 @@ ExecutionResult FrontEndService::Init() noexcept {
   http_server_->RegisterResourceHandler(HttpMethod::GET, service_status_path,
                                         service_status_handler);
 
+  if (!config_provider_
+           ->Get(kAggregatedMetricIntervalMs, aggregated_metric_interval_ms_)
+           .Successful()) {
+    aggregated_metric_interval_ms_ = kDefaultAggregatedMetricIntervalMs;
+  }
+
   // Initializes TransactionMetrics instances for all transaction phases.
   FrontEndService::InitMetricInstances();
   for (auto const& [method_name, map] : metrics_instances_map_) {
     for (auto const& [metric_name, metric_instance] : map) {
-      metric_instance->Init();
+      RETURN_IF_FAILURE(metric_instance->Init());
     }
   }
   return SuccessExecutionResult();
@@ -250,7 +256,7 @@ ExecutionResult FrontEndService::Run() noexcept {
   // Runs all AggregateMetric instances.
   for (auto const& [method_name, map] : metrics_instances_map_) {
     for (auto const& [metric_name, metric_instance] : map) {
-      metric_instance->Run();
+      RETURN_IF_FAILURE(metric_instance->Run());
     }
   }
   return SuccessExecutionResult();
@@ -260,18 +266,30 @@ ExecutionResult FrontEndService::Stop() noexcept {
   // Shuts down all AggregateMetric instances.
   for (auto const& [method_name, map] : metrics_instances_map_) {
     for (auto const& [metric_name, metric_instance] : map) {
-      metric_instance->Stop();
+      RETURN_IF_FAILURE(metric_instance->Stop());
     }
   }
   return SuccessExecutionResult();
 }
 
+shared_ptr<string> FrontEndService::ObtainTransactionOrigin(
+    AsyncContext<HttpRequest, HttpResponse>& http_context) const {
+  // If transaction origin is supplied in the header use that instead. The
+  // transaction origin in the header is useful if a peer coordinator is
+  // resolving a transaction on behalf of a client.
+  string transaction_origin_in_header;
+  auto execution_result = FrontEndUtils::ExtractTransactionOrigin(
+      http_context.request->headers, transaction_origin_in_header);
+  if (execution_result.Successful() && !transaction_origin_in_header.empty()) {
+    return make_shared<string>(move(transaction_origin_in_header));
+  }
+  return http_context.request->auth_context.authorized_domain;
+}
+
 vector<shared_ptr<TransactionCommand>>
 FrontEndService::GenerateConsumeBudgetCommands(
     list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-    const string& authorized_domain, const Uuid& transaction_id,
-    shared_ptr<core::AsyncExecutorInterface>& async_executor,
-    shared_ptr<BudgetKeyProviderInterface>& budget_key_provider) {
+    const string& authorized_domain, const Uuid& transaction_id) {
   vector<shared_ptr<TransactionCommand>> commands;
   size_t index = 0;
   for (auto& budget : consume_budget_metadata_list) {
@@ -279,9 +297,8 @@ FrontEndService::GenerateConsumeBudgetCommands(
         absl::StrCat(authorized_domain, string("/"), *budget.budget_key_name));
     ConsumeBudgetCommandRequestInfo budget_info(budget.time_bucket,
                                                 budget.token_count, index);
-    commands.push_back(make_shared<ConsumeBudgetCommand>(
-        transaction_id, budget_key_name_ptr, move(budget_info), async_executor,
-        budget_key_provider));
+    commands.push_back(consume_budget_command_factory_->ConstructCommand(
+        transaction_id, budget_key_name_ptr, budget_info));
     index++;
   }
   return commands;
@@ -298,9 +315,7 @@ struct ConsumeBudgetMetadataTimeBucketOrderingLessThanComparator {
 vector<shared_ptr<TransactionCommand>>
 FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
     list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-    const string& authorized_domain, const Uuid& transaction_id,
-    shared_ptr<core::AsyncExecutorInterface>& async_executor,
-    shared_ptr<BudgetKeyProviderInterface>& budget_key_provider) {
+    const string& authorized_domain, const Uuid& transaction_id) {
   // Populate
   //
   // Format:
@@ -341,17 +356,17 @@ FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
           budgets.emplace_back(budget.first->time_bucket,
                                budget.first->token_count, budget.second);
         }
-        generated_commands.push_back(make_shared<BatchConsumeBudgetCommand>(
-            transaction_id, budget_key_name_ptr, move(budgets), async_executor,
-            budget_key_provider));
+        generated_commands.push_back(
+            consume_budget_command_factory_->ConstructBatchCommand(
+                transaction_id, budget_key_name_ptr, move(budgets)));
       } else {
         ConsumeBudgetCommandRequestInfo budget(
             (*time_groups.second.begin()).first->time_bucket,
             (*time_groups.second.begin()).first->token_count,
             (*time_groups.second.begin()).second);
-        generated_commands.push_back(make_shared<ConsumeBudgetCommand>(
-            transaction_id, budget_key_name_ptr, move(budget), async_executor,
-            budget_key_provider));
+        generated_commands.push_back(
+            consume_budget_command_factory_->ConstructCommand(
+                transaction_id, budget_key_name_ptr, move(budget)));
       }
     }
   }
@@ -415,10 +430,10 @@ ExecutionResult FrontEndService::BeginTransaction(
   }
 
   auto transaction_id_string = ToString(transaction_id);
-  DEBUG_CONTEXT(kFrontEndService, http_context,
-                "Starting Transaction: %s Total Keys: %lld",
-                transaction_id_string.c_str(),
-                consume_budget_metadata_list.size());
+  SCP_DEBUG_CONTEXT(kFrontEndService, http_context,
+                    "Starting Transaction: %s Total Keys: %lld",
+                    transaction_id_string.c_str(),
+                    consume_budget_metadata_list.size());
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelBeginTransaction)
@@ -427,11 +442,11 @@ ExecutionResult FrontEndService::BeginTransaction(
       make_shared<TransactionRequest>(),
       bind(&FrontEndService::OnTransactionCallback, this,
            server_error_metrics_instance, http_context, _1),
-      http_context.activity_id);
+      http_context);
 
   // Log the request's budget info
   for (auto& consume_budget_metadata : consume_budget_metadata_list) {
-    DEBUG_CONTEXT(
+    SCP_DEBUG_CONTEXT(
         kFrontEndService, http_context,
         "Transaction: %s Budget Key: %s/%s Reporting Time Bucket: %llu Token "
         "Count: %d",
@@ -447,17 +462,18 @@ ExecutionResult FrontEndService::BeginTransaction(
         GenerateConsumeBudgetCommandsWithBatchesPerDay(
             consume_budget_metadata_list,
             *http_context.request->auth_context.authorized_domain,
-            transaction_id, async_executor_, budget_key_provider_);
+            transaction_id);
   } else {
     transaction_context.request->commands = GenerateConsumeBudgetCommands(
         consume_budget_metadata_list,
-        *http_context.request->auth_context.authorized_domain, transaction_id,
-        async_executor_, budget_key_provider_);
+        *http_context.request->auth_context.authorized_domain, transaction_id);
   }
 
   transaction_context.request->is_coordinated_remotely = true;
   transaction_context.request->transaction_secret =
       make_shared<string>(transaction_secret);
+  // Transaction origin during transaction initiation must be the one authorized
+  // with the system.
   transaction_context.request->transaction_origin =
       http_context.request->auth_context.authorized_domain;
   transaction_context.request->timeout_time =
@@ -465,11 +481,12 @@ ExecutionResult FrontEndService::BeginTransaction(
        milliseconds(kTransactionTimeoutMs))
           .count();
   transaction_context.request->transaction_id = transaction_id;
-  execution_result = transaction_manager_->Execute(transaction_context);
+
+  execution_result = transaction_request_router_->Execute(transaction_context);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Failed to execute transaction %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
+                      "Failed to execute transaction %s",
+                      transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
   }
   return execution_result;
@@ -504,6 +521,8 @@ ExecutionResult FrontEndService::PrepareTransaction(
     return execution_result;
   }
 
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+
   Timestamp last_execution_timestamp;
   execution_result = FrontEndUtils::ExtractLastExecutionTimestamp(
       http_context.request->headers, last_execution_timestamp);
@@ -513,7 +532,7 @@ ExecutionResult FrontEndService::PrepareTransaction(
   }
 
   auto transaction_id_string = ToString(transaction_id);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kFrontEndService, http_context,
       "Executing PREPARE phase for transaction: %s LastExecutionTime: %llu",
       transaction_id_string.c_str(), last_execution_timestamp);
@@ -523,12 +542,12 @@ ExecutionResult FrontEndService::PrepareTransaction(
           .at(kMetricNameServerError);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
-      transaction_secret, last_execution_timestamp,
+      transaction_secret, transaction_origin, last_execution_timestamp,
       TransactionExecutionPhase::Prepare);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Failed to execute PREPARE phase for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
+                      "Failed to execute PREPARE phase for transaction: %s",
+                      transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
   }
   return execution_result;
@@ -563,6 +582,8 @@ ExecutionResult FrontEndService::CommitTransaction(
     return execution_result;
   }
 
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+
   Timestamp last_execution_timestamp;
   execution_result = FrontEndUtils::ExtractLastExecutionTimestamp(
       http_context.request->headers, last_execution_timestamp);
@@ -572,7 +593,7 @@ ExecutionResult FrontEndService::CommitTransaction(
   }
 
   auto transaction_id_string = ToString(transaction_id);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kFrontEndService, http_context,
       "Executing COMMIT phase for transaction: %s LastExecutionTime: %llu",
       transaction_id_string.c_str(), last_execution_timestamp);
@@ -582,12 +603,12 @@ ExecutionResult FrontEndService::CommitTransaction(
           .at(kMetricNameServerError);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
-      transaction_secret, last_execution_timestamp,
+      transaction_secret, transaction_origin, last_execution_timestamp,
       TransactionExecutionPhase::Commit);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Failed to execute COMMIT phase for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
+                      "Failed to execute COMMIT phase for transaction: %s",
+                      transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
   }
   return execution_result;
@@ -622,6 +643,8 @@ ExecutionResult FrontEndService::NotifyTransaction(
     return execution_result;
   }
 
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+
   Timestamp last_execution_timestamp;
   execution_result = FrontEndUtils::ExtractLastExecutionTimestamp(
       http_context.request->headers, last_execution_timestamp);
@@ -631,7 +654,7 @@ ExecutionResult FrontEndService::NotifyTransaction(
   }
 
   auto transaction_id_string = ToString(transaction_id);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kFrontEndService, http_context,
       "Executing NOTIFY phase for transaction: %s LastExecutionTime: %llu",
       transaction_id_string.c_str(), last_execution_timestamp);
@@ -641,12 +664,12 @@ ExecutionResult FrontEndService::NotifyTransaction(
           .at(kMetricNameServerError);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
-      transaction_secret, last_execution_timestamp,
+      transaction_secret, transaction_origin, last_execution_timestamp,
       TransactionExecutionPhase::Notify);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Failed to execute NOTIFY phase for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
+                      "Failed to execute NOTIFY phase for transaction: %s",
+                      transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
   }
   return execution_result;
@@ -681,6 +704,8 @@ ExecutionResult FrontEndService::AbortTransaction(
     return execution_result;
   }
 
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+
   Timestamp last_execution_timestamp;
   execution_result = FrontEndUtils::ExtractLastExecutionTimestamp(
       http_context.request->headers, last_execution_timestamp);
@@ -690,7 +715,7 @@ ExecutionResult FrontEndService::AbortTransaction(
   }
 
   auto transaction_id_string = ToString(transaction_id);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kFrontEndService, http_context,
       "Executing ABORT phase for transaction: %s LastExecutionTime: %llu",
       transaction_id_string.c_str(), last_execution_timestamp);
@@ -700,12 +725,12 @@ ExecutionResult FrontEndService::AbortTransaction(
           .at(kMetricNameServerError);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
-      transaction_secret, last_execution_timestamp,
+      transaction_secret, transaction_origin, last_execution_timestamp,
       TransactionExecutionPhase::Abort);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Failed to execute ABORT phase for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
+                      "Failed to execute ABORT phase for transaction: %s",
+                      transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
   }
   return execution_result;
@@ -740,6 +765,8 @@ ExecutionResult FrontEndService::EndTransaction(
     return execution_result;
   }
 
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+
   Timestamp last_execution_timestamp;
   execution_result = FrontEndUtils::ExtractLastExecutionTimestamp(
       http_context.request->headers, last_execution_timestamp);
@@ -749,7 +776,7 @@ ExecutionResult FrontEndService::EndTransaction(
   }
 
   auto transaction_id_string = ToString(transaction_id);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kFrontEndService, http_context,
       "Executing END phase for transaction: %s LastExecutionTime: %llu",
       transaction_id_string.c_str(), last_execution_timestamp);
@@ -759,12 +786,12 @@ ExecutionResult FrontEndService::EndTransaction(
           .at(kMetricNameServerError);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
-      transaction_secret, last_execution_timestamp,
+      transaction_secret, transaction_origin, last_execution_timestamp,
       TransactionExecutionPhase::End);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Failed to execute END phase for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
+                      "Failed to execute END phase for transaction: %s",
+                      transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
   }
   return execution_result;
@@ -799,10 +826,12 @@ ExecutionResult FrontEndService::GetTransactionStatus(
     return execution_result;
   }
 
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+
   auto transaction_id_string = ToString(transaction_id);
-  DEBUG_CONTEXT(kFrontEndService, http_context,
-                "Executing GetTransactionStatus for transaction: %s",
-                transaction_id_string.c_str());
+  SCP_DEBUG_CONTEXT(kFrontEndService, http_context,
+                    "Executing GetTransactionStatus for transaction: %s",
+                    transaction_id_string.c_str());
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelGetStatusTransaction)
@@ -812,18 +841,21 @@ ExecutionResult FrontEndService::GetTransactionStatus(
           make_shared<GetTransactionStatusRequest>(),
           bind(&FrontEndService::OnGetTransactionStatusCallback, this,
                server_error_metrics_instance, http_context, _1),
-          http_context.activity_id);
+          http_context);
 
   get_transaction_status_context.request->transaction_id = transaction_id;
   get_transaction_status_context.request->transaction_secret =
       make_shared<string>(move(transaction_secret));
+  get_transaction_status_context.request->transaction_origin =
+      transaction_origin;
 
-  execution_result = transaction_manager_->GetTransactionStatus(
-      get_transaction_status_context);
+  execution_result =
+      transaction_request_router_->Execute(get_transaction_status_context);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Failed to execute GetTransactionStatus for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(
+        kFrontEndService, http_context, execution_result,
+        "Failed to execute GetTransactionStatus for transaction: %s",
+        transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
   }
   return execution_result;
@@ -905,7 +937,8 @@ ExecutionResult FrontEndService::GetServiceStatus(
   GetTransactionManagerStatusResponse response;
 
   // Serialize pending transactions count from TransactionManager
-  auto execution_result = transaction_manager_->GetStatus(request, response);
+  auto execution_result =
+      transaction_request_router_->Execute(request, response);
   RETURN_IF_FAILURE(execution_result);
 
   execution_result = FrontEndUtils::SerializePendingTransactionCount(
@@ -981,8 +1014,9 @@ void FrontEndService::OnTransactionCallback(
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   if (!transaction_context.result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, transaction_context.result,
-                  "Transaction callback failed.");
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context,
+                      transaction_context.result,
+                      "Transaction callback failed.");
 
     if (transaction_context.result.status == core::ExecutionStatus::Failure &&
         transaction_context.response) {
@@ -995,8 +1029,9 @@ void FrontEndService::OnTransactionCallback(
         // We can log it but should not update the error code getting back to
         // the client since it will make it confusing for the proper diagnosis
         // on the transaction execution errors.
-        ERROR_CONTEXT(kFrontEndService, http_context, local_execution_result,
-                      "Serialization of the transaction response failed");
+        SCP_ERROR_CONTEXT(kFrontEndService, http_context,
+                          local_execution_result,
+                          "Serialization of the transaction response failed");
       }
     }
 
@@ -1011,7 +1046,7 @@ void FrontEndService::OnTransactionCallback(
 
   http_context.response->headers->insert({transaction_id_header, uuid_string});
 
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kFrontEndService, http_context,
       "Executing BEGIN phase for transaction: %s LastExecutionTime: %llu",
       uuid_string.c_str(),
@@ -1021,13 +1056,14 @@ void FrontEndService::OnTransactionCallback(
       metrics_instance, http_context,
       transaction_context.request->transaction_id,
       transaction_context.request->transaction_secret,
+      transaction_context.request->transaction_origin,
       transaction_context.response->last_execution_timestamp,
       TransactionExecutionPhase::Begin);
 
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
-                  "Execute BEGIN phase failed for transaction: %s",
-                  uuid_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
+                      "Execute BEGIN phase failed for transaction: %s",
+                      uuid_string.c_str());
     http_context.result = execution_result;
     http_context.Finish();
     metrics_instance->Increment(reporting_origin_metric_label);
@@ -1039,6 +1075,7 @@ ExecutionResult FrontEndService::ExecuteTransactionPhase(
     const shared_ptr<AggregateMetricInterface>& metrics_instance,
     AsyncContext<HttpRequest, HttpResponse>& http_context, Uuid& transaction_id,
     shared_ptr<string>& transaction_secret,
+    shared_ptr<string>& transaction_origin,
     Timestamp last_transaction_execution_timestamp,
     TransactionExecutionPhase transaction_execution_phase) noexcept {
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
@@ -1046,16 +1083,15 @@ ExecutionResult FrontEndService::ExecuteTransactionPhase(
           make_shared<TransactionPhaseRequest>(),
           bind(&FrontEndService::OnExecuteTransactionPhaseCallback, this,
                metrics_instance, http_context, _1),
-          http_context.activity_id);
+          http_context);
   transaction_phase_context.request->transaction_execution_phase =
       transaction_execution_phase;
   transaction_phase_context.request->transaction_id = transaction_id;
   transaction_phase_context.request->last_execution_timestamp =
       last_transaction_execution_timestamp;
   transaction_phase_context.request->transaction_secret = transaction_secret;
-  transaction_phase_context.request->transaction_origin =
-      http_context.request->auth_context.authorized_domain;
-  return transaction_manager_->ExecutePhase(transaction_phase_context);
+  transaction_phase_context.request->transaction_origin = transaction_origin;
+  return transaction_request_router_->Execute(transaction_phase_context);
 }
 
 void FrontEndService::OnExecuteTransactionPhaseCallback(
@@ -1071,10 +1107,10 @@ void FrontEndService::OnExecuteTransactionPhaseCallback(
       ToString(transaction_phase_context.request->transaction_id);
 
   if (!transaction_phase_context.result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context,
-                  transaction_phase_context.result,
-                  "Transaction phase execution failed for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context,
+                      transaction_phase_context.result,
+                      "Transaction phase execution failed for transaction: %s",
+                      transaction_id_string.c_str());
 
     metrics_instance->Increment(reporting_origin_metric_label);
   }
@@ -1100,21 +1136,23 @@ void FrontEndService::OnExecuteTransactionPhaseCallback(
       // We can log it but should not update the error code getting back to
       // the client since it will make it confusing for the proper diagnosis
       // on the transaction execution errors.
-      ERROR_CONTEXT(kFrontEndService, http_context, local_execution_result,
-                    "Serialization of the transaction phase response failed "
-                    "for transaction: %s",
-                    transaction_id_string.c_str());
+      SCP_ERROR_CONTEXT(
+          kFrontEndService, http_context, local_execution_result,
+          "Serialization of the transaction phase response failed "
+          "for transaction: %s",
+          transaction_id_string.c_str());
     }
   }
 
-  DEBUG_CONTEXT(kFrontEndService, transaction_phase_context,
-                "Transaction phase execution completed for transaction: %s, "
-                "TransactionExecutionPhase enum: %d, LastExecutionTimestamp: "
-                "%lld, HTTP Response: %s",
-                transaction_id_string.c_str(),
-                transaction_phase_context.request->transaction_execution_phase,
-                transaction_phase_context.request->last_execution_timestamp,
-                http_context.response->body.ToString().c_str());
+  SCP_DEBUG_CONTEXT(
+      kFrontEndService, transaction_phase_context,
+      "Transaction phase execution completed for transaction: %s, "
+      "TransactionExecutionPhase enum: %d, LastExecutionTimestamp: "
+      "%lld, HTTP Response: %s",
+      transaction_id_string.c_str(),
+      transaction_phase_context.request->transaction_execution_phase,
+      transaction_phase_context.request->last_execution_timestamp,
+      http_context.response->body.ToString().c_str());
 
   http_context.result = transaction_phase_context.result;
   http_context.Finish();
@@ -1132,10 +1170,10 @@ void FrontEndService::OnGetTransactionStatusCallback(
           http_context.request, remote_coordinator_claimed_identity_);
   http_context.result = get_transaction_status_context.result;
   if (!get_transaction_status_context.result.Successful()) {
-    ERROR_CONTEXT(kFrontEndService, http_context,
-                  get_transaction_status_context.result,
-                  "Get transaction status callback failed for transaction: %s",
-                  transaction_id_string.c_str());
+    SCP_ERROR_CONTEXT(
+        kFrontEndService, http_context, get_transaction_status_context.result,
+        "Get transaction status callback failed for transaction: %s",
+        transaction_id_string.c_str());
     http_context.Finish();
     metrics_instance->Increment(reporting_origin_metric_label);
     return;
@@ -1150,11 +1188,11 @@ void FrontEndService::OnGetTransactionStatusCallback(
     return;
   }
 
-  DEBUG_CONTEXT(
-      kFrontEndService, get_transaction_status_context,
-      "Transaction GetStatus completed for transaction: %s, HTTP Response: %s",
-      transaction_id_string.c_str(),
-      http_context.response->body.ToString().c_str());
+  SCP_DEBUG_CONTEXT(kFrontEndService, get_transaction_status_context,
+                    "Transaction GetTransactionManagerStatus completed for "
+                    "transaction: %s, HTTP Response: %s",
+                    transaction_id_string.c_str(),
+                    http_context.response->body.ToString().c_str());
 
   http_context.Finish();
 }
@@ -1171,7 +1209,7 @@ ExecutionResult FrontEndService::ExecuteConsumeBudgetTransaction(
       make_shared<TransactionRequest>(),
       bind(&FrontEndService::OnExecuteConsumeBudgetTransactionCallback, this,
            consume_budget_transaction_context, _1),
-      consume_budget_transaction_context.activity_id);
+      consume_budget_transaction_context);
 
   auto transaction_id = Uuid::GenerateUuid();
   for (auto& budget_key :
@@ -1179,19 +1217,21 @@ ExecutionResult FrontEndService::ExecuteConsumeBudgetTransaction(
     // Request index is not supplied here since this method is not invoked by
     // clients.
     transaction_context.request->commands.push_back(
-        make_shared<ConsumeBudgetCommand>(
+        consume_budget_command_factory_->ConstructCommand(
             transaction_id, budget_key.budget_key_name,
             ConsumeBudgetCommandRequestInfo(budget_key.time_bucket,
-                                            budget_key.token_count),
-            async_executor_, budget_key_provider_));
+                                            budget_key.token_count)));
   }
 
+  // The transaction is coordinated/orchestrated end-to-end by the Transaction
+  // Manager.
+  transaction_context.request->is_coordinated_remotely = false;
   transaction_context.request->timeout_time =
       (TimeProvider::GetSteadyTimestampInNanoseconds() +
        milliseconds(kTransactionTimeoutMs))
           .count();
   transaction_context.request->transaction_id = transaction_id;
-  return transaction_manager_->Execute(transaction_context);
+  return transaction_request_router_->Execute(transaction_context);
 }
 
 void FrontEndService::OnExecuteConsumeBudgetTransactionCallback(

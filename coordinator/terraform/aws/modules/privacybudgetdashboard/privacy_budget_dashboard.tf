@@ -692,4 +692,3 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
     }
   )
 }
-

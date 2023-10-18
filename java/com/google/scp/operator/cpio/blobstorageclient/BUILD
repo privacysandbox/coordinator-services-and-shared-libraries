@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -27,6 +29,15 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+    ],
+)
+
+java_library(
+    name = "model",
+    srcs = glob(["model/*.java"]),
+    deps = [
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
     ],
 )
 
@@ -55,10 +66,24 @@ java_library(
 )
 
 java_library(
-    name = "model",
-    srcs = glob(["model/*.java"]),
+    name = "gcp",
+    srcs = glob([
+        "*.java",
+        "gcp/*.java",
+        "testing/*.java",
+    ]),
     deps = [
+        ":model",
+        "//java/com/google/scp/operator/cpio/blobstorageclient",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
+        "//java/external:gcp_storage",
+        "//java/external:google_auth_library_oauth2_http",
+        "//java/external:google_gax",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:javax_inject",
     ],
 )

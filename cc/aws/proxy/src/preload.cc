@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <resolv.h>
+#include <sys/epoll.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -60,7 +61,8 @@ static int (*libc_accept)(int sockfd, struct sockaddr* addr,
                           socklen_t* addrlen);
 static int (*libc_accept4)(int sockfd, struct sockaddr* addr,
                            socklen_t* addrlen, int flags);
-static int (*libc_socket)(int domain, int type, int protocol) noexcept;
+static int (*libc_epoll_ctl)(int epfd, int op, int fd,
+                             struct epoll_event* event);
 // The ioctl() syscall signature contains variadic arguments for historical
 // reasons (i.e. allowing different types without forced casting). However, a
 // real syscall cannot have variadic arguments at all. The real internal
@@ -89,6 +91,23 @@ class AutoCloseFd {
  private:
   int fd_;
 };
+
+// Convert the file descriptor sockfd into a VSOCK socket. This means atomically
+// closing sockfd and create a new VSOCK socket descriptor of the same value.
+// Returns the fcntl flags of the original sockfd.
+int ConvertToVsock(int sockfd) {
+  int vsock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
+  if (vsock_fd < 0) {
+    return -1;
+  }
+  AutoCloseFd autoclose(vsock_fd);
+  int flags = fcntl(sockfd, F_GETFL);
+  if (dup2(vsock_fd, sockfd) < 0) {
+    return -1;
+  }
+  return flags;
+}
+
 }  // namespace
 
 void preload_init(void) {
@@ -119,8 +138,8 @@ void preload_init(void) {
       reinterpret_cast<decltype(libc_accept)>(dlsym(RTLD_NEXT, STR(accept)));
   libc_accept4 =
       reinterpret_cast<decltype(libc_accept4)>(dlsym(RTLD_NEXT, STR(accept4)));
-  libc_socket =
-      reinterpret_cast<decltype(libc_socket)>(dlsym(RTLD_NEXT, STR(socket)));
+  libc_epoll_ctl = reinterpret_cast<decltype(libc_epoll_ctl)>(
+      dlsym(RTLD_NEXT, STR(epoll_ctl)));
 #undef _STR
 #undef STR
 }
@@ -144,11 +163,43 @@ EXPORT int res_ninit(res_state statep) {
   return r;
 }
 
-EXPORT int socket(int domain, int type, int protocol) noexcept {
-  if ((domain == AF_INET || domain == AF_INET6) && (type & SOCK_STREAM)) {
-    return libc_socket(AF_VSOCK, type, 0);
+EXPORT int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
+  // The reason why we need to hook epoll_ctl is that, certain applications,
+  // such as boost::asio, may add the socket into an epoll instance before
+  // connect(). This is trouble some, because we need to make that a VSOCK
+  // socket, and it does not happen automatically in the epoll instance. We'll
+  // essentially need to remove the old fd, covert to VSOCK, and add to epoll
+  // again with the same epoll_event. This would require us to remember
+  // epoll_events. To avoid doing that, we convert the socket before adding to
+  // the epoll instance.
+  // Fallback early if it is not EPOLL_CTL_ADD.
+  if (op != EPOLL_CTL_ADD) {
+    return libc_epoll_ctl(epfd, op, fd, event);
   }
-  return libc_socket(domain, type, protocol);
+  // Get the socket type and domain.
+  int sock_type = 0;
+  socklen_t sock_type_len = sizeof(sock_type);
+  int ret = libc_getsockopt(fd, SOL_SOCKET, SO_TYPE,
+                            static_cast<void*>(&sock_type), &sock_type_len);
+  int sock_domain = 0;
+  socklen_t sock_domain_len = sizeof(sock_domain);
+  // We need two libc_getsockopt() calls, one for SO_TYPE, one for SO_DOMAIN. If
+  // either fails, fallback to libc_epoll_ctl.
+  if (ret != 0 || libc_getsockopt(fd, SOL_SOCKET, SO_DOMAIN,
+                                  static_cast<void*>(&sock_domain),
+                                  &sock_domain_len) != 0) {
+    return libc_epoll_ctl(epfd, op, fd, event);
+  }
+  // We only care about IP/IPv6 TCP sockets. Fallback otherwise.
+  if (sock_type != SOCK_STREAM ||
+      (sock_domain != AF_INET && sock_domain != AF_INET6)) {
+    return libc_epoll_ctl(epfd, op, fd, event);
+  }
+  // If we reach here, we have a TCP socket trying to be added into a epoll
+  // instance. Convert the socket into VSOCK and resume to epoll_ctl.
+  int fl = ConvertToVsock(fd);
+  fcntl(fd, F_SETFL, fl);
+  return libc_epoll_ctl(epfd, op, fd, event);
 }
 
 EXPORT int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
@@ -169,14 +220,23 @@ EXPORT int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
                                   &sock_domain_len) != 0) {
     return libc_connect(sockfd, addr, addrlen);
   }
-  // Previously, we've forced every socket() call of AF_INET/AF_INET6 to return
-  // AF_VSOCK sockets. If this socket is not VSOCK, fallback to libc_connect.
-  if (sock_type != SOCK_STREAM || sock_domain != AF_VSOCK) {
+  // If:
+  //    * the sockfd type is not SOCK_STREAM, or
+  //    * sockfd domain is not IP/IPv6/VSOCK, or
+  //    * target address is not IP/IPv6,
+  // then fallback to libc connect().
+  if (sock_type != SOCK_STREAM ||
+      (sock_domain != AF_INET && sock_domain != AF_INET6 &&
+       sock_domain != AF_VSOCK) ||
+      (addr->sa_family != AF_INET && addr->sa_family != AF_INET6)) {
     return libc_connect(sockfd, addr, addrlen);
   }
-  // Preserve the file modes (esp. blocking/non-blocking) so that we can apply
-  // the same modes later.
-  int fl = fcntl(sockfd, F_GETFL);
+  int fl = 0;
+  if (sock_domain == AF_VSOCK) {
+    fl = fcntl(sockfd, F_GETFL);
+  } else {
+    fl = ConvertToVsock(sockfd);
+  }
   // Set blocking
   fcntl(sockfd, F_SETFL, (fl & ~O_NONBLOCK));
   sockaddr_vm vsock_addr = GetProxyVsockAddr();
@@ -405,27 +465,33 @@ EXPORT int bind(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
   int sock_domain = 0;
   socklen_t sock_domain_len = sizeof(sock_domain);
   ret = libc_getsockopt(sockfd, SOL_SOCKET, SO_DOMAIN,
-                       static_cast<void*>(&sock_domain), &sock_domain_len);
-  if (ret != 0 || sock_domain != AF_VSOCK) {
+                        static_cast<void*>(&sock_domain), &sock_domain_len);
+  // If the application calls epoll_ctl first and bind later, we may be dealing
+  // with a VSOCK socket. So here it is either IP/IPv6 or VSOCK, otherwise
+  // fallback.
+  if (ret != 0 || (sock_domain != AF_VSOCK && sock_domain != AF_INET &&
+                   sock_domain != AF_INET6)) {
     return libc_bind(sockfd, addr, addrlen);
   }
   uint16_t port = 0;
   if (addr->sa_family == AF_INET) {
-    // If the socket family does not match the address to bind, return EINVAL.
-    if (sock_domain != AF_INET) {
-      errno = EINVAL;
-      return -1;
+    // If the socket family does not match the address to bind, fallback and let
+    // libc_bind handle it. It's OK if it is VSOCK.
+    if (sock_domain != AF_INET && sock_domain != AF_VSOCK) {
+      return libc_bind(sockfd, addr, addrlen);
     }
     const sockaddr_in* v4addr = reinterpret_cast<const sockaddr_in*>(addr);
     port = ntohs(v4addr->sin_port);
   } else if (addr->sa_family == AF_INET6) {
-    // If the socket family does not match the address to bind, return EINVAL.
-    if (sock_domain != AF_INET6) {
-      errno = EINVAL;
-      return -1;
+    // If the socket family does not match the address to bind, fallback and let
+    // libc_bind handle it. It's OK if it is VSOCK.
+    if (sock_domain != AF_INET6 && sock_domain != AF_VSOCK) {
+      return libc_bind(sockfd, addr, addrlen);
     }
     const sockaddr_in6* v6addr = reinterpret_cast<const sockaddr_in6*>(addr);
     port = ntohs(v6addr->sin6_port);
+  } else {
+    return libc_bind(sockfd, addr, addrlen);
   }
   // In the next few steps, replace sockfd with a UNIX domain socket.
   int uds_sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -515,10 +581,10 @@ EXPORT int accept4(int sockfd, struct sockaddr* addr, socklen_t* addrlen,
   socklen_t sock_domain_len = sizeof(sock_domain);
   if (libc_getsockopt(sockfd, SOL_SOCKET, SO_DOMAIN,
                       static_cast<void*>(&sock_domain), &sock_domain_len)) {
-    return libc_accept(sockfd, addr, addrlen);
+    return libc_accept4(sockfd, addr, addrlen, flags);
   }
   if (sock_domain != AF_UNIX) {
-    return libc_accept(sockfd, addr, addrlen);
+    return libc_accept4(sockfd, addr, addrlen, flags);
   }
   // There might be use cases that the application uses unix domain socket for
   // communication. Here we check if sockfd is in a connected state by calling
@@ -530,7 +596,7 @@ EXPORT int accept4(int sockfd, struct sockaddr* addr, socklen_t* addrlen,
   int ret = getpeername(sockfd, reinterpret_cast<sockaddr*>(&uds_addr),
                         &uds_addr_len);
   if (ret < 0) {
-    return libc_accept(sockfd, addr, addrlen);
+    return libc_accept4(sockfd, addr, addrlen, flags);
   }
 
   // Now prepare for accepting a file descriptor

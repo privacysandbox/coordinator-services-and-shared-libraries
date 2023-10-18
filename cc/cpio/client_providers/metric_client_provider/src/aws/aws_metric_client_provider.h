@@ -53,9 +53,11 @@ class AwsMetricClientProvider : public MetricClientProvider {
       const std::shared_ptr<InstanceClientProviderInterface>&
           instance_client_provider,
       const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor)
+      const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
+      const std::shared_ptr<MetricBatchingOptions>& metric_batching_options =
+          std::make_shared<MetricBatchingOptions>())
       : MetricClientProvider(async_executor, metric_client_options,
-                             instance_client_provider),
+                             instance_client_provider, metric_batching_options),
         io_async_executor_(io_async_executor) {}
 
   AwsMetricClientProvider() = delete;

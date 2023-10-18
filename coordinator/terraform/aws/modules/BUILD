@@ -26,15 +26,6 @@ pkg_files(
 )
 
 pkg_files(
-    name = "keyhostingdashboard_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/keyhostingdashboard",
-    ],
-    prefix = "modules/keyhostingdashboard",
-    strip_prefix = ".",
-)
-
-pkg_files(
     name = "keyjobqueue_pkg",
     srcs = [
         "//coordinator/terraform/aws/modules/keyjobqueue",
@@ -58,15 +49,6 @@ pkg_files(
         "//coordinator/terraform/aws/modules/keystoragedashboard",
     ],
     prefix = "modules/keystoragedashboard",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "keyrotationservice_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/keyrotationservice",
-    ],
-    prefix = "modules/keyrotationservice",
     strip_prefix = ".",
 )
 
@@ -177,15 +159,6 @@ pkg_files(
 )
 
 pkg_files(
-    name = "privatekeyhostingservice_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/privatekeyhostingservice",
-    ],
-    prefix = "modules/privatekeyhostingservice",
-    strip_prefix = ".",
-)
-
-pkg_files(
     name = "encryptionkey_service_pkg",
     srcs = [
         "//coordinator/terraform/aws/modules/encryptionkeyservice",
@@ -254,15 +227,6 @@ pkg_files(
         "//coordinator/terraform/aws/modules/privacybudgetdomainprovider",
     ],
     prefix = "modules/privacybudgetdomainprovider",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "vpc_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/vpc",
-    ],
-    prefix = "modules/vpc",
     strip_prefix = ".",
 )
 
@@ -371,5 +335,41 @@ pkg_files(
         "//coordinator/terraform/aws/modules/publickeyhostingdashboard",
     ],
     prefix = "modules/publickeyhostingdashboard",
+    strip_prefix = ".",
+)
+
+pkg_files(
+    name = "pbsprober_pkg",
+    srcs = [
+        "//coordinator/terraform/aws/modules/pbsprober",
+    ],
+    prefix = "modules/pbsprober",
+    strip_prefix = ".",
+)
+
+pkg_files(
+    name = "adtechmanagement_db_pkg",
+    srcs = [
+        "//coordinator/terraform/aws/modules/adtechmanagement_db",
+    ],
+    prefix = "modules/adtechmanagement_db",
+    strip_prefix = ".",
+)
+
+pkg_files(
+    name = "adtechmanagement_service_pkg",
+    srcs = [
+        "//coordinator/terraform/aws/modules/adtechmanagement_service",
+    ],
+    prefix = "modules/adtechmanagement_service",
+    strip_prefix = ".",
+)
+
+pkg_files(
+    name = "adtechmanagement_storage_pkg",
+    srcs = [
+        "//coordinator/terraform/aws/modules/adtechmanagement_storage",
+    ],
+    prefix = "modules/adtechmanagement_storage",
     strip_prefix = ".",
 )

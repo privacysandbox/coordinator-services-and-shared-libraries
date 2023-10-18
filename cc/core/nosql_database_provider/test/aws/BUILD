@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 TEST_SRCS = [
@@ -57,6 +59,7 @@ cc_test(
         "//cc/core/nosql_database_provider/src/aws:core_nosql_database_provider_aws_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/pbs/leasable_lock/src:pbs_leasable_lock_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@aws_sdk_cpp//:core",
         "@aws_sdk_cpp//:dynamodb",
         "@com_google_googletest//:gtest_main",

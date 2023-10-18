@@ -18,6 +18,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <vector>
 
@@ -32,15 +33,17 @@ namespace google::scp::core {
  */
 class SingleThreadPriorityAsyncExecutor : ServiceInterface {
  public:
-  explicit SingleThreadPriorityAsyncExecutor(size_t queue_cap,
-                                             bool drop_tasks_on_stop = false)
+  explicit SingleThreadPriorityAsyncExecutor(
+      size_t queue_cap, bool drop_tasks_on_stop = false,
+      std::optional<size_t> affinity_cpu_number = std::nullopt)
       : is_running_(false),
         worker_thread_started_(false),
         worker_thread_stopped_(false),
         update_wait_time_(false),
         next_scheduled_task_timestamp_(UINT64_MAX),
         queue_cap_(queue_cap),
-        drop_tasks_on_stop_(drop_tasks_on_stop) {}
+        drop_tasks_on_stop_(drop_tasks_on_stop),
+        affinity_cpu_number_(affinity_cpu_number) {}
 
   ExecutionResult Init() noexcept override;
 
@@ -72,6 +75,12 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
       const AsyncOperation& work, Timestamp timestamp,
       std::function<bool()>& cancellation_callback) noexcept;
 
+  /**
+   * @brief Returns the ID of the spawned thread object to enable looking it up
+   * via thread IDs later. Will only be populated after Run() is called.
+   */
+  ExecutionResultOr<std::thread::id> GetThreadId() const;
+
  private:
   /// Starts the internal worker thread.
   void StartWorker() noexcept;
@@ -97,8 +106,12 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
   size_t queue_cap_;
   /// Indicates whether the async executor should ignore the pending tasks.
   bool drop_tasks_on_stop_;
+  /// An optional CPU to have an affinity for.
+  std::optional<size_t> affinity_cpu_number_;
   /// A unique pointer to the working thread.
   std::unique_ptr<std::thread> working_thread_;
+  /// The ID of the working_thread_.
+  std::thread::id working_thread_id_;
   /// Queue for accepting the incoming tasks.
   std::shared_ptr<std::priority_queue<std::shared_ptr<AsyncTask>,
                                       std::vector<std::shared_ptr<AsyncTask>>,

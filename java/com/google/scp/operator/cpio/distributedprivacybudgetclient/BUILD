@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -28,8 +30,6 @@ java_library(
         "//java/external:apache_httpcore5",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
-        "//java/external:aws_auth",
-        "//java/external:aws_regions",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_annotations",

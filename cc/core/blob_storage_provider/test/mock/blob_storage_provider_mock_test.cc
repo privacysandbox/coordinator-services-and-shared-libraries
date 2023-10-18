@@ -23,6 +23,7 @@
 
 #include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
 #include "core/test/utils/conditional_wait.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::blob_storage_provider::mock::MockBlobStorageProvider;
 using google::scp::core::test::WaitUntil;
@@ -55,14 +56,13 @@ TEST(MockBlobStorageProviderTest, GetBlob) {
   output_stream.close();
 
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
-  EXPECT_EQ(
-      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client),
-      SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client));
 
   AsyncContext<GetBlobRequest, GetBlobResponse> get_blob_context(
       make_shared<GetBlobRequest>(),
       [&](AsyncContext<GetBlobRequest, GetBlobResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         EXPECT_EQ(context.response->buffer->length, 4);
         EXPECT_EQ(context.response->buffer->bytes->size(), bytes.size());
 
@@ -74,8 +74,7 @@ TEST(MockBlobStorageProviderTest, GetBlob) {
 
   get_blob_context.request->bucket_name = make_shared<string>("bucket_get");
   get_blob_context.request->blob_name = make_shared<string>("1.txt");
-  EXPECT_EQ(blob_storage_client->GetBlob(get_blob_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(blob_storage_client->GetBlob(get_blob_context));
 }
 
 TEST(MockBlobStorageProviderTest, PutBlob) {
@@ -89,14 +88,13 @@ TEST(MockBlobStorageProviderTest, PutBlob) {
   vector<Byte> bytes(file_content.begin(), file_content.end());
 
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
-  EXPECT_EQ(
-      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client),
-      SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client));
 
   AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context(
       make_shared<PutBlobRequest>(),
       [&](AsyncContext<PutBlobRequest, PutBlobResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
 
         ifstream input_stream("bucket_put/test_hash/1.txt",
                               ios::ate | ios::binary);
@@ -118,8 +116,7 @@ TEST(MockBlobStorageProviderTest, PutBlob) {
   put_blob_context.request->buffer = make_shared<BytesBuffer>();
   put_blob_context.request->buffer->bytes = make_shared<vector<Byte>>(bytes);
   put_blob_context.request->buffer->length = bytes.size();
-  EXPECT_EQ(blob_storage_client->PutBlob(put_blob_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(blob_storage_client->PutBlob(put_blob_context));
 }
 
 TEST(MockBlobStorageProviderTest, DeleteBlob) {
@@ -137,14 +134,13 @@ TEST(MockBlobStorageProviderTest, DeleteBlob) {
   output_stream.close();
 
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
-  EXPECT_EQ(
-      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client),
-      SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client));
 
   AsyncContext<DeleteBlobRequest, DeleteBlobResponse> delete_blob_context(
       make_shared<DeleteBlobRequest>(),
       [&](AsyncContext<DeleteBlobRequest, DeleteBlobResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
 
         EXPECT_EQ(
             distance(directory_iterator("bucket_delete"), directory_iterator{}),
@@ -155,8 +151,7 @@ TEST(MockBlobStorageProviderTest, DeleteBlob) {
   delete_blob_context.request->bucket_name =
       make_shared<string>("bucket_delete");
   delete_blob_context.request->blob_name = make_shared<string>("2.txt");
-  EXPECT_EQ(blob_storage_client->DeleteBlob(delete_blob_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(blob_storage_client->DeleteBlob(delete_blob_context));
 }
 
 TEST(MockBlobStorageProviderTest, ListBlobs) {
@@ -182,35 +177,29 @@ TEST(MockBlobStorageProviderTest, ListBlobs) {
   output_stream4.close();
 
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
-  EXPECT_EQ(
-      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client),
-      SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      mock_blob_storage_provider.CreateBlobStorageClient(blob_storage_client));
 
   AsyncContext<ListBlobsRequest, ListBlobsResponse> list_blobs_context(
       make_shared<ListBlobsRequest>(),
       [&](AsyncContext<ListBlobsRequest, ListBlobsResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
 
         EXPECT_EQ(context.response->blobs->size(), 7);
-        EXPECT_EQ(*context.response->blobs->at(0).blob_name, "bucket_list/1");
-        EXPECT_EQ(*context.response->blobs->at(1).blob_name,
-                  "bucket_list/1/2.txt");
-        EXPECT_EQ(*context.response->blobs->at(2).blob_name, "bucket_list/1/3");
-        EXPECT_EQ(*context.response->blobs->at(3).blob_name,
-                  "bucket_list/1/3/4.txt");
-        EXPECT_EQ(*context.response->blobs->at(4).blob_name, "bucket_list/2");
-        EXPECT_EQ(*context.response->blobs->at(6).blob_name,
-                  "bucket_list/2/5.txt");
-        EXPECT_EQ(*context.response->blobs->at(5).blob_name,
-                  "bucket_list/2.txt");
+        EXPECT_EQ(*context.response->blobs->at(0).blob_name, "1");
+        EXPECT_EQ(*context.response->blobs->at(1).blob_name, "1/2.txt");
+        EXPECT_EQ(*context.response->blobs->at(2).blob_name, "1/3");
+        EXPECT_EQ(*context.response->blobs->at(3).blob_name, "1/3/4.txt");
+        EXPECT_EQ(*context.response->blobs->at(4).blob_name, "2");
+        EXPECT_EQ(*context.response->blobs->at(6).blob_name, "2/5.txt");
+        EXPECT_EQ(*context.response->blobs->at(5).blob_name, "2.txt");
 
         condition = true;
       });
 
   list_blobs_context.request->bucket_name = make_shared<string>("bucket_list");
   list_blobs_context.request->blob_name = make_shared<string>("");
-  EXPECT_EQ(blob_storage_client->ListBlobs(list_blobs_context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(blob_storage_client->ListBlobs(list_blobs_context));
 }
 
 }  // namespace google::scp::core::test

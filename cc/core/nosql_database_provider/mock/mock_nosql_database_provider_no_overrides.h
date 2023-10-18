@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <gmock/gmock.h>
+
 #include <memory>
 #include <mutex>
 #include <string>
@@ -29,32 +31,22 @@
 
 namespace google::scp::core::nosql_database_provider::mock {
 class MockNoSQLDatabaseProviderNoOverrides
-    : public NoSQLDatabaseProviderInterface {
+    : public testing::NiceMock<NoSQLDatabaseProviderInterface> {
  public:
-  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); };
+  MOCK_METHOD(ExecutionResult, Init, (), (noexcept, override));
 
-  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); };
+  MOCK_METHOD(ExecutionResult, Run, (), (noexcept, override));
 
-  ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); };
+  MOCK_METHOD(ExecutionResult, Stop, (), (noexcept, override));
 
-  ExecutionResult GetDatabaseItem(
-      AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-          get_database_item_context) noexcept override {
-    return get_database_item_mock(get_database_item_context);
-  }
+  MOCK_METHOD(
+      ExecutionResult, GetDatabaseItem,
+      ((AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&)),
+      (noexcept, override));
 
-  ExecutionResult UpsertDatabaseItem(
-      AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-          upsert_database_item_context) noexcept override {
-    return upsert_database_item_mock(upsert_database_item_context);
-  }
-
-  std::function<ExecutionResult(
-      AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&)>
-      get_database_item_mock;
-
-  std::function<ExecutionResult(
-      AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&)>
-      upsert_database_item_mock;
+  MOCK_METHOD(
+      ExecutionResult, UpsertDatabaseItem,
+      ((AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&)),
+      (noexcept, override));
 };
 }  // namespace google::scp::core::nosql_database_provider::mock

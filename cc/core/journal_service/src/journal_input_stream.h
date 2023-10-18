@@ -17,30 +17,32 @@
 #pragma once
 
 #include <atomic>
-#include <list>
 #include <memory>
-#include <mutex>
-#include <set>
 #include <string>
 #include <vector>
 
-#include "core/common/concurrent_map/src/concurrent_map.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/blob_storage_provider_interface.h"
+#include "core/interface/config_provider_interface.h"
+#include "core/interface/configuration_keys.h"
 #include "core/interface/journal_service_interface.h"
 #include "core/journal_service/interface/journal_service_stream_interface.h"
 #include "core/journal_service/src/proto/journal_service.pb.h"
-#include "google/protobuf/any.pb.h"
 
 namespace google::scp::core {
+
+static constexpr size_t kDefaultNumberOfJournalsToReadPerBatch = 1000;
+static constexpr size_t kDefaultNumberOfJournalLogsToReturn = 5000;
+
 /*! @copydoc JournalInputStreamInterface
  */
 class JournalInputStream : public journal_service::JournalInputStreamInterface {
  public:
   JournalInputStream(
-      std::shared_ptr<std::string>& bucket_name,
-      std::shared_ptr<std::string>& partition_name,
-      std::shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client)
+      std::shared_ptr<std::string> bucket_name,
+      std::shared_ptr<std::string> partition_name,
+      std::shared_ptr<BlobStorageClientInterface> blob_storage_provider_client,
+      std::shared_ptr<ConfigProviderInterface> config_provider)
       : journals_loaded_(false),
         last_checkpoint_id_(kInvalidCheckpointId),
         last_processed_journal_id_(kInvalidJournalId),
@@ -51,8 +53,37 @@ class JournalInputStream : public journal_service::JournalInputStreamInterface {
         current_buffer_offset_(0),
         bucket_name_(bucket_name),
         partition_name_(partition_name),
-        blob_storage_provider_client_(blob_storage_provider_client) {}
+        blob_storage_provider_client_(blob_storage_provider_client),
+        config_provider_(config_provider),
+        journal_ids_window_start_index_(0),
+        journal_ids_window_length_(0),
+        enable_batch_read_journals_(false),
+        number_of_journals_per_batch_(kDefaultNumberOfJournalsToReadPerBatch),
+        number_of_journal_logs_to_return_(kDefaultNumberOfJournalLogsToReturn) {
+    if (!config_provider_->Get(kPBSJournalInputStreamEnableBatchReadJournals,
+                               enable_batch_read_journals_)) {
+      enable_batch_read_journals_ = false;
+    }
+    if (!config_provider_->Get(kPBSJournalInputStreamNumberOfJournalsPerBatch,
+                               number_of_journals_per_batch_)) {
+      number_of_journals_per_batch_ = kDefaultNumberOfJournalsToReadPerBatch;
+    }
+    if (!config_provider_->Get(
+            kPBSJournalInputStreamNumberOfJournalLogsToReturn,
+            number_of_journal_logs_to_return_)) {
+      number_of_journal_logs_to_return_ = kDefaultNumberOfJournalLogsToReturn;
+    }
+  }
 
+  /**
+   * @brief ReadLog() returns a set of logs read from the stream. The set may
+   * return End of Stream by returning a status code
+   * SC_JOURNAL_SERVICE_INPUT_STREAM_NO_MORE_LOGS_TO_RETURN, after which
+   * no more ReadLog() are to be performed.
+   *
+   * NOTE: This method is not thread-safe.
+   *
+   */
   ExecutionResult ReadLog(
       AsyncContext<journal_service::JournalStreamReadLogRequest,
                    journal_service::JournalStreamReadLogResponse>&
@@ -266,6 +297,9 @@ class JournalInputStream : public journal_service::JournalInputStreamInterface {
   /// Is set to true when all the journals are loaded in the memory.
   bool journals_loaded_;
 
+  /// Is set to true when all journal IDs are loaded in the memory.
+  bool journal_ids_loaded_ = false;
+
   /// Last stored checkpoint id to start the read operation from.
   CheckpointId last_checkpoint_id_;
 
@@ -306,5 +340,19 @@ class JournalInputStream : public journal_service::JournalInputStreamInterface {
 
   /// Blob storage provider client instance.
   std::shared_ptr<BlobStorageClientInterface> blob_storage_provider_client_;
+
+ private:
+  bool IsJournalBuffersLoadedButNotProcessedYet();
+
+  JournalId GetCurrentBufferJournalId();
+
+  std::shared_ptr<ConfigProviderInterface> config_provider_;
+
+  size_t journal_ids_window_start_index_;
+  size_t journal_ids_window_length_;
+
+  bool enable_batch_read_journals_;
+  size_t number_of_journals_per_batch_;
+  size_t number_of_journal_logs_to_return_;
 };
 }  // namespace google::scp::core

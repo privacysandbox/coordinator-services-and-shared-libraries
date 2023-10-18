@@ -16,9 +16,11 @@
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <thread>
 
+#include "async_executor_utils.h"
 #include "error_codes.h"
 #include "typedef.h"
 
@@ -58,12 +60,18 @@ ExecutionResult SingleThreadAsyncExecutor::Run() noexcept {
 
   is_running_ = true;
   working_thread_ = make_unique<thread>(
-      [](SingleThreadAsyncExecutor* ptr) {
+      [affinity_cpu_number =
+           affinity_cpu_number_](SingleThreadAsyncExecutor* ptr) {
+        if (affinity_cpu_number.has_value()) {
+          // Ignore error.
+          AsyncExecutorUtils::SetAffinity(*affinity_cpu_number);
+        }
         ptr->worker_thread_started_ = true;
         ptr->StartWorker();
         ptr->worker_thread_stopped_ = true;
       },
       this);
+  working_thread_id_ = working_thread_->get_id();
   working_thread_->detach();
 
   return SuccessExecutionResult();
@@ -153,5 +161,12 @@ ExecutionResult SingleThreadAsyncExecutor::Schedule(
   condition_variable_.notify_one();
   return SuccessExecutionResult();
 };
+
+ExecutionResultOr<thread::id> SingleThreadAsyncExecutor::GetThreadId() const {
+  if (!is_running_.load()) {
+    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
+  }
+  return working_thread_id_;
+}
 
 }  // namespace google::scp::core

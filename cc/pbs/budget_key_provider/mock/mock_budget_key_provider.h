@@ -33,8 +33,7 @@ class MockBudgetKeyProvider : public BudgetKeyProvider {
       std::shared_ptr<core::JournalServiceInterface>& journal_service,
       std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
       : BudgetKeyProvider(async_executor, journal_service,
                           nosql_database_provider, metric_client,
@@ -110,12 +109,14 @@ class MockBudgetKeyProvider : public BudgetKeyProvider {
   }
 
   virtual core::ExecutionResult OnJournalServiceRecoverCallback(
-      const std::shared_ptr<core::BytesBuffer>& bytes_buffer) noexcept {
+      const std::shared_ptr<core::BytesBuffer>& bytes_buffer,
+      const core::common::Uuid& activity_id) noexcept {
     if (on_journal_service_recover_callback_mock) {
       return on_journal_service_recover_callback_mock(bytes_buffer);
     }
 
-    return BudgetKeyProvider::OnJournalServiceRecoverCallback(bytes_buffer);
+    return BudgetKeyProvider::OnJournalServiceRecoverCallback(bytes_buffer,
+                                                              activity_id);
   }
 
   virtual void OnLogLoadBudgetKeyIntoCacheCallback(

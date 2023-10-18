@@ -19,19 +19,21 @@
 #include <vector>
 
 #include "core/interface/async_context.h"
-#include "cpio/client_providers/instance_client_provider_new/mock/mock_instance_client_provider.h"
+#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/src/metric_client_provider.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers::mock {
-class MockMetricClientProviderWithOverrides : public MetricClientProvider {
+class MockMetricClientWithOverrides : public MetricClientProvider {
  public:
-  explicit MockMetricClientProviderWithOverrides(
+  explicit MockMetricClientWithOverrides(
       const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      const std::shared_ptr<MetricClientOptions>& metric_client_options)
-      : MetricClientProvider(async_executor, metric_client_options,
-                             std::make_shared<MockInstanceClientProvider>()) {}
+      const std::shared_ptr<MetricBatchingOptions>& metric_batching_options)
+      : MetricClientProvider(async_executor,
+                             std::make_shared<MetricClientOptions>(),
+                             std::make_shared<MockInstanceClientProvider>(),
+                             metric_batching_options) {}
 
   std::function<core::ExecutionResult(
       core::AsyncContext<cmrt::sdk::metric_service::v1::PutMetricsRequest,
@@ -58,7 +60,7 @@ class MockMetricClientProviderWithOverrides : public MetricClientProvider {
 
   core::ExecutionResult PutMetrics(
       core::AsyncContext<cmrt::sdk::metric_service::v1::PutMetricsRequest,
-                         cmrt::sdk::metric_service::v1::PutMetricsResponse>&
+                         cmrt::sdk::metric_service::v1::PutMetricsResponse>
           context) noexcept override {
     if (record_metric_mock) {
       return record_metric_mock(context);

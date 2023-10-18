@@ -163,8 +163,7 @@ inline uint64_t MakeErrorCode(uint64_t component, uint64_t error) {
  * @return uint64_t component code.
  */
 inline uint64_t ExtractComponentCode(uint64_t error_code) {
-  auto max_bit_zeroed = error_code & ~(((uint64_t)(1) << 31));
-  return ((max_bit_zeroed >> 16) & 0xFFFF);
+  return ((error_code >> 16) & 0x7FFF);
 }
 
 /**
@@ -174,15 +173,23 @@ inline uint64_t ExtractComponentCode(uint64_t error_code) {
  * @return std::string the message about the error code.
  */
 inline const char* GetErrorMessage(uint64_t error_code) {
-  static constexpr char kInvalidError[] = "InvalidErrorCode";
+  static constexpr char kInvalidErrorCodeStr[] = "InvalidErrorCode";
+  static constexpr char kUnknownErrorCodeStr[] = "Unknown Error";
+  static constexpr char kSuccessErrorCodeStr[] = "Success";
+
+  if (error_code == SC_OK) {
+    return kSuccessErrorCodeStr;
+  } else if (error_code == SC_UNKNOWN) {
+    return kUnknownErrorCodeStr;
+  }
+
   uint64_t component = ExtractComponentCode(error_code);
   auto it = GetGlobalErrorCodes()[component].find(error_code);
-
   if (it != GetGlobalErrorCodes()[component].end()) {
     return it->second.error_message.c_str();
   }
 
-  return kInvalidError;
+  return kInvalidErrorCodeStr;
 }
 
 /**

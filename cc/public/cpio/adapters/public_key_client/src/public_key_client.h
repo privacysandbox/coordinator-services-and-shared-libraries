@@ -39,25 +39,12 @@ class PublicKeyClient : public PublicKeyClientInterface {
   core::ExecutionResult Stop() noexcept override;
 
   core::ExecutionResult ListPublicKeys(
-      ListPublicKeysRequest request,
-      Callback<ListPublicKeysResponse> callback) noexcept override;
+      cmrt::sdk::public_key_service::v1::ListPublicKeysRequest request,
+      Callback<cmrt::sdk::public_key_service::v1::ListPublicKeysResponse>
+          callback) noexcept override;
 
  protected:
   virtual core::ExecutionResult CreatePublicKeyClientProvider() noexcept;
-  /**
-   * @brief Callback when ListPublicKeys results are returned.
-   *
-   * @param request caller's request.
-   * @param callback caller's callback
-   * @param list_public_keys_context execution context.
-   */
-  void OnListPublicKeysCallback(
-      const ListPublicKeysRequest& request,
-      Callback<ListPublicKeysResponse>& callback,
-      core::AsyncContext<
-          cmrt::sdk::public_key_service::v1::ListPublicKeysRequest,
-          cmrt::sdk::public_key_service::v1::ListPublicKeysResponse>&
-          list_public_keys_context) noexcept;
 
   std::shared_ptr<client_providers::PublicKeyClientProviderInterface>
       public_key_client_provider_;

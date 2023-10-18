@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:public"])
@@ -84,29 +85,6 @@ pkg_files(
 )
 
 java_library(
-    name = "PrivateKeyApiGatewayHandler",
-    srcs = [
-        "PrivateKeyApiGatewayHandler.java",
-    ],
-    deps = [
-        ":AwsKeyServiceModule",
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/api/util",
-        "//java/com/google/scp/shared/aws/util",
-        "//java/com/google/scp/shared/mapper",
-        "//java/external:aws_lambda_java_core",
-        "//java/external:aws_lambda_java_events",
-        "//java/external:guava",
-        "//java/external:guice",
-    ],
-)
-
-java_library(
     name = "GetEncryptionKeyApiGatewayHandler",
     srcs = [
         "GetEncryptionKeyApiGatewayHandler.java",
@@ -131,36 +109,36 @@ java_library(
     ],
 )
 
-java_binary(
-    name = "PrivateKeyApiGatewayHandlerLambda",
-    runtime_deps = [
-        ":PrivateKeyApiGatewayHandler",
+java_library(
+    name = "ListRecentEncryptionKeysApiGatewayHandler",
+    srcs = [
+        "ListRecentEncryptionKeysApiGatewayHandler.java",
+    ],
+    deps = [
+        ":AwsKeyServiceModule",
+        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/com/google/scp/shared/api/model",
+        "//java/com/google/scp/shared/aws/util",
+        "//java/external:aws_lambda_java_core",
+        "//java/external:aws_lambda_java_events",
+        "//java/external:guava",
+        "//java/external:guice",
     ],
 )
 
 java_binary(
-    name = "GetEncryptionKeyApiGatewayHandlerLambda",
+    name = "EncryptionKeyServiceLambda",
     runtime_deps = [
         ":GetEncryptionKeyApiGatewayHandler",
+        ":ListRecentEncryptionKeysApiGatewayHandler",
     ],
 )
 
 alias(
-    name = "PrivateKeyApiGatewayHandlerDeploy",
-    actual = ":PrivateKeyApiGatewayHandlerLambda_deploy.jar",
-)
-
-alias(
-    name = "GetEncryptionKeyApiGatewayHandlerDeploy",
-    actual = ":GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar",
-)
-
-pkg_files(
-    name = "PrivateKeyApiGatewayHandlerDeployPackage",
-    srcs = [
-        ":GetEncryptionKeyApiGatewayHandlerDeploy",
-        ":PrivateKeyApiGatewayHandlerDeploy",
-    ],
-    prefix = "jars",
-    strip_prefix = ".",
+    name = "EncryptionKeyServiceLambdaDeploy",
+    actual = ":EncryptionKeyServiceLambda_deploy.jar",
 )

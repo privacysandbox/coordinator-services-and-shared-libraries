@@ -29,6 +29,7 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/pbs/budget_key_resolver/src:pbs_budget_key_resolver_lib",
         "//cc/pbs/interface:pbs_interface_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

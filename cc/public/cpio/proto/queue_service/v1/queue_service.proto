@@ -16,21 +16,28 @@ syntax = "proto3";
 
 package google.cmrt.sdk.queue_service.v1;
 
+option java_multiple_files = true;
+option java_outer_classname = "QueueServiceProto";
+option java_package = "com.google.cmrt.sdk.queue_service.v1";
+
 import "cc/core/common/proto/common.proto";
+import "google/protobuf/duration.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
 
 // Storing and fetching messages in the cloud.
+// The queue makes a best effort to preserve the order of messages,
+// but more than one copy of a message might be delivered out of order.
 service QueueService {
-  // Enqueues message to queue.
+  // Enqueues message to the queue.
   rpc EnqueueMessage(EnqueueMessageRequest) returns (EnqueueMessageResponse) {}
-  // Gets the top message from queue.
+  // Gets the top message from the queue.
   rpc GetTopMessage(GetTopMessageRequest) returns (GetTopMessageResponse) {}
-  // Updates message expiration time from queue.
-  rpc UpdateMessageExpirationTime(UpdateMessageExpirationTimeRequest)
-      returns (UpdateMessageExpirationTimeResponse) {}
-  // Deletes message from queue.
+  // Modifies message visibility timeout from the queue.
+  rpc UpdateMessageVisibilityTimeout(UpdateMessageVisibilityTimeoutRequest)
+      returns (UpdateMessageVisibilityTimeoutResponse) {}
+  // Deletes message from the queue.
   rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {}
 }
 
@@ -40,7 +47,7 @@ message EnqueueMessageRequest {
   string message_body = 1;
 }
 
-// Response of enqueueing message.
+// Response of enqueuing message.
 message EnqueueMessageResponse {
   // The execution result.
   scp.core.common.proto.ExecutionResult result = 1;
@@ -60,21 +67,25 @@ message GetTopMessageResponse {
   string message_id = 2;
   // Message body.
   string message_body = 3;
-  // An identifier associated with the act of receiving the message. 
+  // An identifier associated with the act of receiving the message.
   // It can be used to update message expiration time or delete message.
   string receipt_info = 4;
 }
 
-// Request to update expiration time of a message.
-message UpdateMessageExpirationTimeRequest {
-  // The receipt info associated with the message whose expiration time is updated.
+// Request to update the visibility timeout of a message.
+// The new timeout begin to count from the time this call is made.
+message UpdateMessageVisibilityTimeoutRequest {
+  // The receipt info associated with the message whose visibility timeout is
+  // modified.
   string receipt_info = 1;
-  // New expiration time for the message.
-  int64 expiration_time = 2;
+  // New visibility timeout for the message.
+  // The maximum timeout is 600 seconds.
+  // Only seconds from the duration will be used.
+  google.protobuf.Duration message_visibility_timeout = 2;
 }
 
-// Response of updating expiration time of a message.
-message UpdateMessageExpirationTimeResponse {
+// Response of updating the visibility timeout of a message.
+message UpdateMessageVisibilityTimeoutResponse {
   // The execution result.
   scp.core.common.proto.ExecutionResult result = 1;
 }

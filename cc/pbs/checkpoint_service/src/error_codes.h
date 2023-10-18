@@ -36,4 +36,11 @@ DEFINE_ERROR_CODE(SC_PBS_CHECKPOINT_SERVICE_IS_ALREADY_STOPPED,
                   SC_PBS_CHECKPOINT_SERVICE, 0x0003,
                   "Checkpoint service is already stopped.",
                   HttpStatusCode::BAD_REQUEST)
+
+DEFINE_ERROR_CODE(
+    SC_PBS_CHECKPOINT_SERVICE_INVALID_LAST_PERSISTED_CHECKPOINT_ID,
+    SC_PBS_CHECKPOINT_SERVICE, 0x0004,
+    "Last persisted checkpoint Id is invalid. No checkpoint has been persisted "
+    "since the start service startup.",
+    HttpStatusCode::NO_CONTENT)
 }  // namespace google::scp::core::errors

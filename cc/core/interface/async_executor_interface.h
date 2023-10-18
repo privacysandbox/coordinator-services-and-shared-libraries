@@ -48,6 +48,46 @@ enum class AsyncPriority {
   Urgent = 2,
 };
 
+/// The setting with which affinity should be enforced.
+enum class AsyncExecutorAffinitySetting {
+  /**
+   * @brief AsyncExecutor Affinity should not be enforced. Work can be done on
+   * any executor.
+   */
+  NonAffinitized = 0,
+
+  /**
+   * @brief AsyncExecutor Affinity should be enforced. Work should be done on
+   * the same executor that the calling async executor is using. This can be
+   * used to gain benefits of cache locality. It is not a guarantee that the
+   * same executor will be used. This should be used with care as using this
+   * haphazardly can lead to slowdown of the program by not utilizing all the
+   * available executors on the system.
+   *
+   * NOTE: This option really only has meaning when calling Schedule* from an
+   * existing AsyncExecutor task. In other words, affinity has no effect on work
+   * being schedule from *off* of an AsyncExecutor.
+   *
+   * Generally, this option should be used when following a sequence of calls
+   * which has a well defined branch point.
+   *
+   *                  -(?)> Func1 -(Affinitized)> Func2 -(Affinitized)> Func3
+   *                 /
+   * ServerListener ---(?)> Func1 -(Affinitized)> Func2 -(Affinitized)> Func3
+   *                 \
+   *                  -(?)> Func1 -(Affinitized)> Func2 -(Affinitized)> Func3
+   *
+   * Consider if the "?" were Affinitized, then all 3 chains of calls will be on
+   * the same CPU as ServerListener which means all 3 chains will be fighting
+   * for cycles on the same CPU. If the "?" were NonAffinitized, then it is
+   * likely that the chains can execute independently because they are on
+   * different CPUs.
+   */
+  AffinitizedToCallingAsyncExecutor = 1,
+};
+
+using TaskCancellationLambda = std::function<bool()>;
+
 /**
  * @brief AsyncExecutor is the main thread-pool of the service. It controls the
  * number of threads that are used across the application and is capable of
@@ -68,6 +108,14 @@ class AsyncExecutorInterface : public ServiceInterface {
                                    AsyncPriority priority) noexcept = 0;
 
   /**
+   * @brief Same as above but with the given affinity setting.
+   * @param affinity the affinity with which to schedule the work.
+   */
+  virtual ExecutionResult Schedule(
+      const AsyncOperation& work, AsyncPriority priority,
+      AsyncExecutorAffinitySetting affinity) noexcept = 0;
+
+  /**
    * @brief Schedules a task to be executed after the specified time.
    * NOTE: There is no guarantee in terms of execution of the task at the
    * time specified.
@@ -78,6 +126,14 @@ class AsyncExecutorInterface : public ServiceInterface {
    */
   virtual ExecutionResult ScheduleFor(const AsyncOperation& work,
                                       Timestamp timestamp) noexcept = 0;
+
+  /**
+   * @brief Same as above but with the given affinity setting.
+   * @param affinity the affinity with which to schedule the work.
+   */
+  virtual ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp,
+      AsyncExecutorAffinitySetting affinity) noexcept = 0;
 
   /**
    * @brief Schedules a task to be executed after the specified
@@ -91,6 +147,15 @@ class AsyncExecutorInterface : public ServiceInterface {
    */
   virtual ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
-      std::function<bool()>& cancellation_callback) noexcept = 0;
+      TaskCancellationLambda& cancellation_callback) noexcept = 0;
+
+  /**
+   * @brief Same as above but with the given affinity setting.
+   * @param affinity the affinity with which to schedule the work.
+   */
+  virtual ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp,
+      TaskCancellationLambda& cancellation_callback,
+      AsyncExecutorAffinitySetting affinity) noexcept = 0;
 };
 }  // namespace google::scp::core

@@ -16,7 +16,7 @@ locals {
   origin_group_id     = "${var.environment}_get_public_keys_api_gateway_group"
   primary_origin_id   = "${var.environment}_get_public_keys_primary_origin"
   secondary_origin_id = "${var.environment}_get_public_keys_secondary_origin"
-  public_key_domain   = (var.environment != "prod" ? "${var.service_subdomain}-${var.environment}.${var.parent_domain_name}" : "${var.service_subdomain}.${var.parent_domain_name}")
+  public_key_domain   = "${var.service_subdomain}.${var.parent_domain_name}"
 }
 
 # Domain record
@@ -100,7 +100,7 @@ resource "aws_cloudfront_distribution" "get_public_keys_cloudfront" {
     }
   }
 
-  aliases = var.enable_domain_management ? [local.public_key_domain] : null
+  aliases = var.enable_domain_management ? concat([local.public_key_domain], var.service_alternate_domain_names) : null
   enabled = true
   comment = var.environment
 

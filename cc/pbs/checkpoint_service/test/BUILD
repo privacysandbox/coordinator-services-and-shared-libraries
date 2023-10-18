@@ -34,11 +34,12 @@ cc_test(
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/journal_service/mock:core_journal_service_mock",
         "//cc/core/transaction_manager/mock:core_transaction_manager_mock",
-        "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
         "//cc/pbs/budget_key/mock:pbs_budget_key_mock",
         "//cc/pbs/budget_key_provider/mock:pbs_budget_key_provider_mock",
         "//cc/pbs/checkpoint_service/mock:pbs_checkpoint_service_mock",
         "//cc/pbs/checkpoint_service/src:pbs_checkpoint_service_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
     ],
 )

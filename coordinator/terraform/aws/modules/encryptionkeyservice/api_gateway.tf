@@ -37,3 +37,25 @@ resource "aws_lambda_permission" "get_private_key_api_gateway_permission" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${var.api_gateway_execution_arn}/*/*/${var.api_version}/encryptionKeys/{key_id}"
 }
+
+resource "aws_apigatewayv2_route" "list_recent_encryption_keys_api_gateway_route" {
+  api_id             = var.api_gateway_id
+  route_key          = "GET /${var.api_version}/encryptionKeys:recent"
+  target             = "integrations/${aws_apigatewayv2_integration.list_recent_encryption_keys_api_gateway_integration.id}"
+  authorization_type = "AWS_IAM"
+}
+
+resource "aws_apigatewayv2_integration" "list_recent_encryption_keys_api_gateway_integration" {
+  api_id             = var.api_gateway_id
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+  integration_uri    = aws_lambda_function.list_recent_encryption_keys_lambda.invoke_arn
+}
+
+resource "aws_lambda_permission" "list_recent_encryption_keys_api_gateway_permission" {
+  statement_id  = "AllowListRecentEncryptionKeysExecutionFromGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.list_recent_encryption_keys_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${var.api_gateway_execution_arn}/*/*/${var.api_version}/encryptionKeys:recent"
+}

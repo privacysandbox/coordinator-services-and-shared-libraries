@@ -202,6 +202,11 @@ variable "enable_public_key_signature" {
   default     = true
 }
 
+variable "key_id_type" {
+  description = "Key ID Type"
+  type        = string
+  default     = ""
+}
 ################################################################################
 # Lambda Variables.
 ################################################################################
@@ -231,7 +236,7 @@ variable "encryption_key_service_jar" {
         (top level under /dist/...)
       EOT
   type        = string
-  default     = "../../../dist/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
+  default     = "../../../dist/EncryptionKeyServiceLambda_deploy.jar"
 }
 
 
@@ -250,6 +255,16 @@ variable "get_public_key_lambda_provisioned_concurrency_enabled" {
 variable "get_public_key_lambda_provisioned_concurrency_count" {
   description = "Number of lambda instances to initialize for provisioned concurrency."
   default     = 2
+}
+
+variable "get_encryption_key_lambda_ps_client_shim_enabled" {
+  description = <<-EOT
+        If true, enables shim to ensure response is compatible with privacy sandbox 0.51.x
+        clients. Newer fields such as activationTime is filtered out from the response.
+        This temporary variable will be removed in the future.
+      EOT
+  type        = bool
+  default     = false
 }
 
 ################################################################################

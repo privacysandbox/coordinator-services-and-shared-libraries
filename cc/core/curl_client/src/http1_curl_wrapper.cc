@@ -63,17 +63,17 @@ ExecutionResult GetExecutionResultFromCurlError(const string& err_buffer) {
     } catch (...) {
       auto result = RetryExecutionResult(
           errors::SC_CURL_CLIENT_REQUEST_BAD_REGEX_PARSING);
-      ERROR(kHttp1CurlWrapper, kZeroUuid, kZeroUuid, result,
-            "Could not parse HTTP status code to integer: %s",
-            http_code_match.str(0).c_str());
+      SCP_ERROR(kHttp1CurlWrapper, kZeroUuid, result,
+                "Could not parse HTTP status code to integer: %s",
+                http_code_match.str(0).c_str());
       return result;
     }
   } else {
     auto result =
         RetryExecutionResult(errors::SC_CURL_CLIENT_REQUEST_BAD_REGEX_PARSING);
-    ERROR(kHttp1CurlWrapper, kZeroUuid, kZeroUuid, result,
-          "Could not find HTTP status in HTTP error message: %s",
-          err_buffer.c_str());
+    SCP_ERROR(kHttp1CurlWrapper, kZeroUuid, result,
+              "Could not find HTTP status in HTTP error message: %s",
+              err_buffer.c_str());
     return result;
   }
   if (http_code < 400) {
@@ -164,16 +164,18 @@ size_t ResponseHeaderHandler(char* contents, size_t byte_size, size_t num_bytes,
   size_t colon_index = contents_str.find(':');
 
   if (colon_index > contents_end) {
-    ERROR(kHttp1CurlWrapper, kZeroUuid, kZeroUuid,
-          FailureExecutionResult(errors::SC_CURL_CLIENT_BAD_HEADER_RECEIVED),
-          "The ':' was found after the '\r' in the header: \"%s\"",
-          contents_str.c_str());
+    SCP_ERROR(
+        kHttp1CurlWrapper, kZeroUuid,
+        FailureExecutionResult(errors::SC_CURL_CLIENT_BAD_HEADER_RECEIVED),
+        "The ':' was found after the '\r' in the header: \"%s\"",
+        contents_str.c_str());
     return contents_size;
   }
   if (colon_index == string::npos) {
-    ERROR(kHttp1CurlWrapper, kZeroUuid, kZeroUuid,
-          FailureExecutionResult(errors::SC_CURL_CLIENT_BAD_HEADER_RECEIVED),
-          "No ':' was found in the header: \"%s\"", contents_str.c_str());
+    SCP_ERROR(
+        kHttp1CurlWrapper, kZeroUuid,
+        FailureExecutionResult(errors::SC_CURL_CLIENT_BAD_HEADER_RECEIVED),
+        "No ':' was found in the header: \"%s\"", contents_str.c_str());
     return contents_size;
   }
   bool has_space_after_colon = contents_str[colon_index + 1] == ' ';
@@ -221,8 +223,7 @@ Http1CurlWrapper::MakeWrapper() {
   CURL* curl = curl_easy_init();
   if (!curl) {
     auto result = RetryExecutionResult(errors::SC_CURL_CLIENT_CURL_INIT_ERROR);
-    ERROR(kHttp1CurlWrapper, kZeroUuid, kZeroUuid, result,
-          "failed to make wrapper");
+    SCP_ERROR(kHttp1CurlWrapper, kZeroUuid, result, "failed to make wrapper");
     return result;
   }
   return make_shared<Http1CurlWrapper>(curl);
@@ -328,9 +329,9 @@ ExecutionResultOr<HttpResponse> Http1CurlWrapper::PerformRequest(
   if (perform_res != CURLE_OK) {
     auto result = GetExecutionResultFromCurlError(err_str);
     if (err_str.empty()) err_str = "<empty>";
-    ERROR(kHttp1CurlWrapper, kZeroUuid, kZeroUuid, result,
-          "CURL HTTP request failed with error code: %s, message: %s",
-          curl_easy_strerror(perform_res), err_str.c_str());
+    SCP_ERROR(kHttp1CurlWrapper, kZeroUuid, result,
+              "CURL HTTP request failed with error code: %s, message: %s",
+              curl_easy_strerror(perform_res), err_str.c_str());
     return result;
   }
   response.code = errors::HttpStatusCode::OK;

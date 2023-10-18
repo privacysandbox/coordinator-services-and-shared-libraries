@@ -1,0 +1,36 @@
+{
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "test": "nyc ts-node node_modules/jasmine/bin/jasmine"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.370.0",
+    "@aws-sdk/client-iam": "^3.359.0",
+    "@aws-sdk/lib-dynamodb": "^3.359.0",
+    "@bazel/typescript": "^5.8.1",
+    "@types/es6-promise": "^3.3.0",
+    "@types/node": "^20.4.2",
+    "tslib": "^2.6.0",
+    "typescript": "^5.1.6"
+  },
+  "devDependencies": {
+    "@bazel/esbuild": "^5.8.1",
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@types/aws-lambda": "^8.10.119",
+    "@types/jasmine": "^4.3.5",
+    "esbuild": "^0.18.10",
+    "jasmine": "^5.1.0",
+    "nyc": "^15.1.0",
+    "prettier": "^3.0.0",
+    "ts-node": "^10.9.1"
+  },
+  "nyc": {
+    "extends": "@istanbuljs/nyc-config-typescript",
+    "check-coverage": true,
+    "all": true,
+    "exclude": [
+      "spec/**/*.*",
+      "util/**/*.*"
+    ]
+  }
+}

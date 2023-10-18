@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -29,5 +31,6 @@ cc_library(
         "//cc/core/blob_storage_provider/src/aws:core_blob_storage_provider_aws_lib",
         "//cc/core/blob_storage_provider/src/common:core_blob_storage_provider_common_lib",
         "//cc/core/interface:interface_lib",
+        "@com_google_absl//absl/strings",
     ],
 )

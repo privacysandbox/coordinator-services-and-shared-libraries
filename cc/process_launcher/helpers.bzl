@@ -27,4 +27,5 @@ def executable_struct_to_json_str(s):
     as_struct = {}
     as_struct["executable_name"] = s["file_name"]
     as_struct["command_line_args"] = s["args"]
+    as_struct["restart"] = s.get("restart", True)
     return json.encode(as_struct)

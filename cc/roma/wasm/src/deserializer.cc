@@ -108,14 +108,8 @@ void WasmDeserializer::ReadCustomString(void* mem_ptr, size_t mem_size,
   }
 
   string temp_buffer;
-  try {
-    // Add space for the null terminator
-    temp_buffer.reserve(str_data_len + 1);
-  } catch (...) {
-    // Allocation or size request failed
-    output.clear();
-    return;
-  }
+  // Add space for the null terminator
+  temp_buffer.reserve(str_data_len + 1);
 
   ReadRawString(mem_ptr, mem_size, str_data_ptr, &temp_buffer[0], str_data_len);
 

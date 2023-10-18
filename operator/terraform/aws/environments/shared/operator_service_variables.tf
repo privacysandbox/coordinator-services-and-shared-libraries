@@ -495,11 +495,21 @@ variable "vpc_availability_zones" {
 }
 
 ################################################################################
+# Notifications Variables.
+################################################################################
+
+variable "enable_job_completion_notifications" {
+  description = "Determines if the SNS topic should be created for job completion notifications."
+  type        = bool
+  default     = false
+}
+
+################################################################################
 # OpenTelemetry related variables
 ################################################################################
 
 variable "allowed_otel_metrics" {
-  description = "Set of otel metrics would be exported."
+  description = "Set of otel metrics to be exported."
   type        = set(string)
-  default     = ["cpu_usage", "memory", "total_execution_time"]
+  default     = []
 }

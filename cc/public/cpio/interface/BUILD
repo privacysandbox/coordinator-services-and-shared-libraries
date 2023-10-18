@@ -13,12 +13,13 @@
 # limitations under the License.
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
 # Flag to determine which platform the system will be built and run on.
 # Example:
-# bazel build target --//cc/cpio:platform=aws
+# bazel build target --//cc/public/cpio/interface:platform=aws
 string_flag(
     name = "platform",
     build_setting_default = "aws",
@@ -28,25 +29,10 @@ string_flag(
     ],
 )
 
-# Flag to determine if we use CPIO server or native library.
-bool_flag(
-    name = "use_cpio_server",
-    build_setting_default = False,
-)
-
 config_setting(
     name = "aws_cpio_lib",
     flag_values = {
         ":platform": "aws",
-        ":use_cpio_server": "False",
-    },
-)
-
-config_setting(
-    name = "aws_cpio_server",
-    flag_values = {
-        ":platform": "aws",
-        ":use_cpio_server": "True",
     },
 )
 
@@ -54,7 +40,44 @@ config_setting(
     name = "gcp_cpio_lib",
     flag_values = {
         ":platform": "gcp",
-        ":use_cpio_server": "False",
+    },
+)
+
+# Flag to determine if we run code inside TEE.
+bool_flag(
+    name = "run_inside_tee",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "aws_cpio_lib_inside_tee",
+    flag_values = {
+        ":platform": "aws",
+        ":run_inside_tee": "True",
+    },
+)
+
+config_setting(
+    name = "gcp_cpio_lib_inside_tee",
+    flag_values = {
+        ":platform": "gcp",
+        ":run_inside_tee": "True",
+    },
+)
+
+config_setting(
+    name = "aws_cpio_lib_outside_tee",
+    flag_values = {
+        ":platform": "aws",
+        ":run_inside_tee": "False",
+    },
+)
+
+config_setting(
+    name = "gcp_cpio_lib_outside_tee",
+    flag_values = {
+        ":platform": "gcp",
+        ":run_inside_tee": "False",
     },
 )
 
@@ -85,6 +108,7 @@ cc_library(
         "//cc/core/logger/src/log_providers/syslog:syslog_lib",
         "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/cpio/client_providers/global_cpio/src/cpio_provider:cpio_provider_lib",
+        "//cc/public/cpio/core/src:cpio_utils_lib",
     ],
 )
 

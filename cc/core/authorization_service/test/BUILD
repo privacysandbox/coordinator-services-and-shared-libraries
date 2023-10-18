@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_test(
@@ -21,7 +23,6 @@ cc_test(
     copts = [
         "-std=c++17",
     ],
-    flaky = True,  # Remove this flag once the flakiness is fixed.
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -31,6 +32,7 @@ cc_test(
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_googletest//:gtest_main",
     ],

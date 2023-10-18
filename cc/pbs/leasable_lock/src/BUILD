@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -29,5 +31,6 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/pbs/interface:pbs_interface_lib",
     ],
 )

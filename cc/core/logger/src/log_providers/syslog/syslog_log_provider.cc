@@ -25,6 +25,7 @@
 #include <string>
 #include <string_view>
 
+#include "absl/strings/str_cat.h"
 #include "core/common/uuid/src/uuid.h"
 
 #include "error_codes.h"
@@ -33,6 +34,8 @@ using std::cerr;
 using std::string;
 using std::string_view;
 
+using absl::StrAppend;
+using absl::StrCat;
 using google::scp::core::common::ToString;
 using google::scp::core::common::Uuid;
 using google::scp::core::errors::SC_SYSLOG_CLOSE_CONNECTION_ERROR;
@@ -62,7 +65,7 @@ ExecutionResult SyslogLogProvider::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
-void SyslogLogProvider::Log(const LogLevel& level,
+void SyslogLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
                             const Uuid& parent_activity_id,
                             const Uuid& activity_id,
                             const string_view& component_name,
@@ -71,9 +74,9 @@ void SyslogLogProvider::Log(const LogLevel& level,
                             const string_view& location,
                             const string_view& message, va_list args) noexcept {
   auto formatted_message =
-      string(cluster_name) + "|" + string(machine_name) + "|" +
-      string(component_name) + "|" + ToString(parent_activity_id) + "|" +
-      ToString(activity_id) + "|" + string(location) + "|" + string(message);
+      StrCat(cluster_name, "|", machine_name, "|", component_name, "|",
+             ToString(correlation_id), "|", ToString(parent_activity_id), "|",
+             ToString(activity_id), "|", location, "|", message);
 
   try {
     switch (level) {

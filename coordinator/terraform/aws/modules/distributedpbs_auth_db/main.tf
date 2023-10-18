@@ -103,3 +103,82 @@ resource "aws_appautoscaling_policy" "table_write_policy" {
     target_value = var.auth_table_write_scale_utilization
   }
 }
+
+resource "aws_dynamodb_table" "pbs_authorization_table_v2" {
+  name           = "${var.environment_prefix}-pbs-authorization-v2"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = var.auth_table_read_initial_capacity
+  write_capacity = var.auth_table_write_initial_capacity
+
+  lifecycle {
+    ignore_changes = [
+      # Ignore changes in read/write capacity since we have an auto-scaling policy
+      read_capacity,
+      write_capacity
+    ]
+  }
+
+  hash_key = "adtech_identity"
+
+  attribute {
+    name = "adtech_identity"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = var.auth_table_enable_point_in_time_recovery
+  }
+
+  tags = {
+    Name        = "${var.environment_prefix}-google-scp-pbs-budget-keys"
+    Environment = "${var.environment_prefix}"
+  }
+}
+
+resource "aws_appautoscaling_target" "pbs_authorization_table_v2_read_target" {
+  min_capacity       = var.auth_table_read_initial_capacity
+  max_capacity       = var.auth_table_read_max_capacity
+  resource_id        = "table/${aws_dynamodb_table.pbs_authorization_table_v2.name}"
+  scalable_dimension = "dynamodb:table:ReadCapacityUnits"
+  service_namespace  = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "pbs_authorization_table_v2_read_policy" {
+  name               = "DynamoDBReadCapacityUtilization:${aws_appautoscaling_target.pbs_authorization_table_v2_read_target.resource_id}"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.pbs_authorization_table_v2_read_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.pbs_authorization_table_v2_read_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.pbs_authorization_table_v2_read_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBReadCapacityUtilization"
+    }
+
+    target_value = var.auth_table_read_scale_utilization
+  }
+}
+
+resource "aws_appautoscaling_target" "pbs_authorization_table_v2_write_target" {
+  min_capacity       = var.auth_table_write_initial_capacity
+  max_capacity       = var.auth_table_write_max_capacity
+  resource_id        = "table/${aws_dynamodb_table.pbs_authorization_table_v2.name}"
+  scalable_dimension = "dynamodb:table:WriteCapacityUnits"
+  service_namespace  = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "pbs_authorization_table_v2_write_policy" {
+  name               = "DynamoDBWriteCapacityUtilization:${aws_appautoscaling_target.pbs_authorization_table_v2_write_target.resource_id}"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.pbs_authorization_table_v2_write_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.pbs_authorization_table_v2_write_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.pbs_authorization_table_v2_write_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBWriteCapacityUtilization"
+    }
+
+    target_value = var.auth_table_write_scale_utilization
+  }
+}

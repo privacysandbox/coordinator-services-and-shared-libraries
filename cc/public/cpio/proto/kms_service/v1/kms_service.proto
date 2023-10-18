@@ -1,0 +1,65 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.kms_service.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "KmsServiceProto";
+option java_package = "com.google.cmrt.sdk.kms_service.v1";
+
+import "cc/core/common/proto/common.proto";
+import "google/protobuf/duration.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Provides KeyManagementService functionalities.
+service KmsService {
+  // Decrypt the given ciphertext.
+  rpc Decrypt(DecryptRequest) returns (DecryptResponse) {}
+}
+
+// Request to decrypt some text.
+message DecryptRequest {
+  // The ciphertext. It should be Base64 encoded.
+  string ciphertext = 1;
+
+  // The region where we want to use the KMS.
+  string kms_region = 2;
+
+  // For AWS this is the key ARN. For GCP this is the key name.
+  string key_resource_name = 3;
+
+  // AccountIdentity. For AWS, it would be the IAM role.
+  // For GCP, it would be the service account; if not specified, default
+  // credentials will be used to talk to cloud KMS.
+  string account_identity = 4;
+
+  // Only for GCP. Pool to provide workload identity.
+  // Refer to
+  // https://cloud.google.com/iam/docs/workload-identity-federation#pools
+  // for details. Required when running code inside TEE.
+  string gcp_wip_provider = 5;
+}
+
+// Response of decrypting some text.
+message DecryptResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+
+  // The decrypted text.
+  string plaintext = 2;
+}

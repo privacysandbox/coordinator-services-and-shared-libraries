@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@com_github_google_rpmpack//:def.bzl", "pkg_tar2rpm")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(
     default_visibility = ["//visibility:public"],

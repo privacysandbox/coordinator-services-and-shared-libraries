@@ -23,6 +23,7 @@
 #include "pbs/budget_key/src/budget_key.h"
 #include "pbs/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::budget_key::mock {
 
@@ -34,11 +35,11 @@ class MockBudgetKey : public BudgetKey {
       const std::shared_ptr<core::JournalServiceInterface>& journal_service,
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
       : BudgetKey(name, id, async_executor, journal_service,
-                  nosql_database_provider, metric_client, config_provider) {}
+                  nosql_database_provider, metric_client, config_provider,
+                  std::make_shared<cpio::MockAggregateMetric>()) {}
 
   std::function<void(
       core::AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>&,
@@ -54,11 +55,16 @@ class MockBudgetKey : public BudgetKey {
       std::shared_ptr<std::list<core::CheckpointLog>>&)>
       checkpoint_mock;
 
+  std::function<core::ExecutionResult()> stop_mock;
+
   core::ExecutionResult Run() noexcept override {
     return core::SuccessExecutionResult();
   }
 
   core::ExecutionResult Stop() noexcept override {
+    if (stop_mock) {
+      return stop_mock();
+    }
     return core::SuccessExecutionResult();
   }
 
@@ -81,9 +87,10 @@ class MockBudgetKey : public BudgetKey {
   }
 
   core::ExecutionResult OnJournalServiceRecoverCallback(
-      const std::shared_ptr<core::BytesBuffer>& bytes_buffer) noexcept
-      override {
-    return BudgetKey::OnJournalServiceRecoverCallback(bytes_buffer);
+      const std::shared_ptr<core::BytesBuffer>& bytes_buffer,
+      const core::common::Uuid& activity_id) noexcept override {
+    return BudgetKey::OnJournalServiceRecoverCallback(bytes_buffer,
+                                                      activity_id);
   }
 
   core::ExecutionResult LoadBudgetKey(

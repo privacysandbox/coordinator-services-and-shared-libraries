@@ -161,13 +161,23 @@ variable "encryption_key_service_jar" {
         (top level under /dist/...)
       EOT
   type        = string
-  default     = "../../../dist/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
+  default     = "../../../dist/EncryptionKeyServiceLambda_deploy.jar"
 }
 
 variable "enable_public_key_signature" {
   description = "Generate a public key signature key for this coordinator and include signatures."
   type        = bool
   default     = true
+}
+
+variable "get_encryption_key_lambda_ps_client_shim_enabled" {
+  description = <<-EOT
+        If true, enables shim to ensure response is compatible with privacy sandbox 0.51.x
+        clients. Newer fields such as activationTime is filtered out from the response.
+        This temporary variable will be removed in the future.
+      EOT
+  type        = bool
+  default     = false
 }
 
 ################################################################################

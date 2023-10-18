@@ -35,6 +35,8 @@ struct TestCpioOptions : public CpioOptions {
   std::string public_ipv4_address;
   /// Private IP address.
   std::string private_ipv4_address;
+  /// STS client endpoint override.
+  std::string sts_endpoint_override;
 
   CpioOptions ToCpioOptions() {
     CpioOptions cpio_options;

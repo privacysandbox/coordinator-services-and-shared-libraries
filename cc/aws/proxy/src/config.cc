@@ -33,6 +33,7 @@ Config Config::Parse(int argc, char* argv[]) {
     { "buffer_size", required_argument, 0, 'b'},
     {0, 0, 0, 0}
   };
+
   // clang-format on
 
   while (true) {

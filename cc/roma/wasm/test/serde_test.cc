@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <string.h>
 
 #include <string>
 #include <vector>
-
-#include <gmock/gmock.h>
 
 #include "roma/wasm/src/deserializer.h"
 #include "roma/wasm/src/serializer.h"

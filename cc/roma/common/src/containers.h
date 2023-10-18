@@ -26,26 +26,7 @@
 
 #include "absl/container/flat_hash_map.h"
 
-#include "shm_allocator.h"
-
 namespace google::scp::roma::common {
-/// std::basic_string with ShmAllocator
-template <typename CharT>
-using BasicRomaString =
-    std::basic_string<CharT, std::char_traits<CharT>, ShmAllocator<CharT>>;
-
-/// std::string with ShmAllocator
-using RomaString = BasicRomaString<char>;
-
-/// std::vector with ShmAllocator
-template <typename T>
-using RomaVector = std::vector<T, ShmAllocator<T>>;
-
-/// std::map with ShmAllocator
-template <typename Key, typename T>
-using RomaMap =
-    std::map<Key, T, std::less<Key>, ShmAllocator<std::pair<const Key, T>>>;
-
 /**
  * @brief This is a map implementation which allows iterating over the map
  * using the order of insertion. The order of insertion can be retrieved by

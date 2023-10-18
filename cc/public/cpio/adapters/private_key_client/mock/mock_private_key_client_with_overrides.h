@@ -18,8 +18,6 @@
 
 #include <memory>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/message_router/src/message_router.h"
 #include "cpio/client_providers/private_key_client_provider/mock/mock_private_key_client_provider.h"
 #include "public/core/interface/execution_result.h"
 
@@ -28,13 +26,18 @@ class MockPrivateKeyClientWithOverrides : public PrivateKeyClient {
  public:
   MockPrivateKeyClientWithOverrides(
       const std::shared_ptr<PrivateKeyClientOptions>& options)
-      : PrivateKeyClient(options) {
-    private_key_client_provider_ = std::make_shared<
-        client_providers::mock::MockPrivateKeyClientProvider>();
-  }
+      : PrivateKeyClient(options) {}
 
-  core::ExecutionResult Init() noexcept override {
-    return private_key_client_provider_->Init();
+  core::ExecutionResult create_private_key_client_provider_result =
+      core::SuccessExecutionResult();
+
+  core::ExecutionResult CreatePrivateKeyClientProvider() noexcept override {
+    if (create_private_key_client_provider_result.Successful()) {
+      private_key_client_provider_ = std::make_shared<
+          client_providers::mock::MockPrivateKeyClientProvider>();
+      return create_private_key_client_provider_result;
+    }
+    return create_private_key_client_provider_result;
   }
 
   std::shared_ptr<client_providers::mock::MockPrivateKeyClientProvider>

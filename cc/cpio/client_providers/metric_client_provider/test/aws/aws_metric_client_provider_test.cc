@@ -34,6 +34,7 @@
 #include "cpio/client_providers/metric_client_provider/src/aws/error_codes.h"
 #include "cpio/common/src/aws/error_codes.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using Aws::InitAPI;
@@ -51,12 +52,12 @@ using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::Timestamp;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::errors::SC_AWS_INTERNAL_SERVICE_ERROR;
 using google::scp::core::errors::
-    SC_AWS_METRIC_CLIENT_PROVIDER_METRIC_CLIENT_OPTIONS_NOT_SET;
+    SC_AWS_METRIC_CLIENT_PROVIDER_SHOULD_ENABLE_BATCH_RECORDING;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::client_providers::AwsMetricClientUtils;
 using google::scp::cpio::client_providers::mock::
@@ -96,60 +97,68 @@ class AwsMetricClientProviderTest : public ::testing::Test {
     ShutdownAPI(options);
   }
 
-  void SetUp() override {
-    auto metric_client_options = make_shared<MetricClientOptions>();
-    metric_client_options->metric_namespace = kNamespace;
+  unique_ptr<MockAwsMetricClientProviderOverrides> CreateClient(
+      bool enable_batch_recording) {
+    auto metric_batching_options = make_shared<MetricBatchingOptions>();
+    metric_batching_options->enable_batch_recording = enable_batch_recording;
+    if (enable_batch_recording) {
+      metric_batching_options->metric_namespace = kNamespace;
+    }
 
-    client_ = make_unique<MockAwsMetricClientProviderOverrides>(
-        metric_client_options);
+    return make_unique<MockAwsMetricClientProviderOverrides>(
+        metric_batching_options);
   }
 
   void SetPutMetricsRequest(
       PutMetricsRequest& record_metric_request, const string& value = kValue,
       int metrics_num = 1,
-      const int64_t& timestamp =
+      const int64_t& timestamp_in_ms =
           duration_cast<milliseconds>(system_clock::now().time_since_epoch())
               .count()) {
+    record_metric_request.set_metric_namespace(kNamespace);
     for (auto i = 0; i < metrics_num; i++) {
       auto metric = record_metric_request.add_metrics();
       metric->set_name(kName);
       metric->set_value(value);
       metric->set_unit(kUnit);
-      metric->set_timestamp_in_ms(timestamp);
+      *metric->mutable_timestamp() =
+          TimeUtil::MillisecondsToTimestamp(timestamp_in_ms);
     }
   }
-
-  unique_ptr<MockAwsMetricClientProviderOverrides> client_;
 };
 
 TEST_F(AwsMetricClientProviderTest, InitSuccess) {
-  client_->GetInstanceClientProvider()->instance_resource_name =
+  auto client = CreateClient(false);
+  client->GetInstanceClientProvider()->instance_resource_name =
       kResourceNameMock;
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
+  EXPECT_SUCCESS(client->Stop());
 }
 
 TEST_F(AwsMetricClientProviderTest, FailedToGetRegion) {
+  auto client = CreateClient(false);
   auto failure = FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR);
-  client_->GetInstanceClientProvider()->get_instance_resource_name_mock =
+  client->GetInstanceClientProvider()->get_instance_resource_name_mock =
       failure;
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), failure);
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_THAT(client->Run(), ResultIs(failure));
 }
 
 TEST_F(AwsMetricClientProviderTest, SplitsOversizeRequestsVector) {
-  client_->GetInstanceClientProvider()->instance_resource_name =
+  auto client = CreateClient(true);
+
+  client->GetInstanceClientProvider()->instance_resource_name =
       kResourceNameMock;
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
 
   Aws::NoResult result;
-  client_->GetCloudWatchClient()->put_metric_data_outcome_mock =
+  client->GetCloudWatchClient()->put_metric_data_outcome_mock =
       PutMetricDataOutcome(result);
 
   size_t put_metric_data_request_count = 0;
-  client_->GetCloudWatchClient()->put_metric_data_async_mock =
+  client->GetCloudWatchClient()->put_metric_data_async_mock =
       [&](const Aws::CloudWatch::Model::PutMetricDataRequest& request,
           const Aws::CloudWatch::PutMetricDataResponseReceivedHandler& handler,
           const std::shared_ptr<const Aws::Client::AsyncCallerContext>&
@@ -171,26 +180,27 @@ TEST_F(AwsMetricClientProviderTest, SplitsOversizeRequestsVector) {
     requests_vector->emplace_back(context);
   }
 
-  EXPECT_EQ(client_->MetricsBatchPush(requests_vector),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(client->MetricsBatchPush(requests_vector));
   WaitUntil([&]() { return put_metric_data_request_count == 10; });
 
   // Cannot stop the client because the AWS callback is mocked.
 }
 
 TEST_F(AwsMetricClientProviderTest, KeepMetricsInTheSameRequest) {
-  client_->GetInstanceClientProvider()->instance_resource_name =
+  auto client = CreateClient(true);
+
+  client->GetInstanceClientProvider()->instance_resource_name =
       kResourceNameMock;
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
 
   Aws::NoResult result;
-  client_->GetCloudWatchClient()->put_metric_data_outcome_mock =
+  client->GetCloudWatchClient()->put_metric_data_outcome_mock =
       PutMetricDataOutcome(result);
 
   atomic<int> put_metric_data_request_count = 0;
   atomic<int> number_datums_received = 0;
-  client_->GetCloudWatchClient()->put_metric_data_async_mock =
+  client->GetCloudWatchClient()->put_metric_data_async_mock =
       [&](const Aws::CloudWatch::Model::PutMetricDataRequest& request,
           const Aws::CloudWatch::PutMetricDataResponseReceivedHandler& handler,
           const std::shared_ptr<const Aws::Client::AsyncCallerContext>&
@@ -212,8 +222,7 @@ TEST_F(AwsMetricClientProviderTest, KeepMetricsInTheSameRequest) {
         [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {});
     requests_vector->push_back(context);
   }
-  EXPECT_EQ(client_->MetricsBatchPush(requests_vector),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(client->MetricsBatchPush(requests_vector));
   WaitUntil([&]() { return put_metric_data_request_count.load() == 3; });
   WaitUntil([&]() { return number_datums_received.load() == 2000; });
 
@@ -221,13 +230,15 @@ TEST_F(AwsMetricClientProviderTest, KeepMetricsInTheSameRequest) {
 }
 
 TEST_F(AwsMetricClientProviderTest, OnPutMetricDataAsyncCallbackWithError) {
-  client_->GetInstanceClientProvider()->instance_resource_name =
+  auto client = CreateClient(true);
+
+  client->GetInstanceClientProvider()->instance_resource_name =
       kResourceNameMock;
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
 
   AWSError<CloudWatchErrors> error(CloudWatchErrors::UNKNOWN, false);
-  client_->GetCloudWatchClient()->put_metric_data_outcome_mock =
+  client->GetCloudWatchClient()->put_metric_data_outcome_mock =
       PutMetricDataOutcome(error);
 
   PutMetricsRequest record_metric_request;
@@ -237,29 +248,31 @@ TEST_F(AwsMetricClientProviderTest, OnPutMetricDataAsyncCallbackWithError) {
       make_shared<PutMetricsRequest>(record_metric_request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         context_finish_count += 1;
-        EXPECT_EQ(context.result,
-                  FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR));
+        EXPECT_THAT(
+            context.result,
+            ResultIs(FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR)));
       });
   auto requests_vector = make_shared<
       vector<AsyncContext<PutMetricsRequest, PutMetricsResponse>>>();
   requests_vector->push_back(context);
   requests_vector->push_back(context);
   requests_vector->push_back(context);
-  EXPECT_EQ(client_->MetricsBatchPush(requests_vector),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(client->MetricsBatchPush(requests_vector));
   WaitUntil([&]() { return context_finish_count == 3; });
 
-  EXPECT_EQ(client_->Stop(), SuccessExecutionResult());
+  // Cannot stop the client because the AWS callback is mocked.
 }
 
 TEST_F(AwsMetricClientProviderTest, OnPutMetricDataAsyncCallbackWithSuccess) {
-  client_->GetInstanceClientProvider()->instance_resource_name =
+  auto client = CreateClient(true);
+
+  client->GetInstanceClientProvider()->instance_resource_name =
       kResourceNameMock;
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
 
   Aws::NoResult result;
-  client_->GetCloudWatchClient()->put_metric_data_outcome_mock =
+  client->GetCloudWatchClient()->put_metric_data_outcome_mock =
       PutMetricDataOutcome(result);
 
   PutMetricsRequest record_metric_request;
@@ -269,28 +282,28 @@ TEST_F(AwsMetricClientProviderTest, OnPutMetricDataAsyncCallbackWithSuccess) {
       make_shared<PutMetricsRequest>(record_metric_request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         context_finish_count += 1;
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
       });
   auto requests_vector = make_shared<
       vector<AsyncContext<PutMetricsRequest, PutMetricsResponse>>>();
   requests_vector->push_back(context);
   requests_vector->push_back(context);
   requests_vector->push_back(context);
-  EXPECT_EQ(client_->MetricsBatchPush(requests_vector),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(client->MetricsBatchPush(requests_vector));
   WaitUntil([&]() { return context_finish_count == 3; });
 
-  EXPECT_EQ(client_->Stop(), SuccessExecutionResult());
+  // Cannot stop the client because the AWS callback is mocked.
 }
 
 TEST_F(AwsMetricClientProviderTest,
-       MultipleMetricsWithoutOptionsSetShouldFail) {
-  client_ = make_unique<MockAwsMetricClientProviderOverrides>(nullptr);
-  client_->GetInstanceClientProvider()->instance_resource_name =
+       MultipleMetricsWithoutBatchRecordingShouldFail) {
+  auto client = CreateClient(false);
+
+  client->GetInstanceClientProvider()->instance_resource_name =
       kResourceNameMock;
 
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
 
   auto requests_vector = make_shared<
       vector<AsyncContext<PutMetricsRequest, PutMetricsResponse>>>();
@@ -303,22 +316,24 @@ TEST_F(AwsMetricClientProviderTest,
         [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {});
     requests_vector->push_back(context);
   }
-  EXPECT_EQ(client_->MetricsBatchPush(requests_vector),
-            FailureExecutionResult(
-                SC_AWS_METRIC_CLIENT_PROVIDER_METRIC_CLIENT_OPTIONS_NOT_SET));
-  EXPECT_EQ(client_->Stop(), SuccessExecutionResult());
+  EXPECT_THAT(
+      client->MetricsBatchPush(requests_vector),
+      ResultIs(FailureExecutionResult(
+          SC_AWS_METRIC_CLIENT_PROVIDER_SHOULD_ENABLE_BATCH_RECORDING)));
+  EXPECT_SUCCESS(client->Stop());
 }
 
-TEST_F(AwsMetricClientProviderTest, OneMetricWithoutOptionsSetSucceed) {
-  client_ = make_unique<MockAwsMetricClientProviderOverrides>(nullptr);
-  client_->GetInstanceClientProvider()->instance_resource_name =
+TEST_F(AwsMetricClientProviderTest, OneMetricWithoutBatchRecordingSucceed) {
+  auto client = CreateClient(false);
+
+  client->GetInstanceClientProvider()->instance_resource_name =
       kResourceNameMock;
 
-  EXPECT_EQ(client_->Init(), SuccessExecutionResult());
-  EXPECT_EQ(client_->Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
 
   Aws::NoResult result;
-  client_->GetCloudWatchClient()->put_metric_data_outcome_mock =
+  client->GetCloudWatchClient()->put_metric_data_outcome_mock =
       PutMetricDataOutcome(result);
 
   auto requests_vector = make_shared<
@@ -330,13 +345,12 @@ TEST_F(AwsMetricClientProviderTest, OneMetricWithoutOptionsSetSucceed) {
   AsyncContext<PutMetricsRequest, PutMetricsResponse> context(
       make_shared<PutMetricsRequest>(record_metric_request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         finished = true;
       });
   requests_vector->push_back(context);
 
-  EXPECT_EQ(client_->MetricsBatchPush(requests_vector),
-            SuccessExecutionResult());
-  EXPECT_EQ(client_->Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(client->MetricsBatchPush(requests_vector));
+  EXPECT_SUCCESS(client->Stop());
 }
 }  // namespace google::scp::cpio::client_providers::test

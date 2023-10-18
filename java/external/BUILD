@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library", "java_plugin")
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -58,7 +60,7 @@ java_library(
         ":autoservice_plugin",
     ],
     neverlink = True,
-    exports = [":autoservice_plugin"],
+    exports = [":autoservice_annotations"],
 )
 
 alias(
@@ -132,6 +134,12 @@ alias(
 )
 
 alias(
+    name = "snakeyaml",
+    actual = "@maven_yaml//:org_yaml_snakeyaml",
+)
+
+# Make sure use snakeyaml deps together to pick the right snakeyaml version.
+alias(
     name = "test_parameter_injector",
     actual = "@maven//:com_google_testparameterinjector_test_parameter_injector",
 )
@@ -175,7 +183,7 @@ java_library(
         ":autovalue_plugin",
     ],
     neverlink = True,
-    exports = [":autovalue_plugin"],
+    exports = [":autovalue_annotations"],
 )
 
 alias(
@@ -287,6 +295,11 @@ alias(
 alias(
     name = "aws_s3_transfer_manager",
     actual = "@maven//:software_amazon_awssdk_s3_transfer_manager",
+)
+
+alias(
+    name = "aws_sns",
+    actual = "@maven//:software_amazon_awssdk_sns",
 )
 
 alias(
@@ -668,4 +681,29 @@ alias(
 alias(
     name = "google_common_proto",
     actual = "@maven//:com_google_api_grpc_proto_google_common_protos",
+)
+
+alias(
+    name = "google_api_services_cloudkms",
+    actual = "@maven//:com_google_apis_google_api_services_cloudkms",
+)
+
+alias(
+    name = "google_http_client",
+    actual = "@maven//:com_google_http_client_google_http_client",
+)
+
+alias(
+    name = "google_http_client_gson",
+    actual = "@maven//:com_google_http_client_google_http_client_gson",
+)
+
+alias(
+    name = "grpc_netty",
+    actual = "@maven//:io_grpc_grpc_netty",
+)
+
+alias(
+    name = "grcp_netty_shaded",
+    actual = "@maven//:io_grpc_grpc_netty_shaded",
 )

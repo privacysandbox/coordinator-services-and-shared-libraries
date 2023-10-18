@@ -12,7 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
+
+java_library(
+    name = "metricclient",
+    srcs = glob([
+        "*.java",
+        "local/*.java",
+    ]),
+    deps = [
+        ":model",
+        "//java/external:guice",
+        "//java/external:javax_inject",
+    ],
+)
+
+java_library(
+    name = "model",
+    srcs = glob(["model/*.java"]),
+    deps = [
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:guava",
+        "//java/external:jackson_annotations",
+    ],
+)
 
 java_library(
     name = "aws",
@@ -38,25 +64,29 @@ java_library(
 )
 
 java_library(
-    name = "metricclient",
+    name = "gcp",
     srcs = glob([
         "*.java",
+        "gcp/*.java",
         "local/*.java",
     ]),
     deps = [
         ":model",
-        "//java/external:guice",
-        "//java/external:javax_inject",
-    ],
-)
-
-java_library(
-    name = "model",
-    srcs = glob(["model/*.java"]),
-    deps = [
+        "//java/com/google/scp/operator/cpio/configclient",
+        "//java/com/google/scp/operator/cpio/metricclient",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
+        "//java/external:gcp_api_gax",
+        "//java/external:gcp_cloud_monitoring",
+        "//java/external:gcp_monitoring_v3",
+        "//java/external:google_common_proto",
+        "//java/external:grpc_api",
         "//java/external:guava",
-        "//java/external:jackson_annotations",
+        "//java/external:guice",
+        "//java/external:javax_inject",
+        "//java/external:protobuf_java",
+        "//java/external:protobuf_java_util",
     ],
 )

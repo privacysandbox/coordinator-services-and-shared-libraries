@@ -25,6 +25,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.DisableActivationTime;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.KeyService;
 import com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptionKeyRequestProto.GetEncryptionKeyRequest;
@@ -47,15 +49,20 @@ public class GetEncryptionKeyApiGatewayHandler
 
   private final KeyService keyService;
 
+  private final boolean disableActivationTime;
+
   /** Default lambda-instantiated constructor. */
   public GetEncryptionKeyApiGatewayHandler() {
     Injector injector = Guice.createInjector(new AwsKeyServiceModule());
     this.keyService = injector.getInstance(KeyService.class);
+    Boolean disableActivationTime = injector.getInstance(Key.get(Boolean.class, DisableActivationTime.class));
+    this.disableActivationTime = disableActivationTime == null ? false : disableActivationTime;
   }
 
   /** Test-only constructor. */
-  public GetEncryptionKeyApiGatewayHandler(KeyService keyService) {
+  public GetEncryptionKeyApiGatewayHandler(KeyService keyService, boolean disableActivationTime) {
     this.keyService = keyService;
+    this.disableActivationTime = disableActivationTime;
   }
 
   @Override
@@ -75,7 +82,13 @@ public class GetEncryptionKeyApiGatewayHandler
   @Override
   protected EncryptionKey processRequest(GetEncryptionKeyRequest getEncryptionKeyRequest)
       throws ServiceException {
-    return keyService.getEncryptionKey(getEncryptionKeyRequest);
+    EncryptionKey encryptionKey = keyService.getEncryptionKey(getEncryptionKeyRequest);
+
+    if (disableActivationTime) {
+      encryptionKey = encryptionKey.toBuilder().clearActivationTime().build();
+    }
+
+    return encryptionKey;
   }
 
   @Override

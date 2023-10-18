@@ -37,6 +37,7 @@
 #include "core/http2_client/mock/mock_http_connection.h"
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using namespace nghttp2::asio_http2;          // NOLINT
 using namespace nghttp2::asio_http2::server;  // NOLINT
@@ -48,6 +49,8 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::common::Uuid;
 using google::scp::core::http2_client::mock::MockHttpConnection;
+using google::scp::core::test::IsSuccessful;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using std::atomic;
 using std::bind;
@@ -85,8 +88,8 @@ TEST(HttpConnectionTest, SimpleRequest) {
   MockHttpConnection connection(async_executor, "localhost",
                                 to_string(server.ports()[0]), false);
 
-  EXPECT_EQ(connection.Init(), SuccessExecutionResult());
-  EXPECT_EQ(connection.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(connection.Init());
+  EXPECT_SUCCESS(connection.Run());
 
   vector<Uuid> keys;
   connection.GetPendingNetworkCallbacks().Keys(keys);
@@ -108,7 +111,7 @@ TEST(HttpConnectionTest, SimpleRequest) {
     usleep(1000);
   }
 
-  EXPECT_EQ(execution_result, SuccessExecutionResult());
+  EXPECT_SUCCESS(execution_result);
 
   while (keys.size() == 0) {
     connection.GetPendingNetworkCallbacks().Keys(keys);
@@ -148,8 +151,8 @@ TEST(HttpConnectionTest, CancelCallbacks) {
   MockHttpConnection connection(async_executor, "localhost",
                                 to_string(server.ports()[0]), false);
 
-  EXPECT_EQ(connection.Init(), SuccessExecutionResult());
-  EXPECT_EQ(connection.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(connection.Init());
+  EXPECT_SUCCESS(connection.Run());
 
   vector<Uuid> keys;
   connection.GetPendingNetworkCallbacks().Keys(keys);
@@ -163,9 +166,9 @@ TEST(HttpConnectionTest, CancelCallbacks) {
   http_context.callback =
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         if (!is_called) {
-          EXPECT_EQ(context.result,
-                    FailureExecutionResult(
-                        errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED));
+          EXPECT_THAT(context.result,
+                      ResultIs(FailureExecutionResult(
+                          errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
           is_called = true;
         }
       };
@@ -176,7 +179,7 @@ TEST(HttpConnectionTest, CancelCallbacks) {
     usleep(1000);
   }
 
-  EXPECT_EQ(execution_result, SuccessExecutionResult());
+  EXPECT_SUCCESS(execution_result);
 
   while (keys.size() == 0) {
     connection.GetPendingNetworkCallbacks().Keys(keys);
@@ -214,8 +217,8 @@ TEST(HttpConnectionTest, StopRemovesCallback) {
   MockHttpConnection connection(async_executor, "localhost",
                                 to_string(server.ports()[0]), false);
 
-  EXPECT_EQ(connection.Init(), SuccessExecutionResult());
-  EXPECT_EQ(connection.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(connection.Init());
+  EXPECT_SUCCESS(connection.Run());
 
   vector<Uuid> keys;
   connection.GetPendingNetworkCallbacks().Keys(keys);
@@ -229,9 +232,9 @@ TEST(HttpConnectionTest, StopRemovesCallback) {
   http_context.callback =
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         if (!is_called) {
-          EXPECT_EQ(context.result,
-                    FailureExecutionResult(
-                        errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED));
+          EXPECT_THAT(context.result,
+                      ResultIs(FailureExecutionResult(
+                          errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
           is_called = true;
         }
       };
@@ -242,7 +245,7 @@ TEST(HttpConnectionTest, StopRemovesCallback) {
     usleep(1000);
   }
 
-  EXPECT_EQ(execution_result, SuccessExecutionResult());
+  EXPECT_SUCCESS(execution_result);
 
   while (keys.size() == 0) {
     connection.GetPendingNetworkCallbacks().Keys(keys);

@@ -34,7 +34,7 @@ public class RepoUtil {
   private String repoName;
 
   @Inject
-  RepoUtil() {
+  public RepoUtil() {
     this.repoName = "__main__";
   }
 

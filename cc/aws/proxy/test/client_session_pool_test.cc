@@ -44,15 +44,17 @@ TEST(ClientSessionPoolTest, TestBind) {
   UdsSocket client_sock1(io_context);
   asio::local::connect_pair(client_sock0, client_sock1);
 
-  asio::ip::tcp::endpoint ep(asio::ip::tcp::v6(), 0);
-  asio::ip::tcp::acceptor acceptor(io_context);
+  char tmpfile[] = "/tmp/client_session_test_XXXXXX";
+  mktemp(tmpfile);
+  ASSERT_NE(tmpfile[0], '\0');
+  asio::local::stream_protocol::endpoint ep(tmpfile);
+  asio::local::stream_protocol::acceptor acceptor(io_context);
   acceptor.open(ep.protocol());
   acceptor.set_option(Acceptor::reuse_address(true));
   error_code ec;
   acceptor.bind(ep, ec);
   ASSERT_FALSE(ec.failed()) << "Bind error: " << ec.message();
   acceptor.listen();
-  EXPECT_GT(acceptor.local_endpoint().port(), 0) << "Bind port is 0";
 
   Endpoint local_ep(acceptor.local_endpoint());
 
@@ -122,7 +124,7 @@ TEST(ClientSessionPoolTest, TestBind) {
     exit(0);
   }
 
-  asio::ip::tcp::socket proxy_client_sock(io_context);
+  asio::local::stream_protocol::socket proxy_client_sock(io_context);
   acceptor.accept(proxy_client_sock, ec);
   ASSERT_FALSE(ec.failed()) << "Proxy accept error: " << ec.message();
 
@@ -156,6 +158,7 @@ TEST(ClientSessionPoolTest, TestBind) {
   work.reset();
   pool->Stop();
   worker.join();
+  unlink(tmpfile);
 }
 
 }  // namespace google::scp::proxy::test

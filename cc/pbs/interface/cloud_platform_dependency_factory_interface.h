@@ -33,8 +33,20 @@
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/interface/pbs_client_interface.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
+
+/// @brief Callbacks originating from the providers should have a higher
+/// priority than the regular tasks because they are time-sensitive.
+static constexpr core::AsyncPriority kDefaultAsyncPriorityForCallbackExecution =
+    core::AsyncPriority::High;
+
+/// @brief Blocking tasks are scheduled with a normal priority are can be
+/// starved by a higher/urgent priority tasks.
+static constexpr core::AsyncPriority
+    kDefaultAsyncPriorityForBlockingIOTaskExecution =
+        core::AsyncPriority::Normal;
 
 /**
  * @brief Platform specific factory interface to provide platform specific
@@ -85,8 +97,11 @@ class CloudPlatformDependencyFactoryInterface
   virtual std::unique_ptr<core::BlobStorageProviderInterface>
   ConstructBlobStorageClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface>
-          io_async_executor) noexcept = 0;
+      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+      core::AsyncPriority async_execution_priority =
+          kDefaultAsyncPriorityForCallbackExecution,
+      core::AsyncPriority io_async_execution_priority =
+          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept = 0;
 
   /**
    * @brief Constrict a NoSQL database client for PBS to use AWS Dynamo/GCP
@@ -99,8 +114,11 @@ class CloudPlatformDependencyFactoryInterface
   virtual std::unique_ptr<core::NoSQLDatabaseProviderInterface>
   ConstructNoSQLDatabaseClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface>
-          io_async_executor) noexcept = 0;
+      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+      core::AsyncPriority async_execution_priority =
+          kDefaultAsyncPriorityForCallbackExecution,
+      core::AsyncPriority io_async_execution_priority =
+          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept = 0;
 
   /**
    * @brief Create a Instance Authorizer object for Instance Metadata client.
@@ -135,10 +153,9 @@ class CloudPlatformDependencyFactoryInterface
    * @param async_executor
    * @param instance_client_provider
    * @return
-   * std::unique_ptr<cpio::client_providers::MetricClientProviderInterface>
+   * std::unique_ptr<cpio::MetricClientInterface>
    */
-  virtual std::unique_ptr<cpio::client_providers::MetricClientProviderInterface>
-  ConstructMetricClient(
+  virtual std::unique_ptr<cpio::MetricClientInterface> ConstructMetricClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
       std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>

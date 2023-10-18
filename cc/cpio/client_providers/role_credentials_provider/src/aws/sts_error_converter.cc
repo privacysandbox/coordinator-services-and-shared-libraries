@@ -66,9 +66,9 @@ FailureExecutionResult STSErrorConverter::ConvertSTSError(
       failure = FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR);
   }
 
-  ERROR(kSTSErrorConverter, kZeroUuid, kZeroUuid, failure,
-        "AWS cloud service error: code is %d, and error message is %s.", error,
-        error_message.c_str());
+  SCP_ERROR(kSTSErrorConverter, kZeroUuid, failure,
+            "AWS cloud service error: code is %d, and error message is %s.",
+            error, error_message.c_str());
   return failure;
 }
 }  // namespace google::scp::cpio::client_providers

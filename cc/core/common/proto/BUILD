@@ -13,6 +13,8 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -27,5 +29,13 @@ proto_library(
 
 cc_proto_library(
     name = "core_common_proto_lib",
+    deps = [":core_common_proto"],
+)
+
+##########################################
+# Java
+##########################################
+java_proto_library(
+    name = "core_common_java_proto",
     deps = [":core_common_proto"],
 )

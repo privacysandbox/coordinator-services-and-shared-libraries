@@ -49,14 +49,14 @@ ExecutionResult AwsAuthorizationTokenFetcher::FetchToken(
       get_credentials_context(
           make_shared<GetCredentialsRequest>(),
           bind(&AwsAuthorizationTokenFetcher::OnGetCredentialsCallback, this,
-               token_request_context, _1));
+               token_request_context, _1),
+          token_request_context);
   return credentials_provider_->GetCredentials(get_credentials_context);
 }
 
 void AwsAuthorizationTokenFetcher::OnGetCredentialsCallback(
     AsyncContext<FetchTokenRequest, FetchTokenResponse> token_request_context,
-    core::AsyncContext<core::GetCredentialsRequest,
-                       core::GetCredentialsResponse>&
+    AsyncContext<GetCredentialsRequest, GetCredentialsResponse>&
         get_credentials_context) noexcept {
   if (!get_credentials_context.result.Successful()) {
     token_request_context.result = get_credentials_context.result;

@@ -14,6 +14,7 @@
 
 #include "cc/core/http2_client/src/http2_client.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <stdint.h>
@@ -27,7 +28,6 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include <gmock/gmock.h>
 #include <nghttp2/asio_http2_server.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
@@ -38,6 +38,7 @@
 #include "core/test/utils/auto_init_run_stop.h"
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using namespace nghttp2::asio_http2;          // NOLINT
 using namespace nghttp2::asio_http2::server;  // NOLINT
@@ -46,8 +47,13 @@ using namespace std::placeholders;            // NOLINT
 
 using google::scp::core::AsyncExecutor;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::TimeDuration;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
+using google::scp::core::common::RetryStrategyOptions;
+using google::scp::core::common::RetryStrategyType;
 using google::scp::core::test::AutoInitRunStop;
+using google::scp::core::test::IsSuccessful;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using std::atomic;
 using std::bind;
@@ -60,6 +66,8 @@ using std::thread;
 using std::to_string;
 using std::vector;
 using std::chrono::milliseconds;
+
+static constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 10;
 
 namespace google::scp::core {
 
@@ -179,18 +187,18 @@ TEST(HttpClientTest, FailedToConnect) {
   http_client.Init();
   http_client.Run();
 
-  promise<void> done;
+  atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
       move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_EQ(
+        EXPECT_THAT(
             context.result,
-            FailureExecutionResult(
-                errors::SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION));
-        done.set_value();
+            ResultIs(FailureExecutionResult(
+                errors::SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
+        finished.store(true);
       });
 
-  EXPECT_EQ(http_client.PerformRequest(context), SuccessExecutionResult());
-  done.get_future().get();
+  EXPECT_SUCCESS(http_client.PerformRequest(context));
+  WaitUntil([&]() { return finished.load(); });
   http_client.Stop();
   async_executor->Stop();
 }
@@ -204,13 +212,19 @@ class HttpClientTestII : public ::testing::Test {
     async_executor->Init();
     async_executor->Run();
 
-    http_client = make_shared<HttpClient>(async_executor);
-    EXPECT_EQ(http_client->Init(), SuccessExecutionResult());
-    EXPECT_EQ(http_client->Run(), SuccessExecutionResult());
+    auto options = HttpClientOptions(
+        RetryStrategyOptions(RetryStrategyType::Exponential,
+                             kDefaultRetryStrategyDelayInMs,
+                             kDefaultRetryStrategyMaxRetries),
+        kDefaultMaxConnectionsPerHost, kHttp2ReadTimeoutInSeconds);
+
+    http_client = make_shared<HttpClient>(async_executor, options);
+    EXPECT_SUCCESS(http_client->Init());
+    EXPECT_SUCCESS(http_client->Run());
   }
 
   void TearDown() override {
-    EXPECT_EQ(http_client->Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(http_client->Stop());
     async_executor->Stop();
     server->Stop();
   }
@@ -228,13 +242,13 @@ TEST_F(HttpClientTestII, Success) {
   promise<void> done;
   AsyncContext<HttpRequest, HttpResponse> context(
       move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         const auto& bytes = *context.response->body.bytes;
         EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
         done.set_value();
       });
 
-  EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_client->PerformRequest(context));
 
   done.get_future().get();
 }
@@ -250,14 +264,14 @@ TEST_F(HttpClientTestII, SingleQueryIsEscaped) {
   atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
       move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         auto query_param_it = context.response->headers->find("query_param");
         EXPECT_NE(query_param_it, context.response->headers->end());
         EXPECT_EQ(query_param_it->second, "foo=%21%40%23%24");
         finished.store(true);
       });
 
-  EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_client->PerformRequest(context));
   WaitUntil([&]() { return finished.load(); });
 }
 
@@ -272,14 +286,14 @@ TEST_F(HttpClientTestII, MultiQueryIsEscaped) {
   atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
       move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         auto query_param_it = context.response->headers->find("query_param");
         EXPECT_NE(query_param_it, context.response->headers->end());
         EXPECT_EQ(query_param_it->second, "foo=%21%40%23%24&bar=%25%5E%28%29");
         finished.store(true);
       });
 
-  EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_client->PerformRequest(context));
   WaitUntil([&]() { return finished.load(); });
 }
 
@@ -291,13 +305,13 @@ TEST_F(HttpClientTestII, FailedToGetResponse) {
   promise<void> done;
   AsyncContext<HttpRequest, HttpResponse> context(
       move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_EQ(context.result,
-                  FailureExecutionResult(
-                      errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND));
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND)));
         done.set_value();
       });
 
-  EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_client->PerformRequest(context));
   done.get_future().get();
 }
 
@@ -311,12 +325,12 @@ TEST_F(HttpClientTestII, SequentialReuse) {
     promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
         move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-          EXPECT_EQ(context.result, SuccessExecutionResult());
+          EXPECT_SUCCESS(context.result);
           const auto& bytes = *context.response->body.bytes;
           EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
           done.set_value();
         });
-    EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+    EXPECT_SUCCESS(http_client->PerformRequest(context));
     done.get_future().get();
   }
 }
@@ -336,12 +350,12 @@ TEST_F(HttpClientTestII, ConcurrentReuse) {
     AsyncContext<HttpRequest, HttpResponse> context(
         move(request),
         [&, i](AsyncContext<HttpRequest, HttpResponse>& context) {
-          EXPECT_EQ(context.result, SuccessExecutionResult());
+          EXPECT_SUCCESS(context.result);
           const auto& bytes = *context.response->body.bytes;
           EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
           done[i].set_value();
         });
-    EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+    EXPECT_SUCCESS(http_client->PerformRequest(context));
   }
   for (auto& p : done) {
     p.get_future().get();
@@ -358,7 +372,7 @@ TEST_F(HttpClientTestII, LargeData) {
   atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
       move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         EXPECT_EQ(context.response->body.length,
                   1048576 + SHA256_DIGEST_LENGTH);
         uint8_t hash[SHA256_DIGEST_LENGTH];
@@ -370,7 +384,7 @@ TEST_F(HttpClientTestII, LargeData) {
         finished.store(true);
       });
 
-  EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(http_client->PerformRequest(context));
   WaitUntil([&]() { return finished.load(); });
 }
 
@@ -385,13 +399,13 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
     promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
         move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-          EXPECT_EQ(context.result, SuccessExecutionResult());
+          EXPECT_THAT(context.result, IsSuccessful());
           const auto& bytes = *context.response->body.bytes;
           EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
           done.set_value();
         });
 
-    EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+    EXPECT_THAT(http_client->PerformRequest(context), IsSuccessful());
     done.get_future().get();
   }
 
@@ -403,14 +417,14 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
     promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
         move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-          EXPECT_EQ(
+          EXPECT_THAT(
               context.result,
-              FailureExecutionResult(
+              ResultIs(FailureExecutionResult(
                   errors::
-                      SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION));
+                      SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
           done.set_value();
         });
-    EXPECT_EQ(http_client->PerformRequest(context), SuccessExecutionResult());
+    EXPECT_THAT(http_client->PerformRequest(context), IsSuccessful());
     done.get_future().get();
   }
 }

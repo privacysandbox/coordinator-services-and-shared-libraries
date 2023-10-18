@@ -201,6 +201,28 @@ variable "sns_topic_arn" {
   nullable = false
 }
 
+variable "autoscaling_min_size" {
+  description = "The minimum number of PBS instances to use for the autoscaling group."
+  type        = number
+  nullable    = false
+
+  validation {
+    condition     = var.autoscaling_min_size > 0
+    error_message = "The minimum number of PBS instances in the autoscaling group must be at least one."
+  }
+}
+
+variable "autoscaling_max_size" {
+  description = "The maximum number of PBS instances to use for the autoscaling group."
+  type        = number
+  nullable    = false
+
+  validation {
+    condition     = var.autoscaling_max_size > 0
+    error_message = "The maximum number of PBS instances in the autoscaling group must be at least one."
+  }
+}
+
 variable "pbs_s3_bucket_lb_access_logs_id" {
   description = "PBS ELB access log bucket ID."
   type        = string

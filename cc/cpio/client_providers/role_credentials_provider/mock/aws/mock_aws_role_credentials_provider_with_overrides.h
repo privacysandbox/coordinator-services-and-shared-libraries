@@ -35,11 +35,12 @@ class MockAwsRoleCredentialsProviderWithOverrides
   MockAwsRoleCredentialsProviderWithOverrides()
       : AwsRoleCredentialsProvider(
             std::make_shared<MockInstanceClientProvider>(),
+            std::make_shared<core::async_executor::mock::MockAsyncExecutor>(),
             std::make_shared<core::async_executor::mock::MockAsyncExecutor>()) {
   }
 
-  core::ExecutionResult Init() noexcept override {
-    auto execution_result = AwsRoleCredentialsProvider::Init();
+  core::ExecutionResult Run() noexcept override {
+    auto execution_result = AwsRoleCredentialsProvider::Run();
     if (execution_result != core::SuccessExecutionResult()) {
       return execution_result;
     }
@@ -49,13 +50,18 @@ class MockAwsRoleCredentialsProviderWithOverrides
     return core::SuccessExecutionResult();
   }
 
+  std::shared_ptr<MockInstanceClientProvider> GetInstanceClientProvider() {
+    return std::dynamic_pointer_cast<MockInstanceClientProvider>(
+        instance_client_provider_);
+  }
+
   std::shared_ptr<MockSTSClient> GetSTSClient() {
     return std::dynamic_pointer_cast<MockSTSClient>(sts_client_);
   }
 
-  std::shared_ptr<core::AsyncExecutorInterface> GetAsyncExecutor() {
+  std::shared_ptr<core::AsyncExecutorInterface> GetCpuAsyncExecutor() {
     return std::dynamic_pointer_cast<core::AsyncExecutorInterface>(
-        async_executor_);
+        cpu_async_executor_);
   }
 
   void OnGetRoleCredentialsCallback(

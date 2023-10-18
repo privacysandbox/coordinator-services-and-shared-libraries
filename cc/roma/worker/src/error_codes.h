@@ -1,16 +1,18 @@
-// Copyright 2022 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 
@@ -87,5 +89,8 @@ DEFINE_ERROR_CODE(SC_ROMA_V8_WORKER_ITEM_WORKED_ON_BEFORE, SC_ROMA_V8_WORKER,
                   0x0014,
                   "The work item has already been worked on. This implies the "
                   "worker initially died while handling this item.",
+                  HttpStatusCode::BAD_REQUEST)
+DEFINE_ERROR_CODE(SC_ROMA_V8_WORKER_ASYNC_EXECUTION_FAILED, SC_ROMA_V8_WORKER,
+                  0x0015, "The code object async function execution failed.",
                   HttpStatusCode::BAD_REQUEST)
 }  // namespace google::scp::core::errors

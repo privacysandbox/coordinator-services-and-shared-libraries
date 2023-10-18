@@ -24,6 +24,8 @@
 #include "core/http2_client/src/error_codes.h"
 #include "pbs/pbs_client/mock/mock_pbs_client.h"
 #include "pbs/pbs_client/mock/transactional/mock_client_consume_budget_command.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
@@ -38,6 +40,7 @@ using google::scp::core::TransactionPhaseRequest;
 using google::scp::core::TransactionPhaseResponse;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::common::Uuid;
+using google::scp::core::test::ResultIs;
 using google::scp::pbs::client::mock::MockClientConsumeBudgetCommand;
 using google::scp::pbs::client::mock::MockPrivacyBudgetServiceClient;
 using std::make_shared;
@@ -115,7 +118,7 @@ TEST(PBSClientConsumeBudgetCommandTest,
     consume_budget_transaction_context.result = result;
     TransactionCommandCallback callback =
         [&](ExecutionResult& execution_result) {
-          EXPECT_EQ(execution_result, result);
+          EXPECT_THAT(execution_result, ResultIs(result));
           is_called = true;
         };
     client_consume_budget_command.OnInitiateConsumeBudgetTransactionCallback(
@@ -200,7 +203,7 @@ TEST(PBSClientConsumeBudgetCommandTest, OnExecuteTransactionPhaseCallback) {
     transaction_phase_context.result = result;
     TransactionCommandCallback callback =
         [&](ExecutionResult& execution_result) {
-          EXPECT_EQ(execution_result, result);
+          EXPECT_THAT(execution_result, ResultIs(result));
           is_called = true;
         };
     client_consume_budget_command.OnPhaseExecutionCallback(
@@ -244,7 +247,7 @@ TEST(PBSClientConsumeBudgetCommandTest,
   transaction_phase_context.result = FailureExecutionResult(
       core::errors::SC_HTTP2_CLIENT_HTTP_STATUS_PRECONDITION_FAILED);
   TransactionCommandCallback callback = [&](ExecutionResult& execution_result) {
-    EXPECT_EQ(execution_result, FailureExecutionResult(123));
+    EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(123)));
     is_called = true;
   };
   mock_client->get_transaction_status_mock =
@@ -309,7 +312,8 @@ TEST(PBSClientConsumeBudgetCommandTest, Prepare) {
           return result;
         };
     TransactionCommandCallback callback;
-    EXPECT_EQ(client_consume_budget_command.Prepare(callback), result);
+    EXPECT_THAT(client_consume_budget_command.Prepare(callback),
+                ResultIs(result));
   }
 }
 
@@ -340,7 +344,8 @@ TEST(PBSClientConsumeBudgetCommandTest, Commit) {
           return result;
         };
     TransactionCommandCallback callback;
-    EXPECT_EQ(client_consume_budget_command.Commit(callback), result);
+    EXPECT_THAT(client_consume_budget_command.Commit(callback),
+                ResultIs(result));
   }
 }
 
@@ -371,7 +376,8 @@ TEST(PBSClientConsumeBudgetCommandTest, Notify) {
           return result;
         };
     TransactionCommandCallback callback;
-    EXPECT_EQ(client_consume_budget_command.Notify(callback), result);
+    EXPECT_THAT(client_consume_budget_command.Notify(callback),
+                ResultIs(result));
   }
 }
 
@@ -402,7 +408,8 @@ TEST(PBSClientConsumeBudgetCommandTest, Abort) {
           return result;
         };
     TransactionCommandCallback callback;
-    EXPECT_EQ(client_consume_budget_command.Abort(callback), result);
+    EXPECT_THAT(client_consume_budget_command.Abort(callback),
+                ResultIs(result));
   }
 }
 
@@ -433,7 +440,7 @@ TEST(PBSClientConsumeBudgetCommandTest, End) {
           return result;
         };
     TransactionCommandCallback callback;
-    EXPECT_EQ(client_consume_budget_command.End(callback), result);
+    EXPECT_THAT(client_consume_budget_command.End(callback), ResultIs(result));
   }
 }
 }  // namespace google::scp::pbs::test
