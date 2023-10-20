@@ -1,0 +1,111 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.instance_service.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "InstanceServiceProto";
+option java_package = "com.google.cmrt.sdk.instance_service.v1";
+
+import "cc/core/common/proto/common.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Services to fetch metadata from instances.
+service InstanceService {
+  // Get the resource name of the current instance.
+  rpc GetCurrentInstanceResourceName(GetCurrentInstanceResourceNameRequest)
+      returns (GetCurrentInstanceResourceNameResponse) {}
+  // Get the tags for a given resource name.
+  rpc GetTagsByResourceName(GetTagsByResourceNameRequest)
+      returns (GetTagsByResourceNameResponse) {}
+  // Get instance details for a given instance resource name.
+  rpc GetInstanceDetailsByResourceName(GetInstanceDetailsByResourceNameRequest)
+      returns (GetInstanceDetailsByResourceNameResponse) {}
+}
+
+// Request to get the current instance resource name.
+message GetCurrentInstanceResourceNameRequest {}
+
+// Response of getting the current instance resource name.
+message GetCurrentInstanceResourceNameResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+
+  // Current instance resource name.
+  //
+  // For AWS, returns the Amazon Resource Name (ARN) of current instance:
+  // `arn:aws:ec2:<REGION>:<ACCOUNT_ID>:instance/<INSTANCE_ID>`
+  // For more information about ARNs, see
+  // https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html
+  //
+  // For GCP, returns full resource name of instance:
+  // `//compute.googleapis.com/projects/{PROJECT_ID}/zones/{ZONE_ID}/instances/{INSTANCE_ID}`.
+  // For more information about GCP full resource name, see
+  // https://cloud.google.com/iam/docs/full-resource-names
+  string instance_resource_name = 2;
+}
+
+// Request to get tags for a given resource name.
+message GetTagsByResourceNameRequest {
+  // For AWS, it's the ARN. For GCP, it's the full resource name.
+  string resource_name = 1;
+}
+
+// Response of get tags for a given resource name.
+message GetTagsByResourceNameResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Tags on the instance.
+  // The server allows a maximum of 300 TagBindings to return.
+  map<string, string> tags = 2;
+}
+
+// Request to get details for a given instance.
+message GetInstanceDetailsByResourceNameRequest {
+  // Instance resource name. Same as instance_resource_name in
+  // GetCurrentInstanceResourceNameResponse.
+  string instance_resource_name = 1;
+}
+
+message InstanceNetwork {
+  // Instance public Ipv4 address.
+  string public_ipv4_address = 1;
+  // Instance private Ipv4 address.
+  string private_ipv4_address = 2;
+}
+
+// Details for instance.
+message InstanceDetails {
+  // Instance ID.
+  string instance_id = 1;
+  // Instance networks.
+  // GCP VM instance supports multiple network interfaces.
+  repeated InstanceNetwork networks = 2;
+  // Labels on the instance.
+  // In AWS, they are the same as instance tags.
+  // In GCP, they are the instance labels.
+  map<string, string> labels = 3;
+}
+
+// Response of fetching instance details for a given resource id.
+message GetInstanceDetailsByResourceNameResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Instance details.
+  InstanceDetails instance_details = 2;
+}

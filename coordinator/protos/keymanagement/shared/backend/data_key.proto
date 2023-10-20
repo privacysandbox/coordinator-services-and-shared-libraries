@@ -1,0 +1,38 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.scp.coordinator.protos.keymanagement.shared.backend;
+
+import "coordinator/protos/keymanagement/shared/backend/encryption_key_status.proto";
+
+option java_package = "com.google.scp.coordinator.protos.keymanagement.shared.backend";
+option java_outer_classname = "DataKeyProto";
+
+// Internal representation of a DataKey
+message DataKey {
+  // Tink-generated AEAD key encrypted with encryption key uri.
+  string encrypted_data_key = 1;
+
+  // Coordinator encryption key uri.
+  string encrypted_data_key_kek_uri = 2;
+
+  // Key context that must be passed back to CreateKeyRequest, contains
+  // expiration time, not meant to be parsed by Coordinator.
+  string data_key_context = 3;
+
+  // MAC(encryptedSymmetricKeysetHandle + dataKeyContext
+  string message_authentication_code = 4;
+}

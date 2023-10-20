@@ -1,0 +1,21 @@
+ # Default setting for v8_enable_pointer_compression.
+diff --git a/bazel/defs.bzl b/bazel/defs.bzl
+index e957c0fad3..701651e0f2 100644
+--- a/bazel/defs.bzl
++++ b/bazel/defs.bzl
+@@ -116,6 +116,7 @@ def _default_args():
+         }) + select({
+             "@v8//bazel/config:is_clang": [
+                 "-Wno-invalid-offsetof",
++                "-Wno-unneeded-internal-declaration",
+                 "-std=c++17",
+             ],
+             "@v8//bazel/config:is_gcc": [
+@@ -131,6 +132,7 @@ def _default_args():
+                 "-Wno-redundant-move",
+                 "-Wno-return-type",
+                 "-Wno-stringop-overflow",
++                "-Wno-nonnull",
+                 # Use GNU dialect, because GCC doesn't allow using
+                 # ##__VA_ARGS__ when in standards-conforming mode.
+                 "-std=gnu++17",

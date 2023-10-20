@@ -1,0 +1,66 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.private_key_service.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "PrivateKeyServiceProto";
+option java_package = "com.google.cmrt.sdk.private_key_service.v1";
+
+import "cc/core/common/proto/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Service to fetch private keys.
+service PrivateKeyService {
+  // Fetches private keys from KeyService. These keys are
+  // already decrypted.
+  rpc ListPrivateKeys(ListPrivateKeysRequest)
+      returns (ListPrivateKeysResponse) {}
+}
+
+// Wrap of private key.
+message PrivateKey {
+  // The id of the public and private key pair.
+  string key_id = 1;
+  // The value of the public key.
+  string public_key = 2;
+  // The value of the private key.
+  string private_key = 3;
+  // The expiration time of the private key.
+  google.protobuf.Timestamp expiration_time = 4;
+  // The creation time of the private key.
+  google.protobuf.Timestamp creation_time = 5;
+}
+
+// Request to list private keys by key IDs or age.
+message ListPrivateKeysRequest {
+  // Given key IDs. If set, don't honor the max_age_seconds filter.
+  repeated string key_ids = 1;
+  // Given age. It should be positive integer.
+  // If the the key_ids filter is not set, max_age_seconds will be used.
+  int64 max_age_seconds = 2;
+}
+
+// Response of listing private keys by key IDs or age.
+message ListPrivateKeysResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Returned private key list.
+  repeated PrivateKey private_keys = 2;
+}

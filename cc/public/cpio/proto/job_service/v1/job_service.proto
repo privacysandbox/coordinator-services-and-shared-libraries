@@ -1,0 +1,230 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.job_service.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "JobServiceProto";
+option java_package = "com.google.cmrt.sdk.job_service.v1";
+
+import "cc/core/common/proto/common.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Storing and fetching jobs in the cloud.
+service JobService {
+  // Puts a job.
+  rpc PutJob(PutJobRequest) returns (PutJobResponse) {}
+  // Gets the first available job.
+  rpc GetNextJob(GetNextJobRequest) returns (GetNextJobResponse) {}
+  // Gets a job by job id.
+  rpc GetJobById(GetJobByIdRequest) returns (GetJobByIdResponse) {}
+  // Updates job body of a job.
+  rpc UpdateJobBody(UpdateJobBodyRequest) returns (UpdateJobBodyResponse) {}
+  // Updates status of a job.
+  rpc UpdateJobStatus(UpdateJobStatusRequest)
+      returns (UpdateJobStatusResponse) {}
+  // Updates the visibility timeout and keep the job invisible from others.
+  rpc UpdateJobVisibilityTimeout(UpdateJobVisibilityTimeoutRequest)
+      returns (UpdateJobVisibilityTimeoutResponse) {}
+  // Removes the orphaned job message from the job queue.
+  // Orphaned job messages are the jobs that are already finished or the job
+  // entries are not existed in the database, but the job messages are still
+  // left in the queue.
+  rpc DeleteOrphanedJobMessage(DeleteOrphanedJobMessageRequest)
+      returns (DeleteOrphanedJobMessageResponse) {}
+}
+
+// The job data.
+message Job {
+  // The Id of the job.
+  string job_id = 1;
+
+  // The server generated Id of the job.
+  string server_job_id = 2;
+
+  // The body of the job.
+  // Please note there is no validation performed against this field.
+  google.protobuf.Any job_body = 3;
+
+  // Enum value to represent the status of the job.
+  JobStatus job_status = 4;
+
+  // The time the job is created.
+  google.protobuf.Timestamp created_time = 5;
+
+  // The time the job is updated.
+  google.protobuf.Timestamp updated_time = 6;
+
+  // The number of times the job has been attempted for processing.
+  int32 retry_count = 8;
+
+  // The time the job started processing.
+  google.protobuf.Timestamp processing_started_time = 9;
+}
+
+// Job status enum.
+enum JobStatus {
+  JOB_STATUS_UNKNOWN = 0;
+  // Job has been created.
+  JOB_STATUS_CREATED = 1;
+  // Job has started processing.
+  JOB_STATUS_PROCESSING = 2;
+  // Job has failed.
+  JOB_STATUS_FAILURE = 3;
+  // Job succeeded.
+  JOB_STATUS_SUCCESS = 4;
+}
+
+// Request to put a job.
+message PutJobRequest {
+  // The Id of the job.
+  // This is provided from the customer and has to be unique.
+  string job_id = 1;
+  // The body of the job.
+  // Please note there is no validation performed against this field.
+  google.protobuf.Any job_body = 2;
+}
+
+// Response of putting a job.
+message PutJobResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // The job data.
+  Job job = 2;
+}
+
+// Request to get the top available job.
+message GetNextJobRequest {
+}
+
+// Response of getting the top available job.
+message GetNextJobResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // The job data.
+  Job job = 2;
+  // An identifier associated with the act of receiving the job from the queue.
+  // It is required for updating job visibility timeout or updating job status
+  // to JOB_STATUS_FAILURE or JOB_STATUS_SUCCESS.
+  string receipt_info = 3;
+}
+
+// Request to get a job by job id.
+message GetJobByIdRequest {
+  // The Id of the job.
+  string job_id = 1;
+}
+
+// Response of getting the job by id.
+message GetJobByIdResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // The job data.
+  Job job = 2;
+}
+
+// Request to update body of a job.
+message UpdateJobBodyRequest {
+  // The Id of the job.
+  string job_id = 1;
+  // The new value for the job body.
+  // Please note there is no validation performed against this field.
+  google.protobuf.Any job_body = 2;
+  // The updated time from the most recent response.
+  // If this field is earlier than the updated time in the job item from the
+  // database, this means there is another request already updated the job body.
+  // This request then is staled and will not update the job in the database.
+  google.protobuf.Timestamp most_recent_updated_time = 3;
+}
+
+// Response of updating body of a job.
+message UpdateJobBodyResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // The time the job is updated.
+  google.protobuf.Timestamp updated_time = 2;
+}
+
+// Request to update job status.
+message UpdateJobStatusRequest {
+  // The Id of the job.
+  string job_id = 1;
+  // The new job status.
+  // The status can not be updated to JOB_STATUS_UNKNOWN or JOB_STATUS_CREATED.
+  JobStatus job_status = 2;
+  // The updated time from the most recent response.
+  // If this field is earlier than the updated time in the job item from the
+  // database, this means there is another request already updated the job
+  // status.
+  // This request then is staled and will not update the job in the database.
+  google.protobuf.Timestamp most_recent_updated_time = 3;
+  // The receipt info associated with the job.
+  // This field can and only be retrieved from GetNextJobResponse.
+  // This is only required when update job status to JOB_STATUS_FAILURE or
+  // JOB_STATUS_SUCCESS.
+  optional string receipt_info = 4;
+}
+
+// Response of updating job status.
+message UpdateJobStatusResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // The updated job status.
+  JobStatus job_status = 2;
+  // The time the job is updated.
+  google.protobuf.Timestamp updated_time = 3;
+  // The number of times the job has been attempted for processing.
+  int32 retry_count = 4;
+}
+
+// Request to update visibility timeout of a job.
+message UpdateJobVisibilityTimeoutRequest {
+  // The Id of the job.
+  string job_id = 1;
+  // The duration of job visibility timeout to be updated.
+  // The maximum duration is 600 seconds.
+  // Only seconds from the duration will be used.
+  google.protobuf.Duration duration_to_update = 2;
+  // The receipt info associated with the job.
+  // This field can and only be retrieved from GetNextJobResponse.
+  string receipt_info = 3;
+}
+
+// Response of updating visibility timeout of a job.
+message UpdateJobVisibilityTimeoutResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+}
+
+// Request to delete orphaned job message.
+message DeleteOrphanedJobMessageRequest {
+  // The Id of the job.
+  string job_id = 1;
+  // The receipt info associated with the job.
+  // This field can and only be retrieved from GetNextJobResponse.
+  string receipt_info = 2;
+}
+
+// Response of deleting orphaned job message.
+message DeleteOrphanedJobMessageResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+}

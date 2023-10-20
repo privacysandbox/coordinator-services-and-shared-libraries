@@ -1,0 +1,81 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.scp.coordinator.protos.keymanagement.shared.backend;
+
+import "coordinator/protos/keymanagement/shared/backend/encryption_key_status.proto";
+import "coordinator/protos/keymanagement/shared/backend/key_split_data.proto";
+
+option java_package = "com.google.scp.coordinator.protos.keymanagement.shared.backend";
+option java_outer_classname = "EncryptionKeyProto";
+
+// Represents single key record.
+message EncryptionKey {
+  // Unique identifier of public key record (eg: UUID).
+  string key_id = 1;
+
+  // Value of public key. Not set when returning Private Key.
+  string public_key = 2;
+
+  // Value of public key material (the key itself rather than the json encoded
+  // keyset). Not set when returning Private Key.
+  string public_key_material = 3;
+
+
+  // Key data payload. The meaning of this field depends on keyType.
+  // If keyType is the empty string, then this acts as json-encoded private key
+  // data in the single-party protocol. Is empty when returning Public Keys.
+  //
+  // If keyType is non-empty, it is the private keyset data handle belonging to
+  // this coordinator, in the multi-party protocol. The type of handle is
+  // indicated by the text of keyType. See EncryptionKeyType.
+  string json_encoded_keyset = 4;
+
+  // Defines status of EncryptionKey. Eg, ACTIVE.
+  EncryptionKeyStatus status = 5;
+
+  // URI of the the key used to encrypt this encryption key -- the Key
+  // Encryption Key (KEK). Includes URI prefix used by Tink (e.g. "aws-kms://").
+  //
+  // For AWS this will include the ARN of the symmetric key e.g.
+  // "aws-kms://arn:aws:kms:us-east-1:012345678901:key/abcdef12-3456-7890-abcd-1234567890ab"
+  //
+  // For GCP this will include the resource name of the symmetric key e.g.
+  // "gcp-kms://projects/example-project-98765/locations/us-central1/keyRings/example-ring/cryptoKeys/example-key"
+  string key_encryption_key_uri = 6;
+
+  // Date in epoch milliseconds when Key is created
+  int64 creation_time = 7;
+
+  // Date in epoch milliseconds when the key becomes active and available for encryption.
+  int64 activation_time = 12;
+
+  // Date in epoch milliseconds when Key expires
+  int64 expiration_time = 8;
+
+  // Date in epoch seconds when Key is removed from database. TTL Time must be
+  // in seconds due to DynamoDB TTL requirements.
+  int64 ttl_time = 9;
+
+  // Stores key metadata for each coordinator (e.g. key signatures and KEKs),
+  // as a collection of KeySplitData.
+  repeated KeySplitData key_split_data = 10;
+
+  // String representation of the type of key split - if empty it is assumed to
+  // be a legacy type single party key (and the key data is in
+  // jsonEncodedKeyset).
+  string key_type = 11;
+}

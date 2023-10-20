@@ -1,0 +1,103 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.queue_service.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "QueueServiceProto";
+option java_package = "com.google.cmrt.sdk.queue_service.v1";
+
+import "cc/core/common/proto/common.proto";
+import "google/protobuf/duration.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Storing and fetching messages in the cloud.
+// The queue makes a best effort to preserve the order of messages,
+// but more than one copy of a message might be delivered out of order.
+service QueueService {
+  // Enqueues message to the queue.
+  rpc EnqueueMessage(EnqueueMessageRequest) returns (EnqueueMessageResponse) {}
+  // Gets the top message from the queue.
+  rpc GetTopMessage(GetTopMessageRequest) returns (GetTopMessageResponse) {}
+  // Modifies message visibility timeout from the queue.
+  rpc UpdateMessageVisibilityTimeout(UpdateMessageVisibilityTimeoutRequest)
+      returns (UpdateMessageVisibilityTimeoutResponse) {}
+  // Deletes message from the queue.
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {}
+}
+
+// Request to enqueue message.
+message EnqueueMessageRequest {
+  // User provided message body.
+  string message_body = 1;
+}
+
+// Response of enqueuing message.
+message EnqueueMessageResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Message Id.
+  string message_id = 2;
+}
+
+// Request to get the top message from the queue.
+message GetTopMessageRequest {
+}
+
+// Response of getting the top message from the queue.
+message GetTopMessageResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Message Id.
+  string message_id = 2;
+  // Message body.
+  string message_body = 3;
+  // An identifier associated with the act of receiving the message.
+  // It can be used to update message expiration time or delete message.
+  string receipt_info = 4;
+}
+
+// Request to update the visibility timeout of a message.
+// The new timeout begin to count from the time this call is made.
+message UpdateMessageVisibilityTimeoutRequest {
+  // The receipt info associated with the message whose visibility timeout is
+  // modified.
+  string receipt_info = 1;
+  // New visibility timeout for the message.
+  // The maximum timeout is 600 seconds.
+  // Only seconds from the duration will be used.
+  google.protobuf.Duration message_visibility_timeout = 2;
+}
+
+// Response of updating the visibility timeout of a message.
+message UpdateMessageVisibilityTimeoutResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+}
+
+// Request to delete message.
+message DeleteMessageRequest {
+  // the receipt info associated with the message to delete.
+  string receipt_info = 1;
+}
+
+// Response of deleting message.
+message DeleteMessageResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+}

@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "Fact",
+  "fields": [
+    {
+      "name": "key",
+      "type": "string",
+      "doc": "Key used in report"
+    },
+    {
+      "name": "value",
+      "type": "long",
+      "doc": "Total value of  report with this key"
+    }
+  ]
+}

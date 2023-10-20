@@ -1,0 +1,52 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.scp.protos.shared.api.v1;
+option java_package = "com.google.scp.protos.shared.api.v1";
+option java_outer_classname = "ErrorResponseProto";
+
+// This is modeled after google.rpc.Status:
+// https://github.com/googleapis/googleapis/blob/4c4a9a261e29cbd6123e26bd701449a6dad2e695/google/rpc/status.proto
+// This conforms to specs defined in:
+// https://cloud.google.com/apis/design/errors
+message ErrorResponse {
+  // A simple error code that can be easily handled by the client.
+  // Corresponds to rpcStatusCode of the enum Code.java.
+  int32 code = 1;
+
+  // A developer-facing human-readable error message in English. It should
+  // both explain the error and offer an actionable resolution to it.
+  string message = 2;
+
+  // Additional error information that the client code can use to handle the
+  // error. Adheres to ErrorInfo in google.rpc.ErrorInfo.
+  repeated Details details = 3;
+}
+
+// This is modeled after google.rpc.ErrorInfo:
+// https://github.com/googleapis/googleapis/blob/4c4a9a261e29cbd6123e26bd701449a6dad2e695/google/rpc/error_details.proto#L112
+message Details {
+  // The reason of the error. This is a constant value that identifies the
+  // proximate cause of the error.
+  string reason = 1;
+
+  // The error domain is typically the registered service name of the tool
+  // or product that generates the error. Example: "pubsub.googleapis.com".
+  string domain = 2;
+
+  // Additional structured details about this error.
+  map<string, string> metadata = 3;
+}

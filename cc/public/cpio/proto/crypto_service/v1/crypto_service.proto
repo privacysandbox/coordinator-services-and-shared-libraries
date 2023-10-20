@@ -1,0 +1,200 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.crypto_service.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "CryptoServiceProto";
+option java_package = "com.google.cmrt.sdk.crypto_service.v1";
+
+import "cc/public/cpio/proto/public_key_service/v1/public_key_service.proto";
+import "cc/public/cpio/proto/private_key_service/v1/private_key_service.proto";
+import "cc/core/common/proto/common.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Provides encryption and decryption functionalities.
+service CryptoService {
+  // Encrypts payload using Hpke.
+  rpc HpkeEncrypt(HpkeEncryptRequest) returns (HpkeEncryptResponse) {}
+  // Decrypts payload using Hpke.
+  rpc HpkeDecrypt(HpkeDecryptRequest) returns (HpkeDecryptResponse) {}
+  // Encrypts payload using Aead.
+  rpc AeadEncrypt(AeadEncryptRequest) returns (AeadEncryptResponse) {}
+  // Decrypts payload using Aead.
+  rpc AeadDecrypt(AeadDecryptRequest) returns (AeadDecryptResponse) {}
+}
+
+// Hpke Kem config.
+enum HpkeKem {
+  KEM_UNKNOWN = 0;
+  DHKEM_X25519_HKDF_SHA256 = 1;
+}
+
+// Hpke Kdf config.
+enum HpkeKdf {
+  KDF_UNKNOWN = 0;
+  HKDF_SHA256 = 1;
+}
+
+// Hpke Aead config.
+enum HpkeAead {
+  AEAD_UNKNOWN = 0;
+  AES_128_GCM = 1;
+  AES_256_GCM = 2;
+  CHACHA20_POLY1305 = 3;
+}
+
+// Wrap all Hpke Kem parameters.
+message HpkeParams {
+  HpkeKem kem = 1;
+  HpkeKdf kdf = 2;
+  HpkeAead aead = 3;
+}
+
+// The length of exposed secret.
+enum SecretLength {
+  SECRET_LENGTH_UNKNOWN = 0;
+  SECRET_LENGTH_16_BYTES = 1;
+  SECRET_LENGTH_32_BYTES = 2;
+}
+
+// All data needed for HpkeEncrypt.
+message HpkeEncryptRequest {
+  // Public key to encrypt the payload.
+  public_key_service.v1.PublicKey public_key = 1;
+  // Data to be encrypted.
+  string payload = 2;
+  // App generated associated data.
+  string shared_info = 3;
+  // HPKE parameters. They are optional and if not set, use the server-level
+  // configured ones. If neither server-level nor request-level parameters are
+  // set, use the default ones in the SDK.
+  HpkeParams hpke_params = 4;
+  // Enables bidirectional encryption if true.
+  bool is_bidirectional = 5;
+  // Only to be used when is_bidirectional is true. The same HPKE context will
+  // export the same secret when the exporter_context and secret_length are the
+  // same. Make sure the exporter_context and secret_length match in HpkeEncrypt
+  // and HpkeDecrypt to get the same secret. If not set, "aead key" will be used
+  // by default.
+  string exporter_context = 6;
+  // Only to be used when is_bidirectional is true. If not set,
+  // SECRET_LENGTH_16_BYTES will be used be default.
+  SecretLength secret_length = 7;
+}
+
+// Encrypted data for HPKE. Do not put data which should not be sent over wire
+// here.
+message HpkeEncryptedData {
+  // Contains encapsulated key and the actual payload.
+  bytes ciphertext = 1;
+  // The identifier of a pair of public key and private key.
+  string key_id = 2;
+}
+
+// Result from HpkeEcrypt.
+message HpkeEncryptResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Encrypted data.
+  HpkeEncryptedData encrypted_data = 2;
+  // Only be present in bi-directional encryption to decrypt the response. Don't
+  // send it over wire.
+  bytes secret = 3;
+}
+
+// All data needed for HpkeDecrypt.
+message HpkeDecryptRequest {
+  // Private key to decrypt the encrypted_data.
+  private_key_service.v1.PrivateKey private_key = 1;
+  // Encrypted data.
+  HpkeEncryptedData encrypted_data = 2;
+  // App generated associated data. Make sure it matches the one for encrypt.
+  string shared_info = 3;
+  // HPKE parameters. They are optional and if not set, use the server-level
+  // configured ones. If neither server-level nor request-level parameters are
+  // set, use the default ones in the SDK.
+  // Need to make sure they match the parameters used for the corresponding
+  // HpkeEncrypt.
+  HpkeParams hpke_params = 4;
+  // Enables bidirectional encryption if true.
+  bool is_bidirectional = 5;
+  // Only to be used when is_bidirectional is true. The same HPKE context will
+  // export the same secret when the exporter_context and secret_length are the
+  // same. Make sure the exporter_context and secret_length match in HpkeEncrypt
+  // and HpkeDecrypt to get the same secret. If not set, "aead key" will be used
+  // by default.
+  string exporter_context = 6;
+  // Only to be used when is_bidirectional is true. If not set,
+  // SECRET_LENGTH_16_BYTES will be used be default.
+  SecretLength secret_length = 7;
+}
+
+// Result from HpkeDecrypt.
+message HpkeDecryptResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Decypted payload.
+  string payload = 2;
+  // Only be present in bi-directional encryption to encrypt the response. Don't
+  // send it over wire.
+  bytes secret = 3;
+}
+
+// All data needed for AeadEncrypt.
+message AeadEncryptRequest {
+  // Data to be encrypted.
+  string payload = 1;
+  // Secret to generate Aead.
+  bytes secret = 2;
+  // App generated associated data.
+  string shared_info = 3;
+}
+
+// Encrypted data for Aead. Do not put data which should not be sent over wire
+// here.
+message AeadEncryptedData {
+  // Encryped payload.
+  bytes ciphertext = 1;
+}
+
+// Result from AeadEncrypt.
+message AeadEncryptResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Encrypted data.
+  AeadEncryptedData encrypted_data = 2;
+}
+
+// All data needed for AeadDecrypt.
+message AeadDecryptRequest {
+  // Encrypted data.
+  AeadEncryptedData encrypted_data = 1;
+  // Secret to generate Aead.
+  bytes secret = 2;
+  // App generated associated data.
+  string shared_info = 3;
+}
+
+// Result from AeadDecrypt.
+message AeadDecryptResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Decypted payload.
+  string payload = 2;
+}

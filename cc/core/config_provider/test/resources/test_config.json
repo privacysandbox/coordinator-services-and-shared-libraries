@@ -1,0 +1,21 @@
+{
+    "server-ip": "10.10.10.20",
+    "server-run": true,
+    "buffer-length": 5000,
+    "string-list": [
+        "1",
+        "2"
+    ],
+    "int-list": [
+        1,
+        2
+    ],
+    "size-list": [
+        3,
+        4
+    ],
+    "bool-list": [
+        true,
+        false
+    ]
+}

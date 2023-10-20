@@ -1,0 +1,31 @@
+build --announce_rc
+build --verbose_failures
+build --color=yes
+build --config=clang
+build --config=java
+
+build:cpp --client_env=BAZEL_CXXOPTS=-std=c++17
+build:cpp --cxxopt=-std=c++17
+
+build:clang --config=cpp
+build:clang --cxxopt=-fbracket-depth=512
+
+# Force bazel to use specific JDK, otherwise JDK may not be predictable
+build:java --java_language_version=11
+build:java --java_runtime_version=remotejdk_11
+
+# Address sanitizer
+build:asan --action_env=CONTROL_PLANE_SHARED_ASAN=1
+build:asan --strip=never
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -g
+build:asan --copt -fno-omit-frame-pointer
+build:asan --linkopt -fsanitize=address
+# Run sudo apt-get install lld in case of error
+build:asan --linkopt=-fuse-ld=lld
+build:asan --action_env=ASAN_OPTIONS=detect_leaks=1:color=always
+
+test --cxxopt=-D_SCP_ROMA_DEBUG_MODE=1
+test --cxxopt=-D_SCP_CORE_SOCAT_FORWARDER_NON_PRIVILEGED=1
+test --test_output=all

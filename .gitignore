@@ -1,0 +1,34 @@
+bazel-*
+!bazel-buildifier
+.project
+/.ijwb/
+/.aswb/
+/.clwb/
+.vscode
+.idea/
+*.iml
+*~
+.terraform
+# NOTE: .terraform.lock.hcl should be checked into git
+# https://www.terraform.io/docs/language/dependency-lock.html#lock-file-location
+
+# Ignore generated files for eclipse lsp
+/pom.xml
+/.settings
+/.classpath
+/.factorypath
+/target
+/bin
+/tools/opensource/license_headers/addlicenses_output.txt
+
+# Ignore node modules
+/node_modules
+typescript/node_modules
+
+
+#Ignore generated cache from depedency and licenses check
+/tools/opensource/__pycache__/
+/tools/opensource/deps.txt
+
+#Ignore release notes file
+release_diff_*.txt

@@ -1,0 +1,67 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.scp.pbs.budget_key_timeframe_manager.proto;
+
+import "cc/core/common/proto/common.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+enum OperationType {
+  OPERATION_TYPE_UNKNOWN = 0;
+  INSERT_TIMEGROUP_INTO_CACHE = 1;
+  REMOVE_TIMEGROUP_FROM_CACHE = 2;
+  UPDATE_TIMEFRAME_RECORD = 3;
+  BATCH_UPDATE_TIMEFRAME_RECORDS_OF_TIMEGROUP = 4;
+};
+
+message BudgetKeyTimeframeGroupLog_1_0 {
+  uint64 time_group = 1;
+  repeated BudgetKeyTimeframeLog_1_0 items = 2;
+}
+
+message BudgetKeyTimeframeLog_1_0 {
+  uint64 time_bucket = 1;
+  uint32 token_count = 2;
+  uint32 active_token_count = 3;
+  core.common.proto.Uuid active_transaction_id = 4;
+}
+
+message BatchBudgetKeyTimeframeLog_1_0 {
+  repeated BudgetKeyTimeframeLog_1_0 items = 1;
+}
+
+/**
+log_body is either one of the following:
+  BudgetKeyTimeframeGroupLog_1_0
+    when operation_type is INSERT_TIMEGROUP_INTO_CACHE or
+    REMOVE_TIMEGROUP_FROM_CACHE
+  BudgetKeyTimeframeLog_1_0
+    when operation_type is UPDATE_TIMEFRAME_RECORD
+  BatchBudgetKeyTimeframeLog_1_0
+    when operation_type is BATCH_UPDATE_TIMEFRAME_RECORDS_OF_TIMEGROUP
+*/
+message BudgetKeyTimeframeManagerLog_1_0 {
+  OperationType operation_type = 1;
+  uint64 time_group = 2;
+  bytes log_body = 3;
+}
+
+message BudgetKeyTimeframeManagerLog {
+  core.common.proto.Version version = 1;
+  bytes log_body = 2;
+}

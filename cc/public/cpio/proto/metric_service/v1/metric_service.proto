@@ -1,0 +1,97 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.metric_service.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "MetricServiceProto";
+option java_package = "com.google.cmrt.sdk.metric_service.v1";
+
+import "cc/core/common/proto/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// For faster allocations of sub-messages.
+option cc_enable_arenas = true;
+
+// Collects and tracks metrics on cloud.
+service MetricService {
+  // Writes metrics on cloud.
+  rpc PutMetrics(PutMetricsRequest) returns (PutMetricsResponse) {}
+}
+
+// Request to write metrics on cloud.
+message PutMetricsRequest {
+  // Namespace for the metrics.
+  string metric_namespace = 1;
+  // Metrics to be written.
+  repeated Metric metrics = 2;
+}
+
+// Response of writing metrics on cloud.
+message PutMetricsResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+}
+
+// Metric unit enum.
+enum MetricUnit {
+  METRIC_UNIT_UNKNOWN = 0;
+  METRIC_UNIT_SECONDS = 1;
+  METRIC_UNIT_MICROSECONDS = 2;
+  METRIC_UNIT_MILLISECONDS = 3;
+  METRIC_UNIT_BITS = 4;
+  METRIC_UNIT_KILOBITS = 5;
+  METRIC_UNIT_MEGABITS = 6;
+  METRIC_UNIT_GIGABITS = 7;
+  METRIC_UNIT_TERABITS = 8;
+  METRIC_UNIT_BYTES = 9;
+  METRIC_UNIT_KILOBYTES = 10;
+  METRIC_UNIT_MEGABYTES = 11;
+  METRIC_UNIT_GIGABYTES = 12;
+  METRIC_UNIT_TERABYTES = 13;
+  METRIC_UNIT_COUNT = 14;
+  METRIC_UNIT_PERCENT = 15;
+  METRIC_UNIT_BITS_PER_SECOND = 16;
+  METRIC_UNIT_KILOBITS_PER_SECOND = 17;
+  METRIC_UNIT_MEGABITS_PER_SECOND = 18;
+  METRIC_UNIT_GIGABITS_PER_SECOND = 19;
+  METRIC_UNIT_TERABITS_PER_SECOND = 20;
+  METRIC_UNIT_BYTES_PER_SECOND = 21;
+  METRIC_UNIT_KILOBYTES_PER_SECOND = 22;
+  METRIC_UNIT_MEGABYTES_PER_SECOND = 23;
+  METRIC_UNIT_GIGABYTES_PER_SECOND = 24;
+  METRIC_UNIT_TERABYTES_PER_SECOND = 25;
+  METRIC_UNIT_COUNT_PER_SECOND = 26;
+}
+
+// One metric data.
+message Metric {
+  // Metric name.
+  // For GCP, the name contains [PROJECT_ID], like “projects/[PROJECT_ID]”.
+  string name = 1;
+  // Metric value.
+  string value = 2;
+  // Metric value unit.
+  MetricUnit unit = 3;
+
+  // A set of key-value pairs.
+  // The key represents label name and the value represents label value.
+  map<string, string> labels = 4;
+
+  // The time the metric data was received. This is optional
+  // field. The default value of timestamp is current time.
+  google.protobuf.Timestamp timestamp = 5;
+}

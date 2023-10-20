@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "BrowserReport",
+  "fields": [
+    {
+      "name": "encryptedShare",
+      "type": "bytes"
+    },
+    {
+      "name": "decryptionKeyId",
+      "type": "string"
+    }
+  ]
+}
