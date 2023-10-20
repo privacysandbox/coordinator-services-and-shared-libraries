@@ -40,10 +40,10 @@ class PrivateKeyClientProviderInterface : public core::ServiceInterface {
    * @param context context of the operation.
    * @return ExecutionResult result of the operation.
    */
-  virtual core::ExecutionResult ListPrivateKeysByIds(
+  virtual core::ExecutionResult ListPrivateKeys(
       core::AsyncContext<
-          cmrt::sdk::private_key_service::v1::ListPrivateKeysByIdsRequest,
-          cmrt::sdk::private_key_service::v1::ListPrivateKeysByIdsResponse>&
+          cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&
           context) noexcept = 0;
 };
 
@@ -59,6 +59,8 @@ class PrivateKeyClientProviderFactory {
       const std::shared_ptr<PrivateKeyClientOptions>& options,
       const std::shared_ptr<core::HttpClientInterface>& http_client,
       const std::shared_ptr<RoleCredentialsProviderInterface>&
-          role_credentials_provider);
+          role_credentials_provider,
+      const std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor);
 };
 }  // namespace google::scp::cpio::client_providers

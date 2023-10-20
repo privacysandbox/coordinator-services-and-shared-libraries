@@ -19,14 +19,14 @@ provider "aws" {
 
 locals {
   create_encryption_key_jar          = var.create_encryption_key_jar != "" ? var.create_encryption_key_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keystorage/service/aws/KeyStorageServiceLambda_deploy.jar"
-  encryption_key_service_jar         = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/GetEncryptionKeyApiGatewayHandlerLambda_deploy.jar"
+  encryption_key_service_jar         = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/EncryptionKeyServiceLambda_deploy.jar"
   use_sns_to_sqs                     = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != ""
   keydb_table_name                   = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
   keyhosting_api_gateway_name        = "unified_key_hosting"
-  keystorage_api_gateway_name        = "key_storage"
-  account_id                         = data.aws_caller_identity.current.account_id
   keyhosting_api_gateway_alarm_label = "UnifiedKeyHosting"
   keystorage_api_gateway_alarm_label = "KeyStorage"
+  keystorage_api_gateway_name        = "key_storage"
+  account_id                         = data.aws_caller_identity.current.account_id
 }
 
 # Needed for dashboard ARNs
@@ -200,23 +200,25 @@ module "encryptionkeyservice" {
   keymanagement_package_bucket = module.keymanagementpackagebucket_primary.bucket_id
   api_version                  = var.api_version
 
-  get_encryption_key_logging_retention_days        = var.cloudwatch_logging_retention_days
-  encryption_key_service_alarms_enabled            = var.alarms_enabled
-  get_encryption_key_sns_topic_arn                 = var.alarms_enabled ? aws_sns_topic.mpkhs[0].arn : null
-  get_encryption_key_alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
-  get_encryption_key_lambda_error_threshold        = var.mpkhs_lambda_error_threshold
-  get_encryption_key_lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
-  get_encryption_key_lambda_max_duration_threshold = var.mpkhs_lambda_max_duration_threshold
-
+  logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
-  sns_topic_arn             = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  alarms_enabled                = var.alarms_enabled
+  sns_topic_arn                 = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
+  lambda_error_threshold        = var.mpkhs_lambda_error_threshold
+  lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
+  lambda_max_duration_threshold = var.mpkhs_lambda_max_duration_threshold
+
+  get_encryption_key_lambda_ps_client_shim_enabled = var.get_encryption_key_lambda_ps_client_shim_enabled
+
   api_gateway_id            = module.keyhostingapigateway.api_gateway_id
   api_gateway_execution_arn = module.keyhostingapigateway.api_gateway_execution_arn
-  enable_vpc                = var.enable_vpc
-  lambda_sg_ids             = var.enable_vpc ? [module.vpc[0].allow_internal_ingress_sg_id, module.vpc[0].allow_egress_sg_id] : null
-  dynamodb_vpc_endpoint_id  = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
-  private_subnet_ids        = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
-  custom_alarm_label        = var.custom_alarm_label
+
+  enable_vpc               = var.enable_vpc
+  lambda_sg_ids            = var.enable_vpc ? [module.vpc[0].allow_internal_ingress_sg_id, module.vpc[0].allow_egress_sg_id] : null
+  dynamodb_vpc_endpoint_id = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
+  private_subnet_ids       = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
+  custom_alarm_label       = var.custom_alarm_label
 }
 
 module "privatekeydomainprovider" {
@@ -296,4 +298,3 @@ module "unifiedkeyhostingdashboard" {
   unified_keyhosting_api_gateway_id                = module.keyhostingapigateway.api_gateway_id
   unified_keyhosting_dashboard_time_period_seconds = var.unified_keyhosting_dashboard_time_period_seconds
 }
-

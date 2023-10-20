@@ -264,6 +264,19 @@ public final class AwsIntegrationTestUtil {
   /**
    * Performs necessary setup to deploy an ApiGatewayV1 endpoint for a specified lambda. The created
    * endpoint proxies all requests (all paths and all HTTP methods) to the lambda of the provided
+   * ARN. Returns the endpoint accessible from host.
+   */
+  public static String createApiGatewayHandler(
+      LocalStackContainer localStack, ApiGatewayClient client, String lambdaArn) {
+    return createApiGatewayHandler(
+        localStack.getEndpointOverride(LocalStackContainer.Service.API_GATEWAY).toString(),
+        client,
+        lambdaArn);
+  }
+
+  /**
+   * Performs necessary setup to deploy an ApiGatewayV1 endpoint for a specified lambda. The created
+   * endpoint proxies all requests (all paths and all HTTP methods) to the lambda of the provided
    * ARN.
    *
    * <p>For the sake of simplicity no URL variables are populated and assumes that the lambda
@@ -273,7 +286,7 @@ public final class AwsIntegrationTestUtil {
    *     "http://foo:80/a/b/_stagename_")
    */
   public static String createApiGatewayHandler(
-      LocalStackContainer localStack, ApiGatewayClient client, String lambdaArn) {
+      String localStackEndpoint, ApiGatewayClient client, String lambdaArn) {
     var stageName = "integrationTest";
     // URI follows format detailed in https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
     var integrationUri =
@@ -313,9 +326,6 @@ public final class AwsIntegrationTestUtil {
     // _user_request_ is hardcoded into LocalStack's urls:
     // https://github.com/localstack/localstack/blob/master/doc/interaction/README.md#invoking-api-gateway
     return String.format(
-        "%s/restapis/%s/%s/_user_request_",
-        localStack.getEndpointOverride(LocalStackContainer.Service.API_GATEWAY),
-        restApiId,
-        stageName);
+        "%s/restapis/%s/%s/_user_request_", localStackEndpoint, restApiId, stageName);
   }
 }

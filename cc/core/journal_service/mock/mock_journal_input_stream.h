@@ -32,9 +32,11 @@ class MockJournalInputStream : public core::JournalInputStream {
   MockJournalInputStream(
       std::shared_ptr<std::string>& bucket_name,
       std::shared_ptr<std::string>& partition_name,
-      std::shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client)
+      std::shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client,
+      std::shared_ptr<ConfigProviderInterface> config_provider)
       : core::JournalInputStream(bucket_name, partition_name,
-                                 blob_storage_provider_client) {}
+                                 blob_storage_provider_client,
+                                 config_provider) {}
 
   std::function<ExecutionResult(
       AsyncContext<journal_service::JournalStreamReadLogRequest,
@@ -325,5 +327,9 @@ class MockJournalInputStream : public core::JournalInputStream {
   size_t& GetCurrentBufferIndex() { return current_buffer_index_; }
 
   size_t& GetCurrentBufferOffset() { return current_buffer_offset_; }
+
+  void set_journal_ids_loaded(bool journal_ids_loaded) {
+    journal_ids_loaded_ = journal_ids_loaded;
+  }
 };
 }  // namespace google::scp::core::journal_service::mock

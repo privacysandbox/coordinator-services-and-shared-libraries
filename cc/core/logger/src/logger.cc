@@ -32,7 +32,12 @@ using std::string;
 using std::string_view;
 using std::stringstream;
 
+// Default values are empty to save characters on each log on the wire.
+static constexpr char kDefaultMachineName[] = "";
+static constexpr char kDefaultClusterName[] = "";
+
 namespace google::scp::core::logger {
+
 ExecutionResult Logger::Init() noexcept {
   return log_provider_->Init();
 }
@@ -45,87 +50,89 @@ ExecutionResult Logger::Stop() noexcept {
   return log_provider_->Stop();
 }
 
-void Logger::Info(const string_view& component_name,
+void Logger::Info(const string_view& component_name, const Uuid& correlation_id,
                   const Uuid& parent_activity_id, const Uuid& activity_id,
                   const string_view& location, const string_view& message,
                   ...) noexcept {
   va_list args;
   va_start(args, message);
-  log_provider_->Log(LogLevel::kInfo, parent_activity_id, activity_id,
-                     component_name, machine_name, cluster_name, location,
-                     message, args);
+  log_provider_->Log(LogLevel::kInfo, correlation_id, parent_activity_id,
+                     activity_id, component_name, kDefaultMachineName,
+                     kDefaultClusterName, location, message, args);
   va_end(args);
 }
 
 void Logger::Debug(const string_view& component_name,
-                   const Uuid& parent_activity_id, const Uuid& activity_id,
-                   const string_view& location, const string_view& message,
-                   ...) noexcept {
+                   const Uuid& correlation_id, const Uuid& parent_activity_id,
+                   const Uuid& activity_id, const string_view& location,
+                   const string_view& message, ...) noexcept {
   va_list args;
   va_start(args, message);
-  log_provider_->Log(LogLevel::kDebug, parent_activity_id, activity_id,
-                     component_name, machine_name, cluster_name, location,
-                     message, args);
+  log_provider_->Log(LogLevel::kDebug, correlation_id, parent_activity_id,
+                     activity_id, component_name, kDefaultMachineName,
+                     kDefaultClusterName, location, message, args);
   va_end(args);
 }
 
 void Logger::Warning(const string_view& component_name,
-                     const Uuid& parent_activity_id, const Uuid& activity_id,
-                     const string_view& location, const string_view& message,
-                     ...) noexcept {
+                     const Uuid& correlation_id, const Uuid& parent_activity_id,
+                     const Uuid& activity_id, const string_view& location,
+                     const string_view& message, ...) noexcept {
   va_list args;
   va_start(args, message);
-  log_provider_->Log(LogLevel::kWarning, parent_activity_id, activity_id,
-                     component_name, machine_name, cluster_name, location,
-                     message, args);
+  log_provider_->Log(LogLevel::kWarning, correlation_id, parent_activity_id,
+                     activity_id, component_name, kDefaultMachineName,
+                     kDefaultClusterName, location, message, args);
   va_end(args);
 }
 
 void Logger::Error(const string_view& component_name,
-                   const Uuid& parent_activity_id, const Uuid& activity_id,
-                   const string_view& location, const string_view& message,
-                   ...) noexcept {
+                   const Uuid& correlation_id, const Uuid& parent_activity_id,
+                   const Uuid& activity_id, const string_view& location,
+                   const string_view& message, ...) noexcept {
   va_list args;
   va_start(args, message);
-  log_provider_->Log(LogLevel::kError, parent_activity_id, activity_id,
-                     component_name, machine_name, cluster_name, location,
-                     message, args);
+  log_provider_->Log(LogLevel::kError, correlation_id, parent_activity_id,
+                     activity_id, component_name, kDefaultMachineName,
+                     kDefaultClusterName, location, message, args);
   va_end(args);
 }
 
 void Logger::Alert(const string_view& component_name,
-                   const Uuid& parent_activity_id, const Uuid& activity_id,
-                   const string_view& location, const string_view& message,
-                   ...) noexcept {
+                   const Uuid& correlation_id, const Uuid& parent_activity_id,
+                   const Uuid& activity_id, const string_view& location,
+                   const string_view& message, ...) noexcept {
   va_list args;
   va_start(args, message);
-  log_provider_->Log(LogLevel::kAlert, parent_activity_id, activity_id,
-                     component_name, machine_name, cluster_name, location,
-                     message, args);
+  log_provider_->Log(LogLevel::kAlert, correlation_id, parent_activity_id,
+                     activity_id, component_name, kDefaultMachineName,
+                     kDefaultClusterName, location, message, args);
   va_end(args);
 }
 
 void Logger::Critical(const string_view& component_name,
+                      const Uuid& correlation_id,
                       const Uuid& parent_activity_id, const Uuid& activity_id,
                       const string_view& location, const string_view& message,
                       ...) noexcept {
   va_list args;
   va_start(args, message);
-  log_provider_->Log(LogLevel::kCritical, parent_activity_id, activity_id,
-                     component_name, machine_name, cluster_name, location,
-                     message, args);
+  log_provider_->Log(LogLevel::kCritical, correlation_id, parent_activity_id,
+                     activity_id, component_name, kDefaultMachineName,
+                     kDefaultClusterName, location, message, args);
   va_end(args);
 }
 
 void Logger::Emergency(const string_view& component_name,
+                       const Uuid& correlation_id,
                        const Uuid& parent_activity_id, const Uuid& activity_id,
                        const string_view& location, const string_view& message,
                        ...) noexcept {
   va_list args;
   va_start(args, message);
-  log_provider_->Log(LogLevel::kEmergency, parent_activity_id, activity_id,
-                     component_name, machine_name, cluster_name, location,
-                     message, args);
+  log_provider_->Log(LogLevel::kEmergency, correlation_id, parent_activity_id,
+                     activity_id, component_name, kDefaultMachineName,
+                     kDefaultClusterName, location, message, args);
   va_end(args);
 }
 

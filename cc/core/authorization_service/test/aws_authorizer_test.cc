@@ -38,6 +38,7 @@
 #include "core/http2_client/mock/mock_http_client.h"
 #include "core/http2_client/src/error_codes.h"
 #include "core/test/utils/conditional_wait.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using namespace nghttp2::asio_http2;          // NOLINT
 using namespace nghttp2::asio_http2::server;  // NOLINT
@@ -47,6 +48,7 @@ using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::authorization_service::mock::
     MockAuthorizationServiceWithOverrides;
 using google::scp::core::http2_client::mock::MockHttpClient;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using std::atomic;
 using std::function;
@@ -142,7 +144,7 @@ TEST(AwsAuthorizerTest, BasicHappyPath) {
 
   promise<void> done;
   Context context(move(request), [&](Context& context) {
-    EXPECT_EQ(context.result, SuccessExecutionResult());
+    EXPECT_SUCCESS(context.result);
     done.set_value();
   });
   ASSERT_EQ(authorizer->Authorize(context), SuccessExecutionResult());
@@ -173,9 +175,9 @@ TEST(AwsAuthorizerTest, BasicUnauthorized) {
 
   promise<void> done;
   Context context(move(request), [&](Context& context) {
-    EXPECT_EQ(
-        context.result,
-        FailureExecutionResult(errors::SC_HTTP2_CLIENT_HTTP_STATUS_FORBIDDEN));
+    EXPECT_THAT(context.result,
+                ResultIs(FailureExecutionResult(
+                    errors::SC_HTTP2_CLIENT_HTTP_STATUS_FORBIDDEN)));
     done.set_value();
   });
   ASSERT_EQ(authorizer->Authorize(context), SuccessExecutionResult());
@@ -206,9 +208,9 @@ TEST(AwsAuthorizerTest, MalformedServerResponse) {
 
   promise<void> done;
   Context context(move(request), [&](Context& context) {
-    EXPECT_EQ(context.result,
-              FailureExecutionResult(
-                  errors::SC_AUTHORIZATION_SERVICE_INTERNAL_ERROR));
+    EXPECT_THAT(context.result,
+                ResultIs(FailureExecutionResult(
+                    errors::SC_AUTHORIZATION_SERVICE_INTERNAL_ERROR)));
     done.set_value();
   });
   ASSERT_EQ(authorizer->Authorize(context), SuccessExecutionResult());
@@ -252,10 +254,10 @@ TEST(AwsAuthorizerTest, CannotConnectServer) {
 
   promise<void> done;
   Context context(move(request), [&](Context& context) {
-    EXPECT_EQ(
+    EXPECT_THAT(
         context.result,
-        FailureExecutionResult(
-            errors::SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION));
+        ResultIs(FailureExecutionResult(
+            errors::SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
     done.set_value();
   });
 
@@ -283,12 +285,14 @@ TEST(AwsAuthorizerTest, MalformedToken) {
       "amz_date":"19891107T123456Z"})"));
 
   Context context(move(request), [&](Context& context) {});
-  EXPECT_EQ(authorizer->Authorize(context),
-            FailureExecutionResult(errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN));
+  EXPECT_THAT(authorizer->Authorize(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   request->claimed_identity = make_shared<string>("claimed_identity");
-  EXPECT_EQ(authorizer->Authorize(context),
-            FailureExecutionResult(errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN));
+  EXPECT_THAT(authorizer->Authorize(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   http_client->Stop();
   async_executor->Stop();
@@ -310,8 +314,9 @@ TEST(AwsAuthorizerTest, MalformedTokenBadEncoding) {
       make_shared<AuthorizationToken>("123321qwerfdaxcvdfasdf");
 
   Context context(move(request), [&](Context& context) {});
-  EXPECT_EQ(authorizer->Authorize(context),
-            FailureExecutionResult(errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN));
+  EXPECT_THAT(authorizer->Authorize(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
   http_client->Stop();
   async_executor->Stop();
 }
@@ -333,9 +338,9 @@ TEST(AwsAuthorizerTest, BadConfig) {
   request->claimed_identity = make_shared<string>("claimed_identity");
 
   Context context(move(request), [&](Context& context) {});
-  EXPECT_EQ(
-      authorizer->Authorize(context),
-      FailureExecutionResult(errors::SC_AUTHORIZATION_SERVICE_INVALID_CONFIG));
+  EXPECT_THAT(authorizer->Authorize(context),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_SERVICE_INVALID_CONFIG)));
   http_client->Stop();
   async_executor->Stop();
 }
@@ -363,10 +368,10 @@ TEST(AwsAuthorizerTest, HttpClientIsCalledOnlyOnceForEvaluatingTokens) {
       [&](AsyncContext<HttpRequest, HttpResponse>
               http_context_callback) mutable {
         for (int i = 0; i < 100; ++i) {
-          EXPECT_EQ(
+          EXPECT_THAT(
               authorizer->Authorize(context),
-              RetryExecutionResult(
-                  errors::SC_AUTHORIZATION_SERVICE_AUTH_TOKEN_IS_REFRESHING));
+              ResultIs(RetryExecutionResult(
+                  errors::SC_AUTHORIZATION_SERVICE_AUTH_TOKEN_IS_REFRESHING)));
           vector<string> keys;
           authorizer->GetAuthorizationTokensMap()->Keys(keys);
           EXPECT_EQ(keys.size(), 1);
@@ -380,12 +385,13 @@ TEST(AwsAuthorizerTest, HttpClientIsCalledOnlyOnceForEvaluatingTokens) {
         return SuccessExecutionResult();
       };
 
-  EXPECT_EQ(authorizer->Authorize(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(authorizer->Authorize(context));
 
   for (int i = 0; i < 100; ++i) {
-    EXPECT_EQ(authorizer->Authorize(context),
-              RetryExecutionResult(
-                  errors::SC_AUTHORIZATION_SERVICE_AUTH_TOKEN_IS_REFRESHING));
+    EXPECT_THAT(
+        authorizer->Authorize(context),
+        ResultIs(RetryExecutionResult(
+            errors::SC_AUTHORIZATION_SERVICE_AUTH_TOKEN_IS_REFRESHING)));
   }
 
   http_context.response = make_shared<HttpResponse>();
@@ -402,7 +408,7 @@ TEST(AwsAuthorizerTest, HttpClientIsCalledOnlyOnceForEvaluatingTokens) {
     called = true;
   };
 
-  EXPECT_EQ(authorizer->Authorize(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(authorizer->Authorize(context));
   EXPECT_EQ(counter.load(), 1);
   WaitUntil([&]() { return called.load(); });
 
@@ -436,10 +442,10 @@ TEST(AwsAuthorizerTest, HttpClientFailureWillInvalidateCache) {
       [&](AsyncContext<HttpRequest, HttpResponse>
               http_context_callback) mutable {
         for (int i = 0; i < 100; ++i) {
-          EXPECT_EQ(
+          EXPECT_THAT(
               authorizer->Authorize(context),
-              RetryExecutionResult(
-                  errors::SC_AUTHORIZATION_SERVICE_AUTH_TOKEN_IS_REFRESHING));
+              ResultIs(RetryExecutionResult(
+                  errors::SC_AUTHORIZATION_SERVICE_AUTH_TOKEN_IS_REFRESHING)));
         }
 
         EXPECT_EQ(
@@ -452,8 +458,10 @@ TEST(AwsAuthorizerTest, HttpClientFailureWillInvalidateCache) {
         return FailureExecutionResult(1234);
       };
 
-  EXPECT_EQ(authorizer->Authorize(context), FailureExecutionResult(1234));
-  EXPECT_EQ(authorizer->Authorize(context), FailureExecutionResult(1234));
+  EXPECT_THAT(authorizer->Authorize(context),
+              ResultIs(FailureExecutionResult(1234)));
+  EXPECT_THAT(authorizer->Authorize(context),
+              ResultIs(FailureExecutionResult(1234)));
   EXPECT_EQ(counter.load(), 2);
 }
 
@@ -482,8 +490,8 @@ TEST(AwsAuthorizerTest, HttpClientFailureOnResponse) {
         return SuccessExecutionResult();
       };
 
-  EXPECT_EQ(authorizer->Authorize(context), SuccessExecutionResult());
-  EXPECT_EQ(authorizer->Authorize(context), SuccessExecutionResult());
+  EXPECT_SUCCESS(authorizer->Authorize(context));
+  EXPECT_SUCCESS(authorizer->Authorize(context));
   EXPECT_EQ(counter.load(), 2);
 }
 
@@ -527,7 +535,7 @@ TEST(AwsAuthorizerTest, InsertionWhileDeletionShouldReturnRefreshStatusCode) {
 
   promise<void> done;
   Context context(request, [&](Context& context) {
-    EXPECT_EQ(context.result, SuccessExecutionResult());
+    EXPECT_SUCCESS(context.result);
     done.set_value();
   });
   ASSERT_EQ(authorizer->Authorize(context), SuccessExecutionResult());

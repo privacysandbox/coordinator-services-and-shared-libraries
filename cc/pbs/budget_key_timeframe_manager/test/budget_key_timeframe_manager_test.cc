@@ -38,13 +38,15 @@
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
 #include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "pbs/budget_key/src/budget_key.h"
 #include "pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager_with_override.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_serialization.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "pbs/budget_key_timeframe_manager/src/error_codes.h"
 #include "pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
+#include "pbs/interface/configuration_keys.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
@@ -63,6 +65,7 @@ using google::scp::core::NoSQLDatabaseAttributeName;
 using google::scp::core::NoSqlDatabaseKeyValuePair;
 using google::scp::core::NoSQLDatabaseProviderInterface;
 using google::scp::core::NoSQLDatabaseValidAttributeValueTypes;
+using google::scp::core::OnLogRecoveredCallback;
 using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::Timestamp;
@@ -79,8 +82,10 @@ using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProviderNoOverrides;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockAggregateMetric;
+using google::scp::cpio::MockMetricClient;
 using google::scp::pbs::BudgetKey;
 using google::scp::pbs::BudgetKeyTimeframeManager;
 using google::scp::pbs::budget_key_timeframe_manager::Utils;
@@ -113,12 +118,17 @@ using std::chrono::minutes;
 using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
+static constexpr Uuid kDefaultUuid = {0, 0};
+
+static shared_ptr<MockAggregateMetric> mock_aggregate_metric =
+    make_shared<MockAggregateMetric>();
+
 namespace google::scp::pbs::test {
 TEST(BudgetKeyTimeframeManagerTest, InitShouldSubscribe) {
   auto budget_key_name = make_shared<string>("budget_key_name");
   auto bucket_name = make_shared<string>("bucket_name");
   auto partition_name = make_shared<string>("partition_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Uuid id = Uuid::GenerateUuid();
   shared_ptr<BlobStorageProviderInterface> blob_storage_provider;
@@ -132,16 +142,14 @@ TEST(BudgetKeyTimeframeManagerTest, InitShouldSubscribe) {
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
 
   BudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, mock_config_provider,
+      mock_aggregate_metric);
 
-  std::function<core::ExecutionResult(
-      const std::shared_ptr<core::BytesBuffer>&)>
-      callback;
+  OnLogRecoveredCallback callback;
   EXPECT_EQ(mock_journal_service->GetSubscribersMap().Find(id, callback),
             FailureExecutionResult(
                 core::errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
@@ -154,7 +162,7 @@ TEST(BudgetKeyTimeframeManagerTest, InitShouldSubscribe) {
 
 TEST(BudgetKeyTimeframeManagerTest, LoadWithEmptyReportingTimesIsDisallowed) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Uuid id = Uuid::GenerateUuid();
   auto mock_journal_service = make_shared<MockJournalService>();
@@ -184,7 +192,7 @@ TEST(BudgetKeyTimeframeManagerTest, LoadWithEmptyReportingTimesIsDisallowed) {
 TEST(BudgetKeyTimeframeManagerTest,
      LoadWithMultipleReportingTimesOfSameTimeBucketIsDisallowed) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Uuid id = Uuid::GenerateUuid();
   auto mock_journal_service = make_shared<MockJournalService>();
@@ -215,7 +223,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      LoadWithMultipleReportingTimesOfDifferentTimeGroupsIsDisallowed) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Uuid id = Uuid::GenerateUuid();
   auto mock_journal_service = make_shared<MockJournalService>();
@@ -251,7 +259,7 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateWithEmptyTimeframesIsDisallowed) {
   update_budget_key_timeframe_context.request =
       make_shared<UpdateBudgetKeyTimeframeRequest>();
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -293,7 +301,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   update_budget_key_timeframe_context.request->timeframes_to_update.back()
       .reporting_time = reporting_time2;
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -335,7 +343,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   update_budget_key_timeframe_context.request->timeframes_to_update.back()
       .reporting_time = reporting_time2;
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -360,7 +368,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 
 TEST(BudgetKeyTimeframeManagerTest, LoadKey) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Timestamp reporting_time = 20;
   atomic<bool> condition(false);
@@ -398,13 +406,13 @@ TEST(BudgetKeyTimeframeManagerTest, LoadKey) {
           });
   auto result =
       budget_key_timeframe_manager.Load(load_budget_key_timeframe_context);
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   WaitUntil([&]() { return condition.load(); });
 }
 
 TEST(BudgetKeyTimeframeManagerTest, RetryUntilLoaded) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
 
   Timestamp reporting_time = 20;
@@ -466,7 +474,7 @@ TEST(BudgetKeyTimeframeManagerTest, RetryUntilLoaded) {
 
 TEST(BudgetKeyTimeframeManagerTest, RetryUntilLoadedAfterDeletion) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Timestamp reporting_time = 20;
   atomic<bool> condition = false;
@@ -526,7 +534,7 @@ TEST(BudgetKeyTimeframeManagerTest, RetryUntilLoadedAfterDeletion) {
 
 TEST(BudgetKeyTimeframeManagerTest, BecomeTheLoaderIfLoadingFails) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Timestamp reporting_time = 20;
   atomic<bool> condition = false;
@@ -578,14 +586,14 @@ TEST(BudgetKeyTimeframeManagerTest, BecomeTheLoaderIfLoadingFails) {
       time_group, budget_key_timeframe_group);
   budget_key_timeframe_group->needs_loader = true;
   result = budget_key_timeframe_manager.Load(load_budget_key_timeframe_context);
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   WaitUntil([&]() { return condition.load(); });
   EXPECT_EQ(budget_key_timeframe_group->needs_loader.load(), false);
 }
 
 TEST(BudgetKeyTimeframeManagerTest, DoNotLoadIfKeyExists) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   Timestamp reporting_time = nanoseconds(20).count();
   atomic<bool> condition(false);
@@ -655,13 +663,13 @@ TEST(BudgetKeyTimeframeManagerTest, DoNotLoadIfKeyExists) {
   load_budget_key_timeframe_context.result = FailureExecutionResult(SC_UNKNOWN);
   auto result =
       budget_key_timeframe_manager.Load(load_budget_key_timeframe_context);
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ(condition.load(), false);
 }
 
 TEST(BudgetKeyTimeframeManagerTest, DoNotLoadIfKeysOfSameTimegroupExist) {
   auto budget_key_name = make_shared<string>("budget_key_name");
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
 
   Timestamp reporting_time1 = nanoseconds(20).count();
@@ -846,7 +854,7 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateLogWithSingleTimeframe) {
       .active_transaction_id.low = 123;
   update_budget_key_timeframe_context.request->timeframes_to_update.back()
       .active_transaction_id.high = 456;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -896,7 +904,7 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateLogWithSingleTimeframe) {
 
         // Use journal service callback apply to verify correctness of log data
         EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                      journal_log_context.request->data),
+                      journal_log_context.request->data, kDefaultUuid),
                   SuccessExecutionResult());
         return SuccessExecutionResult();
       };
@@ -970,7 +978,7 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateLogWithMultipleTimeframes) {
   update_budget_key_timeframe_context.request->timeframes_to_update.back()
       .active_transaction_id.high = 789;
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -1020,7 +1028,7 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateLogWithMultipleTimeframes) {
 
         // Use journal service callback apply to verify correctness of log data
         EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                      journal_log_context.request->data),
+                      journal_log_context.request->data, kDefaultUuid),
                   SuccessExecutionResult());
         return SuccessExecutionResult();
       };
@@ -1072,7 +1080,7 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateLogWithMultipleTimeframes) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackFailure) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1149,7 +1157,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackFailure) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackRetry) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1225,7 +1233,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackRetry) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackSuccessNoEntry) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1294,7 +1302,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackSuccessNoEntry) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackSuccessWithEntry) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1369,7 +1377,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackSuccessWithEntry) {
 TEST(BudgetKeyTimeframeManagerTest,
      OnLogUpdateCallbackSuccessWithMultipleEntries) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1480,7 +1488,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 
 TEST(BudgetKeyTimeframeManagerTest, OnJournalServiceRecoverCallbackInvalidLog) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1496,7 +1504,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnJournalServiceRecoverCallbackInvalidLog) {
       nosql_database_provider, mock_metric_client, mock_config_provider);
   auto bytes_buffer = make_shared<BytesBuffer>(1);
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
 }
@@ -1504,7 +1512,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnJournalServiceRecoverCallbackInvalidLog) {
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackInvalidLogVersion) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1528,7 +1536,7 @@ TEST(BudgetKeyTimeframeManagerTest,
       *bytes_buffer, 0, budget_key_timeframe_manager_log, bytes_serialized);
   bytes_buffer->length = bytes_serialized;
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_SERIALIZATION_VERSION_IS_INVALID));
 }
@@ -1536,7 +1544,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackInvalidLog1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1563,7 +1571,7 @@ TEST(BudgetKeyTimeframeManagerTest,
       *bytes_buffer, 0, budget_key_timeframe_manager_log, bytes_serialized);
   bytes_buffer->length = bytes_serialized;
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
 }
@@ -1571,7 +1579,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackInsertTimeframeGroupWithEmptyBody1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1616,7 +1624,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::
                     SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA));
@@ -1625,7 +1633,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackInsertTimeframeGroupWithNonEmptyBody1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1688,7 +1696,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             SuccessExecutionResult());
 
   shared_ptr<BudgetKeyTimeframeGroup> budget_key_timeframe_group;
@@ -1713,7 +1721,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackValidGroupLogRemoveTimeframeGroup1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1768,7 +1776,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             SuccessExecutionResult());
 
   EXPECT_EQ(budget_key_timeframe_manager.GetBudgetTimeframeGroups()->Find(
@@ -1778,14 +1786,14 @@ TEST(BudgetKeyTimeframeManagerTest,
 
   // if it is called again, no actions need to be taken.
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             SuccessExecutionResult());
 }
 
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackValidGroupLogUpdateTimeframe1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1848,7 +1856,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
 
@@ -1859,7 +1867,7 @@ TEST(BudgetKeyTimeframeManagerTest,
             SuccessExecutionResult());
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             SuccessExecutionResult());
 
   auto timeframe = make_shared<BudgetKeyTimeframe>(1);
@@ -1877,7 +1885,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackInvalidEmptyLog1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1922,7 +1930,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
 
@@ -1933,7 +1941,7 @@ TEST(BudgetKeyTimeframeManagerTest,
             SuccessExecutionResult());
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
 
@@ -1946,7 +1954,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackBatchUpdateTimeframeWithEmptyBody1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -1991,7 +1999,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
 
@@ -2002,7 +2010,7 @@ TEST(BudgetKeyTimeframeManagerTest,
             SuccessExecutionResult());
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_BUDGET_KEY_TIMEFRAME_MANAGER_INVALID_LOG));
 }
@@ -2010,7 +2018,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackBatchUpdateTimeframeWithInvalidBody1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -2075,7 +2083,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
 
@@ -2086,7 +2094,7 @@ TEST(BudgetKeyTimeframeManagerTest,
             SuccessExecutionResult());
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_BUDGET_KEY_TIMEFRAME_MANAGER_INVALID_LOG));
 }
@@ -2094,7 +2102,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 TEST(BudgetKeyTimeframeManagerTest,
      OnJournalServiceRecoverCallbackBatchUpdateTimeframeWithValidBody1_0) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -2184,7 +2192,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   bytes_buffer->length = bytes_serialized;
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             FailureExecutionResult(
                 core::errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
 
@@ -2195,7 +2203,7 @@ TEST(BudgetKeyTimeframeManagerTest,
             SuccessExecutionResult());
 
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                bytes_buffer),
+                bytes_buffer, kDefaultUuid),
             SuccessExecutionResult());
   {
     auto timeframe = make_shared<BudgetKeyTimeframe>(1);
@@ -2241,10 +2249,9 @@ TEST(BudgetKeyTimeframeManagerTest, LoadTimeframeGroupFromDBResults) {
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
       load_budget_key_timeframe_context;
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
@@ -2274,28 +2281,29 @@ TEST(BudgetKeyTimeframeManagerTest, LoadTimeframeGroupFromDBResults) {
       make_shared<BudgetKeyTimeframeGroup>(time_group);
 
   for (auto result : results) {
-    mock_nosql_database_provider->get_database_item_mock =
-        [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-                get_database_item_context) {
-          if (result.Successful()) {
-            EXPECT_EQ(*get_database_item_context.request->table_name,
-                      "PBS_BudgetKeys");
-            EXPECT_EQ(*get_database_item_context.request->partition_key
-                           ->attribute_name,
-                      "Budget_Key");
-            EXPECT_EQ(get<string>(*get_database_item_context.request
-                                       ->partition_key->attribute_value),
-                      "budget_key_name");
-            EXPECT_EQ(
-                *get_database_item_context.request->sort_key->attribute_name,
-                "Timeframe");
-            EXPECT_EQ(get<string>(*get_database_item_context.request->sort_key
-                                       ->attribute_value),
-                      "19218");
-          }
+    EXPECT_CALL(*mock_nosql_database_provider, GetDatabaseItem)
+        .WillOnce(
+            [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
+                    get_database_item_context) {
+              if (result.Successful()) {
+                EXPECT_EQ(*get_database_item_context.request->table_name,
+                          "PBS_BudgetKeys");
+                EXPECT_EQ(*get_database_item_context.request->partition_key
+                               ->attribute_name,
+                          "Budget_Key");
+                EXPECT_EQ(get<string>(*get_database_item_context.request
+                                           ->partition_key->attribute_value),
+                          "budget_key_name");
+                EXPECT_EQ(*get_database_item_context.request->sort_key
+                               ->attribute_name,
+                          "Timeframe");
+                EXPECT_EQ(get<string>(*get_database_item_context.request
+                                           ->sort_key->attribute_value),
+                          "19218");
+              }
 
-          return result;
-        };
+              return result;
+            });
 
     AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
         load_budget_key_timeframe_context;
@@ -2316,7 +2324,7 @@ TEST(BudgetKeyTimeframeManagerTest,
       load_budget_key_timeframe_context;
 
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -2357,56 +2365,54 @@ TEST(BudgetKeyTimeframeManagerTest,
     shared_ptr<BudgetKeyTimeframeGroup> budget_key_timeframe_group =
         make_shared<BudgetKeyTimeframeGroup>(time_group);
 
-    load_budget_key_timeframe_context.callback =
-        [&](AsyncContext<LoadBudgetKeyTimeframeRequest,
-                         LoadBudgetKeyTimeframeResponse>&
-                load_budget_key_timeframe_context) {
-          if (result !=
-              FailureExecutionResult(
-                  core::errors::SC_NO_SQL_DATABASE_PROVIDER_RECORD_NOT_FOUND)) {
-            EXPECT_EQ(load_budget_key_timeframe_context.result, result);
-            EXPECT_EQ(
-                budget_key_timeframe_manager.GetBudgetTimeframeGroups()->Find(
-                    time_group, budget_key_timeframe_group),
-                SuccessExecutionResult());
+    load_budget_key_timeframe_context
+        .callback = [&](AsyncContext<LoadBudgetKeyTimeframeRequest,
+                                     LoadBudgetKeyTimeframeResponse>&
+                            load_budget_key_timeframe_context) {
+      if (result !=
+          FailureExecutionResult(
+              core::errors::SC_NO_SQL_DATABASE_PROVIDER_RECORD_NOT_FOUND)) {
+        EXPECT_THAT(load_budget_key_timeframe_context.result, ResultIs(result));
+        EXPECT_EQ(budget_key_timeframe_manager.GetBudgetTimeframeGroups()->Find(
+                      time_group, budget_key_timeframe_group),
+                  SuccessExecutionResult());
 
-            EXPECT_EQ(budget_key_timeframe_group->is_loaded.load(), false);
-            EXPECT_EQ(budget_key_timeframe_group->needs_loader.load(), true);
-          } else {
-            EXPECT_EQ(load_budget_key_timeframe_context.result,
-                      SuccessExecutionResult());
-            EXPECT_EQ(
-                budget_key_timeframe_manager.GetBudgetTimeframeGroups()->Find(
-                    time_group, budget_key_timeframe_group),
-                SuccessExecutionResult());
-            EXPECT_EQ(
-                load_budget_key_timeframe_context.response->budget_key_frames[0]
-                    ->token_count,
-                kMaxToken);
-            EXPECT_EQ(
-                load_budget_key_timeframe_context.response->budget_key_frames[0]
-                    ->time_bucket_index,
-                Utils::GetTimeBucket(reporting_time));
-            EXPECT_EQ(
-                load_budget_key_timeframe_context.response->budget_key_frames[0]
-                    ->active_token_count.load(),
-                0);
-            EXPECT_EQ(
-                load_budget_key_timeframe_context.response->budget_key_frames[0]
-                    ->active_transaction_id.load()
-                    .low,
-                0);
-            EXPECT_EQ(
-                load_budget_key_timeframe_context.response->budget_key_frames[0]
-                    ->active_transaction_id.load()
-                    .high,
-                0);
+        EXPECT_EQ(budget_key_timeframe_group->is_loaded.load(), false);
+        EXPECT_EQ(budget_key_timeframe_group->needs_loader.load(), true);
+      } else {
+        EXPECT_EQ(load_budget_key_timeframe_context.result,
+                  SuccessExecutionResult());
+        EXPECT_EQ(budget_key_timeframe_manager.GetBudgetTimeframeGroups()->Find(
+                      time_group, budget_key_timeframe_group),
+                  SuccessExecutionResult());
+        EXPECT_EQ(
+            load_budget_key_timeframe_context.response->budget_key_frames[0]
+                ->token_count,
+            kMaxToken);
+        EXPECT_EQ(
+            load_budget_key_timeframe_context.response->budget_key_frames[0]
+                ->time_bucket_index,
+            Utils::GetTimeBucket(reporting_time));
+        EXPECT_EQ(
+            load_budget_key_timeframe_context.response->budget_key_frames[0]
+                ->active_token_count.load(),
+            0);
+        EXPECT_EQ(
+            load_budget_key_timeframe_context.response->budget_key_frames[0]
+                ->active_transaction_id.load()
+                .low,
+            0);
+        EXPECT_EQ(
+            load_budget_key_timeframe_context.response->budget_key_frames[0]
+                ->active_transaction_id.load()
+                .high,
+            0);
 
-            EXPECT_EQ(budget_key_timeframe_group->needs_loader.load(), false);
-            EXPECT_EQ(budget_key_timeframe_group->is_loaded.load(), true);
-          }
-          condition = true;
-        };
+        EXPECT_EQ(budget_key_timeframe_group->needs_loader.load(), false);
+        EXPECT_EQ(budget_key_timeframe_group->is_loaded.load(), true);
+      }
+      condition = true;
+    };
 
     auto pair = make_pair(time_group, budget_key_timeframe_group);
     budget_key_timeframe_manager.GetBudgetTimeframeGroups()->Insert(
@@ -2427,7 +2433,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
       load_budget_key_timeframe_context;
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -2562,7 +2568,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
       load_budget_key_timeframe_context;
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -2722,7 +2728,7 @@ TEST(BudgetKeyTimeframeManagerTest,
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
       load_budget_key_timeframe_context;
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalService>();
   auto journal_service =
@@ -2861,7 +2867,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 
 TEST(BudgetKeyTimeframeManagerTest, OnLogLoadCallbackFailure) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -2910,7 +2916,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogLoadCallbackFailure) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnLogLoadCallbackSuccess) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -2959,7 +2965,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogLoadCallbackSuccess) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnStoreTimeframeGroupToDBCallbackFailure) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -3005,7 +3011,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnStoreTimeframeGroupToDBCallbackFailure) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnStoreTimeframeGroupToDBCallbackSuccess) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -3051,7 +3057,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnStoreTimeframeGroupToDBCallbackSuccess) {
                   SuccessExecutionResult());
 
         EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-                      journal_log_context.request->data),
+                      journal_log_context.request->data, kDefaultUuid),
                   SuccessExecutionResult());
 
         EXPECT_EQ(budget_key_timeframe_manager.GetBudgetTimeframeGroups()->Find(
@@ -3082,10 +3088,9 @@ TEST(BudgetKeyTimeframeManagerTest, OnStoreTimeframeGroupToDBCallbackSuccess) {
 
 TEST(BudgetKeyTimeframeManagerTest, OnBeforeGarbageCollection) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
@@ -3160,10 +3165,9 @@ TEST(BudgetKeyTimeframeManagerTest, OnBeforeGarbageCollection) {
 TEST(BudgetKeyTimeframeManagerTest,
      OnBeforeGarbageCollectionWithActiveTransactionId) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
@@ -3208,7 +3212,7 @@ TEST(BudgetKeyTimeframeManagerTest,
 
 TEST(BudgetKeyTimeframeManagerTest, OnRemoveEntryFromCacheLogged) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -3249,7 +3253,7 @@ TEST(BudgetKeyTimeframeManagerTest, OnRemoveEntryFromCacheLogged) {
 
 TEST(BudgetKeyTimeframeManagerTest, Checkpoint) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -3325,7 +3329,7 @@ TEST(BudgetKeyTimeframeManagerTest, Checkpoint) {
 
   EXPECT_EQ(
       recovery_budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-          bytes_buffer),
+          bytes_buffer, kDefaultUuid),
       SuccessExecutionResult());
 
   it++;
@@ -3336,7 +3340,7 @@ TEST(BudgetKeyTimeframeManagerTest, Checkpoint) {
   EXPECT_EQ(it->log_status, JournalLogStatus::Log);
   EXPECT_EQ(
       recovery_budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
-          bytes_buffer),
+          bytes_buffer, kDefaultUuid),
       SuccessExecutionResult());
   it++;
   EXPECT_EQ(it, logs->end());
@@ -3412,7 +3416,7 @@ TEST(BudgetKeyTimeframeManagerTest, Checkpoint) {
 
 TEST(BudgetKeyTimeframeManagerTest, CanUnload) {
   auto mock_journal_service = make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
@@ -3431,7 +3435,7 @@ TEST(BudgetKeyTimeframeManagerTest, CanUnload) {
       budget_key_name, id, async_executor, journal_service,
       nosql_database_provider, mock_metric_client, mock_config_provider);
 
-  EXPECT_EQ(budget_key_timeframe_manager.CanUnload(), SuccessExecutionResult());
+  EXPECT_SUCCESS(budget_key_timeframe_manager.CanUnload());
 
   Timestamp reporting_time = 1660498765350482296;
   auto time_group = Utils::GetTimeGroup(reporting_time);
@@ -3501,7 +3505,7 @@ TEST(BudgetKeyTimeframeManagerTest, PopulateLoadBudgetKeyTimeframeResponse) {
     auto execution_result = BudgetKeyTimeframeManagerAcessor::
         PopulateLoadBudgetKeyTimeframeResponsePublic(budget_key_timeframe_group,
                                                      request, response);
-    EXPECT_EQ(execution_result, SuccessExecutionResult());
+    EXPECT_SUCCESS(execution_result);
 
     EXPECT_EQ(response->budget_key_frames.size(), 1);
     EXPECT_EQ(response->budget_key_frames[0], budget_key_timeframe1);
@@ -3515,7 +3519,7 @@ TEST(BudgetKeyTimeframeManagerTest, PopulateLoadBudgetKeyTimeframeResponse) {
     auto execution_result = BudgetKeyTimeframeManagerAcessor::
         PopulateLoadBudgetKeyTimeframeResponsePublic(budget_key_timeframe_group,
                                                      request, response);
-    EXPECT_EQ(execution_result, SuccessExecutionResult());
+    EXPECT_SUCCESS(execution_result);
 
     EXPECT_EQ(response->budget_key_frames.size(), 1);
     EXPECT_EQ(response->budget_key_frames[0], budget_key_timeframe2);
@@ -3529,7 +3533,7 @@ TEST(BudgetKeyTimeframeManagerTest, PopulateLoadBudgetKeyTimeframeResponse) {
     auto execution_result = BudgetKeyTimeframeManagerAcessor::
         PopulateLoadBudgetKeyTimeframeResponsePublic(budget_key_timeframe_group,
                                                      request, response);
-    EXPECT_EQ(execution_result, SuccessExecutionResult());
+    EXPECT_SUCCESS(execution_result);
 
     EXPECT_EQ(response->budget_key_frames.size(), 1);
     EXPECT_EQ(response->budget_key_frames[0], budget_key_timeframe3);
@@ -3543,7 +3547,7 @@ TEST(BudgetKeyTimeframeManagerTest, PopulateLoadBudgetKeyTimeframeResponse) {
     auto execution_result = BudgetKeyTimeframeManagerAcessor::
         PopulateLoadBudgetKeyTimeframeResponsePublic(budget_key_timeframe_group,
                                                      request, response);
-    EXPECT_EQ(execution_result, SuccessExecutionResult());
+    EXPECT_SUCCESS(execution_result);
 
     EXPECT_EQ(response->budget_key_frames.size(), 2);
     EXPECT_EQ(response->budget_key_frames[0], budget_key_timeframe1);
@@ -3558,7 +3562,7 @@ TEST(BudgetKeyTimeframeManagerTest, PopulateLoadBudgetKeyTimeframeResponse) {
     auto execution_result = BudgetKeyTimeframeManagerAcessor::
         PopulateLoadBudgetKeyTimeframeResponsePublic(budget_key_timeframe_group,
                                                      request, response);
-    EXPECT_EQ(execution_result, SuccessExecutionResult());
+    EXPECT_SUCCESS(execution_result);
 
     EXPECT_EQ(response->budget_key_frames.size(), 2);
     EXPECT_EQ(response->budget_key_frames[0], budget_key_timeframe3);

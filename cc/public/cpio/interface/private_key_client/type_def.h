@@ -23,22 +23,33 @@
 #include "public/cpio/interface/type_def.h"
 
 namespace google::scp::cpio {
-using KMSKeyName = std::string;
-using PrivateKeyValue = std::string;
 using PrivateKeyVendingServiceEndpoint = std::string;
+using GcpPrivateKeyVendingServiceCloudfunctionUrl = std::string;
+using GcpWIPProvider = std::string;
 
 /// Configurations for private key vending endpoint.
 struct PrivateKeyVendingEndpoint {
+  virtual ~PrivateKeyVendingEndpoint() = default;
+
   /** @brief The account identity to access the cloud. This is used to create
    *  temporary credentials to access resources you normally has no access. In
    *  AWS, it is the IAM Role ARN. In GCP, it would be the service account.
    */
   AccountIdentity account_identity;
-  /** @brief The region of private key vending service.
-   */
+  /// The region of private key vending service.
   Region service_region;
   /// The endpoint of private key vending service.
   PrivateKeyVendingServiceEndpoint private_key_vending_service_endpoint;
+
+  /// Only needed for GCP. Cloudfunction url for the private key vending
+  /// service.
+  GcpPrivateKeyVendingServiceCloudfunctionUrl
+      gcp_private_key_vending_service_cloudfunction_url;
+  /// Only needed for GCP. Pool to provide workload identity.
+  /// Refer to
+  /// https://cloud.google.com/iam/docs/workload-identity-federation#pools for
+  /// details.
+  GcpWIPProvider gcp_wip_provider;
 };
 
 /// Configuration for PrivateKeyClient.

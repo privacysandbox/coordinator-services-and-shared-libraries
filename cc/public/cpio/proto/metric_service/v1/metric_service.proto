@@ -16,7 +16,12 @@ syntax = "proto3";
 
 package google.cmrt.sdk.metric_service.v1;
 
+option java_multiple_files = true;
+option java_outer_classname = "MetricServiceProto";
+option java_package = "com.google.cmrt.sdk.metric_service.v1";
+
 import "cc/core/common/proto/common.proto";
+import "google/protobuf/timestamp.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
@@ -86,7 +91,7 @@ message Metric {
   // The key represents label name and the value represents label value.
   map<string, string> labels = 4;
 
-  // The time the metric data was received in milliseconds. This is optional
+  // The time the metric data was received. This is optional
   // field. The default value of timestamp is current time.
-  int64 timestamp_in_ms = 5;
+  google.protobuf.Timestamp timestamp = 5;
 }

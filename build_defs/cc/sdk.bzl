@@ -1,0 +1,1 @@
+sdk_static_lib.bzl

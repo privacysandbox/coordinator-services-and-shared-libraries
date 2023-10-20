@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -21,6 +23,7 @@ java_library(
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
+        "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyid",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <gmock/gmock.h>
+
 #include <map>
 #include <memory>
 #include <string>
@@ -39,118 +41,48 @@ class MockInstanceClientProvider : public InstanceClientProviderInterface {
     return core::SuccessExecutionResult();
   }
 
-  std::string instance_id_mock = "instance_id";
-  core::ExecutionResult get_instance_id_result_mock =
+  MOCK_METHOD(
+      core::ExecutionResult, GetCurrentInstanceResourceName,
+      ((core::AsyncContext<cmrt::sdk::instance_service::v1::
+                               GetCurrentInstanceResourceNameRequest,
+                           cmrt::sdk::instance_service::v1::
+                               GetCurrentInstanceResourceNameResponse>&)),
+      (override, noexcept));
+
+  MOCK_METHOD(
+      core::ExecutionResult, GetTagsByResourceName,
+      ((core::AsyncContext<
+          cmrt::sdk::instance_service::v1::GetTagsByResourceNameRequest,
+          cmrt::sdk::instance_service::v1::GetTagsByResourceNameResponse>&)),
+      (override, noexcept));
+
+  MOCK_METHOD(
+      core::ExecutionResult, GetInstanceDetailsByResourceName,
+      ((core::AsyncContext<cmrt::sdk::instance_service::v1::
+                               GetInstanceDetailsByResourceNameRequest,
+                           cmrt::sdk::instance_service::v1::
+                               GetInstanceDetailsByResourceNameResponse>&)),
+      (override, noexcept));
+
+  std::string instance_resource_name =
+      R"(arn:aws:ec2:us-east-1:123456789012:instance/i-0e9801d129EXAMPLE)";
+  core::ExecutionResult get_instance_resource_name_mock =
       core::SuccessExecutionResult();
-
-  core::ExecutionResult GetCurrentInstanceId(
-      std::string& instance_id) noexcept override {
-    if (get_instance_id_result_mock != core::SuccessExecutionResult()) {
-      return get_instance_id_result_mock;
-    }
-    instance_id = instance_id_mock;
-    return core::SuccessExecutionResult();
-  }
-
-  std::string region_mock = "us-east-1";
-  core::ExecutionResult get_region_result_mock = core::SuccessExecutionResult();
-
-  core::ExecutionResult GetCurrentInstanceRegion(
-      std::string& region) noexcept override {
-    if (get_region_result_mock != core::SuccessExecutionResult()) {
-      return get_region_result_mock;
-    }
-    region = region_mock;
-    return core::SuccessExecutionResult();
-  }
-
-  std::map<std::string, std::string> tag_values_mock = {
-      std::make_pair("tag1", "value1")};
-  core::ExecutionResult get_tags_result_mock = core::SuccessExecutionResult();
-
-  core::ExecutionResult GetTagsOfInstance(
-      const std::vector<std::string>& tag_names, const std::string& instance_id,
-      std::map<std::string, std::string>& tag_values_map) noexcept override {
-    if (get_tags_result_mock != core::SuccessExecutionResult()) {
-      return get_tags_result_mock;
-    }
-    tag_values_map = tag_values_mock;
-    return core::SuccessExecutionResult();
-  }
-
-  core::ExecutionResult GetCurrentInstancePublicIpv4Address(
-      std::string& instance_public_ipv4_address) noexcept override {
-    instance_public_ipv4_address = "1.1.1.1";
-    return core::SuccessExecutionResult();
-  }
-
-  core::ExecutionResult GetCurrentInstancePrivateIpv4Address(
-      std::string& instance_private_ipv4_address) noexcept override {
-    instance_private_ipv4_address = "10.1.1.1";
-    return core::SuccessExecutionResult();
-  }
-
-  std::string project_id_mock = "12345";
-  core::ExecutionResult get_project_id_result_mock =
-      core::SuccessExecutionResult();
-
-  core::ExecutionResult GetCurrentInstanceProjectId(
-      std::string& project_id) noexcept override {
-    if (get_project_id_result_mock != core::SuccessExecutionResult()) {
-      return get_project_id_result_mock;
-    }
-    project_id = project_id_mock;
-    return core::SuccessExecutionResult();
-  }
-
-  std::string instance_zone_mock = "zone-a";
-  core::ExecutionResult get_instance_zone_result_mock =
-      core::SuccessExecutionResult();
-
-  core::ExecutionResult GetCurrentInstanceZone(
-      std::string& instance_zone) noexcept override {
-    if (get_instance_zone_result_mock != core::SuccessExecutionResult()) {
-      return get_instance_zone_result_mock;
-    }
-    instance_zone = instance_zone_mock;
-    return core::SuccessExecutionResult();
-  }
-
-  core::ExecutionResult GetCurrentInstanceResourceName(
-      core::AsyncContext<cmrt::sdk::instance_service::v1::
-                             GetCurrentInstanceResourceNameRequest,
-                         cmrt::sdk::instance_service::v1::
-                             GetCurrentInstanceResourceNameResponse>&
-          context) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
 
   core::ExecutionResult GetCurrentInstanceResourceNameSync(
       std::string& resource_name) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
-
-  core::ExecutionResult GetTagsByResourceName(
-      core::AsyncContext<
-          cmrt::sdk::instance_service::v1::GetTagsByResourceNameRequest,
-          cmrt::sdk::instance_service::v1::GetTagsByResourceNameResponse>&
-          context) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
-  }
-
-  core::ExecutionResult GetInstanceDetailsByResourceName(
-      core::AsyncContext<cmrt::sdk::instance_service::v1::
-                             GetInstanceDetailsByResourceNameRequest,
-                         cmrt::sdk::instance_service::v1::
-                             GetInstanceDetailsByResourceNameResponse>&
-          context) noexcept override {
-    return core::FailureExecutionResult(SC_UNKNOWN);
+    if (get_instance_resource_name_mock != core::SuccessExecutionResult()) {
+      return get_instance_resource_name_mock;
+    }
+    resource_name = instance_resource_name;
+    return core::SuccessExecutionResult();
   }
 
   core::ExecutionResult GetInstanceDetailsByResourceNameSync(
       const std::string& resource_name,
       cmrt::sdk::instance_service::v1::InstanceDetails&
           instance_details) noexcept override {
+    // Not implemented.
     return core::FailureExecutionResult(SC_UNKNOWN);
   }
 };

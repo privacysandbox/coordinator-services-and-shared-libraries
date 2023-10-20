@@ -18,15 +18,23 @@
 
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
+#include "core/interface/partition_types.h"
 #include "pbs/interface/cloud_platform_dependency_factory_interface.h"
 
 namespace google::scp::pbs {
+
+static constexpr core::PartitionId kGlobalPartitionId = {0, 0};
+
 class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  public:
   LocalDependencyFactory(
-      std::shared_ptr<core::ConfigProviderInterface> config_provider)
-      : config_provider_(config_provider) {}
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      std::vector<core::PartitionId> partition_ids = {kGlobalPartitionId})
+      : config_provider_(config_provider),
+        partition_ids_(std::move(partition_ids)) {}
 
   core::ExecutionResult Init() noexcept override;
 
@@ -44,14 +52,20 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   std::unique_ptr<core::BlobStorageProviderInterface>
   ConstructBlobStorageClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor) noexcept
-      override;
+      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+      core::AsyncPriority async_execution_priority =
+          kDefaultAsyncPriorityForCallbackExecution,
+      core::AsyncPriority io_async_execution_priority =
+          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
 
   std::unique_ptr<core::NoSQLDatabaseProviderInterface>
   ConstructNoSQLDatabaseClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor) noexcept
-      override;
+      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+      core::AsyncPriority async_execution_priority =
+          kDefaultAsyncPriorityForCallbackExecution,
+      core::AsyncPriority io_async_execution_priority =
+          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
 
   std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
   ConstructInstanceAuthorizer(std::shared_ptr<core::HttpClientInterface>
@@ -66,8 +80,7 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
           auth_token_provider) noexcept override;
 
-  std::unique_ptr<cpio::client_providers::MetricClientProviderInterface>
-  ConstructMetricClient(
+  std::unique_ptr<cpio::MetricClientInterface> ConstructMetricClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
       std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
@@ -85,6 +98,7 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
   std::string remote_coordinator_endpoint_ = "http://othercoordinator.com:8080";
   std::string reporting_origin_ = "reporting_origin";
+  std::vector<core::PartitionId> partition_ids_;
 };
 
 }  // namespace google::scp::pbs

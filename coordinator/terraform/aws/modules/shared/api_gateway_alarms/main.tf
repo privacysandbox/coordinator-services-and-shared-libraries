@@ -40,6 +40,7 @@ resource "aws_cloudwatch_metric_alarm" "max_latency_alarm" {
     ApiId = var.api_gateway_id
   }
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -65,6 +66,7 @@ resource "aws_cloudwatch_metric_alarm" "error_5xx_alarm" {
     ApiId = var.api_gateway_id
   }
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment

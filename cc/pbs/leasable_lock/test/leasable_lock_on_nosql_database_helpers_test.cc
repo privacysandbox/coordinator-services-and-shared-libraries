@@ -26,6 +26,7 @@ using std::chrono::milliseconds;
 #include "core/interface/nosql_database_provider_interface.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
 #include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -45,6 +46,7 @@ using google::scp::core::UpsertDatabaseItemResponse;
 using google::scp::core::common::TimeProvider;
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProviderNoOverrides;
+using google::scp::core::test::ResultIs;
 using google::scp::pbs::LeasableLockOnNoSQLDatabase;
 
 static constexpr char kPBSPartitionLockTableDefaultName[] =
@@ -66,7 +68,7 @@ class LeasableLockOnNoSQLDatabaseTester : public LeasableLockOnNoSQLDatabase {
 
     auto attributes = make_shared<vector<NoSqlDatabaseKeyValuePair>>();
     auto result = ConstructAttributesFromLeaseInfo(lease, attributes);
-    EXPECT_EQ(result, SuccessExecutionResult());
+    EXPECT_SUCCESS(result);
     EXPECT_EQ(attributes->size(), 3);
     EXPECT_EQ(attributes->at(0).attribute_name->compare(
                   kPBSPartitionLockTableLeaseOwnerIdAttributeName),
@@ -97,7 +99,7 @@ class LeasableLockOnNoSQLDatabaseTester : public LeasableLockOnNoSQLDatabase {
 
     LeaseInfoInternal obtained_lease;
     result = ObtainLeaseInfoFromAttributes(attributes, obtained_lease);
-    EXPECT_EQ(result, SuccessExecutionResult());
+    EXPECT_SUCCESS(result);
 
     EXPECT_EQ(lease.lease_expiraton_timestamp_in_milliseconds,
               obtained_lease.lease_expiraton_timestamp_in_milliseconds);
@@ -114,49 +116,51 @@ class LeasableLockOnNoSQLDatabaseTester : public LeasableLockOnNoSQLDatabase {
     lease.lease_owner_info.service_endpoint_address = "18.1.1.1";
 
     auto database = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-    database->get_database_item_mock =
-        [=](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-                get_database_item_context) {
-          EXPECT_EQ(get_database_item_context.request->table_name->compare(
-                        kPBSPartitionLockTableDefaultName),
-                    0);
-          EXPECT_EQ(
-              get_database_item_context.request->partition_key->attribute_name
-                  ->compare(kPBSPartitionLockTableLockIdKeyName),
-              0);
-          EXPECT_EQ(
-              get<string>(*get_database_item_context.request->partition_key
-                               ->attribute_value)
-                  .compare(kPBSPartitionLockTableRowKeyForGlobalPartition),
-              0);
-          // Sort key is not present
-          EXPECT_EQ(get_database_item_context.request->sort_key, nullptr);
+    EXPECT_CALL(*database, GetDatabaseItem)
+        .WillOnce(
+            [=](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
+                    get_database_item_context) {
+              EXPECT_EQ(get_database_item_context.request->table_name->compare(
+                            kPBSPartitionLockTableDefaultName),
+                        0);
+              EXPECT_EQ(get_database_item_context.request->partition_key
+                            ->attribute_name->compare(
+                                kPBSPartitionLockTableLockIdKeyName),
+                        0);
+              EXPECT_EQ(
+                  get<string>(*get_database_item_context.request->partition_key
+                                   ->attribute_value)
+                      .compare(kPBSPartitionLockTableRowKeyForGlobalPartition),
+                  0);
+              // Sort key is not present
+              EXPECT_EQ(get_database_item_context.request->sort_key, nullptr);
 
-          get_database_item_context.response =
-              make_shared<GetDatabaseItemResponse>();
-          get_database_item_context.response->table_name =
-              get_database_item_context.request->table_name;
-          get_database_item_context.response->partition_key =
-              get_database_item_context.request->partition_key;
-          get_database_item_context.response->sort_key =
-              get_database_item_context.request->sort_key;
+              get_database_item_context.response =
+                  make_shared<GetDatabaseItemResponse>();
+              get_database_item_context.response->table_name =
+                  get_database_item_context.request->table_name;
+              get_database_item_context.response->partition_key =
+                  get_database_item_context.request->partition_key;
+              get_database_item_context.response->sort_key =
+                  get_database_item_context.request->sort_key;
 
-          get_database_item_context.response->attributes =
-              make_shared<vector<NoSqlDatabaseKeyValuePair>>();
-          auto result = ConstructAttributesFromLeaseInfo(
-              lease, get_database_item_context.response->attributes);
-          EXPECT_EQ(result, SuccessExecutionResult());
-          EXPECT_EQ(get_database_item_context.response->attributes->size(), 3);
+              get_database_item_context.response->attributes =
+                  make_shared<vector<NoSqlDatabaseKeyValuePair>>();
+              auto result = ConstructAttributesFromLeaseInfo(
+                  lease, get_database_item_context.response->attributes);
+              EXPECT_SUCCESS(result);
+              EXPECT_EQ(get_database_item_context.response->attributes->size(),
+                        3);
 
-          get_database_item_context.result = SuccessExecutionResult();
-          get_database_item_context.callback(get_database_item_context);
-          return SuccessExecutionResult();
-        };
+              get_database_item_context.result = SuccessExecutionResult();
+              get_database_item_context.callback(get_database_item_context);
+              return SuccessExecutionResult();
+            });
     database_ = database;
 
     LeaseInfoInternal obtained_lease;
     auto result = ReadLeaseSynchronouslyFromDatabase(obtained_lease);
-    EXPECT_EQ(result, SuccessExecutionResult());
+    EXPECT_SUCCESS(result);
 
     EXPECT_EQ(lease.lease_expiraton_timestamp_in_milliseconds,
               obtained_lease.lease_expiraton_timestamp_in_milliseconds);
@@ -168,13 +172,15 @@ class LeasableLockOnNoSQLDatabaseTester : public LeasableLockOnNoSQLDatabase {
 
   void TestReadSynchronouslyFromDatabaseFailsIfRequestExecutionFails() {
     auto database = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-    database->get_database_item_mock =
-        [=](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-                get_database_item_context) {
-          get_database_item_context.result = FailureExecutionResult(SC_UNKNOWN);
-          get_database_item_context.callback(get_database_item_context);
-          return SuccessExecutionResult();
-        };
+    EXPECT_CALL(*database, GetDatabaseItem)
+        .WillOnce(
+            [=](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
+                    get_database_item_context) {
+              get_database_item_context.result =
+                  FailureExecutionResult(SC_UNKNOWN);
+              get_database_item_context.callback(get_database_item_context);
+              return SuccessExecutionResult();
+            });
     database_ = database;
 
     LeaseInfoInternal obtained_lease;
@@ -194,9 +200,10 @@ class LeasableLockOnNoSQLDatabaseTester : public LeasableLockOnNoSQLDatabase {
     new_lease.lease_owner_info.service_endpoint_address = "18.1.1.1";
 
     auto database = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-    database->upsert_database_item_mock =
-        [=](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-                upsert_database_item_context) {
+    EXPECT_CALL(*database, UpsertDatabaseItem)
+        .WillOnce([=](AsyncContext<UpsertDatabaseItemRequest,
+                                   UpsertDatabaseItemResponse>&
+                          upsert_database_item_context) {
           EXPECT_EQ(upsert_database_item_context.request->table_name->compare(
                         kPBSPartitionLockTableDefaultName),
                     0);
@@ -238,11 +245,11 @@ class LeasableLockOnNoSQLDatabaseTester : public LeasableLockOnNoSQLDatabase {
           upsert_database_item_context.result = SuccessExecutionResult();
           upsert_database_item_context.callback(upsert_database_item_context);
           return SuccessExecutionResult();
-        };
+        });
     database_ = database;
 
     auto result = WriteLeaseSynchronouslyToDatabase(prev_lease, new_lease);
-    EXPECT_EQ(result, SuccessExecutionResult());
+    EXPECT_SUCCESS(result);
   }
 
   void TestWriteLeaseSynchronouslyToDatabaseFailsIfRequestExecutionFails() {
@@ -257,14 +264,15 @@ class LeasableLockOnNoSQLDatabaseTester : public LeasableLockOnNoSQLDatabase {
     new_lease.lease_owner_info.service_endpoint_address = "18.1.1.1";
 
     auto database = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-    database->upsert_database_item_mock =
-        [=](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-                upsert_database_item_context) {
+    EXPECT_CALL(*database, UpsertDatabaseItem)
+        .WillOnce([=](AsyncContext<UpsertDatabaseItemRequest,
+                                   UpsertDatabaseItemResponse>&
+                          upsert_database_item_context) {
           upsert_database_item_context.result =
               FailureExecutionResult(SC_UNKNOWN);
           upsert_database_item_context.callback(upsert_database_item_context);
           return SuccessExecutionResult();
-        };
+        });
     database_ = database;
 
     auto result = WriteLeaseSynchronouslyToDatabase(prev_lease, new_lease);

@@ -24,30 +24,11 @@
 #include "core/interface/service_interface.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/type_def.h"
+#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 #include "type_def.h"
 
 namespace google::scp::cpio {
-/// Request for ListPublicKeys.
-struct ListPublicKeysRequest {};
-
-/// Represent the public key object.
-struct PublicKey {
-  /// The id of the public key.
-  PublicPrivateKeyPairId key_id;
-  /// The value of the public key encoded by base64.
-  PublicKeyValue public_key;
-};
-
-/// Response for ListPublicKeys.
-struct ListPublicKeysResponse {
-  /// List of public keys.
-  std::vector<PublicKey> public_keys;
-  /// The expiration time of above list public keys in Unix time in
-  /// milliseconds.
-  Timestamp expiration_time_in_ms;
-};
-
 /**
  * @brief Interface responsible for fetching public key from Key Management
  * Service.
@@ -68,8 +49,9 @@ class PublicKeyClientInterface : public core::ServiceInterface {
    * @return core::ExecutionResult scheduling result returned synchronously.
    */
   virtual core::ExecutionResult ListPublicKeys(
-      ListPublicKeysRequest request,
-      Callback<ListPublicKeysResponse> callback) noexcept = 0;
+      cmrt::sdk::public_key_service::v1::ListPublicKeysRequest request,
+      Callback<cmrt::sdk::public_key_service::v1::ListPublicKeysResponse>
+          callback) noexcept = 0;
 };
 
 /// Factory to create PublicKeyClient.

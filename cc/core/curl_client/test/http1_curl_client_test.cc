@@ -15,15 +15,14 @@
  */
 #include "core/curl_client/src/http1_curl_client.h"
 
-#include <gtest/gtest.h>
-
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/curl_client/src/error_codes.h"
 #include "core/curl_client/src/http1_curl_wrapper.h"
 #include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using std::atomic_bool;
 using std::make_shared;
@@ -66,8 +65,9 @@ class Http1CurlClientTest : public ::testing::Test {
         wrapper_(make_shared<MockCurlWrapper>()),
         provider_(make_shared<MockCurlWrapperProvider>()),
         subject_(cpu_async_executor_, io_async_executor_, provider_,
-                 common::RetryStrategyType::Exponential,
-                 /*time_duration_ms=*/1UL, /*total_retries=*/10) {
+                 common::RetryStrategyOptions(
+                     common::RetryStrategyType::Exponential,
+                     /*time_duration_ms=*/1UL, /*total_retries=*/10)) {
     assert(cpu_async_executor_->Init().Successful());
     assert(io_async_executor_->Init().Successful());
     assert(cpu_async_executor_->Run().Successful());
@@ -114,7 +114,7 @@ TEST_F(Http1CurlClientTest, IssuesPerformRequestOnWrapper) {
 
   atomic_bool finished(false);
   http_context.callback = [&response, &finished](auto& http_context) {
-    EXPECT_THAT(http_context.result, IsSuccessful());
+    EXPECT_SUCCESS(http_context.result);
     EXPECT_THAT(http_context.response, Pointee(ResponseEquals(response)));
     finished = true;
   };
@@ -147,7 +147,7 @@ TEST_F(Http1CurlClientTest, RetriesWork) {
 
   atomic_bool finished(false);
   http_context.callback = [&response, &finished](auto& http_context) {
-    EXPECT_THAT(http_context.result, IsSuccessful());
+    EXPECT_SUCCESS(http_context.result);
     EXPECT_THAT(http_context.response, Pointee(ResponseEquals(response)));
     finished = true;
   };

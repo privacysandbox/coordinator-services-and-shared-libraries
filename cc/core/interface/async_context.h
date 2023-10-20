@@ -46,7 +46,7 @@ struct AsyncContext {
   AsyncContext()
       : AsyncContext(
             nullptr /* request */, [](AsyncContext<TRequest, TResponse>&) {},
-            common::kZeroUuid) {}
+            common::kZeroUuid, common::kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -56,7 +56,7 @@ struct AsyncContext {
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
                const Callback& callback)
-      : AsyncContext(request, callback, common::kZeroUuid) {}
+      : AsyncContext(request, callback, common::kZeroUuid, common::kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -68,8 +68,39 @@ struct AsyncContext {
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
                const Callback& callback, const common::Uuid& parent_activity_id)
+      : AsyncContext(request, callback, parent_activity_id, common::kZeroUuid) {
+  }
+
+  /**
+   * @brief Constructs a new Async Context object.
+   * @param request instance of the request.
+   * @param callback the callback object for when the async operation is
+   * completed.
+   * @param parent_context The parent async context of the current async
+   * context.
+   */
+  template <typename ParentAsyncContext>
+  AsyncContext(const std::shared_ptr<TRequest>& request,
+               const Callback& callback,
+               const ParentAsyncContext& parent_context)
+      : AsyncContext(request, callback, parent_context.activity_id,
+                     parent_context.correlation_id) {}
+
+  /**
+   * @brief Constructs a new Async Context object.
+   * @param request instance of the request.
+   * @param callback the callback object for when the async operation is
+   * completed.
+   * @param parent_activity_id The parent activity id of the current async
+   * context.
+   * @param correlation_id The correlation id of the current async context.
+   */
+  AsyncContext(const std::shared_ptr<TRequest>& request,
+               const Callback& callback, const common::Uuid& parent_activity_id,
+               const common::Uuid& correlation_id)
       : parent_activity_id(parent_activity_id),
         activity_id(common::Uuid::GenerateUuid()),
+        correlation_id(correlation_id),
         request(request),
         response(nullptr),
         result(FailureExecutionResult(SC_UNKNOWN)),
@@ -84,6 +115,7 @@ struct AsyncContext {
   AsyncContext(const AsyncContext& right) {
     parent_activity_id = right.parent_activity_id;
     activity_id = right.activity_id;
+    correlation_id = right.correlation_id;
     request = right.request;
     response = right.response;
     result = right.result;
@@ -93,16 +125,16 @@ struct AsyncContext {
   }
 
   /// Finishes the async operation by calling the callback.
-  void Finish() noexcept {
+  virtual void Finish() noexcept {
     if (callback) {
       if (!result.Successful()) {
         // typeid(TRequest).name() is an approximation of the context's template
         // types mangled in compiler defined format, mainly for debugging
         // purposes.
-        ERROR_CONTEXT("AsyncContext", (*this), result,
-                      "AsyncContext Finished. Mangled RequestType: '%s', "
-                      "Mangled ResponseType: '%s'",
-                      typeid(TRequest).name(), typeid(TResponse).name());
+        SCP_ERROR_CONTEXT("AsyncContext", (*this), result,
+                          "AsyncContext Finished. Mangled RequestType: '%s', "
+                          "Mangled ResponseType: '%s'",
+                          typeid(TRequest).name(), typeid(TResponse).name());
       }
       callback(*this);
     }
@@ -113,6 +145,11 @@ struct AsyncContext {
 
   /// The id of the current context.
   common::Uuid activity_id;
+
+  /// The unique id for the operation the current context is relate to.
+  /// For example, in CMRTIO, it could be for a request, and in PBS, it could be
+  /// for a transaction.
+  common::Uuid correlation_id;
 
   /// The input request for the operation.
   std::shared_ptr<TRequest> request;

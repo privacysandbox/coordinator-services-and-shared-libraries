@@ -35,6 +35,7 @@ cc_test(
         "//cc/pbs/budget_key_transaction_protocols/mock:pbs_budget_key_transaction_protocols_mock",
         "//cc/pbs/budget_key_transaction_protocols/src:pbs_budget_key_transaction_protocols_lib",
         "//cc/pbs/interface:pbs_interface_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

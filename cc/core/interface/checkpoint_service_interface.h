@@ -49,5 +49,15 @@ struct CheckpointLog {
 class CheckpointServiceInterface : public ServiceInterface {
  public:
   virtual ~CheckpointServiceInterface() = default;
+
+  /**
+   * @brief Returns the last persisted checkpoint id by the current checkpoint
+   * service.
+   *
+   * @return ExecutionResultOr<CheckpointId> CheckpointId that was last
+   * persisted
+   */
+  virtual ExecutionResultOr<CheckpointId>
+  GetLastPersistedCheckpointId() noexcept = 0;
 };
 }  // namespace google::scp::core

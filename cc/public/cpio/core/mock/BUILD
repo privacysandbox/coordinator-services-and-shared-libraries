@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
     name = "lib_cpio_mock",
+    testonly = True,
     srcs = ["mock_lib_cpio.h"],
     deps = [
         "//cc:cc_base_include_dir",

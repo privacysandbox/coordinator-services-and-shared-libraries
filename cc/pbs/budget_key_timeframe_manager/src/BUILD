@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -34,10 +36,12 @@ cc_library(
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/nosql_database_provider/src/common:core_nosql_database_provider_common_lib",
-        "//cc/cpio/client_providers/metric_client_provider/interface:metric_utils_interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/budget_key_timeframe_manager/src/proto:pbs_budget_key_timeframe_manager_proto_lib",
         "//cc/pbs/interface:pbs_interface_lib",
+        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
+        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
+        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@boost//:algorithm",
     ],
 )

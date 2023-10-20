@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_proto_library", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
@@ -40,6 +41,7 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/message_router/src:message_router_lib",
         "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
     ],

@@ -26,6 +26,7 @@
 #include "core/journal_service/src/journal_serialization.h"
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::blob_storage_provider::mock::MockBlobStorageClient;
@@ -81,9 +82,8 @@ TEST(JournalOutputStreamTests, AppendLog) {
       make_shared<JournalLog>();
 
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(
-        mock_journal_output_stream.AppendLog(journal_stream_append_log_context),
-        SuccessExecutionResult());
+    EXPECT_SUCCESS(mock_journal_output_stream.AppendLog(
+        journal_stream_append_log_context));
   }
 
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogsCount().load(), 5);
@@ -131,16 +131,15 @@ TEST(JournalOutputStreamTests, FlushLogsFailure) {
 
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogsCount().load(), 0);
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogs().Size(), 0);
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_journal_output_stream.FlushLogs());
 
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(
-        mock_journal_output_stream.AppendLog(journal_stream_append_log_context),
-        SuccessExecutionResult());
+    EXPECT_SUCCESS(mock_journal_output_stream.AppendLog(
+        journal_stream_append_log_context));
   }
 
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(),
-            FailureExecutionResult(123));
+  EXPECT_THAT(mock_journal_output_stream.FlushLogs(),
+              ResultIs(FailureExecutionResult(123)));
 }
 
 TEST(JournalOutputStreamTests, FlushLogsSchedulingFailure) {
@@ -176,22 +175,21 @@ TEST(JournalOutputStreamTests, FlushLogsSchedulingFailure) {
 
   int count = 0;
   journal_stream_append_log_context.callback = [&](auto& context) {
-    EXPECT_EQ(context.result, FailureExecutionResult(123));
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(123)));
     count++;
   };
 
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogsCount().load(), 0);
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogs().Size(), 0);
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_journal_output_stream.FlushLogs());
 
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(
-        mock_journal_output_stream.AppendLog(journal_stream_append_log_context),
-        SuccessExecutionResult());
+    EXPECT_SUCCESS(mock_journal_output_stream.AppendLog(
+        journal_stream_append_log_context));
   }
 
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(),
-            FailureExecutionResult(123));
+  EXPECT_THAT(mock_journal_output_stream.FlushLogs(),
+              ResultIs(FailureExecutionResult(123)));
 
   EXPECT_EQ(count, 5);
 }
@@ -238,15 +236,14 @@ TEST(JournalOutputStreamTests, WriteBatch) {
 
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogsCount().load(), 0);
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogs().Size(), 0);
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_journal_output_stream.FlushLogs());
 
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(
-        mock_journal_output_stream.AppendLog(journal_stream_append_log_context),
-        SuccessExecutionResult());
+    EXPECT_SUCCESS(mock_journal_output_stream.AppendLog(
+        journal_stream_append_log_context));
   }
 
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_journal_output_stream.FlushLogs());
   EXPECT_TRUE(is_called);
 }
 
@@ -284,21 +281,20 @@ TEST(JournalOutputStreamTests, WriteBatchWriteBlobFailure) {
       make_shared<JournalLog>();
   int count = 0;
   journal_stream_append_log_context.callback = [&](auto& context) {
-    EXPECT_EQ(context.result, FailureExecutionResult(123));
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(123)));
     count++;
   };
 
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogsCount().load(), 0);
   EXPECT_EQ(mock_journal_output_stream.GetPendingLogs().Size(), 0);
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_journal_output_stream.FlushLogs());
 
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(
-        mock_journal_output_stream.AppendLog(journal_stream_append_log_context),
-        SuccessExecutionResult());
+    EXPECT_SUCCESS(mock_journal_output_stream.AppendLog(
+        journal_stream_append_log_context));
   }
 
-  EXPECT_EQ(mock_journal_output_stream.FlushLogs(), SuccessExecutionResult());
+  EXPECT_SUCCESS(mock_journal_output_stream.FlushLogs());
   EXPECT_TRUE(is_called);
   EXPECT_EQ(count, 5);
 }
@@ -496,12 +492,9 @@ TEST(JournalOutputStreamTests, WriteEmptyJournalBlob) {
   MockJournalOutputStream mock_journal_output_stream(
       bucket_name, partition_name, async_executor, storage_client);
 
-  auto callback = [](ExecutionResult& result) {
-    EXPECT_EQ(SuccessExecutionResult(), result);
-  };
-  EXPECT_EQ(
-      mock_journal_output_stream.WriteJournalBlob(bytes_buffer, 1, callback),
-      SuccessExecutionResult());
+  auto callback = [](ExecutionResult& result) { EXPECT_SUCCESS(result); };
+  EXPECT_SUCCESS(
+      mock_journal_output_stream.WriteJournalBlob(bytes_buffer, 1, callback));
 }
 
 TEST(JournalOutputStreamTests, OnWriteJournalBlobCallback) {
@@ -519,7 +512,7 @@ TEST(JournalOutputStreamTests, OnWriteJournalBlobCallback) {
   for (auto result : results) {
     atomic<bool> condition = false;
     auto callback = [&](ExecutionResult& execution_result) {
-      EXPECT_EQ(execution_result, result);
+      EXPECT_THAT(execution_result, ResultIs(result));
       condition = true;
     };
     AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context;
@@ -548,9 +541,10 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
   JournalId journal_id;
   auto execution_result =
       mock_journal_output_stream.GetLastPersistedJournalId(journal_id);
-  EXPECT_EQ(execution_result,
-            FailureExecutionResult(
-                core::errors::SC_JOURNAL_SERVICE_NO_NEW_JOURNAL_ID_AVAILABLE));
+  EXPECT_THAT(
+      execution_result,
+      ResultIs(FailureExecutionResult(
+          core::errors::SC_JOURNAL_SERVICE_NO_NEW_JOURNAL_ID_AVAILABLE)));
 
   vector<JournalId> keys;
   for (JournalId i = 50; i < 100; ++i) {
@@ -559,10 +553,10 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
     *value = true;
     execution_result =
         mock_journal_output_stream.GetLastPersistedJournalId(journal_id);
-    EXPECT_EQ(
+    EXPECT_THAT(
         execution_result,
-        FailureExecutionResult(
-            core::errors::SC_JOURNAL_SERVICE_NO_NEW_JOURNAL_ID_AVAILABLE));
+        ResultIs(FailureExecutionResult(
+            core::errors::SC_JOURNAL_SERVICE_NO_NEW_JOURNAL_ID_AVAILABLE)));
 
     mock_journal_output_stream.GetPersistedJournalIds().Keys(keys);
     EXPECT_EQ(keys.size(), 99);
@@ -575,7 +569,7 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
   for (int i = 0; i < 100; ++i) {
     execution_result =
         mock_journal_output_stream.GetLastPersistedJournalId(journal_id);
-    EXPECT_EQ(execution_result, SuccessExecutionResult());
+    EXPECT_SUCCESS(execution_result);
     EXPECT_EQ(journal_id, 1);
 
     mock_journal_output_stream.GetPersistedJournalIds().Keys(keys);
@@ -587,7 +581,7 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
   for (int i = 0; i < 100; ++i) {
     execution_result =
         mock_journal_output_stream.GetLastPersistedJournalId(journal_id);
-    EXPECT_EQ(execution_result, SuccessExecutionResult());
+    EXPECT_SUCCESS(execution_result);
     EXPECT_EQ(journal_id, 1);
 
     mock_journal_output_stream.GetPersistedJournalIds().Keys(keys);
@@ -603,7 +597,7 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
     for (JournalId j = i + 1; j < 50; ++j) {
       execution_result =
           mock_journal_output_stream.GetLastPersistedJournalId(journal_id);
-      EXPECT_EQ(execution_result, SuccessExecutionResult());
+      EXPECT_SUCCESS(execution_result);
       EXPECT_EQ(journal_id, i);
 
       mock_journal_output_stream.GetPersistedJournalIds().Keys(keys);
@@ -613,7 +607,7 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
 
   execution_result =
       mock_journal_output_stream.GetLastPersistedJournalId(journal_id);
-  EXPECT_EQ(execution_result, SuccessExecutionResult());
+  EXPECT_SUCCESS(execution_result);
   EXPECT_EQ(journal_id, 99);
   mock_journal_output_stream.GetPersistedJournalIds().Keys(keys);
   EXPECT_EQ(keys.size(), 0);

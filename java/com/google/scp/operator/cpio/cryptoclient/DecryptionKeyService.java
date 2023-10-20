@@ -19,11 +19,11 @@ package com.google.scp.operator.cpio.cryptoclient;
 import com.google.crypto.tink.HybridDecrypt;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 
-/** Interface responsible for retrieving and decrypting keys from the aggregate service KMS */
+/** Interface responsible for retrieving and decrypting keys from the KMS */
 public interface DecryptionKeyService {
 
   /**
-   * Retrieve a key from the aggregate service KMS using the key identifier.
+   * Retrieve a key from the KMS using the key identifier.
    *
    * <p>Returns the HybridDecrypt interface as opposed to a KeysetHandle because getKey is in the
    * hot path of the decryption logic and there is measureable overhead transforming a KeysetHandle

@@ -43,11 +43,14 @@ class HttpConnection : public ServiceInterface {
    * @param async_executor An instance of the async executor.
    * @param host The remote host for creating the connection.
    * @param service The port of the connection.
-   * @param https If the connection is https, must be set to true.
+   * @param is_https If the connection is https, must be set to true.
+   * @param http2_read_timeout_in_sec nghttp2 read timeout in second.
    */
   HttpConnection(const std::shared_ptr<AsyncExecutorInterface>& async_executor,
                  const std::string& host, const std::string& service,
-                 bool https);
+                 bool is_https,
+                 TimeDuration http2_read_timeout_in_sec =
+                     kDefaultHttp2ReadTimeoutInSeconds);
 
   ExecutionResult Init() noexcept override;
   ExecutionResult Run() noexcept override;
@@ -69,6 +72,15 @@ class HttpConnection : public ServiceInterface {
    * @return false Connection is available.
    */
   bool IsDropped() noexcept;
+
+  /**
+   * @brief Indicates whether the connection to the remote server is ready for
+   * outgoing requests.
+   *
+   * @return true Connection not ready.
+   * @return false Connection is ready.
+   */
+  bool IsReady() noexcept;
 
   /**
    * @brief Resets the state of the connection.
@@ -153,7 +165,10 @@ class HttpConnection : public ServiceInterface {
   /// Indicates the port for connection.
   std::string service_;
   /// True if the scheme is https.
-  bool https_;
+  bool is_https_;
+
+  /// http2 read timeout in seconds.
+  TimeDuration http2_read_timeout_in_sec_;
   /// The asio io_service to provide http functionality.
   std::unique_ptr<boost::asio::io_service> io_service_;
   /// The worker guard to run the io_service_.

@@ -40,7 +40,7 @@
 #include "core/interface/service_interface.h"
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/type_def.h"
-#include "external/tink_cc/proto/hpke.pb.h"
+#include "proto/hpke.pb.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
 
@@ -110,8 +110,11 @@ using std::uniform_int_distribution;
 using std::unique_ptr;
 using std::placeholders::_1;
 
+namespace {
 /// Filename for logging errors
-static constexpr char kCryptoClientProvider[] = "CryptoClientProvider";
+constexpr char kCryptoClientProvider[] = "CryptoClientProvider";
+constexpr char kDefaultExporterContext[] = "aead key";
+}  // namespace
 
 namespace google::scp::cpio::client_providers {
 namespace tink = ::crypto::tink::internal;
@@ -240,9 +243,9 @@ ExecutionResult CryptoClientProvider::HpkeEncrypt(
   if (!cipher.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CREATE_HPKE_CONTEXT_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, encrypt_context, execution_result,
-                  "Hpke encryption failed with error %s.",
-                  cipher.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, encrypt_context, execution_result,
+                      "Hpke encryption failed with error %s.",
+                      cipher.status().ToString().c_str());
     encrypt_context.result = execution_result;
     encrypt_context.Finish();
     return encrypt_context.result;
@@ -253,9 +256,9 @@ ExecutionResult CryptoClientProvider::HpkeEncrypt(
   if (!ciphertext.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_HPKE_ENCRYPT_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, encrypt_context, execution_result,
-                  "Hpke encryption failed with error %s.",
-                  ciphertext.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, encrypt_context, execution_result,
+                      "Hpke encryption failed with error %s.",
+                      ciphertext.status().ToString().c_str());
     encrypt_context.result = execution_result;
     encrypt_context.Finish();
     return encrypt_context.result;
@@ -264,14 +267,17 @@ ExecutionResult CryptoClientProvider::HpkeEncrypt(
   encrypt_context.response = make_shared<HpkeEncryptResponse>();
   if (encrypt_context.request->is_bidirectional()) {
     auto secret = (*cipher)->Export(
-        encrypt_context.request->exporter_context(),
+        encrypt_context.request->exporter_context().empty()
+            ? kDefaultExporterContext
+            : encrypt_context.request->exporter_context(),
         GetSecretLength(encrypt_context.request->secret_length()));
     if (!secret.ok()) {
       auto execution_result = FailureExecutionResult(
           SC_CRYPTO_CLIENT_PROVIDER_SECRET_EXPORT_FAILED);
-      ERROR_CONTEXT(kCryptoClientProvider, encrypt_context, execution_result,
-                    "Hpke encryption failed with error %s.",
-                    secret.status().ToString().c_str());
+      SCP_ERROR_CONTEXT(kCryptoClientProvider, encrypt_context,
+                        execution_result,
+                        "Hpke encryption failed with error %s.",
+                        secret.status().ToString().c_str());
       encrypt_context.result = execution_result;
       encrypt_context.Finish();
       return encrypt_context.result;
@@ -298,8 +304,8 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   auto execution_result = Base64Decode(
       decrypt_context.request->private_key().private_key(), decoded_key);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error.");
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error.");
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -309,9 +315,9 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   if (!keyset_reader.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_READ_BINARY_KEY_SET_FROM_PRIVATE_KEY);
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error %s.",
-                  keyset_reader.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error %s.",
+                      keyset_reader.status().ToString().c_str());
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -321,9 +327,9 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   if (!keyset_handle.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE);
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error %s.",
-                  keyset_handle.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error %s.",
+                      keyset_handle.status().ToString().c_str());
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -333,8 +339,8 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   if (keyset.key_size() != 1) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_INVALID_KEYSET_SIZE);
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error.");
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error.");
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -346,9 +352,9 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   if (!splitted_ciphertext.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_SPLIT_CIPHERTEXT_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error %s.",
-                  splitted_ciphertext.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error %s.",
+                      splitted_ciphertext.status().ToString().c_str());
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -358,8 +364,8 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   if (!private_key.ParseFromString(keyset.key(0).key_data().value())) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_PARSE_HPKE_PRIVATE_KEY_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error.");
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error.");
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -372,9 +378,9 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   if (!cipher.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CREATE_HPKE_CONTEXT_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error %s.",
-                  cipher.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error %s.",
+                      cipher.status().ToString().c_str());
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -385,9 +391,9 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   if (!payload.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_HPKE_DECRYPT_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                  "Hpke decryption failed with error %s.",
-                  payload.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
+                      "Hpke decryption failed with error %s.",
+                      payload.status().ToString().c_str());
     decrypt_context.result = execution_result;
     decrypt_context.Finish();
     return decrypt_context.result;
@@ -396,14 +402,17 @@ ExecutionResult CryptoClientProvider::HpkeDecrypt(
   decrypt_context.response = make_shared<HpkeDecryptResponse>();
   if (decrypt_context.request->is_bidirectional()) {
     auto secret = (*cipher)->Export(
-        decrypt_context.request->exporter_context(),
+        decrypt_context.request->exporter_context().empty()
+            ? kDefaultExporterContext
+            : decrypt_context.request->exporter_context(),
         GetSecretLength(decrypt_context.request->secret_length()));
     if (!secret.ok()) {
       auto execution_result = FailureExecutionResult(
           SC_CRYPTO_CLIENT_PROVIDER_SECRET_EXPORT_FAILED);
-      ERROR_CONTEXT(kCryptoClientProvider, decrypt_context, execution_result,
-                    "Hpke decryption failed with error %s.",
-                    secret.status().ToString().c_str());
+      SCP_ERROR_CONTEXT(kCryptoClientProvider, decrypt_context,
+                        execution_result,
+                        "Hpke decryption failed with error %s.",
+                        secret.status().ToString().c_str());
       decrypt_context.result = execution_result;
       decrypt_context.Finish();
       return decrypt_context.result;
@@ -426,9 +435,9 @@ ExecutionResult CryptoClientProvider::AeadEncrypt(
   if (!cipher.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
-                  "Aead encryption failed with error %s.",
-                  cipher.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
+                      "Aead encryption failed with error %s.",
+                      cipher.status().ToString().c_str());
     context.result = execution_result;
     context.Finish();
     return context.result;
@@ -438,9 +447,9 @@ ExecutionResult CryptoClientProvider::AeadEncrypt(
   if (!ciphertext.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_AEAD_ENCRYPT_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
-                  "Aead encryption failed with error %s.",
-                  ciphertext.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
+                      "Aead encryption failed with error %s.",
+                      ciphertext.status().ToString().c_str());
     context.result = execution_result;
     context.Finish();
     return context.result;
@@ -459,9 +468,9 @@ ExecutionResult CryptoClientProvider::AeadDecrypt(
   if (!cipher.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
-                  "Aead decryption failed with error %s.",
-                  cipher.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
+                      "Aead decryption failed with error %s.",
+                      cipher.status().ToString().c_str());
     context.result = execution_result;
     context.Finish();
     return context.result;
@@ -472,9 +481,9 @@ ExecutionResult CryptoClientProvider::AeadDecrypt(
   if (!payload.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_AEAD_DECRYPT_FAILED);
-    ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
-                  "Aead decryption failed with error %s.",
-                  payload.status().ToString().c_str());
+    SCP_ERROR_CONTEXT(kCryptoClientProvider, context, execution_result,
+                      "Aead decryption failed with error %s.",
+                      payload.status().ToString().c_str());
     context.result = execution_result;
     context.Finish();
     return context.result;

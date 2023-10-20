@@ -16,15 +16,20 @@
 
 #include "aws_http_request_response_auth_interceptor.h"
 
+#include <array>
+#include <initializer_list>
+#include <iterator>
+#include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 
-#include "absl/strings/str_cat.h"
 #include "core/authorization_service/src/error_codes.h"
 #include "core/http2_client/src/aws/aws_v4_signer.h"
+#include "core/interface/type_def.h"
 #include "core/utils/src/base64.h"
 #include "public/core/interface/execution_result.h"
 
@@ -55,11 +60,11 @@ constexpr char kSignature[] = "signature";
 constexpr char kAmzDate[] = "amz_date";
 constexpr char kAuthorizedDomain[] = "authorized_domain";
 constexpr char kSecurityToken[] = "security_token";
-constexpr char* kSignedHeaders[] = {"Host", "X-Amz-Date"};
+constexpr std::array kSignedHeaders = {"Host", "X-Amz-Date"};
 
 }  // namespace
 
-ExecutionResult AwsHttpRequestResponseAuthInterceptor::AddHeadersToRequest(
+ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
     const AuthorizationMetadata& authorization_metadata,
     HttpRequest& http_request) {
   if (authorization_metadata.authorization_token.length() == 0) {
@@ -122,7 +127,7 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::AddHeadersToRequest(
 
 core::ExecutionResultOr<AuthorizedMetadata>
 AwsHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
-    const HttpResponse& http_response) {
+    const AuthorizationMetadata&, const HttpResponse& http_response) {
   string body_str = http_response.body.ToString();
   json body_json;
   bool parse_fail = true;

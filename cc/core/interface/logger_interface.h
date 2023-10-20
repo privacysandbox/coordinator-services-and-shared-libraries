@@ -50,12 +50,14 @@ class LoggerInterface : public ServiceInterface {
    * @param component_name The name of the component writing the log.
    * @param parent_activity_id The parent activity id of the log.
    * @param activity_id The activity id of the log.
+   * @param correlation_id The correlation id of the log.
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
   virtual void Info(const std::string_view& component_name,
                     const common::Uuid& parent_activity_id,
                     const common::Uuid& activity_id,
+                    const common::Uuid& correlation_id,
                     const std::string_view& location,
                     const std::string_view& message, ...) noexcept = 0;
 
@@ -65,12 +67,14 @@ class LoggerInterface : public ServiceInterface {
    * @param component_name The name of the component writing the log.
    * @param parent_activity_id The parent activity id of the log.
    * @param activity_id The activity id of the log.
+   * @param correlation_id The correlation id of the log.
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
   virtual void Debug(const std::string_view& component_name,
                      const common::Uuid& parent_activity_id,
                      const common::Uuid& activity_id,
+                     const common::Uuid& correlation_id,
                      const std::string_view& location,
                      const std::string_view& message, ...) noexcept = 0;
 
@@ -80,12 +84,14 @@ class LoggerInterface : public ServiceInterface {
    * @param component_name The name of the component writing the log.
    * @param parent_activity_id The parent activity id of the log.
    * @param activity_id The activity id of the log.
+   * @param correlation_id The correlation id of the log.
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
   virtual void Warning(const std::string_view& component_name,
                        const common::Uuid& parent_activity_id,
                        const common::Uuid& activity_id,
+                       const common::Uuid& correlation_id,
                        const std::string_view& location,
                        const std::string_view& message, ...) noexcept = 0;
 
@@ -95,12 +101,14 @@ class LoggerInterface : public ServiceInterface {
    * @param component_name The name of the component writing the log.
    * @param parent_activity_id The parent activity id of the log.
    * @param activity_id The activity id of the log.
+   * @param correlation_id The correlation id of the log.
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
   virtual void Error(const std::string_view& component_name,
                      const common::Uuid& parent_activity_id,
                      const common::Uuid& activity_id,
+                     const common::Uuid& correlation_id,
                      const std::string_view& location,
                      const std::string_view& message, ...) noexcept = 0;
 
@@ -110,12 +118,14 @@ class LoggerInterface : public ServiceInterface {
    * @param component_name The name of the component writing the log.
    * @param parent_activity_id The parent activity id of the log.
    * @param activity_id The activity id of the log.
+   * @param correlation_id The correlation id of the log.
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
   virtual void Alert(const std::string_view& component_name,
                      const common::Uuid& parent_activity_id,
                      const common::Uuid& activity_id,
+                     const common::Uuid& correlation_id,
                      const std::string_view& location,
                      const std::string_view& message, ...) noexcept = 0;
 
@@ -125,12 +135,14 @@ class LoggerInterface : public ServiceInterface {
    * @param component_name The name of the component writing the log.
    * @param parent_activity_id The parent activity id of the log.
    * @param activity_id The activity id of the log.
+   * @param correlation_id The correlation id of the log.
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
   virtual void Critical(const std::string_view& component_name,
                         const common::Uuid& parent_activity_id,
                         const common::Uuid& activity_id,
+                        const common::Uuid& correlation_id,
                         const std::string_view& location,
                         const std::string_view& message, ...) noexcept = 0;
 
@@ -140,12 +152,14 @@ class LoggerInterface : public ServiceInterface {
    * @param component_name The name of the component writing the log.
    * @param parent_activity_id The parent activity id of the log.
    * @param activity_id The activity id of the log.
+   * @param correlation_id The correlation id of the log.
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
   virtual void Emergency(const std::string_view& component_name,
                          const common::Uuid& parent_activity_id,
                          const common::Uuid& activity_id,
+                         const common::Uuid& correlation_id,
                          const std::string_view& location,
                          const std::string_view& message, ...) noexcept = 0;
 };

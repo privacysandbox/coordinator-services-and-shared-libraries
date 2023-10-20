@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,29 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@rules_pkg//:mappings.bzl", "pkg_attributes", "pkg_files")
+load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_zip")
 
 package(default_visibility = ["//visibility:public"])
-
-pkg_files(
-    name = "singleparty_dist_files",
-    srcs = [
-        "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/aws:KeyGenerationLambdaDeploy",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PrivateKeyApiGatewayHandlerDeploy",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PublicKeyApiGatewayHandlerDeploy",
-        "//java/com/google/scp/coordinator/privacy/budgeting/service/aws:aws_consume_privacy_budget_handler_binary_deploy",
-    ],
-    prefix = "jars",
-)
 
 pkg_files(
     name = "multiparty_dist_files",
     srcs = [
         "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_container_aws",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:GetEncryptionKeyApiGatewayHandlerDeploy",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:EncryptionKeyServiceLambdaDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PublicKeyApiGatewayHandlerDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/service/aws:KeyStorageServiceLambdaDeploy",
+        "//java/com/google/scp/coordinator/pbsprober/service/aws:PrivacyBudgetProberHandlerLambdaDeploy",
         "//java/com/google/scp/coordinator/privacy/budgeting/service/aws:aws_consume_privacy_budget_handler_binary_deploy",
         "//python/privacybudget/aws/pbs_auth_handler:auth_lambda_handler",
     ],
@@ -53,57 +43,27 @@ pkg_files(
 )
 
 pkg_tar(
-    name = "singleparty_coordinator_tar",
-    srcs = [
-        ":singleparty_dist_files",
-        "//coordinator/terraform/aws/applications:domainrecords_module_pkg",
-        "//coordinator/terraform/aws/applications:privacybudgetmanagement_module_pkg",
-        "//coordinator/terraform/aws/applications:roleprovider_module_pkg",
-        "//coordinator/terraform/aws/applications:singlepartykeymanagement_module_pkg",
-        "//coordinator/terraform/aws/environments/demo:coordinator_demo",
-        "//coordinator/terraform/aws/environments/demo:coordinator_readme",
-        "//coordinator/terraform/aws/environments/shared:coordinator_shared",
-        "//coordinator/terraform/aws/modules:bazel_module_pkg",
-        "//coordinator/terraform/aws/modules:keydb_pkg",
-        "//coordinator/terraform/aws/modules:keyhostingdashboard_pkg",
-        "//coordinator/terraform/aws/modules:keymanagementroleprovider_pkg",
-        "//coordinator/terraform/aws/modules:keyrotationservice_pkg",
-        "//coordinator/terraform/aws/modules:privacybudgetdashboard_pkg",
-        "//coordinator/terraform/aws/modules:privacybudgetdb_pkg",
-        "//coordinator/terraform/aws/modules:privacybudgetdomainprovider_pkg",
-        "//coordinator/terraform/aws/modules:privacybudgetservice_pkg",
-        "//coordinator/terraform/aws/modules:privatekeydomainprovider_pkg",
-        "//coordinator/terraform/aws/modules:privatekeyhostingservice_pkg",
-        "//coordinator/terraform/aws/modules:publickeyhostingcloudfront_pkg",
-        "//coordinator/terraform/aws/modules:publickeyhostingservice_pkg",
-        "//coordinator/terraform/aws/modules:shared_api_gateway_alarms_pkg",
-        "//coordinator/terraform/aws/modules:shared_bucketprovider_pkg",
-        "//coordinator/terraform/aws/modules:shared_lambda_alarms_pkg",
-        "//coordinator/terraform/aws/modules:shared_lambda_roles_pkg",
-        "//coordinator/terraform/aws/modules:shared_workerenclaveencryptionkey_pkg",
-        "//coordinator/terraform/aws/modules:sslcertificateprovider_pkg",
-        "//coordinator/terraform/aws/modules:vpc_pkg",
-        "//licenses",
-    ],
-    extension = "tgz",
-    strip_prefix = "/",
-)
-
-pkg_tar(
     name = "multiparty_coordinator_tar",
     srcs = [
         ":multiparty_dist_files",
         ":multiparty_dist_scripts",
+        "//coordinator/terraform/aws/applications:adtechmanagement_application_pkg",
         "//coordinator/terraform/aws/applications:distributed_pbs_application_pkg",
         "//coordinator/terraform/aws/applications:distributed_pbs_base_pkg",
+        "//coordinator/terraform/aws/applications:distributed_pbs_prober_pkg",
         "//coordinator/terraform/aws/applications:domainrecords_module_pkg",
         "//coordinator/terraform/aws/applications:multipartykeyhosting_primary_module_pkg",
         "//coordinator/terraform/aws/applications:multipartykeyhosting_secondary_module_pkg",
         "//coordinator/terraform/aws/applications:roleprovider_module_pkg",
         "//coordinator/terraform/aws/environments_mp_primary/demo:mp_primary_coordinator_demo",
         "//coordinator/terraform/aws/environments_mp_primary/shared:mp_primary_coordinator_shared",
+        "//coordinator/terraform/aws/environments_mp_primary/testing:mp_primary_coordinator_testing",
         "//coordinator/terraform/aws/environments_mp_secondary/demo:mp_secondary_coordinator_demo",
         "//coordinator/terraform/aws/environments_mp_secondary/shared:mp_secondary_coordinator_shared",
+        "//coordinator/terraform/aws/environments_mp_secondary/testing:mp_secondary_coordinator_testing",
+        "//coordinator/terraform/aws/modules:adtechmanagement_db_pkg",
+        "//coordinator/terraform/aws/modules:adtechmanagement_service_pkg",
+        "//coordinator/terraform/aws/modules:adtechmanagement_storage_pkg",
         "//coordinator/terraform/aws/modules:apigateway_pkg",
         "//coordinator/terraform/aws/modules:bazel_module_pkg",
         "//coordinator/terraform/aws/modules:distributed_pbs_access_policy_pkg",
@@ -122,6 +82,7 @@ pkg_tar(
         "//coordinator/terraform/aws/modules:keystoragedashboard_pkg",
         "//coordinator/terraform/aws/modules:keystorageservice_pkg",
         "//coordinator/terraform/aws/modules:multipartykeygeneration_service_pkg",
+        "//coordinator/terraform/aws/modules:pbsprober_pkg",
         "//coordinator/terraform/aws/modules:privacybudgetdashboard_pkg",
         "//coordinator/terraform/aws/modules:privatekeydomainprovider_pkg",
         "//coordinator/terraform/aws/modules:publickeyhostingcloudfront_pkg",

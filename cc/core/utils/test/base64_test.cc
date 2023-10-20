@@ -19,7 +19,7 @@
 #include <string>
 
 #include "core/utils/src/error_codes.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
@@ -30,14 +30,15 @@ namespace google::scp::core::utils::test {
 TEST(Base64Test, Base64EncodeInvalidValue) {
   string empty;
   string encoded;
-  EXPECT_EQ(Base64Encode(empty, encoded),
-            FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT));
+  EXPECT_THAT(
+      Base64Encode(empty, encoded),
+      ResultIs(FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT)));
 }
 
 TEST(Base64Test, Base64EncodeValidValue) {
   string decoded("test_test_test");
   string encoded;
-  EXPECT_EQ(Base64Encode(decoded, encoded), SuccessExecutionResult());
+  EXPECT_SUCCESS(Base64Encode(decoded, encoded));
   EXPECT_EQ(encoded, "dGVzdF90ZXN0X3Rlc3Q=");
 }
 
@@ -45,18 +46,18 @@ TEST(Base64Test, Base64DecodeInvalidValue) {
   // Not correctly padded - needs "==" appended.
   string encoded("sdasdasdas");
   string decoded;
-  EXPECT_EQ(Base64Decode(encoded, decoded),
-            FailureExecutionResult(
-                errors::SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH));
+  EXPECT_THAT(Base64Decode(encoded, decoded),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH)));
 }
 
 TEST(Base64Test, Base64DecodeValidValues) {
   string empty;
   string decoded;
-  EXPECT_EQ(Base64Decode(empty, decoded), SuccessExecutionResult());
+  EXPECT_SUCCESS(Base64Decode(empty, decoded));
 
   string encoded("dGVzdF90ZXN0X3Rlc3Q=");
-  EXPECT_EQ(Base64Decode(encoded, decoded), SuccessExecutionResult());
+  EXPECT_SUCCESS(Base64Decode(encoded, decoded));
   EXPECT_EQ(decoded, "test_test_test");
 }
 

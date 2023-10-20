@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
     name = "public_key_client_provider_mock",
+    testonly = True,
     srcs = glob(
         [
             "*.cc",

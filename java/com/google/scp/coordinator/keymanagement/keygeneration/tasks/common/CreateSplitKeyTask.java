@@ -17,9 +17,17 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import com.google.scp.shared.api.exception.ServiceException;
+import java.time.Duration;
+import java.time.Instant;
 
 /** Interface for task classes that generate split keys */
 public interface CreateSplitKeyTask {
+
+  /**
+   * Amount of time a key must be valid for to not be refreshed. Keys that expire before (now +
+   * keyRefreshWindow) should be replaced with a new key.
+   */
+  Duration KEY_REFRESH_WINDOW = Duration.ofDays(1);
 
   /**
    * The actual key generation process. Performs the necessary key exchange key fetching (if
@@ -28,8 +36,11 @@ public interface CreateSplitKeyTask {
    *
    * <p>For key regeneration {@link CreateSplitKeyTask#replaceExpiringKeys(int, int, int)} should be
    * used.
+   *
+   * @param activation the instant when the key should be active for encryption.
    */
-  void createSplitKey(int count, int validityInDays, int ttlInDays) throws ServiceException;
+  void createSplitKey(int count, int validityInDays, int ttlInDays, Instant activation)
+      throws ServiceException;
 
   /**
    * Counts the number of active keys in the KeyDB and creates enough keys to both replace any keys
@@ -40,4 +51,20 @@ public interface CreateSplitKeyTask {
    */
   void replaceExpiringKeys(int numDesiredKeys, int validityInDays, int ttlInDays)
       throws ServiceException;
+
+  /**
+   * Ensures {@code numDesiredKeys} active keys are currently available by creating new immediately
+   * active keys to meet that number. For each active key, ensures that there is a corresponding
+   * replacement key that will be active {@link #KEY_REFRESH_WINDOW} before the former expires.
+   *
+   * <p>The created immediately active keys expire in {@code validityInDays} days and will be in the
+   * key database for {@code ttlInDays} days. The subsequent replacement keys will be active {@link
+   * #KEY_REFRESH_WINDOW} before a currently active key expires, the replacement key will also
+   * expire in {@code validityInDays} and in the key database for {@code ttlInDays} days.
+   *
+   * @param numDesiredKeys the number of keys is ensured to be active.
+   * @param validityInDays the number of days each key should be active/valid for before expiring.
+   * @param ttlInDays the number of days each key should be stored in the database.
+   */
+  void create(int numDesiredKeys, int validityInDays, int ttlInDays) throws ServiceException;
 }

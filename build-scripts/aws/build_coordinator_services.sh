@@ -48,7 +48,7 @@ key_generation_ami_owners      = ["${AWS_ACCOUNT_ID}"]
 EOT
 
 ln -s ../../shared/mpkhs_primary/ami_params.auto.tfvars environments_mp_primary/demo/mpkhs_primary/ami_params.auto.tfvars
-tar --append --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar environments_mp_primary/shared/mpkhs_primary/ami_params.auto.tfvars environments_mp_primary/demo/mpkhs_primary/ami_params.auto.tfvars
+tar --append --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar ./environments_mp_primary/shared/mpkhs_primary/ami_params.auto.tfvars ./environments_mp_primary/demo/mpkhs_primary/ami_params.auto.tfvars
 tar --list --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar
 popd
 gzip < $TAR_MANIPULATION_TMP_DIR/scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar > multiparty-coordinator-${COORDINATOR_VERSION}.tgz

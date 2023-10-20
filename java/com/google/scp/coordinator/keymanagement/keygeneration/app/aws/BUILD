@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:public"])
@@ -156,10 +157,12 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/aws",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
+        "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyid",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/aws",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/shared/aws/credsprovider",
         "//java/com/google/scp/shared/aws/util",
+        "//java/com/google/scp/shared/clients",
         "//java/com/google/scp/shared/clients/configclient:aws",
         "//java/com/google/scp/shared/crypto/tink",
         "//java/com/google/scp/shared/crypto/tink/aws",

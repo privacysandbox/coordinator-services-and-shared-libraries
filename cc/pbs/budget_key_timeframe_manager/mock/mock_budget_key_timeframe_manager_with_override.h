@@ -28,6 +28,7 @@
 #include "pbs/interface/budget_key_timeframe_manager_interface.h"
 #include "pbs/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::buget_key_timeframe_manager::mock {
 class MockBudgetKeyTimeframeManager : public BudgetKeyTimeframeManager {
@@ -39,12 +40,12 @@ class MockBudgetKeyTimeframeManager : public BudgetKeyTimeframeManager {
       const std::shared_ptr<core::JournalServiceInterface>& journal_service,
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
-      : BudgetKeyTimeframeManager(budget_key_name, id, async_executor,
-                                  journal_service, nosql_database_provider,
-                                  metric_client, config_provider) {
+      : BudgetKeyTimeframeManager(
+            budget_key_name, id, async_executor, journal_service,
+            nosql_database_provider, metric_client, config_provider,
+            std::make_shared<cpio::MockAggregateMetric>()) {
     budget_key_timeframe_groups_ = std::make_unique<
         core::common::auto_expiry_concurrent_map::mock::
             MockAutoExpiryConcurrentMap<
@@ -58,9 +59,10 @@ class MockBudgetKeyTimeframeManager : public BudgetKeyTimeframeManager {
   }
 
   virtual core::ExecutionResult OnJournalServiceRecoverCallback(
-      const std::shared_ptr<core::BytesBuffer>& bytes_buffer) noexcept {
+      const std::shared_ptr<core::BytesBuffer>& bytes_buffer,
+      const core::common::Uuid& activity_id) noexcept {
     return BudgetKeyTimeframeManager::OnJournalServiceRecoverCallback(
-        bytes_buffer);
+        bytes_buffer, activity_id);
   }
 
   core::ExecutionResult LoadTimeframeGroupFromDB(

@@ -16,9 +16,12 @@ load(
     "@com_google_googleapis_imports//:imports.bzl",
     "cc_grpc_library",
     "cc_proto_library",
+    "java_grpc_library",
 )
+load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//visibility:public"])
 
 proto_library(
     name = "crypto_service_proto",
@@ -44,4 +47,18 @@ cc_grpc_library(
     generate_mocks = True,
     grpc_only = True,
     deps = [":crypto_service_cc_proto"],
+)
+
+##############################################################################
+# Java
+##############################################################################
+java_proto_library(
+    name = "crypto_service_java_proto",
+    deps = [":crypto_service_proto"],
+)
+
+java_grpc_library(
+    name = "crypto_service_java_grpc",
+    srcs = [":crypto_service_proto"],
+    deps = [":crypto_service_java_proto"],
 )

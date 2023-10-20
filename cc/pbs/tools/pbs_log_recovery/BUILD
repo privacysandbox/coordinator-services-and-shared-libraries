@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_binary(
@@ -26,11 +28,12 @@ cc_binary(
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/journal_service/src:core_journal_service_lib",
+        "//cc/core/logger/src/log_providers:log_providers_lib",
         "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-        "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
         "//cc/pbs/budget_key_provider/src:pbs_budget_key_provider_lib",
         "//cc/pbs/transactions/src:pbs_transactions_lib",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@aws_sdk_cpp//:core",
         "@aws_sdk_cpp//:s3",
     ],

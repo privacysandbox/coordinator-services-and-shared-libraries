@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <vector>
-
-#include <gmock/gmock.h>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/config_provider/mock/mock_config_provider.h"
@@ -28,13 +27,13 @@
 #include "core/interface/configuration_keys.h"
 #include "core/interface/token_provider_cache_interface.h"
 #include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
-#include "cpio/client_providers/instance_client_provider_new/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/instance_client_provider_new/src/aws/error_codes.h"
+#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
 #include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
@@ -89,7 +88,8 @@ class AwsCloudDependencyFactoryTest : public ::testing::Test {
                                "identity.com");
     mock_config_provider_->Set(kRemotePrivacyBudgetServiceHostAddress,
                                "https://www.pbs.com");
-    mock_config_provider_->Set(kServiceMetricsBatchPush, false);
+    mock_config_provider_->SetBool(kServiceMetricsBatchPush, false);
+    mock_config_provider_->Set(kServiceMetricsBatchTimeDurationMs, "3000");
 
     EXPECT_THAT(aws_factory_.Init(), ResultIs(SuccessExecutionResult()));
   }

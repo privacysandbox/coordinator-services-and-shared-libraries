@@ -16,27 +16,37 @@ syntax = "proto3";
 
 package google.scp.core.common.proto;
 
+option java_outer_classname = "CommonProto";
+option java_package = "com.google.scp.core";
+
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
 
+// Global unique identidier.
 message Uuid {
-  uint64 high = 1;
-  uint64 low = 2;
+  uint64 high = 1;  // The higher 64 bits.
+  uint64 low = 2;   // The lower 64 bits.
 }
 
+// Version number.
 message Version {
-  uint64 major = 1;
-  uint64 minor = 2;
+  uint64 major = 1;  // The major version number.
+  uint64 minor = 2;  // The minor version number.
 }
 
+// The status of execution result.
 enum ExecutionStatus {
-  EXECUTION_STATUS_UNKNOWN = 0;
-  EXECUTION_STATUS_SUCCESS = 1;
-  EXECUTION_STATUS_FAILURE = 2;
-  EXECUTION_STATUS_RETRY = 3;
+  EXECUTION_STATUS_UNKNOWN = 0;  // Unknown status.
+  EXECUTION_STATUS_SUCCESS = 1;  // The execution is successful.
+  EXECUTION_STATUS_FAILURE = 2;  // The execution is failed.
+  EXECUTION_STATUS_RETRY = 3;    // The execution is retriable.
 }
 
+// The result of the execution.
 message ExecutionResult {
-  ExecutionStatus status = 1;
+  ExecutionStatus status = 1;  // The execution status.
+  // The failure status code.
   uint64 status_code = 2;
+  // Returned if the execution failed.
+  string error_message = 3;
 }

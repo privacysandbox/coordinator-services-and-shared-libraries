@@ -16,6 +16,8 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter;
 
+import static java.lang.Math.toIntExact;
+
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
@@ -55,6 +57,8 @@ public final class EncryptionKeyConverter {
             .setPublicKeyMaterial(encryptionKey.getPublicKeyMaterial())
             .setExpirationTime(encryptionKey.getExpirationTime())
             .setCreationTime(encryptionKey.getCreationTime())
+            .setActivationTime(encryptionKey.getActivationTime())
+            .setTtlTime(toIntExact(encryptionKey.getTtlTime()))
             .addAllKeyData(keyData);
 
     Set<String> keyTypeValues = ProtoUtil.getValidEnumValues(EncryptionKeyType.class);

@@ -77,6 +77,11 @@ class AsyncTask {
     return true;
   }
 
+  bool IsCancelled() {
+    std::unique_lock lock(cancellation_mutex_);
+    return is_cancelled_;
+  }
+
  private:
   /// Async operation to be executed.
   AsyncOperation async_operation_;

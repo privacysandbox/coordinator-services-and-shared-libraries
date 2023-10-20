@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 cc_test(
     name = "pbs_leasable_lock_test",
     size = "small",
     srcs = [
         "leasable_lock_on_nosql_database_helpers_test.cc",
         "leasable_lock_on_nosql_database_test.cc",
+        "lease_info_test.cc",
     ],
     copts = [
         "-std=c++17",
@@ -34,6 +37,7 @@ cc_test(
         "//cc/core/test:core_test_lib",
         "//cc/pbs/leasable_lock/mock:pbs_leasable_lock_mock",
         "//cc/pbs/leasable_lock/src:pbs_leasable_lock_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

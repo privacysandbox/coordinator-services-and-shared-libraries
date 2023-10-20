@@ -30,6 +30,7 @@
 #include "cpio/client_providers/role_credentials_provider/mock/aws/mock_aws_sts_client.h"
 #include "cpio/client_providers/role_credentials_provider/src/aws/error_codes.h"
 #include "cpio/common/src/aws/error_codes.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;
@@ -46,11 +47,11 @@ using Aws::STS::Model::Credentials;
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::errors::SC_AWS_INTERNAL_SERVICE_ERROR;
 using google::scp::core::errors::
     SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::client_providers::mock::
     MockAwsRoleCredentialsProviderWithOverrides;
@@ -61,8 +62,12 @@ using std::make_shared;
 using std::shared_ptr;
 using std::string;
 
-static constexpr char kAssumeRoleArn[] = "assume_role_arn";
-static constexpr char kSessionName[] = "session_name";
+namespace {
+constexpr char kResourceNameMock[] =
+    "arn:aws:ec2:us-east-1:123456789012:instance/i-0e9801d129EXAMPLE";
+constexpr char kAssumeRoleArn[] = "assume_role_arn";
+constexpr char kSessionName[] = "session_name";
+}  // namespace
 
 namespace google::scp::cpio::client_providers::test {
 class AwsRoleCredentialsProviderTest : public ::testing::Test {
@@ -80,13 +85,15 @@ class AwsRoleCredentialsProviderTest : public ::testing::Test {
   void SetUp() override {
     role_credentials_provider_ =
         make_shared<MockAwsRoleCredentialsProviderWithOverrides>();
-    EXPECT_EQ(role_credentials_provider_->Init(), SuccessExecutionResult());
+    EXPECT_SUCCESS(role_credentials_provider_->Init());
+    role_credentials_provider_->GetInstanceClientProvider()
+        ->instance_resource_name = kResourceNameMock;
+    EXPECT_SUCCESS(role_credentials_provider_->Run());
     mock_sts_client_ = role_credentials_provider_->GetSTSClient();
-    EXPECT_EQ(role_credentials_provider_->Run(), SuccessExecutionResult());
   }
 
   void TearDown() override {
-    EXPECT_EQ(role_credentials_provider_->Stop(), SuccessExecutionResult());
+    EXPECT_SUCCESS(role_credentials_provider_->Stop());
   }
 
   shared_ptr<MockAwsRoleCredentialsProviderWithOverrides>
@@ -124,8 +131,8 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleFailure) {
           make_shared<GetRoleCredentialsRequest>(),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
-            EXPECT_EQ(context.result,
-                      FailureExecutionResult(SC_AWS_INTERNAL_SERVICE_ERROR));
+            EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(
+                                            SC_AWS_INTERNAL_SERVICE_ERROR)));
             is_called = true;
           });
 
@@ -141,17 +148,32 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleFailure) {
 
 TEST_F(AwsRoleCredentialsProviderTest, NullInstanceClientProvider) {
   auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
-      nullptr, make_shared<MockAsyncExecutor>());
-  EXPECT_EQ(role_credentials_provider->Init(),
-            FailureExecutionResult(
-                SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED));
+      nullptr, make_shared<MockAsyncExecutor>(),
+      make_shared<MockAsyncExecutor>());
+  EXPECT_SUCCESS(role_credentials_provider->Init());
+  EXPECT_THAT(role_credentials_provider->Run(),
+              ResultIs(FailureExecutionResult(
+                  SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED)));
 }
 
-TEST_F(AwsRoleCredentialsProviderTest, NullAsyncExecutor) {
+TEST_F(AwsRoleCredentialsProviderTest, NullCpuAsyncExecutor) {
   auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
-      make_shared<mock::MockInstanceClientProvider>(), nullptr);
-  EXPECT_EQ(role_credentials_provider->Init(),
-            FailureExecutionResult(
-                SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED));
+      make_shared<mock::MockInstanceClientProvider>(), nullptr,
+      make_shared<MockAsyncExecutor>());
+  EXPECT_SUCCESS(role_credentials_provider->Init());
+  EXPECT_THAT(role_credentials_provider->Run(),
+              ResultIs(FailureExecutionResult(
+                  SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED)));
 }
+
+TEST_F(AwsRoleCredentialsProviderTest, NullIoAsyncExecutor) {
+  auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
+      make_shared<mock::MockInstanceClientProvider>(),
+      make_shared<MockAsyncExecutor>(), nullptr);
+  EXPECT_SUCCESS(role_credentials_provider->Init());
+  EXPECT_THAT(role_credentials_provider->Run(),
+              ResultIs(FailureExecutionResult(
+                  SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED)));
+}
+
 }  // namespace google::scp::cpio::client_providers::test

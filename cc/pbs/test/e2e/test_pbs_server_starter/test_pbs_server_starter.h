@@ -56,9 +56,12 @@ class TestPbsServerStarter {
 
   int Setup();
 
-  int RunTwoPbsServers(const TestPbsConfig& config, bool setup_data);
-  int RunPbsServer1(const TestPbsConfig& config);
-  int RunPbsServer2(const TestPbsConfig& config);
+  int RunTwoPbsServers(const TestPbsConfig& config, bool setup_data,
+                       std::map<std::string, std::string> env_overrides = {});
+  int RunPbsServer1(const TestPbsConfig& config,
+                    std::map<std::string, std::string> env_overrides = {});
+  int RunPbsServer2(const TestPbsConfig& config,
+                    std::map<std::string, std::string> env_overrides = {});
 
   void StopTwoPbsServers(const TestPbsConfig& config);
   void StopPbsServer1(const TestPbsConfig& config);

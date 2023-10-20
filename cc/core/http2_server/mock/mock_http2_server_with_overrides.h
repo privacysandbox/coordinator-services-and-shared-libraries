@@ -20,7 +20,7 @@
 #include <string>
 
 #include "core/http2_server/src/http2_server.h"
-#include "cpio/client_providers/metric_client_provider/mock/utils/mock_aggregate_metric.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::http2_server::mock {
 
@@ -30,20 +30,45 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
       std::string& host_address, std::string& port,
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client)
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
+          nullptr)
       : core::Http2Server(host_address, port, 2 /* thread_pool_size */,
-                          async_executor, authorization_proxy, metric_client) {}
+                          async_executor, authorization_proxy, metric_client,
+                          config_provider) {}
 
-  ExecutionResult MetricInit() noexcept {
-    core::Http2Server::http_error_metrics_ =
-        std::make_shared<cpio::client_providers::mock::MockAggregateMetric>();
-    return SuccessExecutionResult();
+  // Construct HTTP Server with Request Routing capabilities.
+  MockHttp2ServerWithOverrides(
+      std::string& host_address, std::string& port, size_t thread_pool_size,
+      std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
+      std::shared_ptr<HttpRequestRouterInterface>& request_router,
+      std::shared_ptr<HttpRequestRouteResolverInterface>&
+          request_route_resolver,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      Http2ServerOptions options = Http2ServerOptions())
+      : Http2Server(host_address, port, thread_pool_size, async_executor,
+                    authorization_proxy, metric_client, config_provider,
+                    options) {
+    request_router_ = request_router;
+    request_route_resolver_ = request_route_resolver;
   }
+
+  ExecutionResult MetricInit() noexcept { return SuccessExecutionResult(); }
 
   ExecutionResult MetricRun() noexcept { return SuccessExecutionResult(); }
 
   ExecutionResult MetricStop() noexcept { return SuccessExecutionResult(); }
+
+  void OnHttp2Response(
+      AsyncContext<NgHttp2Request, NgHttp2Response>& http_context,
+      RequestTargetEndpointType request_destination_type) noexcept override {
+    if (on_http2_response_mock_) {
+      on_http2_response_mock_(http_context, request_destination_type);
+    }
+    core::Http2Server::OnHttp2Response(http_context, request_destination_type);
+  }
 
   void OnAuthorizationCallback(
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
@@ -58,7 +83,25 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
   void HandleHttp2Request(
       AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
       HttpHandler& http_handler) noexcept {
-    core::Http2Server::HandleHttp2Request(http2_context, http_handler);
+    if (handle_http2_request_mock_) {
+      return handle_http2_request_mock_(http2_context, http_handler);
+    }
+    return core::Http2Server::HandleHttp2Request(http2_context, http_handler);
+  }
+
+  void RouteOrHandleHttp2Request(
+      AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
+      HttpHandler& http_handler) noexcept {
+    return core::Http2Server::RouteOrHandleHttp2Request(http2_context,
+                                                        http_handler);
+  }
+
+  void OnHttp2RequestDataObtainedRoutedRequest(
+      AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
+      const RequestRouteEndpointInfo endpoint_info,
+      ExecutionResult request_body_received_result) noexcept {
+    return core::Http2Server::OnHttp2RequestDataObtainedRoutedRequest(
+        http2_context, endpoint_info, request_body_received_result);
   }
 
   void OnHttp2PendingCallback(ExecutionResult& execution_result,
@@ -84,5 +127,13 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
   GetActiveRequests() {
     return active_requests_;
   }
+
+  std::function<void(AsyncContext<NgHttp2Request, NgHttp2Response>&,
+                     HttpHandler& http_handler)>
+      handle_http2_request_mock_;
+
+  std::function<void(AsyncContext<NgHttp2Request, NgHttp2Response>&,
+                     RequestTargetEndpointType)>
+      on_http2_response_mock_;
 };
 }  // namespace google::scp::core::http2_server::mock

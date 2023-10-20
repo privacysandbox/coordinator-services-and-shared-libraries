@@ -52,8 +52,9 @@ LeaseManager::LeaseManager(
       ongoing_lease_acquisition_start_timestamp_(
           kNoOngoingLeaseAcquisitionTimestamp),
       terminate_process_function_([]() {
-        EMERGENCY(kLeaseManager, kZeroUuid, kZeroUuid,
-                  FailureExecutionResult(SC_UNKNOWN), "Terminating process..");
+        SCP_EMERGENCY(kLeaseManager, kZeroUuid,
+                      FailureExecutionResult(SC_UNKNOWN),
+                      "Terminating process..");
         abort();
       }),
       lease_enforcer_frequency_in_milliseconds_(
@@ -99,10 +100,11 @@ void LeaseManager::LeaseObtainerThreadFunction() {
     ongoing_lease_acquisition_start_timestamp_ =
         TimeProvider::GetSteadyTimestampInNanoseconds();
 
-    auto result = leasable_lock_->RefreshLease();
+    auto is_read_only_lease_refresh = false;
+    auto result = leasable_lock_->RefreshLease(is_read_only_lease_refresh);
     if (!result.Successful()) {
-      ERROR(kLeaseManager, kZeroUuid, kZeroUuid, result,
-            "Unable to refresh lease on the lock.");
+      SCP_ERROR(kLeaseManager, kZeroUuid, result,
+                "Unable to refresh lease on the lock.");
     }
 
     auto is_current_lease_owner = leasable_lock_->IsCurrentLeaseOwner();
@@ -143,6 +145,9 @@ void LeaseManager::LeaseEnforcerThreadFunction() {
       NotifyLeaseObtainer(true /* obtain lease */);
     }
 
+    // TODO b/280466468 Ensure lease obtainer is acknowledging
+    // notification, otherwise terminate the process.
+
     if (IsLeaseRefreshTakingLong()) {
       terminate_process_function_();
     }
@@ -173,9 +178,9 @@ bool LeaseManager::IsLeaseRefreshTakingLong() {
       (now_timestamp - ongoing_lease_acquisition_start_timestamp >
        lease_obtainer_maximum_runningtime_in_milliseconds_);
   if (is_lease_refresh_taking_long) {
-    INFO(kLeaseManager, kZeroUuid, kZeroUuid,
-         "Lease refresh took too long. Time taken: %ld",
-         (now_timestamp - ongoing_lease_acquisition_start_timestamp));
+    SCP_INFO(kLeaseManager, kZeroUuid,
+             "Lease refresh took too long. Time taken: %lld",
+             (now_timestamp - ongoing_lease_acquisition_start_timestamp));
   }
   return is_lease_refresh_taking_long;
 }

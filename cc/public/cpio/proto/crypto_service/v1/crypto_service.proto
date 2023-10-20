@@ -16,6 +16,10 @@ syntax = "proto3";
 
 package google.cmrt.sdk.crypto_service.v1;
 
+option java_multiple_files = true;
+option java_outer_classname = "CryptoServiceProto";
+option java_package = "com.google.cmrt.sdk.crypto_service.v1";
+
 import "cc/public/cpio/proto/public_key_service/v1/public_key_service.proto";
 import "cc/public/cpio/proto/private_key_service/v1/private_key_service.proto";
 import "cc/core/common/proto/common.proto";

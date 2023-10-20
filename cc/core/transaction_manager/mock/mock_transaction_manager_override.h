@@ -25,7 +25,7 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/transaction_manager/interface/transaction_engine_interface.h"
 #include "core/transaction_manager/src/transaction_manager.h"
-#include "cpio/client_providers/metric_client_provider/mock/utils/mock_aggregate_metric.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionManager : public core::TransactionManager {
@@ -40,8 +40,7 @@ class MockTransactionManager : public core::TransactionManager {
       std::shared_ptr<RemoteTransactionManagerInterface>&
           remote_transaction_manager,
       size_t max_concurrent_transactions,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client)
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client)
       : TransactionManager(
             async_executor, transaction_command_serializer, journal_service,
             remote_transaction_manager, max_concurrent_transactions,
@@ -66,11 +65,9 @@ class MockTransactionManager : public core::TransactionManager {
       get_status_mock;
 
   ExecutionResult RegisterAggregateMetric(
-      std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metrics_instance,
+      std::shared_ptr<cpio::AggregateMetricInterface>& metrics_instance,
       const std::string& name) noexcept {
-    metrics_instance =
-        std::make_shared<cpio::client_providers::mock::MockAggregateMetric>();
+    metrics_instance = std::make_shared<cpio::MockAggregateMetric>();
     return SuccessExecutionResult();
   }
 
@@ -104,14 +101,14 @@ class MockTransactionManager : public core::TransactionManager {
         get_transaction_status_context);
   }
 
-  ExecutionResult GetStatus(
+  ExecutionResult GetTransactionManagerStatus(
       const GetTransactionManagerStatusRequest& request,
       GetTransactionManagerStatusResponse& response) noexcept override {
     if (get_status_mock) {
       return get_status_mock(request, response);
     }
 
-    return TransactionManager::GetStatus(request, response);
+    return TransactionManager::GetTransactionManagerStatus(request, response);
   }
 };
 }  // namespace google::scp::core::transaction_manager::mock

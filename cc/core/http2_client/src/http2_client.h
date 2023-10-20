@@ -29,6 +29,29 @@
 
 namespace google::scp::core {
 
+struct HttpClientOptions {
+  HttpClientOptions()
+      : retry_strategy_options(common::RetryStrategyOptions(
+            common::RetryStrategyType::Exponential,
+            kDefaultRetryStrategyDelayInMs, kDefaultRetryStrategyMaxRetries)),
+        max_connections_per_host(kDefaultMaxConnectionsPerHost),
+        http2_read_timeout_in_sec(kDefaultHttp2ReadTimeoutInSeconds) {}
+
+  HttpClientOptions(common::RetryStrategyOptions retry_strategy_options,
+                    size_t max_connections_per_host,
+                    TimeDuration http2_read_timeout_in_sec)
+      : retry_strategy_options(retry_strategy_options),
+        max_connections_per_host(max_connections_per_host),
+        http2_read_timeout_in_sec(http2_read_timeout_in_sec) {}
+
+  /// Retry strategy options.
+  const common::RetryStrategyOptions retry_strategy_options;
+  /// Max http connections per host.
+  const size_t max_connections_per_host;
+  /// nghttp client read timeout.
+  const TimeDuration http2_read_timeout_in_sec;
+};
+
 /*! @copydoc HttpClientInterface
  */
 class HttpClient : public HttpClientInterface {
@@ -42,11 +65,8 @@ class HttpClient : public HttpClientInterface {
    * strategy.
    * @param total_retries total retry counts.
    */
-  explicit HttpClient(
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      core::common::RetryStrategyType retry_strategy_type = kRetryStrategyType,
-      core::TimeDuration time_duraton_ms = kHttpClientRetryStrategyDelayMs,
-      size_t total_retries = kHttpClientRetryStrategyTotalRetries);
+  explicit HttpClient(std::shared_ptr<AsyncExecutorInterface>& async_executor,
+                      HttpClientOptions options = HttpClientOptions());
 
   ExecutionResult Init() noexcept override;
   ExecutionResult Run() noexcept override;
@@ -56,11 +76,6 @@ class HttpClient : public HttpClientInterface {
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept override;
 
  private:
-  static constexpr TimeDuration kHttpClientRetryStrategyDelayMs = 101;
-  static constexpr size_t kHttpClientRetryStrategyTotalRetries = 12;
-  static const common::RetryStrategyType kRetryStrategyType =
-      common::RetryStrategyType::Exponential;
-
   /// An instance of the connection pool that is used by the http client.
   std::unique_ptr<HttpConnectionPool> http_connection_pool_;
 

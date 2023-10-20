@@ -51,12 +51,15 @@ module "multipartykeyhosting_primary" {
   default_cloudfront_ttl_seconds           = var.default_cloudfront_ttl_seconds
   coordinator_b_assume_role_arn            = var.coordinator_b_assume_role_arn
   enable_public_key_signature              = var.enable_public_key_signature
+  key_id_type                              = var.key_id_type
 
   public_key_service_jar                                = var.public_key_service_jar
   encryption_key_service_jar                            = var.encryption_key_service_jar
   get_public_key_lambda_memory_mb                       = var.get_public_key_lambda_memory_mb
   get_public_key_lambda_provisioned_concurrency_enabled = var.get_public_key_lambda_provisioned_concurrency_enabled
   get_public_key_lambda_provisioned_concurrency_count   = var.get_public_key_lambda_provisioned_concurrency_count
+
+  get_encryption_key_lambda_ps_client_shim_enabled = var.get_encryption_key_lambda_ps_client_shim_enabled
 
   enable_domain_management                                = var.enable_domain_management
   parent_domain_name                                      = var.parent_domain_name

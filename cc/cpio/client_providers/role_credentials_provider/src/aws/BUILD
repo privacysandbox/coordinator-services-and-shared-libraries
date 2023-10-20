@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
@@ -27,7 +29,7 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/instance_client_provider/src:instance_client_provider_lib",
+        "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_provider_lib",
         "//cc/cpio/common/src/aws:aws_utils_lib",
         "//cc/public/cpio/interface:type_def",
         "@aws_sdk_cpp//:core",

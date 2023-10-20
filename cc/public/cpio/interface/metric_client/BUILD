@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -26,8 +28,7 @@ cc_library(
 )
 
 cc_library(
-    name = "metric_client",
-    srcs = ["//cc/public/cpio/adapters/metric_client/src:metric_client_srcs"],
+    name = "metric_client_interface",
     hdrs =
         [
             "metric_client_interface.h",
@@ -38,8 +39,24 @@ cc_library(
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
-        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/public/cpio/interface:type_def",
+        "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
+    ],
+)
+
+cc_library(
+    name = "metric_client",
+    srcs = ["//cc/public/cpio/adapters/metric_client/src:metric_client_srcs"],
+    deps = [
+        ":metric_client_interface",
+        ":type_def",
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:async_context_lib",
+        "//cc/core/interface:interface_lib",
+        "//cc/core/utils/src:core_utils",
+        "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
+        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_select_lib",
+        "//cc/public/cpio/adapters/common:adapter_utils",
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
     ],

@@ -40,6 +40,7 @@ namespace google::scp::core {
  *
  */
 class HttpConnectionPool : public ServiceInterface {
+ protected:
   /**
    * @brief The http connection pool entry to be kept in the concurrent map of
    * the active connections.
@@ -60,14 +61,17 @@ class HttpConnectionPool : public ServiceInterface {
    * @brief Constructs a new Http Connection Pool object
    *
    * @param async_executor An instance of the async executor.
-   * @param max_connection_per_host The max number of connections created per
+   * @param max_connections_per_host The max number of connections created per
    * host.
    */
   explicit HttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      size_t max_connection_per_host = 2)
+      size_t max_connections_per_host = kDefaultMaxConnectionsPerHost,
+      TimeDuration http2_read_timeout_in_sec =
+          kDefaultHttp2ReadTimeoutInSeconds)
       : async_executor_(async_executor),
-        max_connection_per_host_(max_connection_per_host),
+        max_connections_per_host_(max_connections_per_host),
+        http2_read_timeout_in_sec_(http2_read_timeout_in_sec),
         is_running_(false) {}
 
   ExecutionResult Init() noexcept;
@@ -85,25 +89,41 @@ class HttpConnectionPool : public ServiceInterface {
       const std::shared_ptr<Uri>& uri,
       std::shared_ptr<HttpConnection>& connection) noexcept;
 
- private:
+ protected:
+  /**
+   * @brief Create a Http Connection object
+   *
+   * @param host host name
+   * @param service service name a.k.a. service port
+   * @param is_https
+   * @return shared_ptr<HttpConnection>
+   */
+  virtual std::shared_ptr<HttpConnection> CreateHttpConnection(
+      std::string host, std::string service, bool is_https,
+      TimeDuration http2_read_timeout_in_sec);
+
   /**
    * @brief If a connection goes bad for any reason, the connection pool will
    * recycle the connection by stopping it and reseting the object.
    *
    * @param connection The connection to be recycled.
    */
-  void RecycleConnection(std::shared_ptr<HttpConnection>& connection) noexcept;
+  virtual void RecycleConnection(
+      std::shared_ptr<HttpConnection>& connection) noexcept;
 
   /// Instance of the async executor.
   const std::shared_ptr<AsyncExecutorInterface> async_executor_;
 
   /// Max number of connections per host.
-  size_t max_connection_per_host_;
+  size_t max_connections_per_host_;
+
+  /// http2 connection read timeout in seconds.
+  TimeDuration http2_read_timeout_in_sec_;
 
   /// The pool of all the connections.
   core::common::ConcurrentMap<std::string,
                               std::shared_ptr<HttpConnectionPoolEntry>>
-      sessions_;
+      connections_;
 
   /// Indicates whether the connection pool is running.
   std::atomic<bool> is_running_;

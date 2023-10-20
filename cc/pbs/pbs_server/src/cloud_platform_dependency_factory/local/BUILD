@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -29,9 +31,11 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/authorization_service/src:core_authorization_service",
+        "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/credentials_provider/src:core_credentials_provider_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
     ],

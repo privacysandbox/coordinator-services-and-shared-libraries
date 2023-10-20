@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 /** Client which fetches encrypted private keys from the private key vending service. */
 public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetchingService {
+
   private static final int REQUEST_TIMEOUT_DURATION =
       Ints.checkedCast(Duration.ofMinutes(1).toMillis());
   private final HttpClientWrapper httpClient;
@@ -107,7 +108,7 @@ public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetc
       throws EncryptionKeyFetchingServiceException {
     try {
       EncryptionKey.Builder builder = EncryptionKey.newBuilder();
-      JsonFormat.parser().merge(responseBody, builder);
+      JsonFormat.parser().ignoringUnknownFields().merge(responseBody, builder);
       return builder.build();
     } catch (InvalidProtocolBufferException e) {
       var message = "Failed to parse success response as EncryptedPrivateKey";

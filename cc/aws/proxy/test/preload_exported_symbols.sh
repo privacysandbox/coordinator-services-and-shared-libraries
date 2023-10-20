@@ -30,11 +30,11 @@ accept
 accept4
 bind
 connect
+epoll_ctl
 getsockopt
 ioctl
 listen
-setsockopt
-socket'
+setsockopt'
 
 
 expected_sha=$(echo $expected_symbols | sha1sum | awk '{print $1}')

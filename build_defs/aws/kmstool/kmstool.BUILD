@@ -1,6 +1,6 @@
-package(default_visibility = ["//visibility:public"])
-
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
+
+package(default_visibility = ["//visibility:public"])
 
 exports_files(glob(["*"]))
 

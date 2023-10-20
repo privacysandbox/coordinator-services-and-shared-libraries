@@ -48,8 +48,8 @@ class MockRemoteTransactionManager
     if (get_transaction_status_mock) {
       return get_transaction_status_mock(get_transaction_status_context);
     }
-    if (transaction_engine) {
-      return transaction_engine->GetTransactionStatus(
+    if (transaction_engine.lock()) {
+      return transaction_engine.lock()->GetTransactionStatus(
           get_transaction_status_context);
     }
     return core::SuccessExecutionResult();
@@ -61,13 +61,14 @@ class MockRemoteTransactionManager
     if (execute_phase_mock) {
       return execute_phase_mock(transaction_phase_context);
     }
-    if (transaction_engine) {
-      return transaction_engine->ExecutePhase(transaction_phase_context);
+    if (transaction_engine.lock()) {
+      return transaction_engine.lock()->ExecutePhase(transaction_phase_context);
     }
     return core::SuccessExecutionResult();
   }
 
-  std::shared_ptr<TransactionEngineInterface> transaction_engine;
+  // Use weak_ptr here to avoid cycle dependencies for shared_ptr.
+  std::weak_ptr<TransactionEngineInterface> transaction_engine;
   std::function<ExecutionResult(
       AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>&)>
       get_transaction_status_mock;

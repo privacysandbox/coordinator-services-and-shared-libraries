@@ -16,7 +16,10 @@
 
 #include <gtest/gtest.h>
 
+#include "public/core/test/interface/execution_result_matchers.h"
+
 using google::scp::core::nosql_database_provider::NoSQLDatabaseProviderUtils;
+using google::scp::core::test::ResultIs;
 using std::get;
 using std::string;
 
@@ -65,24 +68,24 @@ TEST(NoSQLDatabaseProviderUtilsTest, FromStringString) {
 TEST(NoSQLDatabaseProviderUtilsTest, FromStringInvalid) {
   string str("s");
   NoSQLDatabaseValidAttributeValueTypes value;
-  EXPECT_EQ(NoSQLDatabaseProviderUtils::FromString<string>(NULL, 123, value),
-            FailureExecutionResult(
-                errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE));
+  EXPECT_THAT(NoSQLDatabaseProviderUtils::FromString<string>(NULL, 123, value),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
 
-  EXPECT_EQ(
+  EXPECT_THAT(
       NoSQLDatabaseProviderUtils::FromString<int>(str.c_str(), 123, value),
-      FailureExecutionResult(
-          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE));
+      ResultIs(FailureExecutionResult(
+          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
 
-  EXPECT_EQ(
+  EXPECT_THAT(
       NoSQLDatabaseProviderUtils::FromString<double>(str.c_str(), 123, value),
-      FailureExecutionResult(
-          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE));
+      ResultIs(FailureExecutionResult(
+          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
 
-  EXPECT_EQ(
+  EXPECT_THAT(
       NoSQLDatabaseProviderUtils::FromString<float>(str.c_str(), 123, value),
-      FailureExecutionResult(
-          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE));
+      ResultIs(FailureExecutionResult(
+          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
 }
 
 }  // namespace google::scp::core::test

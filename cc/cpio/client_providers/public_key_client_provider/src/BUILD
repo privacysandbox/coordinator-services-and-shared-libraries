@@ -12,42 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
     name = "public_key_client_provider_lib",
-    srcs = [
-        ":public_key_client_provider_srcs",
-        "//cc/cpio/client_providers/interface:public_key_client_provider_interface.h",
-    ],
-    copts = [
-        "-std=c++17",
-    ],
+    srcs = glob(
+        [
+            "*.cc",
+            "*.h",
+        ],
+    ),
     deps = [
         "//cc:cc_base_include_dir",
-        "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
+        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/cpio/client_providers/interface:type_def",
+        "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface/public_key_client:type_def",
         "//cc/public/cpio/proto/public_key_service/v1:public_key_service_cc_proto",
+        "@com_google_protobuf//:protobuf",
         "@nlohmann_json//:lib",
-    ],
-)
-
-exports_files([
-    "error_codes.h",
-    "public_key_client_provider.cc",
-    "public_key_client_provider.h",
-    "public_key_client_utils.cc",
-    "public_key_client_utils.h",
-])
-
-filegroup(
-    name = "public_key_client_provider_srcs",
-    srcs = [
-        "error_codes.h",
-        "public_key_client_provider.cc",
-        "public_key_client_provider.h",
-        "public_key_client_utils.cc",
-        "public_key_client_utils.h",
     ],
 )

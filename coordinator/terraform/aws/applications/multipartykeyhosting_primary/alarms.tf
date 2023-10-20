@@ -33,7 +33,7 @@ module "sqs_queue_alarms" {
   count  = var.alarms_enabled ? 1 : 0
   source = "../../modules/shared/sqs_queue_alarms"
 
-  alarm_label_sqs_queue               = "KeyRotationQueue"
+  alarm_label_sqs_queue               = "KeyRotation"
   sqs_queue_name                      = module.key_job_queue.keyjobqueue_queue_name
   environment                         = var.environment
   sns_topic_arn                       = var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn

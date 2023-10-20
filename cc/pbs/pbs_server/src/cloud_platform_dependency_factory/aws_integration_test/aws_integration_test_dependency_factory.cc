@@ -22,7 +22,7 @@
 #include "core/interface/configuration_keys.h"
 #include "core/nosql_database_provider/src/aws/aws_dynamo_db.h"
 #include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
-#include "cpio/client_providers/instance_client_provider_new/test/aws/test_aws_instance_client_provider.h"
+#include "cpio/client_providers/instance_client_provider/test/aws/test_aws_instance_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/test/aws/test_aws_metric_client_provider.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/pbs_client_interface.h"
@@ -40,7 +40,8 @@ using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::Uuid;
 using google::scp::core::token_provider_cache::mock::DummyTokenProviderCache;
 using google::scp::cpio::TestAwsMetricClientOptions;
-using google::scp::cpio::client_providers::TestAwsInstanceClientProviderNew;
+using google::scp::cpio::client_providers::MetricBatchingOptions;
+using google::scp::cpio::client_providers::TestAwsInstanceClientProvider;
 using google::scp::cpio::client_providers::TestAwsMetricClientProvider;
 using google::scp::cpio::client_providers::TestInstanceClientOptions;
 using std::make_shared;
@@ -59,15 +60,16 @@ ExecutionResult AwsIntegrationTestDependencyFactory::ReadTestConfigurations() {
   auto execution_result = config_provider_->Get(
       kCloudwatchEndpointOverride, ec2_metadata_endpoint_override_);
   if (!execution_result.Successful()) {
-    ERROR(kAwsIntegrationTestDependencyProvider, kZeroUuid, kZeroUuid,
-          execution_result, "Failed to read EC2Metadata endpoint override.");
+    SCP_ERROR(kAwsIntegrationTestDependencyProvider, kZeroUuid,
+              execution_result,
+              "Failed to read EC2Metadata endpoint override.");
     return execution_result;
   }
   execution_result = config_provider_->Get(kCloudwatchEndpointOverride,
                                            cloudwatch_endpoint_override_);
   if (!execution_result.Successful()) {
-    ERROR(kAwsIntegrationTestDependencyProvider, kZeroUuid, kZeroUuid,
-          execution_result, "Failed to read Cloudwatch endpoint override.");
+    SCP_ERROR(kAwsIntegrationTestDependencyProvider, kZeroUuid,
+              execution_result, "Failed to read Cloudwatch endpoint override.");
     return execution_result;
   }
   return SuccessExecutionResult();
@@ -111,7 +113,9 @@ AwsIntegrationTestDependencyFactory::ConstructAuthorizationProxyClient(
 unique_ptr<core::BlobStorageProviderInterface>
 AwsIntegrationTestDependencyFactory::ConstructBlobStorageClient(
     shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::AsyncExecutorInterface> io_async_executor) noexcept {
+    shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+    core::AsyncPriority async_execution_priority,
+    core::AsyncPriority io_async_execution_priority) noexcept {
   return make_unique<TestAwsS3Provider>(async_executor, io_async_executor,
                                         config_provider_);
 }
@@ -119,26 +123,29 @@ AwsIntegrationTestDependencyFactory::ConstructBlobStorageClient(
 unique_ptr<core::NoSQLDatabaseProviderInterface>
 AwsIntegrationTestDependencyFactory::ConstructNoSQLDatabaseClient(
     shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::AsyncExecutorInterface> io_async_executor) noexcept {
+    shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+    core::AsyncPriority async_execution_priority,
+    core::AsyncPriority io_async_execution_priority) noexcept {
   return make_unique<TestAwsDynamoDB>(async_executor, io_async_executor,
                                       config_provider_);
 }
 
-unique_ptr<cpio::client_providers::MetricClientProviderInterface>
+unique_ptr<cpio::MetricClientInterface>
 AwsIntegrationTestDependencyFactory::ConstructMetricClient(
     shared_ptr<core::AsyncExecutorInterface> async_executor,
     shared_ptr<core::AsyncExecutorInterface> io_async_executor,
     shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
         instance_client_provider) noexcept {
   auto metric_client_options = make_shared<TestAwsMetricClientOptions>();
-  metric_client_options->metric_namespace = metrics_namespace_;
-  metric_client_options->enable_batch_recording = metrics_batch_push_enabled_;
   metric_client_options->cloud_watch_endpoint_override =
       make_shared<string>(cloudwatch_endpoint_override_);
+  auto metric_batching_options = make_shared<MetricBatchingOptions>();
+  metric_batching_options->metric_namespace = metrics_namespace_;
+  metric_batching_options->enable_batch_recording = metrics_batch_push_enabled_;
   // Creates TestAwsMetricClientProvider.
   return make_unique<TestAwsMetricClientProvider>(
       metric_client_options, instance_client_provider, async_executor,
-      io_async_executor);
+      io_async_executor, metric_batching_options);
 }
 
 unique_ptr<cpio::client_providers::InstanceClientProviderInterface>
@@ -154,7 +161,7 @@ AwsIntegrationTestDependencyFactory::ConstructInstanceMetadataClient(
   // Mock instance_id and private_ipv4_address for lease manager.
   options->instance_id = "1111";
   options->private_ipv4_address = "111.111.111.111";
-  return make_unique<TestAwsInstanceClientProviderNew>(options);
+  return make_unique<TestAwsInstanceClientProvider>(options);
 }
 
 }  // namespace google::scp::pbs

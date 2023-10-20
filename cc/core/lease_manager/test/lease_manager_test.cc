@@ -26,6 +26,7 @@
 #include "core/lease_manager/mock/mock_leasable_lock.h"
 #include "core/lease_manager/mock/mock_lease_manager_with_overrides.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using std::abort;
 using std::atomic;
@@ -54,12 +55,12 @@ TEST(LeaseManagerTest, InitStartRunStop) {
   auto leasable_lock = make_shared<MockLeasableLock>();
   leasable_lock->SetLeaseDurationInMilliseconds(500);
 
-  EXPECT_EQ(lease_manager.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Init());
   EXPECT_EQ(lease_manager.ManageLeaseOnLock(
                 leasable_lock, [](LeaseTransitionType lease_transition_type,
                                   optional<LeaseInfo> lease_owner) {}),
             SuccessExecutionResult());
-  EXPECT_EQ(lease_manager.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Run());
   // Run() on an already running lease manager should fail.
   EXPECT_NE(lease_manager.Run(), SuccessExecutionResult());
 
@@ -68,7 +69,7 @@ TEST(LeaseManagerTest, InitStartRunStop) {
                 leasable_lock, [](LeaseTransitionType, optional<LeaseInfo>) {}),
             SuccessExecutionResult());
 
-  EXPECT_EQ(lease_manager.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Stop());
   // Stop() on an already running lease manager should fail.
   EXPECT_NE(lease_manager.Stop(), SuccessExecutionResult());
 }
@@ -80,16 +81,16 @@ TEST(LeaseManagerTest, StartsAndStopsThreads) {
   auto leasable_lock = make_shared<MockLeasableLock>();
   leasable_lock->SetLeaseDurationInMilliseconds(500);
 
-  EXPECT_EQ(lease_manager.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Init());
   EXPECT_EQ(lease_manager.ManageLeaseOnLock(
                 leasable_lock, [](LeaseTransitionType lease_transition_type,
                                   optional<LeaseInfo> lease_owner) {}),
             SuccessExecutionResult());
-  EXPECT_EQ(lease_manager.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Run());
   EXPECT_TRUE(lease_manager.IsLeaseEnforcerThreadStarted());
   EXPECT_TRUE(lease_manager.IsLeaseObtainerThreadStarted());
 
-  EXPECT_EQ(lease_manager.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Stop());
   EXPECT_FALSE(lease_manager.IsLeaseEnforcerThreadStarted());
   EXPECT_FALSE(lease_manager.IsLeaseObtainerThreadStarted());
 }
@@ -112,7 +113,7 @@ TEST(LeaseManagerTest, AcquiresAndRenewsLease) {
   leasable_lock->SetLeaseDurationInMilliseconds(500);
   leasable_lock->SetLeaseOwnerInfo(lease_acquirer_info);
   leasable_lock->AllowLeaseAcquire();
-  EXPECT_EQ(lease_manager.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Init());
   EXPECT_EQ(
       lease_manager.ManageLeaseOnLock(
           leasable_lock,
@@ -131,11 +132,11 @@ TEST(LeaseManagerTest, AcquiresAndRenewsLease) {
           }),
       SuccessExecutionResult());
 
-  EXPECT_EQ(lease_manager.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Run());
   while (callback_counter <= 1) {
     sleep_for(milliseconds(10));
   }
-  EXPECT_EQ(lease_manager.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Stop());
   EXPECT_FALSE(process_terminated);
 }
 
@@ -157,7 +158,7 @@ TEST(LeaseManagerTest, LosesAndReacquiresLease) {
   leasable_lock->SetLeaseDurationInMilliseconds(500);
   leasable_lock->SetLeaseOwnerInfo(lease_acquirer_info);
   leasable_lock->AllowLeaseAcquire();
-  EXPECT_EQ(lease_manager.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Init());
   EXPECT_EQ(
       lease_manager.ManageLeaseOnLock(
           leasable_lock,
@@ -190,11 +191,11 @@ TEST(LeaseManagerTest, LosesAndReacquiresLease) {
           }),
       SuccessExecutionResult());
 
-  EXPECT_EQ(lease_manager.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Run());
   while (callback_counter <= 4) {
     sleep_for(milliseconds(10));
   }
-  EXPECT_EQ(lease_manager.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Stop());
   EXPECT_FALSE(process_terminated);
 }
 
@@ -213,7 +214,7 @@ TEST(LeaseManagerTest,
   auto leasable_lock = make_shared<MockLeasableLock>();
   leasable_lock->AllowLeaseAcquire();
   leasable_lock->SetLeaseDurationInMilliseconds(500);
-  EXPECT_EQ(lease_manager.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Init());
   EXPECT_EQ(
       lease_manager.ManageLeaseOnLock(
           leasable_lock,
@@ -223,11 +224,11 @@ TEST(LeaseManagerTest,
           }),
       SuccessExecutionResult());
 
-  EXPECT_EQ(lease_manager.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Run());
   while (!process_terminated) {
     sleep_for(milliseconds(10));
   }
-  EXPECT_EQ(lease_manager.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Stop());
   EXPECT_TRUE(process_terminated);
 }
 
@@ -249,17 +250,17 @@ TEST(LeaseManagerTest, ProcessTerminatesIfLeaseAcquireOnLockTakesLong) {
     sleep_for(
         milliseconds(lease_obtain_max_time_threshold_in_milliseconds * 2));
   });
-  EXPECT_EQ(lease_manager.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Init());
   EXPECT_EQ(lease_manager.ManageLeaseOnLock(
                 leasable_lock, [&](LeaseTransitionType lease_transition,
                                    optional<LeaseInfo> owner) {}),
             SuccessExecutionResult());
 
-  EXPECT_EQ(lease_manager.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Run());
   while (!process_terminated) {
     sleep_for(milliseconds(10));
   }
-  EXPECT_EQ(lease_manager.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Stop());
   EXPECT_TRUE(process_terminated);
 }
 

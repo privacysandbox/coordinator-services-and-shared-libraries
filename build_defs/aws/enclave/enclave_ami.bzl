@@ -29,22 +29,22 @@ def _generic_enclave_ami_pkr_script_impl(ctx):
         template = packer_template,
         output = packer_file,
         substitutions = {
-            "{ec2_instance}": ctx.attr.ec2_instance,
-            "{aws_region}": ctx.attr.aws_region_override[BuildSettingInfo].value if ctx.attr.aws_region_override != None and ctx.attr.aws_region_override[BuildSettingInfo].value != "None" else ctx.attr.aws_region,
-            "{container_path}": enclave_container_image.short_path,
-            "{container_filename}": enclave_container_image.basename,
-            "{proxy_rpm}": ctx.file.proxy_rpm.short_path,
-            "{enclave_watcher_rpm}": ctx.file.enclave_watcher_rpm.short_path,
-            "{enclave_allocator}": enclave_allocator.short_path,
-            "{ami_name}": ctx.attr.ami_name[BuildSettingInfo].value,
             "{ami_groups}": ctx.attr.ami_groups,
-            "{enable_enclave_debug_mode}": "true" if ctx.attr.enable_enclave_debug_mode else "false",
-            "{uninstall_ssh_server}": "true" if ctx.attr.uninstall_ssh_server else "false",
-            "{licenses}": ctx.file.licenses.short_path,
+            "{ami_name}": ctx.attr.ami_name[BuildSettingInfo].value,
+            "{aws_region}": ctx.attr.aws_region_override[BuildSettingInfo].value if ctx.attr.aws_region_override != None and ctx.attr.aws_region_override[BuildSettingInfo].value != "None" else ctx.attr.aws_region,
+            "{container_filename}": enclave_container_image.basename,
+            "{container_path}": enclave_container_image.short_path,
             "{docker_repo}": ctx.attr.enclave_container_image.label.package,
             # Use the input container tag if specified or remove the .tar extension from the container_image name
             "{docker_tag}": ctx.attr.enclave_container_tag if ctx.attr.enclave_container_tag else ctx.attr.enclave_container_image.label.name.replace(".tar", ""),
+            "{ec2_instance}": ctx.attr.ec2_instance,
+            "{enable_enclave_debug_mode}": "true" if ctx.attr.enable_enclave_debug_mode else "false",
+            "{enclave_allocator}": enclave_allocator.short_path,
+            "{enclave_watcher_rpm}": ctx.file.enclave_watcher_rpm.short_path,
+            "{licenses}": ctx.file.licenses.short_path,
+            "{proxy_rpm}": ctx.file.proxy_rpm.short_path,
             "{subnet_id}": ctx.attr.subnet_id,
+            "{uninstall_ssh_server}": "true" if ctx.attr.uninstall_ssh_server else "false",
         },
     )
 
@@ -63,28 +63,12 @@ def _generic_enclave_ami_pkr_script_impl(ctx):
 generic_enclave_ami_pkr_script = rule(
     implementation = _generic_enclave_ami_pkr_script_impl,
     attrs = {
-        "enclave_container_image": attr.label(
-            mandatory = True,
-            allow_single_file = True,
-        ),
-        # Optional. Input the container tag when it is different from the container image name.
-        "enclave_container_tag": attr.string(
-            default = "",
-        ),
-        "enclave_allocator": attr.label(
-            mandatory = True,
-            allow_single_file = True,
+        "ami_groups": attr.string(
+            default = "[]",
         ),
         "ami_name": attr.label(
             mandatory = True,
             providers = [BuildSettingInfo],
-        ),
-        "ami_groups": attr.string(
-            default = "[]",
-        ),
-        "ec2_instance": attr.string(
-            mandatory = True,
-            default = "m5.xlarge",
         ),
         "aws_region": attr.string(
             mandatory = True,
@@ -94,38 +78,54 @@ generic_enclave_ami_pkr_script = rule(
             mandatory = False,
             providers = [BuildSettingInfo],
         ),
-        "subnet_id": attr.string(
+        "ec2_instance": attr.string(
             mandatory = True,
-            default = "",
+            default = "m5.xlarge",
         ),
-        "proxy_rpm": attr.label(
-            default = Label("//cc/aws/proxy:vsockproxy_rpm"),
-            cfg = "host",
+        "enable_enclave_debug_mode": attr.bool(
+            default = False,
+        ),
+        "enclave_allocator": attr.label(
+            mandatory = True,
             allow_single_file = True,
+        ),
+        "enclave_container_image": attr.label(
+            mandatory = True,
+            allow_single_file = True,
+        ),
+        # Optional. Input the container tag when it is different from the container image name.
+        "enclave_container_tag": attr.string(
+            default = "",
         ),
         "enclave_watcher_rpm": attr.label(
             default = Label("//build_defs/aws/enclavewatcher:enclave_watcher_rpm"),
             allow_single_file = True,
         ),
+        "licenses": attr.label(
+            allow_single_file = True,
+            mandatory = True,
+        ),
         "packer_ami_config": attr.label(
             default = Label("//build_defs/aws/enclave:generic_enclave_ami.pkr.hcl"),
             allow_single_file = True,
         ),
-        "enable_enclave_debug_mode": attr.bool(
-            default = False,
-        ),
-        "uninstall_ssh_server": attr.bool(
-            default = False,
-        ),
         "packer_binary": attr.label(
             default = Label("@packer//:packer"),
             executable = True,
-            cfg = "host",
+            cfg = "exec",
             allow_single_file = True,
         ),
-        "licenses": attr.label(
+        "proxy_rpm": attr.label(
+            default = Label("//cc/aws/proxy:vsockproxy_rpm"),
+            cfg = "exec",
             allow_single_file = True,
+        ),
+        "subnet_id": attr.string(
             mandatory = True,
+            default = "",
+        ),
+        "uninstall_ssh_server": attr.bool(
+            default = False,
         ),
     },
 )

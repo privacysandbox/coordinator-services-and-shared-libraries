@@ -22,23 +22,9 @@
 
 #include "core/interface/lease_manager_interface.h"
 #include "core/interface/nosql_database_provider_interface.h"
+#include "pbs/interface/configuration_keys.h"
 
 namespace google::scp::pbs {
-static constexpr char kPBSPartitionLockTableRowKeyForGlobalPartition[] = "0";
-// NOTE: Any changes in the following column schema names must be reflected in
-// the terraform deployment script.
-// See coordinator/terraform/aws/services/distributedpbs_storage/main.tf
-static constexpr char kPBSPartitionLockTableLockIdKeyName[] = "LockId";
-static constexpr char kPBSPartitionLockTableLeaseOwnerIdAttributeName[] =
-    "LeaseOwnerId";
-static constexpr char
-    kPBSPartitionLockTableLeaseExpirationTimestampAttributeName[] =
-        "LeaseExpirationTimestamp";
-static constexpr char
-    kPBSLockTableLeaseOwnerServiceEndpointAddressAttributeName[] =
-        "LeaseOwnerServiceEndpointAddress";
-static constexpr char kPBSLockTableLeaseAcquisitionDisallowedAttributeName[] =
-    "LeaseAcquisitionDisallowed";
 
 constexpr std::chrono::milliseconds kDefaultLeaseDurationInMilliseconds =
     std::chrono::seconds(10);
@@ -78,7 +64,8 @@ class LeasableLockOnNoSQLDatabase : public core::LeasableLockInterface {
    *
    * @return core::ExecutionResult
    */
-  core::ExecutionResult RefreshLease() noexcept override;
+  core::ExecutionResult RefreshLease(
+      bool is_read_only_lease_refresh) noexcept override;
 
   /**
    * @brief Determines if lease refresh needs to be done based on cached lease
@@ -125,19 +112,39 @@ class LeasableLockOnNoSQLDatabase : public core::LeasableLockInterface {
           lease_expiraton_timestamp_in_milliseconds(0),
           lease_acquisition_disallowed(false) {}
 
-    LeaseInfoInternal& operator=(const LeaseInfoInternal&) = default;
-
     bool IsExpired() const;
-    void ExtendLeaseDurationInMillisecondsFromCurrentTimestamp(
+
+    /// @brief Set the expiration timestamp to be now() + lease_duration
+    /// @param lease_duration
+    void SetExpirationTimestampFromNow(
         std::chrono::milliseconds lease_duration);
+
     bool IsLeaseOwner(std::string lease_acquirer_id) const;
+
+    /// @brief Should renew? is calculated as percent time left in the
+    /// current lease according to
+    /// 'lease_renewal_threshold_percent_time_left_in_lease'
+    /// @param lease_duration_in_milliseconds
+    /// @param lease_renewal_threshold_percent_time_left_in_lease
+    /// @return
     bool IsLeaseRenewalRequired(
         std::chrono::milliseconds lease_duration_in_milliseconds,
         uint64_t lease_renewal_threshold_percent_time_left_in_lease) const;
-    std::chrono::milliseconds GetCurrentTimestampInMilliseconds() const;
 
+    std::chrono::milliseconds GetCurrentTimeInMilliseconds() const;
+
+    /// @brief Is < half of the lease time remaining in the current lease.
+    /// @param lease_duration_in_milliseconds
+    /// @return
+    bool IsHalfLeaseDurationPassed(
+        std::chrono::milliseconds lease_duration_in_milliseconds) const;
+
+    /// @brief Lease owner information.
     core::LeaseInfo lease_owner_info;
+    /// @brief The expiration timestamp in milliseconds
     std::chrono::milliseconds lease_expiraton_timestamp_in_milliseconds;
+    /// @brief Indicates if the lease acquisition needs to be disallowed.
+    /// NOTE: This gets populated from the Database row into memory.
     bool lease_acquisition_disallowed;
   };
 
@@ -198,5 +205,11 @@ class LeasableLockOnNoSQLDatabase : public core::LeasableLockInterface {
    * should be allowed to renew.
    */
   const uint64_t lease_renewal_threshold_percent_time_left_in_lease_;
+
+  /**
+   * @brief Activity ID of the object
+   *
+   */
+  const core::common::Uuid activity_id_;
 };
 };  // namespace google::scp::pbs

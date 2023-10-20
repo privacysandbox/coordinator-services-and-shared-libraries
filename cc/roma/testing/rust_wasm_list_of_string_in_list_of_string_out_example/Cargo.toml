@@ -1,7 +1,0 @@
-[package]
-name = "list_of_string_in_list_of_string_out"
-version = "0.0.0"
-
-[lib]
-crate-type = ["cdylib"]
-path = "./list_of_string_in_list_of_string_out.rs"

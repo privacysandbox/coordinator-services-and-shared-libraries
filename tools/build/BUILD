@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_python//python:defs.bzl", "py_runtime_pair")
+load("@rules_python//python:defs.bzl", "py_runtime", "py_runtime_pair")
 
 py_runtime(
     name = "py_wrapper_runtime",

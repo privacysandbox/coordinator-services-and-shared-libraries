@@ -34,5 +34,12 @@ public enum HttpMethod {
   DELETE,
 
   /** Used for updating a resource. */
-  PATCH
+  PATCH;
+
+  /** Return whether the http method is valid. */
+  public static boolean isValid(String method) {
+    HttpMethod[] httpMethods = HttpMethod.values();
+    for (HttpMethod httpMethod : httpMethods) if (httpMethod.name().equals(method)) return true;
+    return false;
+  }
 }

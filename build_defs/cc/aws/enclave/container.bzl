@@ -13,10 +13,10 @@
 # limitations under the License.
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
-load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
 load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
 load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
 
 # Note: use reproducible versions of these binaries.
 _PROXY_BINARY_FILES = [
@@ -88,10 +88,10 @@ def cc_enclave_image(
     enclave_cmd = ["/scp_process_launcher"]  # This is to keep retry and get log messages more friendly
 
     proxify_cmd = {
-        "file_name": "/proxify",
         "args": [
             "/" + binary_filename,
         ] + binary_args,
+        "file_name": "/proxify",
     }
 
     enclave_cmd.append(executable_struct_to_json_str(proxify_cmd))

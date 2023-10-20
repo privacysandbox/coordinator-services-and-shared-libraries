@@ -16,7 +16,6 @@
 
 package com.google.scp.operator.frontend.service.aws.testing;
 
-import com.google.acai.AfterTest;
 import com.google.acai.BeforeTest;
 import com.google.acai.TestingService;
 import com.google.acai.TestingServiceModule;
@@ -70,12 +69,13 @@ public final class DynamoMetadataDbIntegrationTestModule extends AbstractModule 
 
     @BeforeTest
     void createTable() {
+      try {
+        // Attempt to delete the table in @BeforeTest (ignoring exceptions when it doesn't exist)
+        // because @AfterTest isn't guaranteed to run, which can lead to leaked state
+        ddbClient.deleteTable(DeleteTableRequest.builder().tableName(metadataDbTableName).build());
+      } catch (Exception e) {
+      }
       AwsIntegrationTestUtil.createMetadataDbTable(ddbClient, metadataDbTableName);
-    }
-
-    @AfterTest
-    void deleteTable() {
-      ddbClient.deleteTable(DeleteTableRequest.builder().tableName(metadataDbTableName).build());
     }
   }
 }

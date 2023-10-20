@@ -40,7 +40,10 @@ import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 /**
  * Module for providing the values needed by the Key Generation Lambda function, retrieving
  * configuration values from environment variables.
+ *
+ * @deprecated Single-party key features are deprecated. Pending removal b/282204533.
  */
+@Deprecated
 public final class AwsKeyGenerationModule extends AbstractModule {
 
   /** Environment variable containing table name of KeyDb */

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_test")
+
 package(default_visibility = ["//visibility:public"])
 
 java_test(
@@ -22,11 +24,13 @@ java_test(
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/com/google/scp/operator/cpio/lifecycleclient:local",
         "//java/com/google/scp/operator/cpio/metricclient",
+        "//java/com/google/scp/operator/cpio/notificationclient",
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",
         "//java/com/google/scp/operator/shared/dao/jobqueue/testing",
         "//java/com/google/scp/operator/shared/dao/metadatadb/common",
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
         "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/shared/clients/configclient:aws",
         "//java/com/google/scp/shared/proto",
         "//java/external:acai",
         "//java/external:google_truth",

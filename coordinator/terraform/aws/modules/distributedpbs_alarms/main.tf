@@ -1,18 +1,16 @@
-/**
- * Copyright 2023 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 terraform {
   required_version = "~> 1.2.3"
@@ -137,6 +135,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_log_corrupted_alarm" {
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -158,6 +157,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_missing_transaction_alarm" {
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -179,6 +179,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_checkpointing_alarm" {
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -200,6 +201,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_database_read_alarm" {
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -221,6 +223,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_database_update_alarm" {
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -242,6 +245,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_missing_component_id_alarm" 
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -263,6 +267,7 @@ resource "aws_cloudwatch_metric_alarm" "error_level_handle_journal_alarm" {
   treat_missing_data = "notBreaching"
 
   alarm_actions = [var.sns_topic_arn]
+  ok_actions    = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -279,6 +284,7 @@ resource "aws_cloudwatch_metric_alarm" "elb_4xx_error_ratio_high" {
   alarm_description         = "4XXError rate ratio has exceeded ${var.error_ratio_4xx_threshold}%"
   insufficient_data_actions = []
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -332,6 +338,7 @@ resource "aws_cloudwatch_metric_alarm" "elb_5xx_error_ratio_high" {
   alarm_description         = "5XXError rate ratio has exceeded ${var.error_ratio_5xx_threshold}%"
   insufficient_data_actions = []
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -388,6 +395,7 @@ resource "aws_cloudwatch_metric_alarm" "budget_key_table_read_capacity_alarm" {
   insufficient_data_actions = []
   treat_missing_data        = "notBreaching"
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   metric_query {
     id          = "e1"
@@ -429,6 +437,7 @@ resource "aws_cloudwatch_metric_alarm" "budget_key_table_write_capacity_alarm" {
   insufficient_data_actions = []
   treat_missing_data        = "notBreaching"
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   metric_query {
     id          = "e1"
@@ -469,6 +478,7 @@ resource "aws_cloudwatch_metric_alarm" "partition_lock_table_read_capacity_alarm
   insufficient_data_actions = []
   treat_missing_data        = "notBreaching"
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   metric_query {
     id          = "e1"
@@ -509,6 +519,7 @@ resource "aws_cloudwatch_metric_alarm" "partition_lock_table_write_capacity_alar
   insufficient_data_actions = []
   treat_missing_data        = "notBreaching"
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   metric_query {
     id          = "e1"
@@ -549,6 +560,7 @@ resource "aws_cloudwatch_metric_alarm" "reporting_origin_table_read_capacity_ala
   insufficient_data_actions = []
   treat_missing_data        = "notBreaching"
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   metric_query {
     id          = "e1"
@@ -589,6 +601,7 @@ resource "aws_cloudwatch_metric_alarm" "reporting_origin_table_write_capacity_al
   insufficient_data_actions = []
   treat_missing_data        = "notBreaching"
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   metric_query {
     id          = "e1"

@@ -26,13 +26,10 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/transaction_manager_interface.h"
 #include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/transactions/src/consume_budget_command_common.h"
+#include "pbs/transactions/src/consume_budget_command_base.h"
+#include "pbs/transactions/src/consume_budget_command_request_info.h"
 #include "public/core/interface/execution_result.h"
 
-// TODO: Make the retry strategy configurable.
-static constexpr google::scp::core::TimeDuration
-    kConsumeBudgetCommandRetryStrategyDelayMs = 31;
-static constexpr size_t kConsumeBudgetCommandRetryStrategyTotalRetries = 12;
 static constexpr google::scp::core::common::Uuid kConsumeBudgetCommandId{
     1000ULL, 1000ULL};
 
@@ -40,53 +37,38 @@ namespace google::scp::pbs {
 /**
  * @brief Implements consume budget command that uses two phase commit protocol.
  */
-class ConsumeBudgetCommand : public core::TransactionCommand {
+class ConsumeBudgetCommand : public ConsumeBudgetCommandBase {
  public:
+  /**
+   * @brief Construct a new Consume Budget Command object with execution
+   * dependencies
+   *
+   * @param transaction_id
+   * @param budget_key_name
+   * @param budget_consumption
+   * @param async_executor
+   * @param budget_key_provider
+   */
   ConsumeBudgetCommand(
-      core::common::Uuid transaction_id,
-      std::shared_ptr<BudgetKeyName>& budget_key_name,
-      ConsumeBudgetCommandRequestInfo&& budget_consumption,
-      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider)
-      : transaction_id_(transaction_id),
-        budget_key_name_(budget_key_name),
-        budget_consumption_(std::move(budget_consumption)),
-        async_executor_(async_executor),
-        budget_key_provider_(budget_key_provider),
-        operation_dispatcher_(
-            async_executor,
-            core::common::RetryStrategy(
-                core::common::RetryStrategyType::Exponential,
-                kConsumeBudgetCommandRetryStrategyDelayMs,
-                kConsumeBudgetCommandRetryStrategyTotalRetries)),
-        failed_with_insufficient_budget_consumption_(false) {
-    begin = [](core::TransactionCommandCallback& callback) mutable {
-      auto success_result = core::SuccessExecutionResult();
-      callback(success_result);
-      return core::SuccessExecutionResult();
-    };
-    prepare =
-        std::bind(&ConsumeBudgetCommand::Prepare, this, std::placeholders::_1);
-    commit =
-        std::bind(&ConsumeBudgetCommand::Commit, this, std::placeholders::_1);
-    notify =
-        std::bind(&ConsumeBudgetCommand::Notify, this, std::placeholders::_1);
-    abort =
-        std::bind(&ConsumeBudgetCommand::Abort, this, std::placeholders::_1);
-    end = begin;
-    command_id = kConsumeBudgetCommandId;
-  }
+      const core::common::Uuid& transaction_id,
+      const std::shared_ptr<BudgetKeyName>& budget_key_name,
+      const ConsumeBudgetCommandRequestInfo& budget_consumption,
+      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider);
 
+  /**
+   * @brief Construct a new Consume Budget Command object with deferred setting
+   * of execution dependencies. The dependencies will be set by the component
+   * handling the execution of the command.
+   *
+   * @param transaction_id
+   * @param budget_key_name
+   * @param budget_consumption
+   */
   ConsumeBudgetCommand(
-      core::common::Uuid transaction_id,
-      std::shared_ptr<BudgetKeyName>& budget_key_name, TimeBucket time_bucket,
-      TokenCount total_budgets_to_consume,
-      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider)
-      : ConsumeBudgetCommand(transaction_id, budget_key_name,
-                             ConsumeBudgetCommandRequestInfo(
-                                 time_bucket, total_budgets_to_consume),
-                             async_executor, budget_key_provider) {}
+      const core::common::Uuid& transaction_id,
+      const std::shared_ptr<BudgetKeyName>& budget_key_name,
+      const ConsumeBudgetCommandRequestInfo& budget_consumption);
 
   /// Returns the budget key name associated with the command.
   const std::shared_ptr<BudgetKeyName> GetBudgetKeyName() const {
@@ -116,13 +98,18 @@ class ConsumeBudgetCommand : public core::TransactionCommand {
     return std::nullopt;
   }
 
-  /// Returns the current version of the command
-  core::Version GetVersion() const { return {.major = 1, .minor = 0}; }
-
-  /// Returns the transaction of the command
-  const core::common::Uuid GetTransactionId() const { return transaction_id_; }
+  /// Set the dependencies provided.
+  void SetUpCommandExecutionDependencies(
+      const std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          async_executor) noexcept override;
 
  protected:
+  /**
+   * @brief Set up handlers for phases such as BEGIN, PREPARE, COMMIT, etc.
+   */
+  void SetUpCommandPhaseHandlers();
+
   /**
    * @brief Executes the prepare phase of a two-phase commit operation for
    * consuming budgets.
@@ -262,23 +249,11 @@ class ConsumeBudgetCommand : public core::TransactionCommand {
           abort_consume_budget_context,
       core::TransactionCommandCallback& transaction_command_callback) noexcept;
 
-  /// The transaction id associated with the command.
-  core::common::Uuid transaction_id_;
-
   /// The budget key name for the current command.
-  std::shared_ptr<BudgetKeyName> budget_key_name_;
+  const std::shared_ptr<BudgetKeyName> budget_key_name_;
 
   /// Budget consumption info
-  ConsumeBudgetCommandRequestInfo budget_consumption_;
-
-  /// An instance of the async executor.
-  std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
-
-  /// An instance of the budget key provider.
-  std::shared_ptr<BudgetKeyProviderInterface> budget_key_provider_;
-
-  /// Operation distpatcher
-  core::common::OperationDispatcher operation_dispatcher_;
+  const ConsumeBudgetCommandRequestInfo budget_consumption_;
 
   /// If the command failed to execute any of its phases due to insufficient
   /// budget consumption

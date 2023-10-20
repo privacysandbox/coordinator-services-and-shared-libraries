@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
 cc_test(
     name = "journal_service_tests",
     size = "small",
-    srcs = glob(
-        [
-            "**/*.cc",
-        ],
-    ),
+    srcs = [
+        "journal_input_stream_test.cc",
+        "journal_output_stream_test.cc",
+        "journal_service_serialization_test.cc",
+        "journal_service_test.cc",
+        "journal_utils_test.cc",
+    ],
     copts = [
         "-std=c++17",
     ],
@@ -27,6 +31,7 @@ cc_test(
         "-latomic",
     ],
     deps = [
+        ":test_util",
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
@@ -36,8 +41,44 @@ cc_test(
         "//cc/core/journal_service/mock:core_journal_service_mock",
         "//cc/core/journal_service/src:core_journal_service_lib",
         "//cc/core/test/utils:utils_lib",
-        "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "test_util",
+    testonly = True,
+    srcs = ["test_util.cc"],
+    hdrs = ["test_util.h"],
+    deps = [
+        "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
+        "//cc/core/journal_service/src:core_journal_service_lib",
+        "//cc/core/journal_service/src/proto:core_journal_service_proto_lib",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "journal_input_stream_benchmark_test",
+    size = "large",
+    srcs = ["journal_input_stream_benchmark_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
+    linkopts = [
+        "-latomic",
+    ],
+    tags = ["manual"],
+    deps = [
+        ":test_util",
+        "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
+        "//cc/core/config_provider/src:config_provider_lib",
+        "//cc/core/journal_service/src:core_journal_service_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@google_benchmark//:benchmark",
     ],
 )

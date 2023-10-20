@@ -31,12 +31,14 @@ DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_INVALID_EXPIRATION,
                   SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0002,
                   "The expiration value is invalid.", HttpStatusCode::CONFLICT)
 
-DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_NOT_AVAILABLE,
-                  SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0003,
-                  "The entry is not available.", HttpStatusCode::CONFLICT)
-
 DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED,
                   SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0004,
                   "The entry is being deleted.", HttpStatusCode::CONFLICT)
+
+DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_STOP_INCOMPLETE,
+                  SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0005,
+                  "There is pending work to be completed, cannot stop the "
+                  "AutoExpiryConcurrentMap properly.",
+                  HttpStatusCode::CONFLICT)
 
 }  // namespace google::scp::core::errors

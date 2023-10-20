@@ -38,7 +38,8 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
 
   struct SortKey {
     std::mutex sort_key_lock;
-    std::vector<std::shared_ptr<Record>> sorted_records;
+    // We do not support multiple records for a given partition and sort key.
+    std::shared_ptr<Record> record;
   };
 
   struct Partition {
@@ -60,6 +61,14 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
     core::common::ConcurrentMap<std::string, std::shared_ptr<Table>> tables;
   };
 
+  explicit MockNoSQLDatabaseProvider(
+      const std::shared_ptr<InMemoryDatabase>& in_memory_database)
+      : in_memory_db(in_memory_database) {}
+
+  MockNoSQLDatabaseProvider()
+      : MockNoSQLDatabaseProvider(
+            std::move(std::make_unique<InMemoryDatabase>())) {}
+
   ExecutionResult Init() noexcept override { return SuccessExecutionResult(); };
 
   ExecutionResult Run() noexcept override { return SuccessExecutionResult(); };
@@ -71,19 +80,26 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
           get_database_item_context) noexcept override {
     if (!get_database_item_context.request ||
         !get_database_item_context.request->table_name ||
-        !get_database_item_context.request->sort_key ||
-        !get_database_item_context.request->partition_key ||
-        !get_database_item_context.request->attributes ||
-        get_database_item_context.request->attributes->size() == 0) {
+        !get_database_item_context.request->partition_key) {
       get_database_item_context.result =
           FailureExecutionResult(errors::SC_NO_SQL_DATABASE_INVALID_REQUEST);
       get_database_item_context.Finish();
       return SuccessExecutionResult();
     }
 
+    // Sort key is optional, use an empty string "" if not present.
+    if (!get_database_item_context.request->sort_key) {
+      get_database_item_context.request->sort_key =
+          std::make_shared<NoSqlDatabaseKeyValuePair>();
+      get_database_item_context.request->sort_key->attribute_name =
+          std::make_shared<NoSQLDatabaseAttributeName>("");
+      get_database_item_context.request->sort_key->attribute_value =
+          std::make_shared<NoSQLDatabaseValidAttributeValueTypes>("");
+    }
+
     // Find the table
     auto table = std::make_shared<Table>();
-    auto execution_result = in_memory_map.tables.Find(
+    auto execution_result = in_memory_db->tables.Find(
         *get_database_item_context.request->table_name, table);
     if (!execution_result.Successful()) {
       get_database_item_context.result = FailureExecutionResult(
@@ -137,8 +153,7 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
 
     sort_key->sort_key_lock.lock();
     auto record = std::make_shared<Record>();
-    execution_result = SearchSortkey(
-        sort_key, get_database_item_context.request->attributes, record);
+    execution_result = GetRecord(sort_key, record);
     if (!execution_result.Successful()) {
       get_database_item_context.result = execution_result;
       get_database_item_context.Finish();
@@ -186,7 +201,6 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
     if (!upsert_database_item_context.request ||
         !upsert_database_item_context.request->table_name ||
         !upsert_database_item_context.request->partition_key ||
-        !upsert_database_item_context.request->attributes ||
         !upsert_database_item_context.request->new_attributes ||
         upsert_database_item_context.request->new_attributes->size() == 0) {
       upsert_database_item_context.result =
@@ -195,9 +209,19 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
       return SuccessExecutionResult();
     }
 
+    // Sort key is optional, use an empty string "" if not present.
+    if (!upsert_database_item_context.request->sort_key) {
+      upsert_database_item_context.request->sort_key =
+          std::make_shared<NoSqlDatabaseKeyValuePair>();
+      upsert_database_item_context.request->sort_key->attribute_name =
+          std::make_shared<NoSQLDatabaseAttributeName>("");
+      upsert_database_item_context.request->sort_key->attribute_value =
+          std::make_shared<NoSQLDatabaseValidAttributeValueTypes>("");
+    }
+
     // Find the table
     auto table = std::make_shared<Table>();
-    auto execution_result = in_memory_map.tables.Find(
+    auto execution_result = in_memory_db->tables.Find(
         *upsert_database_item_context.request->table_name, table);
     if (!execution_result.Successful()) {
       upsert_database_item_context.result = FailureExecutionResult(
@@ -248,16 +272,34 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
     // Upsert key.
     sort_key->sort_key_lock.lock();
     auto record = std::make_shared<Record>();
-    execution_result = SearchSortkey(
-        sort_key, upsert_database_item_context.request->attributes, record);
+    execution_result = GetRecord(sort_key, record);
 
     if (execution_result.Successful()) {
+      // Check pre-condition while holding the lock
+      for (const auto& old_attribute :
+           *upsert_database_item_context.request->attributes) {
+        NoSQLDatabaseValidAttributeValueTypes attribute_value;
+        execution_result = record->attributes.Find(
+            *old_attribute.attribute_name, attribute_value);
+        if (!execution_result.Successful()) {
+          // if attribute is not found, continue looking for other attributes.
+          continue;
+        }
+        // If attribute is found, then the value must be equal.
+        if (attribute_value != *old_attribute.attribute_value) {
+          upsert_database_item_context.result = FailureExecutionResult(
+              errors::SC_NO_SQL_DATABASE_UNRETRIABLE_ERROR);
+          upsert_database_item_context.Finish();
+          return SuccessExecutionResult();
+        }
+      }
+
       for (auto new_attribute :
            *upsert_database_item_context.request->new_attributes) {
         record->attributes.Erase(*new_attribute.attribute_name);
       }
     } else {
-      sort_key->sorted_records.push_back(record);
+      sort_key->record = record;
     }
 
     for (auto attribute :
@@ -304,32 +346,83 @@ class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {
     return SuccessExecutionResult();
   }
 
-  ExecutionResult SearchSortkey(
-      std::shared_ptr<SortKey>& sort_key,
-      std::shared_ptr<std::vector<NoSqlDatabaseKeyValuePair>>& attributes,
-      std::shared_ptr<Record>& out_record) {
-    for (std::shared_ptr<Record> record : sort_key->sorted_records) {
-      bool no_match = false;
-      for (auto attribute : *attributes) {
-        NoSQLDatabaseValidAttributeValueTypes attribute_value;
-        if (record->attributes.Find(*attribute.attribute_name,
-                                    attribute_value) !=
-            SuccessExecutionResult()) {
-          no_match = true;
-          break;
-        }
-      }
-
-      if (!no_match) {
-        out_record = record;
-        return SuccessExecutionResult();
-      }
+  ExecutionResult GetRecord(std::shared_ptr<SortKey>& sort_key,
+                            std::shared_ptr<Record>& out_record) {
+    if (sort_key->record) {
+      out_record = sort_key->record;
+      return SuccessExecutionResult();
     }
     return FailureExecutionResult(
         errors::SC_NO_SQL_DATABASE_PROVIDER_RECORD_NOT_FOUND);
   }
 
-  InMemoryDatabase in_memory_map;
+  void InitializeTable(std::string table_name, std::string partition_key_name,
+                       std::string sort_key_name = "") {
+    auto table = std::make_shared<MockNoSQLDatabaseProvider::Table>();
+    if (!in_memory_db->tables.Insert(std::make_pair(table_name, table), table)
+             .Successful()) {
+      // Insert failure means already initialized.
+      return;
+    }
+    table->partition_key_name =
+        std::make_shared<core::NoSQLDatabaseAttributeName>(partition_key_name);
+    table->sort_key_name =
+        std::make_shared<core::NoSQLDatabaseAttributeName>(sort_key_name);
+  }
+
+  void InitializeTableWithDefaultRow(std::string table_name,
+                                     std::string partition_key_name,
+                                     std::string partition_key_value,
+                                     std::string sort_key_name = "",
+                                     std::string sort_key_value = "") {
+    auto table = std::make_shared<MockNoSQLDatabaseProvider::Table>();
+    if (!in_memory_db->tables.Insert(std::make_pair(table_name, table), table)
+             .Successful()) {
+      // Insert failure means already initialized.
+      return;
+    }
+    table->partition_key_name =
+        std::make_shared<core::NoSQLDatabaseAttributeName>(partition_key_name);
+    table->sort_key_name =
+        std::make_shared<core::NoSQLDatabaseAttributeName>(sort_key_name);
+    // Insert
+    auto partition = std::make_shared<MockNoSQLDatabaseProvider::Partition>();
+    table->partition_key_value.Insert(make_pair(partition_key_value, partition),
+                                      partition);
+    auto sort_key = std::make_shared<MockNoSQLDatabaseProvider::SortKey>();
+    partition->sort_key_value.Insert(make_pair(sort_key_value, sort_key),
+                                     sort_key);
+    sort_key->record = std::make_shared<Record>();
+  }
+
+  void InitializeTableWithDefaultRows(
+      std::string table_name, std::string partition_key_name,
+      std::vector<std::string> partition_key_values,
+      std::string sort_key_name = "", std::string sort_key_value = "") {
+    auto table = std::make_shared<MockNoSQLDatabaseProvider::Table>();
+    if (!in_memory_db->tables.Insert(std::make_pair(table_name, table), table)
+             .Successful()) {
+      // Insert failure means already initialized.
+      return;
+    }
+    table->partition_key_name =
+        std::make_shared<core::NoSQLDatabaseAttributeName>(partition_key_name);
+    table->sort_key_name =
+        std::make_shared<core::NoSQLDatabaseAttributeName>(sort_key_name);
+    // Insert
+    for (auto& partition_key_value : partition_key_values) {
+      auto partition = std::make_shared<MockNoSQLDatabaseProvider::Partition>();
+      table->partition_key_value.Insert(
+          make_pair(partition_key_value, partition), partition);
+      auto sort_key = std::make_shared<MockNoSQLDatabaseProvider::SortKey>();
+      partition->sort_key_value.Insert(make_pair(sort_key_value, sort_key),
+                                       sort_key);
+      sort_key->record = std::make_shared<Record>();
+    }
+  }
+
+  std::shared_ptr<InMemoryDatabase> in_memory_db;
+
   std::function<ExecutionResult(
       AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&)>
       upsert_database_item_mock;

@@ -34,7 +34,7 @@ cc_test(
         "//cc/pbs/authorization_token_fetcher/src/aws:pbs_aws_authorization_token_fetcher",
         "//cc/pbs/authorization_token_fetcher/src/gcp:pbs_gcp_authorization_token_fetcher",
         "//cc/pbs/interface:pbs_interface_lib",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

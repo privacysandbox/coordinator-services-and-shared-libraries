@@ -39,6 +39,7 @@ public final class JobGenerator {
   private static final String DATA_HANDLE = "dataHandle";
   private static final String DATA_HANDLE_BUCKET = "bucket";
   private static final String POSTBACK_URL = "http://postback.com";
+  private static final String ACCOUNT_IDENTITY = "service-account@testing.com";
   private static final ImmutableList<String> PRIVACY_BUDGET_KEYS =
       ImmutableList.of("privacyBudgetKey1", "privacyBudgetKey2");
   private static final String ATTRIBUTION_REPORT_TO = "foo.com";
@@ -269,6 +270,12 @@ public final class JobGenerator {
                     JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
                     DEBUG_PRIVACY_BUDGET_LIMIT.toString()))
             .build();
+    return requestInfo;
+  }
+
+  public static RequestInfo createFakeRequestInfoWithAccountIdentity(String requestId) {
+    RequestInfo requestInfo =
+        createFakeRequestInfo(requestId).toBuilder().setAccountIdentity(ACCOUNT_IDENTITY).build();
     return requestInfo;
   }
 

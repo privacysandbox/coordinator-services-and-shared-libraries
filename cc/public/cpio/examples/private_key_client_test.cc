@@ -17,8 +17,6 @@
 #include <memory>
 #include <string>
 
-#include <aws/core/Aws.h>
-
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -28,18 +26,14 @@
 #include "public/cpio/interface/private_key_client/type_def.h"
 #include "public/cpio/interface/type_def.h"
 
-using Aws::InitAPI;
-using Aws::SDKOptions;
-using Aws::ShutdownAPI;
-using google::scp::core::AsyncContext;
+using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest;
+using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse;
 using google::scp::core::ExecutionResult;
 using google::scp::core::GetErrorMessage;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::Cpio;
 using google::scp::cpio::CpioOptions;
-using google::scp::cpio::ListPrivateKeysByIdsRequest;
-using google::scp::cpio::ListPrivateKeysByIdsResponse;
 using google::scp::cpio::LogOption;
 using google::scp::cpio::PrivateKeyClientFactory;
 using google::scp::cpio::PrivateKeyClientInterface;
@@ -65,8 +59,6 @@ constexpr char kServiceRegion[] = "us-east-1";
 constexpr char kKeyId1[] = "key-id";
 
 int main(int argc, char* argv[]) {
-  SDKOptions options;
-  InitAPI(options);
   CpioOptions cpio_options;
   cpio_options.log_option = LogOption::kConsoleLog;
   auto result = Cpio::InitCpio(cpio_options);
@@ -108,22 +100,22 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Run private key client successfully!" << std::endl;
 
-  ListPrivateKeysByIdsRequest request;
-  request.key_ids.emplace_back(kKeyId1);
+  ListPrivateKeysRequest request;
+  request.add_key_ids(kKeyId1);
   atomic<bool> finished = false;
-  result = private_key_client->ListPrivateKeysByIds(
+  result = private_key_client->ListPrivateKeys(
       move(request),
-      [&](const ExecutionResult result, ListPrivateKeysByIdsResponse response) {
+      [&](const ExecutionResult result, ListPrivateKeysResponse response) {
         if (!result.Successful()) {
-          std::cout << "ListPrivateKeysByIds failed: "
+          std::cout << "ListPrivateKeys failed: "
                     << GetErrorMessage(result.status_code) << std::endl;
         } else {
-          std::cout << "ListPrivateKeysByIds succeeded." << std::endl;
+          std::cout << "ListPrivateKeys succeeded." << std::endl;
         }
         finished = true;
       });
   if (!result.Successful()) {
-    std::cout << "ListPrivateKeysByIds failed immediately: "
+    std::cout << "ListPrivateKeys failed immediately: "
               << GetErrorMessage(result.status_code) << std::endl;
   }
   WaitUntil([&finished]() { return finished.load(); },
@@ -140,5 +132,4 @@ int main(int argc, char* argv[]) {
     std::cout << "Failed to shutdown CPIO: "
               << GetErrorMessage(result.status_code) << std::endl;
   }
-  ShutdownAPI(options);
 }

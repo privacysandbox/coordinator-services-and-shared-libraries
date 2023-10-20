@@ -40,6 +40,7 @@ class LogProviderInterface : public ServiceInterface {
    * @param level The severity level of the message.
    * @param parent_activity_id The activity id associated with the message.
    * @param activity_id The activity id associated with the message.
+   * @param correlation_id The correlation id associated with the message.
    * @param component_name The name of the component logging the message.
    * @param machine_name The name of the machine logging the message.
    * @param cluster_name The name of the machine cluster logging the
@@ -52,6 +53,7 @@ class LogProviderInterface : public ServiceInterface {
   virtual void Log(const LogLevel& level,
                    const common::Uuid& parent_activity_id,
                    const common::Uuid& activity_id,
+                   const common::Uuid& correlation_id,
                    const std::string_view& component_name,
                    const std::string_view& machine_name,
                    const std::string_view& cluster_name,

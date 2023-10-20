@@ -18,6 +18,8 @@ load(
     "cc_proto_library",
     "java_grpc_library",
 )
+load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -43,4 +45,18 @@ cc_grpc_library(
     generate_mocks = True,
     grpc_only = True,
     deps = [":instance_service_cc_proto"],
+)
+
+##############################################################################
+# Java
+##############################################################################
+java_proto_library(
+    name = "instance_service_java_proto",
+    deps = [":instance_service_proto"],
+)
+
+java_grpc_library(
+    name = "instance_service_java_grpc",
+    srcs = [":instance_service_proto"],
+    deps = [":instance_service_java_proto"],
 )

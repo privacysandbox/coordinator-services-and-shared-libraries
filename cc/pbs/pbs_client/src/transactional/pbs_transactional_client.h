@@ -30,6 +30,7 @@
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/interface/pbs_client_interface.h"
 #include "pbs/interface/pbs_transactional_client_interface.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
 /*! @copydoc PrivacyBudgetServiceTransactionalClientInterface
@@ -85,6 +86,16 @@ class PrivacyBudgetServiceTransactionalClient
                          ConsumeBudgetTransactionResponse>&
           consume_budget_transaction_context) noexcept override;
 
+  core::ExecutionResult GetTransactionStatusOnPBS1(
+      core::AsyncContext<core::GetTransactionStatusRequest,
+                         core::GetTransactionStatusResponse>
+          get_transaction_status_context) noexcept override;
+
+  core::ExecutionResult GetTransactionStatusOnPBS2(
+      core::AsyncContext<core::GetTransactionStatusRequest,
+                         core::GetTransactionStatusResponse>
+          get_transaction_status_context) noexcept override;
+
  protected:
   PrivacyBudgetServiceTransactionalClient(
       const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
@@ -118,8 +129,7 @@ class PrivacyBudgetServiceTransactionalClient
   std::shared_ptr<core::RemoteTransactionManagerInterface>
       remote_transaction_manager_;
   /// An instance of the metric client.
-  std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-      metric_client_;
+  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
   /// Config provider
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
   /// An instance of the transaction manager.

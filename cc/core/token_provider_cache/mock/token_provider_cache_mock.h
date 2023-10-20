@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 #pragma once
+#include <gmock/gmock.h>
+
 #include <functional>
 #include <memory>
 #include <string>
-
-#include <gmock/gmock.h>
 
 #include "core/interface/token_provider_cache_interface.h"
 

@@ -26,14 +26,15 @@
 #include "pbs/leasable_lock/src/error_codes.h"
 
 using google::scp::core::ExecutionResult;
+using google::scp::core::FailureExecutionResult;
 using google::scp::core::LeaseInfo;
 using google::scp::core::LeaseManagerInterface;
 using google::scp::core::LeaseTransitionType;
 using google::scp::core::NoSQLDatabaseProviderInterface;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::TimeDuration;
-using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::TimeProvider;
+using google::scp::core::common::Uuid;
 using std::atomic;
 using std::get;
 using std::make_shared;
@@ -51,7 +52,7 @@ using std::this_thread::sleep_for;
 
 namespace google::scp::pbs {
 
-constexpr char kLeaseManager[] = "LeaseManager";
+constexpr char kLeasableLock[] = "LeasableLock";
 
 // NOTE: This leasable lock implementation assumes a row already exists on
 // the database for the specified 'lock_row_key_' in the constructor
@@ -67,24 +68,36 @@ LeasableLockOnNoSQLDatabase::LeasableLockOnNoSQLDatabase(
       lock_row_key_(lock_row_key),
       lease_duration_in_milliseconds_(lease_duration_in_milliseconds),
       lease_renewal_threshold_percent_time_left_in_lease_(
-          lease_renewal_threshold_percent_time_left_in_lease) {}
+          lease_renewal_threshold_percent_time_left_in_lease),
+      activity_id_(Uuid::GenerateUuid()) {}
 
-ExecutionResult LeasableLockOnNoSQLDatabase::RefreshLease() noexcept {
+ExecutionResult LeasableLockOnNoSQLDatabase::RefreshLease(
+    bool is_read_only_lease_refresh) noexcept {
   unique_lock<mutex> lock(mutex_);
+
+  SCP_INFO(kLeasableLock, activity_id_,
+           "LockId: '%s', Starting to refresh the lease.",
+           lock_row_key_.c_str());
 
   LeaseInfoInternal lease_read;
   auto result = ReadLeaseSynchronouslyFromDatabase(lease_read);
   if (!result.Successful()) {
-    // TODO: kZeroUuid for now. Add an activity argument to
-    // RefreshLease so that the caller's activity can be used here.
-    ERROR(kLeaseManager, kZeroUuid, kZeroUuid, result,
-          "Failed to read lease from the database.");
+    SCP_ERROR(kLeasableLock, activity_id_, result,
+              "LockId: '%s', Failed to read the lease.", lock_row_key_.c_str());
     return result;
   }
 
+  SCP_INFO(kLeasableLock, activity_id_,
+           "LockId: '%s', Read the current lease from lock.",
+           lock_row_key_.c_str());
+
   if (lease_read.lease_acquisition_disallowed) {
-    return core::FailureExecutionResult(
+    auto execution_result = core::FailureExecutionResult(
         core::errors::SC_LEASABLE_LOCK_ACQUISITION_DISALLOWED);
+    SCP_ERROR(kLeasableLock, activity_id_, execution_result,
+              "LockId: '%s', Lease acquisition is disallowed!",
+              lock_row_key_.c_str());
+    return execution_result;
   }
 
   if (!lease_read.IsLeaseOwner(lease_acquirer_info_.lease_acquirer_id) &&
@@ -93,21 +106,54 @@ ExecutionResult LeasableLockOnNoSQLDatabase::RefreshLease() noexcept {
     return result;
   }
 
+  // If lease should not be acquired, i.e. lease is read only, then return with
+  // the read lease.
+  if (is_read_only_lease_refresh) {
+    current_lease_ = lease_read;
+    return result;
+  }
+
+  SCP_INFO(kLeasableLock, activity_id_,
+           "LockId: '%s', Attempting to write new lease to lock.",
+           lock_row_key_.c_str());
+
   // Renew(if owner) or Acquire(if not owner) the lease
   LeaseInfoInternal new_lease = lease_read;
   if (!lease_read.IsLeaseOwner(lease_acquirer_info_.lease_acquirer_id)) {
     new_lease = LeaseInfoInternal(lease_acquirer_info_);
   }
-  new_lease.ExtendLeaseDurationInMillisecondsFromCurrentTimestamp(
-      lease_duration_in_milliseconds_);
+  new_lease.SetExpirationTimestampFromNow(lease_duration_in_milliseconds_);
   result = WriteLeaseSynchronouslyToDatabase(lease_read, new_lease);
   if (!result.Successful()) {
-    // TODO: kZeroUuid for now. Add an activity argument to
-    // RefreshLease so that the caller's activity can be used here.
-    ERROR(kLeaseManager, kZeroUuid, kZeroUuid, result,
-          "Failed to update lease on the database.");
+    SCP_ERROR(kLeasableLock, activity_id_, result,
+              "LockId: '%s', Failed to update lease on the database. "
+              "Expiration Timestamp (ms): '%llu', Remaining time on Lease "
+              "(ms): '%lld'",
+              lock_row_key_.c_str(),
+              lease_read.lease_expiraton_timestamp_in_milliseconds,
+              lease_read.lease_expiraton_timestamp_in_milliseconds -
+                  duration_cast<milliseconds>(
+                      TimeProvider::GetWallTimestampInNanoseconds()));
     return result;
   }
+
+  SCP_INFO(
+      kLeasableLock, activity_id_,
+      "LockId: '%s', Lease Written. Updated the lease to ID: '%s', Address: "
+      "'%s', Expiration "
+      "Timestamp (ms): '%llu'. Previous Expiration Timestamp was (ms): '%llu', "
+      "Current - Previous Expiration Timestamps (ms): '%lld', Time remaining "
+      "on the Lease (ms): '%lld'",
+      lock_row_key_.c_str(),
+      new_lease.lease_owner_info.lease_acquirer_id.c_str(),
+      new_lease.lease_owner_info.service_endpoint_address.c_str(),
+      new_lease.lease_expiraton_timestamp_in_milliseconds,
+      lease_read.lease_expiraton_timestamp_in_milliseconds,
+      new_lease.lease_expiraton_timestamp_in_milliseconds -
+          lease_read.lease_expiraton_timestamp_in_milliseconds,
+      new_lease.lease_expiraton_timestamp_in_milliseconds -
+          duration_cast<milliseconds>(
+              TimeProvider::GetWallTimestampInNanoseconds()));
 
   current_lease_ = new_lease;
   return result;
@@ -119,6 +165,11 @@ bool LeasableLockOnNoSQLDatabase::ShouldRefreshLease() const noexcept {
   // 1. Current Lease is expired
   // 2. Current Lease is not expired, the lease is owned by this caller and
   // lease renew threshold has been reached.
+  // 3. Current Lease is not expired, the lease is NOT owned by this caller but
+  // has passed atleast half of the lease duration since it was last refreshed.
+  // (This is done to ensure we don't wait until the Lease becomes fully stale
+  // and then refresh which leads to incorrect stats w.r.t. currently holding
+  // lease count)
   if (!current_lease_.has_value()) {
     return true;
   } else if (current_lease_->IsExpired()) {
@@ -128,8 +179,10 @@ bool LeasableLockOnNoSQLDatabase::ShouldRefreshLease() const noexcept {
     return current_lease_->IsLeaseRenewalRequired(
         lease_duration_in_milliseconds_,
         lease_renewal_threshold_percent_time_left_in_lease_);
+  } else {
+    return current_lease_->IsHalfLeaseDurationPassed(
+        lease_duration_in_milliseconds_);
   }
-  return false;
 }
 
 TimeDuration
@@ -158,7 +211,7 @@ bool LeasableLockOnNoSQLDatabase::IsCurrentLeaseOwner() const noexcept {
 }
 
 bool LeasableLockOnNoSQLDatabase::LeaseInfoInternal::IsExpired() const {
-  auto now_timestamp_in_milliseconds = GetCurrentTimestampInMilliseconds();
+  auto now_timestamp_in_milliseconds = GetCurrentTimeInMilliseconds();
   return now_timestamp_in_milliseconds >
          lease_expiraton_timestamp_in_milliseconds;
 }
@@ -169,16 +222,19 @@ bool LeasableLockOnNoSQLDatabase::LeaseInfoInternal::IsLeaseOwner(
 }
 
 void LeasableLockOnNoSQLDatabase::LeaseInfoInternal::
-    ExtendLeaseDurationInMillisecondsFromCurrentTimestamp(
-        milliseconds lease_duration_in_milliseconds) {
+    SetExpirationTimestampFromNow(milliseconds lease_duration_in_milliseconds) {
   lease_expiraton_timestamp_in_milliseconds =
-      GetCurrentTimestampInMilliseconds() + lease_duration_in_milliseconds;
+      GetCurrentTimeInMilliseconds() + lease_duration_in_milliseconds;
 }
 
 bool LeasableLockOnNoSQLDatabase::LeaseInfoInternal::IsLeaseRenewalRequired(
     milliseconds lease_duration_in_milliseconds,
     uint64_t lease_renewal_threshold_percent_time_left_in_lease) const {
-  auto now_timestamp_in_milliseconds = GetCurrentTimestampInMilliseconds();
+  auto now_timestamp_in_milliseconds = GetCurrentTimeInMilliseconds();
+  if (now_timestamp_in_milliseconds >
+      lease_expiraton_timestamp_in_milliseconds) {
+    return true;
+  }
   auto time_left_in_lease_in_milliseconds =
       lease_expiraton_timestamp_in_milliseconds - now_timestamp_in_milliseconds;
   double percent_time_left =
@@ -188,8 +244,22 @@ bool LeasableLockOnNoSQLDatabase::LeaseInfoInternal::IsLeaseRenewalRequired(
           lease_renewal_threshold_percent_time_left_in_lease);
 }
 
-milliseconds LeasableLockOnNoSQLDatabase::LeaseInfoInternal::
-    GetCurrentTimestampInMilliseconds() const {
+bool LeasableLockOnNoSQLDatabase::LeaseInfoInternal::IsHalfLeaseDurationPassed(
+    milliseconds lease_duration_in_milliseconds) const {
+  auto now_timestamp_in_milliseconds = GetCurrentTimeInMilliseconds();
+  if (now_timestamp_in_milliseconds >
+      lease_expiraton_timestamp_in_milliseconds) {
+    return true;
+  }
+  auto time_left_in_lease_in_milliseconds =
+      lease_expiraton_timestamp_in_milliseconds - now_timestamp_in_milliseconds;
+  return (time_left_in_lease_in_milliseconds.count() <
+          (lease_duration_in_milliseconds.count() / 2.0));
+}
+
+milliseconds
+LeasableLockOnNoSQLDatabase::LeaseInfoInternal::GetCurrentTimeInMilliseconds()
+    const {
   return duration_cast<milliseconds>(
       TimeProvider::GetWallTimestampInNanoseconds());
 }

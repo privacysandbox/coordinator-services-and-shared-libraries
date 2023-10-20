@@ -58,6 +58,9 @@ struct JournalStreamReadLogRequest {
   /// checkpointing to limit the number of journals to merge and create a
   /// checkpoint.
   JournalId max_number_of_journals_to_process = UINT64_MAX;
+  /// Should perform log reads if there is just only a checkpoint to be
+  /// read but no journals to be read in the log stream.
+  bool should_read_stream_when_only_checkpoint_exists = true;
 };
 
 /// Represents the journal stream read response object.
@@ -91,8 +94,12 @@ class JournalInputStreamInterface {
   virtual ~JournalInputStreamInterface() = default;
 
   /**
-   * @brief Reads all of the logs from the logs stream. If the return object is
-   * empty, there is no log remaining to be replayed.
+   * @brief Reads all of the logs from the logs stream. The caller is expected
+   * to keep issuing ReadLog() until a EOS marker is returned in the form of
+   * ExecutionResult set to
+   * FailureExecutionResult(SC_JOURNAL_SERVICE_INPUT_STREAM_NO_MORE_LOGS_TO_RETURN)
+   * either in @return or in the context.result.
+   *
    *
    * @param read_log_context The context object of the read log operation.
    * @return ExecutionResult The execution result of the operation.

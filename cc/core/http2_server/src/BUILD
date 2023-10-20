@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -29,11 +31,13 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
         "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/metric_client_provider/interface:metric_utils_interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
-        "//cc/cpio/client_providers/metric_client_provider/src/utils:metric_utils_lib",
+        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
+        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
+        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@boost//:asio_ssl",
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
+        "@com_google_absl//absl/strings",
     ],
 )

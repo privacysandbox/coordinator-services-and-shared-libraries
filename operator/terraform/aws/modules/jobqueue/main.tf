@@ -58,4 +58,3 @@ resource "aws_ssm_parameter" "aws_sqs_queue_url_parameter_store_legacy" {
   }
   overwrite = true
 }
-

@@ -113,6 +113,14 @@ module "kms_key_parameter" {
   parameter_value       = var.kms_key_parameter
 }
 
+module "notifications_topic_arn" {
+  count           = var.enable_job_completion_notifications ? 1 : 0
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "NOTIFICATIONS_TOPIC_ID"
+  parameter_value = module.notifications[0].notifications_sns_topic_arn
+}
+
 module "frontend" {
   source                               = "../../modules/frontend"
   environment                          = var.environment
@@ -288,4 +296,11 @@ module "vpc" {
   dynamodb_arns                   = [module.metadata_db.metadata_db_arn, module.asginstances_db.asginstances_db_arn]
 
   s3_allowed_principal_arns = [module.worker_service.worker_enclave_role_arn]
+}
+
+module "notifications" {
+  count  = var.enable_job_completion_notifications ? 1 : 0
+  source = "../../modules/notifications"
+
+  environment = var.environment
 }

@@ -21,7 +21,6 @@ import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -194,60 +193,6 @@ public class AwsParameterClientTest {
   }
 
   @Test
-  public void getParameter_withLegacyParameterFallback() throws Exception {
-    var fakeSsmResponse =
-        GetParametersResponse.builder()
-            .parameters(
-                Parameter.builder()
-                    .name("/aggregate-service/" + ENVIRONMENT + "/sqs_queue_url")
-                    .value("test-value")
-                    .build())
-            .build();
-    var fakeEc2Response =
-        DescribeTagsResponse.builder()
-            .tags(TagDescription.builder().key(ENVIRONMENT_TAG_NAME).value(ENVIRONMENT).build())
-            .build();
-    when(ssmClient.getParameters(any(GetParametersRequest.class))).thenReturn(fakeSsmResponse);
-    when(ec2Client.describeTags(any(DescribeTagsRequest.class))).thenReturn(fakeEc2Response);
-
-    Optional<String> actual = parameterClient.getParameter(WorkerParameter.JOB_QUEUE.name());
-
-    verify(ec2Client).describeTags(any(DescribeTagsRequest.class));
-    verify(ssmClient, times(2)).getParameters(any(GetParametersRequest.class));
-    assertThat(actual).isPresent();
-    assertThat(actual.get()).isEqualTo("test-value");
-  }
-
-  @Test
-  public void getParameter_withCustomPrefixLegacyParameterFallback() throws Exception {
-    var fakeSsmResponse =
-        GetParametersResponse.builder()
-            .parameters(
-                Parameter.builder()
-                    .name("/aggregate-service/" + ENVIRONMENT + "/dynamodb_metadatadb_table_name")
-                    .value("test-value")
-                    .build())
-            .build();
-    var fakeEc2Response =
-        DescribeTagsResponse.builder()
-            .tags(TagDescription.builder().key(ENVIRONMENT_TAG_NAME).value(ENVIRONMENT).build())
-            .build();
-    when(ssmClient.getParameters(any(GetParametersRequest.class))).thenReturn(fakeSsmResponse);
-    when(ec2Client.describeTags(any(DescribeTagsRequest.class))).thenReturn(fakeEc2Response);
-
-    Optional<String> actual =
-        parameterClient.getParameter(
-            WorkerParameter.JOB_METADATA_DB.name(),
-            Optional.of("scp"),
-            /* includeEnvironmentParam= */ true);
-
-    verify(ec2Client).describeTags(any(DescribeTagsRequest.class));
-    verify(ssmClient, times(2)).getParameters(any(GetParametersRequest.class));
-    assertThat(actual).isPresent();
-    assertThat(actual.get()).isEqualTo("test-value");
-  }
-
-  @Test
   public void getParameter_withNonexistentSingleParameter() throws Exception {
     var fakeSsmResponse = GetParametersResponse.builder().build();
     var fakeEc2Response =
@@ -293,6 +238,6 @@ public class AwsParameterClientTest {
 
     assertThat(result).isEmpty();
     verify(ec2Client).describeTags(any(DescribeTagsRequest.class));
-    verify(ssmClient, times(2)).getParameters(any(GetParametersRequest.class));
+    verify(ssmClient).getParameters(any(GetParametersRequest.class));
   }
 }

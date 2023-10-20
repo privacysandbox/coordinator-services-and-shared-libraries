@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.service.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.keyhosting.service.common.KeyHostingUtil.getMaxAgeCacheControlValue;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
@@ -31,12 +32,15 @@ import com.google.scp.coordinator.keymanagement.keyhosting.service.common.conver
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetActivePublicKeysTask;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask;
+import com.google.scp.coordinator.keymanagement.keyhosting.tasks.ListRecentEncryptionKeysTask;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptedPrivateKeyRequestProto.GetEncryptedPrivateKeyRequest;
-import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptedPrivateKeyResponseProto.GetEncryptedPrivateKeyResponse;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptionKeyRequestProto.GetEncryptionKeyRequest;
+import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysRequestProto.ListRecentEncryptionKeysRequest;
+import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +55,7 @@ public final class KeyService {
 
   private final GetActivePublicKeysTask getActivePublicKeysTask;
   private final GetEncryptedPrivateKeyTask getEncryptedPrivateKeyTask;
+  private final ListRecentEncryptionKeysTask listRecentEncryptionKeysTask;
   private final EncodedPublicKeyListConverter encodedPublicKeyListConverter;
   private final Long cacheControlMaximum;
 
@@ -58,10 +63,12 @@ public final class KeyService {
   public KeyService(
       GetActivePublicKeysTask getActivePublicKeysTask,
       GetEncryptedPrivateKeyTask getEncryptedPrivateKeyTask,
+      ListRecentEncryptionKeysTask listRecentEncryptionKeysTask,
       EncodedPublicKeyListConverter encodedPublicKeyListConverter,
       @CacheControlMaximum Long cacheControlMaximum) {
     this.getActivePublicKeysTask = getActivePublicKeysTask;
     this.getEncryptedPrivateKeyTask = getEncryptedPrivateKeyTask;
+    this.listRecentEncryptionKeysTask = listRecentEncryptionKeysTask;
     this.encodedPublicKeyListConverter = encodedPublicKeyListConverter;
     this.cacheControlMaximum = cacheControlMaximum;
   }
@@ -99,14 +106,14 @@ public final class KeyService {
     }
   }
 
-  /** Implements a GET request for a specific private key resource. */
-  public GetEncryptedPrivateKeyResponse getEncryptedPrivateKey(
-      GetEncryptedPrivateKeyRequest request) throws ServiceException {
-    EncryptionKey encryptionKey =
-        getEncryptedPrivateKeyTask.getEncryptedPrivateKey(getPrivateKeyId(request));
-    return GetEncryptedPrivateKeyResponse.newBuilder()
-        .setName(request.getName())
-        .setJsonEncodedKeyset(encryptionKey.getJsonEncodedKeyset())
+  /**
+   * @see ListRecentEncryptionKeysRequest
+   */
+  public ListRecentEncryptionKeysResponse listRecentKeys(ListRecentEncryptionKeysRequest request)
+      throws ServiceException {
+    Stream<EncryptionKey> keys = listRecentEncryptionKeysTask.execute(request.getMaxAgeSeconds());
+    return ListRecentEncryptionKeysResponse.newBuilder()
+        .addAllKeys(keys.map(EncryptionKeyConverter::toApiEncryptionKey).collect(toImmutableList()))
         .build();
   }
 

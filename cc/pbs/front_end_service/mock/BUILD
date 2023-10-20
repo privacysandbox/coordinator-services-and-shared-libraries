@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -27,7 +29,7 @@ cc_library(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
         "//cc/pbs/front_end_service/src:pbs_front_end_service_lib",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
     ],
 )

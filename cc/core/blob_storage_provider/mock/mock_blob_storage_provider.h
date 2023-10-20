@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/strip.h"
 #include "core/blob_storage_provider/src/common/error_codes.h"
 #include "core/interface/blob_storage_provider_interface.h"
 
@@ -61,6 +62,7 @@ class MockBlobStorageClient : public BlobStorageClientInterface {
     get_blob_context.response = std::make_shared<GetBlobResponse>();
     get_blob_context.response->buffer = std::make_shared<BytesBuffer>();
     get_blob_context.response->buffer->length = content_length;
+    get_blob_context.response->buffer->capacity = content_length;
 
     if (content_length != 0) {
       get_blob_context.response->buffer->bytes =
@@ -87,21 +89,59 @@ class MockBlobStorageClient : public BlobStorageClientInterface {
     if (list_blobs_mock) {
       return list_blobs_mock(list_blobs_context);
     }
-    auto full_path = *list_blobs_context.request->bucket_name +
-                     std::string("/") + *list_blobs_context.request->blob_name;
+    auto directory_path = *list_blobs_context.request->bucket_name;
 
     list_blobs_context.response = std::make_shared<ListBlobsResponse>();
     list_blobs_context.response->blobs = std::make_shared<std::vector<Blob>>();
+    auto& blob_name_prefix = list_blobs_context.request->blob_name;
 
-    for (const auto& entry :
-         std::filesystem::recursive_directory_iterator(full_path)) {
+    for (const auto& dir_entry :
+         std::filesystem::recursive_directory_iterator(directory_path)) {
+      absl::string_view blob_name(dir_entry.path().c_str());
+      absl::ConsumePrefix(&blob_name,
+                          *list_blobs_context.request->bucket_name + "/");
+      if (blob_name_prefix && !blob_name_prefix->empty() &&
+          (std::mismatch(blob_name_prefix->begin(), blob_name_prefix->end(),
+                         blob_name.begin())
+               .first != blob_name_prefix->end())) {
+        // Prefix mismatch, skip this entry.
+        continue;
+      }
       Blob blob;
-      blob.blob_name = std::make_shared<std::string>(entry.path());
+      blob.blob_name = std::make_shared<std::string>(blob_name);
       list_blobs_context.response->blobs->push_back(std::move(blob));
     }
 
-    std::sort(list_blobs_context.response->blobs->begin(),
-              list_blobs_context.response->blobs->end(), CompareBlobs);
+    auto& blobs_in_response = list_blobs_context.response->blobs;
+    auto& supplied_marker = list_blobs_context.request->marker;
+
+    std::sort(blobs_in_response->begin(), blobs_in_response->end(),
+              CompareBlobs);
+
+    // Filter based on supplied marker
+    if (supplied_marker && !supplied_marker->empty()) {
+      for (auto it = blobs_in_response->begin();
+           it != blobs_in_response->end();) {
+        if (supplied_marker->compare(*it->blob_name) >= 0) {
+          // Remove all blobs that are less or equal to the marker name
+          it = blobs_in_response->erase(it);
+        } else {
+          it++;
+        }
+      }
+    }
+
+    // Populate next marker, with the last blob name in the response list of
+    // blobs.
+    if (!blobs_in_response->empty()) {
+      auto next_marker = std::make_shared<Blob>();
+      next_marker->bucket_name =
+          list_blobs_context.response->blobs->rbegin()->bucket_name;
+      next_marker->blob_name =
+          list_blobs_context.response->blobs->rbegin()->blob_name;
+      list_blobs_context.response->next_marker = next_marker;
+    }
+
     list_blobs_context.result = SuccessExecutionResult();
     list_blobs_context.Finish();
     return SuccessExecutionResult();

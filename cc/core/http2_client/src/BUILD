@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -35,6 +37,7 @@ cc_library(
         "@boost//:asio_ssl",
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
+        "@com_github_nghttp2_nghttp2//:nghttp2_asio",
         "@com_google_absl//absl/strings",
     ],
 )

@@ -26,8 +26,8 @@
 #include "core/journal_service/mock/mock_journal_service.h"
 #include "core/transaction_manager/mock/mock_transaction_command_serializer.h"
 #include "core/transaction_manager/src/transaction_manager.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "pbs/pbs_client/src/pbs_client.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 #include "client_consume_budget_command.h"
 
@@ -36,6 +36,8 @@ using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::Byte;
 using google::scp::core::BytesBuffer;
 using google::scp::core::ExecutionResult;
+using google::scp::core::GetTransactionStatusRequest;
+using google::scp::core::GetTransactionStatusResponse;
 using google::scp::core::HttpClient;
 using google::scp::core::HttpClientInterface;
 using google::scp::core::HttpHeaders;
@@ -52,7 +54,7 @@ using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::journal_service::mock::MockJournalService;
 using google::scp::core::transaction_manager::mock::
     MockTransactionCommandSerializer;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockMetricClient;
 using std::bind;
 using std::dynamic_pointer_cast;
 using std::make_shared;
@@ -103,22 +105,19 @@ PrivacyBudgetServiceTransactionalClient::
       transaction_command_serializer_(
           make_shared<MockTransactionCommandSerializer>()),
       journal_service_(make_shared<MockJournalService>()),
-      metric_client_(make_shared<MockMetricClientProvider>()),
+      metric_client_(make_shared<MockMetricClient>()),
       config_provider_(make_shared<MockConfigProvider>()),
       transaction_manager_(make_shared<TransactionManager>(
           async_executor_, transaction_command_serializer_, journal_service_,
           remote_transaction_manager_, max_concurrent_transactions_,
           metric_client_, config_provider_)) {
   auto mock_metric_client =
-      dynamic_pointer_cast<MockMetricClientProvider>(metric_client_);
-  mock_metric_client->record_metric_mock =
-      [](core::AsyncContext<cmrt::sdk::metric_service::v1::PutMetricsRequest,
-                            cmrt::sdk::metric_service::v1::PutMetricsResponse>&
-             context) {
-        context.result = SuccessExecutionResult();
-        context.Finish();
-        return SuccessExecutionResult();
-      };
+      dynamic_pointer_cast<MockMetricClient>(metric_client_);
+  ON_CALL(*mock_metric_client, PutMetrics).WillByDefault([&](auto context) {
+    context.result = SuccessExecutionResult();
+    context.Finish();
+    return SuccessExecutionResult();
+  });
 }
 
 ExecutionResult PrivacyBudgetServiceTransactionalClient::Init() noexcept {
@@ -182,14 +181,13 @@ ExecutionResult PrivacyBudgetServiceTransactionalClient::ConsumeBudget(
       make_shared<TransactionRequest>(),
       bind(&PrivacyBudgetServiceTransactionalClient::OnConsumeBudgetCallback,
            this, consume_budget_transaction_context, _1),
-      consume_budget_transaction_context.activity_id);
+      consume_budget_transaction_context);
 
   transaction_context.request->is_coordinated_remotely = false;
   transaction_context.request->transaction_id =
       consume_budget_transaction_context.request->transaction_id;
   transaction_context.request->transaction_secret =
       consume_budget_transaction_context.request->transaction_secret;
-  // TODO: transaction_context.request->timeout_time
 
   transaction_context.request->commands.push_back(
       make_shared<ClientConsumeBudgetCommand>(
@@ -210,6 +208,20 @@ ExecutionResult PrivacyBudgetServiceTransactionalClient::ConsumeBudget(
   }
 
   return transaction_manager_->Execute(transaction_context);
+}
+
+ExecutionResult
+PrivacyBudgetServiceTransactionalClient::GetTransactionStatusOnPBS1(
+    AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
+        context) noexcept {
+  return pbs1_client_->GetTransactionStatus(context);
+}
+
+ExecutionResult
+PrivacyBudgetServiceTransactionalClient::GetTransactionStatusOnPBS2(
+    AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
+        context) noexcept {
+  return pbs2_client_->GetTransactionStatus(context);
 }
 
 void PrivacyBudgetServiceTransactionalClient::OnConsumeBudgetCallback(

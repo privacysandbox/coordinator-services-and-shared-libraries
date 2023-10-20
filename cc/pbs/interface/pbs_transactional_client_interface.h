@@ -49,6 +49,28 @@ class PrivacyBudgetServiceTransactionalClientInterface
       core::AsyncContext<ConsumeBudgetTransactionRequest,
                          ConsumeBudgetTransactionResponse>&
           consume_budget_context) noexcept = 0;
+
+  /**
+   * @brief Get the Transaction Status On PBS 1 object
+   *
+   * @param get_transaction_status_context
+   * @return core::ExecutionResult
+   */
+  virtual core::ExecutionResult GetTransactionStatusOnPBS1(
+      core::AsyncContext<core::GetTransactionStatusRequest,
+                         core::GetTransactionStatusResponse>
+          get_transaction_status_context) noexcept = 0;
+
+  /**
+   * @brief Get the Transaction Status On PBS 2 object
+   *
+   * @param get_transaction_status_context
+   * @return core::ExecutionResult
+   */
+  virtual core::ExecutionResult GetTransactionStatusOnPBS2(
+      core::AsyncContext<core::GetTransactionStatusRequest,
+                         core::GetTransactionStatusResponse>
+          get_transaction_status_context) noexcept = 0;
 };
 
 }  // namespace google::scp::pbs

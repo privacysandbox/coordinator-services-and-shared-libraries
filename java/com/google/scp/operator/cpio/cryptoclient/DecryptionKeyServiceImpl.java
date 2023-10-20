@@ -33,7 +33,7 @@ import java.security.GeneralSecurityException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-/** Interface responsible for retrieving and decrypting keys from the aggregate service KMS */
+/** Interface responsible for retrieving and decrypting keys from the KMS */
 public final class DecryptionKeyServiceImpl implements DecryptionKeyService {
 
   private static final int MAX_CACHE_SIZE = 100;

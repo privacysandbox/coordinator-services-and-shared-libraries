@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -22,9 +24,13 @@ java_library(
         "//java/com/google/scp/operator/cpio/lifecycleclient",
         "//java/com/google/scp/operator/cpio/metricclient",
         "//java/com/google/scp/operator/cpio/metricclient:model",
+        "//java/com/google/scp/operator/cpio/notificationclient",
+        "//java/com/google/scp/operator/cpio/notificationclient:model",
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",
         "//java/com/google/scp/operator/shared/dao/metadatadb/common",
         "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:model",
         "//java/com/google/scp/shared/proto",
         "//java/external:findbugs",
         "//java/external:guava",
@@ -64,6 +70,8 @@ java_library(
         "//java/com/google/scp/operator/cpio/lifecycleclient",
         "//java/com/google/scp/operator/cpio/metricclient",
         "//java/com/google/scp/operator/cpio/metricclient:model",
+        "//java/com/google/scp/operator/cpio/notificationclient",
+        "//java/com/google/scp/operator/cpio/notificationclient:model",
         "//java/com/google/scp/operator/shared/dao/jobqueue/aws",
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",
         "//java/com/google/scp/operator/shared/dao/metadatadb/aws",
@@ -91,5 +99,52 @@ java_library(
         "//operator/protos/shared/backend/jobqueue:java_proto",
         "//operator/protos/shared/backend/metadatadb:java_proto",
         "@com_google_protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
+    name = "gcp",
+    srcs = glob([
+        "*.java",
+        "local/*.java",
+        "gcp/*.java",
+        "testing/*.java",
+    ]),
+    deps = [
+        "//java/com/google/scp/operator/cpio/blobstorageclient:model",
+        "//java/com/google/scp/operator/cpio/configclient",
+        "//java/com/google/scp/operator/cpio/jobclient",
+        "//java/com/google/scp/operator/cpio/jobclient:model",
+        "//java/com/google/scp/operator/cpio/lifecycleclient",
+        "//java/com/google/scp/operator/cpio/metricclient",
+        "//java/com/google/scp/operator/cpio/metricclient:model",
+        "//java/com/google/scp/operator/cpio/notificationclient",
+        "//java/com/google/scp/operator/cpio/notificationclient:model",
+        "//java/com/google/scp/operator/shared/dao/jobqueue/common",
+        "//java/com/google/scp/operator/shared/dao/jobqueue/gcp",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/common",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
+        "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:gcp",
+        "//java/com/google/scp/shared/clients/configclient:model",
+        "//java/com/google/scp/shared/proto",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:findbugs",
+        "//java/external:gcp_api_gax",
+        "//java/external:gcp_pubsub",
+        "//java/external:gcp_pubsub_v1",
+        "//java/external:gcp_spanner",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:jackson_core",
+        "//java/external:jackson_databind",
+        "//java/external:javax_inject",
+        "//java/external:protobuf_java_util",
+        "//operator/protos/shared/backend:java_proto",
+        "//operator/protos/shared/backend/jobqueue:java_proto",
+        "//operator/protos/shared/backend/metadatadb:java_proto",
     ],
 )

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #pragma once
+
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -26,39 +27,62 @@
 #include "cc/core/interface/http_server_interface.h"
 
 namespace google::scp::core {
-/// Nghttp2 wrapper for the http2 response.
+/**
+ * @brief Wrapper object of a nghttp2::response object to interface with it.
+ */
 class NgHttp2Response : public HttpResponse {
  public:
   explicit NgHttp2Response(
       const nghttp2::asio_http2::server::response& ng2_response)
-      : ng2_response_(ng2_response),
-        io_service_(ng2_response.io_service()),
-        is_closed_(false) {
-    ng2_response.on_close(
-        std::bind(&NgHttp2Response::OnClose, this, std::placeholders::_1));
-  }
+      : ng2_response_(ng2_response), is_closed_(false) {}
 
-  /// Sends the result to the caller.
+  /**
+   * @brief Callback for connection closing.
+   * uint32_t error code of connection closure.
+   */
+  using OnCloseErrorCode = uint32_t;
+  using OnCloseCallback = std::function<void(OnCloseErrorCode)>;
+
+  /**
+   * @brief Submit work onto the IoService of the response.
+   *
+   * @param work
+   */
+  void SubmitWorkOnIoService(std::function<void()> work) noexcept;
+
+  /**
+   * @brief Sends the populated response back to the client.
+   * NOTE: Should always be invoked on a thread that belongs to nghttp2
+   * response. A way to do this is to post this invocation as a work onto the
+   * IoService of nghttp2 response object.
+   */
   void Send() noexcept;
 
-  /// The callback for when the request is completely closed
-  std::function<void(uint32_t)> on_closed;
+  /**
+   * @brief Set callback to be invoked when connection is closing on the
+   * response.
+   *
+   * @param callback
+   */
+  void SetOnCloseCallback(const OnCloseCallback& callback);
 
  private:
   /**
-   * @brief Is called when the response is ending.
+   * @brief Internal handler called when the connection is closing.
    *
    * @param error_code The error code for closing
+   * @param callback callback to be invoked once the connection closes on the
+   * response.
    */
-  void OnClose(uint32_t error_code) noexcept;
+  void OnClose(uint32_t error_code, OnCloseCallback callback) noexcept;
+
   /// A reference to the ng2 response object.
   const nghttp2::asio_http2::server::response& ng2_response_;
-  /// A reference to the ng2 response io service.
-  boost::asio::io_service& io_service_;
-  /// Response mutex is used for synchronization between closing the connection
-  /// and sending response.
-  std::mutex response_mutex_;
+
   /// Indicates whether the response stream is closed.
   bool is_closed_;
+
+  /// Mutex to synchronize on_close while sending response back on connection.
+  std::mutex on_close_mutex_;
 };
 }  // namespace google::scp::core

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <cstdlib>
@@ -32,13 +33,16 @@
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/config_provider/src/config_provider.h"
+#include "core/config_provider/src/env_config_provider.h"
 #include "core/credentials_provider/src/aws_credentials_provider.h"
 #include "core/curl_client/src/http1_curl_client.h"
 #include "core/http2_client/src/http2_client.h"
 #include "core/interface/authorization_service_interface.h"
+#include "core/interface/type_def.h"
 #include "core/logger/src/log_providers/syslog/syslog_log_provider.h"
 #include "core/logger/src/logger.h"
 #include "core/test/utils/conditional_wait.h"
+#include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
 #include "core/token_provider_cache/src/auto_refresh_token_provider.h"
 #include "pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
 #include "pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
@@ -57,25 +61,34 @@ using google::scp::core::AwsCredentialsProvider;
 using google::scp::core::Byte;
 using google::scp::core::BytesBuffer;
 using google::scp::core::ConfigProvider;
+using google::scp::core::ConfigProviderInterface;
+using google::scp::core::EnvConfigProvider;
 using google::scp::core::ExecutionResult;
 using google::scp::core::Http1CurlClient;
 using google::scp::core::HttpClient;
 using google::scp::core::HttpClientInterface;
+using google::scp::core::HttpClientOptions;
 using google::scp::core::HttpHeaders;
 using google::scp::core::HttpMethod;
 using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
+using google::scp::core::kDefaultHttp2ReadTimeoutInSeconds;
+using google::scp::core::kDefaultRetryStrategyDelayInMs;
+using google::scp::core::kDefaultRetryStrategyMaxRetries;
 using google::scp::core::LoggerInterface;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::TokenProviderCacheInterface;
 using google::scp::core::common::ConcurrentQueue;
 using google::scp::core::common::GlobalLogger;
+using google::scp::core::common::RetryStrategyOptions;
+using google::scp::core::common::RetryStrategyType;
 using google::scp::core::common::TimeProvider;
 using google::scp::core::common::ToString;
 using google::scp::core::common::Uuid;
 using google::scp::core::logger::Logger;
 using google::scp::core::logger::log_providers::SyslogLogProvider;
 using google::scp::core::test::WaitUntil;
+using google::scp::core::token_provider_cache::mock::DummyTokenProviderCache;
 using google::scp::pbs::AwsAuthorizationTokenFetcher;
 using google::scp::pbs::ConsumeBudgetMetadata;
 using google::scp::pbs::ConsumeBudgetTransactionRequest;
@@ -109,10 +122,19 @@ using std::chrono::steady_clock;
 using std::filesystem::path;
 using std::this_thread::sleep_for;
 
-namespace google::scp::pbs {
+// Do not keep retrying for a longer time as there could be a failover being
+// done while workload is running. Retries are configurable via an Environment
+// variable.
+static constexpr size_t kHttp2RequestRetryStrategyMaxRetries = 3;
+
+// Give up quickly if the destination node is not reachable.
+static constexpr size_t kHttp2ConnectionReadTimeoutInSeconds = 5;
+
 static constexpr char kPBSWorkloadGenerator[] = "PBSWorkloadGenerator";
 
-enum class CloudPlatformType { Invalid = 0, GCP = 1, AWS = 2 };
+namespace google::scp::pbs {
+
+enum class CloudPlatformType { Invalid = 0, GCP = 1, AWS = 2, Local = 3 };
 
 struct AppConfiguration {
   size_t total_transactions;
@@ -144,7 +166,7 @@ struct MultiCoordinatorConfig {
 
 unique_ptr<TokenProviderCacheInterface> GetAWSAuthTokenProviderCache(
     const string& auth_service_endpoint, const string& cloud_service_region,
-    shared_ptr<AsyncExecutorInterface> async_executor) {
+    const shared_ptr<AsyncExecutorInterface>& async_executor) {
   auto credentials_provider = make_unique<AwsCredentialsProvider>();
   auto auth_token_fetcher = make_unique<AwsAuthorizationTokenFetcher>(
       auth_service_endpoint, cloud_service_region, move(credentials_provider));
@@ -153,9 +175,9 @@ unique_ptr<TokenProviderCacheInterface> GetAWSAuthTokenProviderCache(
 }
 
 unique_ptr<TokenProviderCacheInterface> GetGCPAuthTokenProviderCache(
-    shared_ptr<HttpClientInterface> http1_client,
+    const shared_ptr<HttpClientInterface>& http1_client,
     const string& auth_service_endpoint,
-    shared_ptr<AsyncExecutorInterface> async_executor) {
+    const shared_ptr<AsyncExecutorInterface>& async_executor) {
   auto auth_token_fetcher = make_unique<GcpAuthorizationTokenFetcher>(
       http1_client, auth_service_endpoint, async_executor);
   return make_unique<AutoRefreshTokenProviderService>(move(auth_token_fetcher),
@@ -258,14 +280,20 @@ unique_ptr<std::thread> key_generation_thread_;
 condition_variable condition_variable_;
 ConcurrentQueue<shared_ptr<string>> keys_(UINT64_MAX);
 size_t total_transactions_;
-atomic<size_t> current_transaction_count_;
+// Temporary fix for the uint64_t overflow issue in the while loop later in the
+// code.
+atomic<int64_t> current_transaction_count_;
 atomic<size_t> total_executed_;
 atomic<size_t> total_failed_;
+
+atomic<uint64_t> transactions_completed_count_;
+atomic<uint64_t> previous_completed_count_;
+
 string prefix_;  // NOLINT
 atomic<uint64_t> index_;
 
 AsyncContext<ConsumeBudgetTransactionRequest, ConsumeBudgetTransactionResponse>
-CreateConsumeBudgetTransaction(AppConfiguration& app_configuration) {
+CreateConsumeBudgetTransaction(const AppConfiguration& app_configuration) {
   AsyncContext<ConsumeBudgetTransactionRequest,
                ConsumeBudgetTransactionResponse>
       consume_budget_transaction_context;
@@ -296,29 +324,28 @@ CreateConsumeBudgetTransaction(AppConfiguration& app_configuration) {
         metadata);
   }
 
-  consume_budget_transaction_context.callback =
-      [&](AsyncContext<ConsumeBudgetTransactionRequest,
-                       ConsumeBudgetTransactionResponse>&
-              consume_budget_transaction_context) mutable {
-        if (consume_budget_transaction_context.result ==
-            SuccessExecutionResult()) {
-          return;
-        }
+  consume_budget_transaction_context
+      .callback = [&](AsyncContext<ConsumeBudgetTransactionRequest,
+                                   ConsumeBudgetTransactionResponse>&
+                          consume_budget_transaction_context) mutable {
+    if (consume_budget_transaction_context.result == SuccessExecutionResult()) {
+      return;
+    }
 
-        auto transaction_id_str = ToString(
-            consume_budget_transaction_context.request->transaction_id);
-        ERROR_CONTEXT(kPBSWorkloadGenerator, consume_budget_transaction_context,
+    auto transaction_id_str =
+        ToString(consume_budget_transaction_context.request->transaction_id);
+    SCP_ERROR_CONTEXT(kPBSWorkloadGenerator, consume_budget_transaction_context,
                       consume_budget_transaction_context.result,
                       "The transaction failed with id: %s",
                       transaction_id_str.c_str());
-      };
+  };
 
   return consume_budget_transaction_context;
 }
 
 void StartProducerThread(
-    AppConfiguration& app_configuration,
-    shared_ptr<PrivacyBudgetServiceTransactionalClient>& client) {
+    const AppConfiguration& app_configuration,
+    const shared_ptr<PrivacyBudgetServiceTransactionalClient>& client) {
   unique_lock<mutex> thread_lock(mutex_);
 
   while (true) {
@@ -351,6 +378,7 @@ void StartProducerThread(
 
             total_executed_++;
             current_transaction_count_--;
+            transactions_completed_count_++;
             original_callback(consume_budget_transaction_context);
 
             condition_variable_.notify_one();
@@ -361,8 +389,8 @@ void StartProducerThread(
           client->ConsumeBudget(consume_budget_transaction_context);
 
       if (!execution_result.Successful()) {
-        ERROR(kPBSWorkloadGenerator, Uuid::GenerateUuid(), Uuid::GenerateUuid(),
-              execution_result, "Transaction failed to start");
+        SCP_ERROR(kPBSWorkloadGenerator, Uuid::GenerateUuid(), execution_result,
+                  "Transaction failed to start");
         current_transaction_count_--;
         continue;
       }
@@ -372,8 +400,9 @@ void StartProducerThread(
   }
 }
 
-void RunWorkload(AppConfiguration& app_configuration,
-                 shared_ptr<PrivacyBudgetServiceTransactionalClient>& client) {
+void RunWorkload(
+    const string& reporting_origin, const AppConfiguration& app_configuration,
+    const shared_ptr<PrivacyBudgetServiceTransactionalClient>& client) {
   auto execution_result = client->Init();
   if (!execution_result.Successful()) {
     throw runtime_error("Cannot initialize the client");
@@ -403,6 +432,24 @@ void RunWorkload(AppConfiguration& app_configuration,
     end = steady_clock::now();
   }
 
+  atomic<bool> workload_done = false;
+  size_t peak_tps = 0;
+  std::thread display_thread([&]() {
+    previous_completed_count_ = transactions_completed_count_.load();
+    while (current_transaction_count_.load() > 0) {
+      uint64_t snapshot_completed_count = transactions_completed_count_.load();
+      uint64_t instantaneous_tps =
+          snapshot_completed_count - previous_completed_count_;
+      cout << "Reporting Origin: '" << reporting_origin
+           << "' Remaining Transactions: '" << current_transaction_count_.load()
+           << "' TPS: '" << instantaneous_tps << "'" << endl;
+      previous_completed_count_ = snapshot_completed_count;
+      peak_tps = std::max(peak_tps, instantaneous_tps);
+      sleep_for(milliseconds(1000));
+    }
+    workload_done = true;
+  });
+
   cout << "Duration passed, stopping" << endl;
   unique_lock<mutex> thread_lock(mutex_);
   is_running_ = false;
@@ -414,23 +461,32 @@ void RunWorkload(AppConfiguration& app_configuration,
     working_thread_->join();
   }
 
-  while (current_transaction_count_.load() > 0) {
-    cout << "There are " << current_transaction_count_.load()
-         << " remaining transactions to be completed" << endl;
-    sleep_for(milliseconds(500));
+  while (!workload_done.load()) {
+    std::this_thread::yield();
   }
 
   auto closing_time = steady_clock::now();
   auto elapsed_time = duration_cast<seconds>(closing_time - begin);
+  auto total_succeeded = total_executed_.load() - total_failed_.load();
 
-  cout << "Workload is completed" << endl;
-  cout << "Total executed: " << total_executed_.load() << endl;
-  cout << "Total failed: " << total_failed_.load() << endl;
-  cout << "Total time elapsed (seconds): " << elapsed_time.count() << endl;
-  cout << "TPS: "
-       << total_executed_.load() / static_cast<double>(elapsed_time.count())
-       << endl;
+  cout << "Workload is completed\n" << endl;
+  cout << "Time Elapsed (Seconds): " << elapsed_time.count() << endl;
+  cout << "Total Executed: " << total_executed_.load() << endl;
+  cout << "\x1b[32mTotal Succeeded: " << total_succeeded << "\x1b[0m" << endl;
+  if (total_failed_ > 0) {
+    cout << "\x1b[31mTotal Failed: " << total_failed_.load() << " \x1b[0m"
+         << endl;
+  }
+  if (total_succeeded > 0) {
+    cout << "\x1b[33mTPS: "
+         << total_executed_.load() / static_cast<double>(elapsed_time.count())
+         << "\x1b[0m" << endl;
+    cout << "\x1b[33mMax TPS: " << peak_tps << "\x1b[0m" << endl;
+  }
 
+  if (display_thread.joinable()) {
+    display_thread.join();
+  }
   execution_result = client->Stop();
   if (!execution_result.Successful()) {
     throw runtime_error("Cannot stop the client");
@@ -451,6 +507,9 @@ void RunWithSingleClient(AppConfiguration& app_configuration,
   } else if (app_configuration.cloud_platform_type == CloudPlatformType::GCP) {
     auth_token_provider_cache = GetGCPAuthTokenProviderCache(
         http1_client, config.pbs_auth_endpoint, async_executor);
+  } else if (app_configuration.cloud_platform_type ==
+             CloudPlatformType::Local) {
+    auth_token_provider_cache = make_shared<DummyTokenProviderCache>();
   } else {
     throw runtime_error("Invalid platform type.");
   }
@@ -463,16 +522,16 @@ void RunWithSingleClient(AppConfiguration& app_configuration,
       async_executor, auth_token_provider_cache);
 
   cout << "Running the workload against a single PBS" << endl;
-  RunWorkload(app_configuration, client);
+  RunWorkload(config.reporting_origin, app_configuration, client);
 
   assert(auth_token_provider_cache->Stop().Successful());
 }
 
 void RunWithPBSTransactionalClient(
-    AppConfiguration& app_configuration,
-    shared_ptr<HttpClientInterface> http1_client,
-    shared_ptr<HttpClientInterface> http2_client,
-    shared_ptr<AsyncExecutorInterface> async_executor) {
+    const AppConfiguration& app_configuration,
+    const shared_ptr<HttpClientInterface>& http1_client,
+    const shared_ptr<HttpClientInterface>& http2_client,
+    const shared_ptr<AsyncExecutorInterface>& async_executor) {
   MultiCoordinatorConfig config;
   ReadMultiCoordinatorConfig(app_configuration.config_path, config);
 
@@ -489,6 +548,10 @@ void RunWithPBSTransactionalClient(
         http1_client, config.pbs1_auth_endpoint, async_executor);
     auth_token_provider_cache_2 = GetGCPAuthTokenProviderCache(
         http1_client, config.pbs2_auth_endpoint, async_executor);
+  } else if (app_configuration.cloud_platform_type ==
+             CloudPlatformType::Local) {
+    auth_token_provider_cache_1 = make_shared<DummyTokenProviderCache>();
+    auth_token_provider_cache_2 = make_shared<DummyTokenProviderCache>();
   } else {
     throw runtime_error("Invalid platform type.");
   }
@@ -504,7 +567,7 @@ void RunWithPBSTransactionalClient(
       auth_token_provider_cache_2);
 
   cout << "Running the workload against a multi PBS" << endl;
-  RunWorkload(app_configuration, client);
+  RunWorkload(config.reporting_origin, app_configuration, client);
 
   assert(auth_token_provider_cache_1->Stop().Successful());
   assert(auth_token_provider_cache_2->Stop().Successful());
@@ -519,7 +582,7 @@ void PrintHelp() {
           "number_of_transactions "
           "number_of_unique_keys "
           "for_how_long_in_seconds "
-          "cloud_platform_type i.e. aws/gcp"
+          "cloud_platform_type i.e. aws/gcp/local"
        << std::endl;
 }
 
@@ -532,7 +595,7 @@ void StartLogger() {
   if (!logger_ptr->Run().Successful()) {
     throw runtime_error("Cannot run logger.");
   }
-  GlobalLogger::SetGlobalLogger(logger_ptr);
+  GlobalLogger::SetGlobalLogger(std::move(logger_ptr));
 }
 
 using google::scp::pbs::AppConfiguration;
@@ -563,8 +626,20 @@ int main(int argc, char** argv) {
   } else if (strcmp(argv[6], "gcp") == 0) {
     cout << "Platform Type is GCP" << endl;
     app_configuration.cloud_platform_type = CloudPlatformType::GCP;
+  } else if (strcmp(argv[6], "local") == 0) {
+    cout << "Platform Type is Local" << endl;
+    app_configuration.cloud_platform_type = CloudPlatformType::Local;
   } else {
     throw runtime_error("Invalid Platform Type.");
+  }
+
+  EnvConfigProvider config_provider;
+  size_t http_request_max_retries_count;
+  auto result = config_provider.Get(
+      google::scp::pbs::kPBSWorkloadGeneratorMaxHttpRetryCount,
+      http_request_max_retries_count);
+  if (!result.Successful()) {
+    http_request_max_retries_count = kHttp2RequestRetryStrategyMaxRetries;
   }
 
   cout << "Config path: " << app_configuration.config_path << endl;
@@ -573,7 +648,7 @@ int main(int argc, char** argv) {
   cout << "Duration in Seconds: " << app_configuration.duration_in_seconds
        << endl;
 
-  size_t async_executor_thread_count = 48;
+  size_t async_executor_thread_count = std::thread::hardware_concurrency() * 2;
   size_t async_executor_queue_cap = 100000;
   bool drop_tasks_on_close = true;
   shared_ptr<google::scp::core::AsyncExecutorInterface> async_executor =
@@ -583,7 +658,17 @@ int main(int argc, char** argv) {
 
   auto http1_client =
       make_shared<Http1CurlClient>(async_executor, async_executor);
-  auto http2_client = make_shared<HttpClient>(async_executor);
+
+  // We allow a number of connections per host to be the number of threads on
+  // our async executor to eliminate connections being a bottleneck.
+  auto http2_client = make_shared<HttpClient>(
+      async_executor,
+      HttpClientOptions(
+          RetryStrategyOptions(RetryStrategyType::Exponential,
+                               kDefaultRetryStrategyDelayInMs,
+                               http_request_max_retries_count),
+          async_executor_thread_count /*max_connections_per_host*/,
+          kHttp2ConnectionReadTimeoutInSeconds));
   shared_ptr<TokenProviderCacheInterface> auth_token_provider_cache;
 
   assert(async_executor->Init().Successful());

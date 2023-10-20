@@ -136,6 +136,11 @@ variable "enable_public_key_signature" {
   type        = bool
 }
 
+variable "key_id_type" {
+  description = "Key ID Type"
+  type        = string
+}
+
 ################################################################################
 # VPC Variables
 ################################################################################

@@ -22,9 +22,11 @@
 
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using google::scp::pbs::BudgetKeyResolver;
 using std::atomic;
@@ -37,7 +39,7 @@ TEST(BudgetKeyResolverTest, AlwaysReturnLocal) {
   auto request = make_shared<ResolveBudgetKeyRequest>();
   AsyncContext<ResolveBudgetKeyRequest, ResolveBudgetKeyResponse> async_context(
       request, [&](auto& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         EXPECT_EQ(context.response->budget_key_location,
                   BudgetKeyLocation::Local);
         condition = true;

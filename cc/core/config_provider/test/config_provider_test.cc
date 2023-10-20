@@ -25,6 +25,7 @@
 #include <memory>
 
 #include "core/config_provider/src/error_codes.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::ConfigProvider;
 using google::scp::core::FailureExecutionResult;
@@ -95,14 +96,15 @@ TEST(ConfigProviderTest, GetConfigsFailed) {
 
   string out_string;
 
-  EXPECT_EQ(config.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(config.Init());
 
-  EXPECT_EQ(config.Get("server-name", out_string),
-            FailureExecutionResult(errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND));
+  EXPECT_THAT(config.Get("server-name", out_string),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
 
-  EXPECT_EQ(
-      config.Get("buffer-length", out_string),
-      FailureExecutionResult(errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR));
+  EXPECT_THAT(config.Get("buffer-length", out_string),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(ConfigProviderTest, InitFailed) {
@@ -112,9 +114,9 @@ TEST(ConfigProviderTest, InitFailed) {
 
   ConfigProvider config(full_path);
 
-  EXPECT_EQ(config.Init(),
-            FailureExecutionResult(
-                errors::SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE));
+  EXPECT_THAT(config.Init(),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE)));
 }
 
 TEST(ConfigProviderTest, ShowErrorInfo) {

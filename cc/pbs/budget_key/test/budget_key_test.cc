@@ -34,11 +34,14 @@
 #include "core/journal_service/mock/mock_journal_service_with_overrides.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "pbs/budget_key/mock/mock_budget_key_with_overrides.h"
 #include "pbs/budget_key/src/proto/budget_key.pb.h"
 #include "pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager.h"
 #include "pbs/budget_key_transaction_protocols/mock/mock_consume_budget_transaction_protocol.h"
+#include "pbs/interface/configuration_keys.h"
+#include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
@@ -52,6 +55,7 @@ using google::scp::core::JournalLogResponse;
 using google::scp::core::JournalLogStatus;
 using google::scp::core::JournalServiceInterface;
 using google::scp::core::NoSQLDatabaseProviderInterface;
+using google::scp::core::OnLogRecoveredCallback;
 using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
@@ -62,8 +66,10 @@ using google::scp::core::journal_service::mock::MockJournalService;
 using google::scp::core::journal_service::mock::MockJournalServiceWithOverrides;
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockAggregateMetric;
+using google::scp::cpio::MockMetricClient;
 using google::scp::pbs::BudgetKey;
 using google::scp::pbs::budget_key::mock::MockBudgetKey;
 using google::scp::pbs::budget_key::mock::MockConsumeBudgetTransactionProtocol;
@@ -80,6 +86,11 @@ using std::static_pointer_cast;
 using std::string;
 using std::vector;
 
+static constexpr Uuid kDefaultUuid = {0, 0};
+
+static shared_ptr<MockAggregateMetric> mock_aggregate_metric =
+    make_shared<MockAggregateMetric>();
+
 namespace google::scp::pbs::test {
 TEST(BudgetKeyTest, InitShouldSubscribe) {
   auto bucket_name = make_shared<string>("bucket_name");
@@ -92,7 +103,7 @@ TEST(BudgetKeyTest, InitShouldSubscribe) {
       make_shared<MockConsumeBudgetTransactionProtocol>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalServiceWithOverrides>(
       bucket_name, partition_name, async_executor, blob_storage_provider,
@@ -104,11 +115,10 @@ TEST(BudgetKeyTest, InitShouldSubscribe) {
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider);
+                       mock_metric_client, mock_config_provider,
+                       mock_aggregate_metric);
 
-  std::function<core::ExecutionResult(
-      const std::shared_ptr<core::BytesBuffer>&)>
-      callback;
+  OnLogRecoveredCallback callback;
   EXPECT_EQ(mock_journal_service->GetSubscribersMap().Find(budget_key.GetId(),
                                                            callback),
             FailureExecutionResult(
@@ -151,18 +161,19 @@ TEST(BudgetKeyTest, GetBudget) {
     shared_ptr<AsyncExecutorInterface> async_executor =
         make_shared<MockAsyncExecutor>();
     shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider;
-    auto mock_metric_client = make_shared<MockMetricClientProvider>();
+    auto mock_metric_client = make_shared<MockMetricClient>();
     auto mock_config_provider = make_shared<MockConfigProvider>();
     BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                          journal_service, nosql_database_provider,
                          budget_key_manager, budget_key_transaction_protocol,
-                         mock_metric_client, mock_config_provider);
+                         mock_metric_client, mock_config_provider,
+                         mock_aggregate_metric);
     GetBudgetRequest request = {.time_bucket = reporting_time};
     AsyncContext<GetBudgetRequest, GetBudgetResponse> get_budget_context(
         make_shared<GetBudgetRequest>(move(request)), [](auto& context) {});
     get_budget_context.callback = [result,
                                    &condition](auto get_budget_context) {
-      EXPECT_EQ(get_budget_context.result, result);
+      EXPECT_THAT(get_budget_context.result, ResultIs(result));
       if (result.Successful()) {
         EXPECT_EQ(get_budget_context.response->token_count, kMaxToken);
       }
@@ -186,19 +197,20 @@ TEST(BudgetKeyTest, LoadBudgetKey) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider);
+                       mock_metric_client, mock_config_provider,
+                       mock_aggregate_metric);
 
   AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>
       load_budget_key_context;
   load_budget_key_context.callback =
       [&](AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>&
               load_budget_key_context) {
-        EXPECT_EQ(load_budget_key_context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(load_budget_key_context.result);
       };
 
   EXPECT_EQ(budget_key.LoadBudgetKey(load_budget_key_context),
@@ -219,10 +231,9 @@ TEST(BudgetKeyTest, LoadBudgetKeyWithSerialization) {
 
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   MockBudgetKey budget_key(
       budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
       nosql_database_provider, mock_metric_client, mock_config_provider);
@@ -244,7 +255,7 @@ TEST(BudgetKeyTest, LoadBudgetKeyWithSerialization) {
         budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
         nosql_database_provider, mock_metric_client, mock_config_provider);
     EXPECT_EQ(mock_budget_key.OnJournalServiceRecoverCallback(
-                  journal_log_context.request->data),
+                  journal_log_context.request->data, kDefaultUuid),
               SuccessExecutionResult());
 
     // Call the callback to get the time of buffer timeframe manager.
@@ -285,10 +296,9 @@ TEST(BudgetKeyTest, SerializeBudgetKey) {
 
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   MockBudgetKey budget_key(
       budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
       nosql_database_provider, mock_metric_client, mock_config_provider);
@@ -298,8 +308,9 @@ TEST(BudgetKeyTest, SerializeBudgetKey) {
   EXPECT_EQ(budget_key.SerializeBudgetKey(timeframe_manager_id, *bytes_buffer),
             SuccessExecutionResult());
 
-  EXPECT_EQ(budget_key.OnJournalServiceRecoverCallback(bytes_buffer),
-            SuccessExecutionResult());
+  EXPECT_EQ(
+      budget_key.OnJournalServiceRecoverCallback(bytes_buffer, kDefaultUuid),
+      SuccessExecutionResult());
 
   EXPECT_EQ(budget_key.GetBudgetKeyTimeframeManagerId(), timeframe_manager_id);
 }
@@ -317,7 +328,7 @@ TEST(BudgetKeyTest, OnLogLoadBudgetKeyCallback) {
       make_shared<MockNoSQLDatabaseProvider>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   MockBudgetKey budget_key(
       budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
@@ -332,7 +343,8 @@ TEST(BudgetKeyTest, OnLogLoadBudgetKeyCallback) {
   load_budget_key_context.callback =
       [](AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>&
              load_budget_key_context) {
-        EXPECT_EQ(load_budget_key_context.result, FailureExecutionResult(123));
+        EXPECT_THAT(load_budget_key_context.result,
+                    ResultIs(FailureExecutionResult(123)));
       };
 
   journal_log_context.result = FailureExecutionResult(123);
@@ -343,7 +355,8 @@ TEST(BudgetKeyTest, OnLogLoadBudgetKeyCallback) {
   load_budget_key_context.callback =
       [](AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>&
              load_budget_key_context) {
-        EXPECT_EQ(load_budget_key_context.result, RetryExecutionResult(123));
+        EXPECT_THAT(load_budget_key_context.result,
+                    ResultIs(RetryExecutionResult(123)));
       };
 
   journal_log_context.result = RetryExecutionResult(123);
@@ -365,7 +378,7 @@ TEST(BudgetKeyTest, OnLogLoadBudgetKeyCallbackWithFailure) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   MockBudgetKey budget_key(
       budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
@@ -380,7 +393,7 @@ TEST(BudgetKeyTest, OnLogLoadBudgetKeyCallbackWithFailure) {
   load_budget_key_context.callback =
       [](AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>&
              load_budget_key_context) {
-        EXPECT_EQ(load_budget_key_context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(load_budget_key_context.result);
       };
 
   journal_log_context.result = SuccessExecutionResult();
@@ -409,16 +422,17 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackInvalidLog) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   MockBudgetKey budget_key(
       budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
       nosql_database_provider, mock_metric_client, mock_config_provider);
 
   auto bytes_buffer = make_shared<BytesBuffer>();
-  EXPECT_EQ(budget_key.OnJournalServiceRecoverCallback(bytes_buffer),
-            FailureExecutionResult(
-                core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
+  EXPECT_EQ(
+      budget_key.OnJournalServiceRecoverCallback(bytes_buffer, kDefaultUuid),
+      FailureExecutionResult(
+          core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
   EXPECT_EQ(budget_key.GetBudgetConsumptionTransactionProtocol(), nullptr);
 }
 
@@ -436,7 +450,7 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackInvalidVersion) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   MockBudgetKey budget_key(
       budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
@@ -454,9 +468,10 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackInvalidVersion) {
   EXPECT_EQ(budget_key_log.ByteSizeLong(), bytes_serialized);
   bytes_buffer->length = bytes_serialized;
 
-  EXPECT_EQ(budget_key.OnJournalServiceRecoverCallback(bytes_buffer),
-            FailureExecutionResult(
-                core::errors::SC_SERIALIZATION_VERSION_IS_INVALID));
+  EXPECT_EQ(
+      budget_key.OnJournalServiceRecoverCallback(bytes_buffer, kDefaultUuid),
+      FailureExecutionResult(
+          core::errors::SC_SERIALIZATION_VERSION_IS_INVALID));
   EXPECT_EQ(budget_key.GetBudgetConsumptionTransactionProtocol(), nullptr);
 }
 
@@ -473,7 +488,7 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackInvalidLog1_0) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
       make_shared<MockNoSQLDatabaseProvider>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   MockBudgetKey budget_key(
       budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
@@ -494,9 +509,10 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackInvalidLog1_0) {
   EXPECT_EQ(budget_key_log.ByteSizeLong(), bytes_serialized);
   bytes_buffer->length = bytes_serialized;
 
-  EXPECT_EQ(budget_key.OnJournalServiceRecoverCallback(bytes_buffer),
-            FailureExecutionResult(
-                core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
+  EXPECT_EQ(
+      budget_key.OnJournalServiceRecoverCallback(bytes_buffer, kDefaultUuid),
+      FailureExecutionResult(
+          core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
   EXPECT_EQ(budget_key.GetBudgetConsumptionTransactionProtocol(), nullptr);
 }
 
@@ -510,10 +526,9 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackValidLog) {
   shared_ptr<BlobStorageProviderInterface> blob_storage_provider;
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   auto mock_journal_service = make_shared<MockJournalServiceWithOverrides>(
       bucket_name, partition_name, async_executor, blob_storage_provider,
       mock_metric_client, mock_config_provider);
@@ -550,12 +565,11 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackValidLog) {
   EXPECT_EQ(budget_key_log.ByteSizeLong(), bytes_serialized);
   bytes_buffer->length = bytes_serialized;
 
-  std::function<core::ExecutionResult(
-      const std::shared_ptr<core::BytesBuffer>&)>
-      callback;
+  OnLogRecoveredCallback callback;
 
-  EXPECT_EQ(budget_key.OnJournalServiceRecoverCallback(bytes_buffer),
-            SuccessExecutionResult());
+  EXPECT_EQ(
+      budget_key.OnJournalServiceRecoverCallback(bytes_buffer, kDefaultUuid),
+      SuccessExecutionResult());
 
   EXPECT_EQ(mock_journal_service->GetSubscribersMap().Find(
                 budget_key.GetBudgetKeyTimeframeManagerId(), callback),
@@ -580,14 +594,14 @@ TEST(BudgetKeyTest, CheckpointNoTimeframeManager) {
 
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider, nullptr,
                        budget_key_transaction_protocol, mock_metric_client,
-                       mock_config_provider);
+                       mock_config_provider, mock_aggregate_metric);
   auto logs = make_shared<list<CheckpointLog>>();
-  EXPECT_EQ(budget_key.Checkpoint(logs), SuccessExecutionResult());
+  EXPECT_SUCCESS(budget_key.Checkpoint(logs));
   EXPECT_EQ(logs->size(), 1);
 }
 
@@ -608,20 +622,20 @@ TEST(BudgetKeyTest, CanUnload) {
       make_shared<MockBudgetKeyTimeframeManager>();
   shared_ptr<BudgetKeyTimeframeManagerInterface> budget_key_manager =
       mock_budget_key_timeframe_manager;
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider);
+                       mock_metric_client, mock_config_provider,
+                       mock_aggregate_metric);
 
   mock_budget_key_timeframe_manager->can_unload_mock = []() {
     return FailureExecutionResult(123);
   };
 
-  EXPECT_EQ(budget_key.CanUnload(), FailureExecutionResult(123));
+  EXPECT_THAT(budget_key.CanUnload(), ResultIs(FailureExecutionResult(123)));
 }
 
 TEST(BudgetKeyTest, Checkpoint) {
@@ -639,17 +653,17 @@ TEST(BudgetKeyTest, Checkpoint) {
       make_shared<MockAsyncExecutor>();
   shared_ptr<BudgetKeyTimeframeManagerInterface> budget_key_manager =
       make_shared<MockBudgetKeyTimeframeManager>();
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
-  mock_config_provider->Set("google_scp_pbs_budget_key_table_name",
-                            string("PBS_BudgetKeys"));
+  mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider);
+                       mock_metric_client, mock_config_provider,
+                       mock_aggregate_metric);
 
   auto logs = make_shared<list<CheckpointLog>>();
-  EXPECT_EQ(budget_key.Checkpoint(logs), SuccessExecutionResult());
+  EXPECT_SUCCESS(budget_key.Checkpoint(logs));
   EXPECT_EQ(logs->size(), 1);
 
   auto it = logs->begin();
@@ -663,7 +677,8 @@ TEST(BudgetKeyTest, Checkpoint) {
       nosql_database_provider, mock_metric_client, mock_config_provider);
 
   auto bytes_buffer = make_shared<BytesBuffer>(it->bytes_buffer);
-  EXPECT_EQ(recovery_budget_key.OnJournalServiceRecoverCallback(bytes_buffer),
+  EXPECT_EQ(recovery_budget_key.OnJournalServiceRecoverCallback(bytes_buffer,
+                                                                kDefaultUuid),
             SuccessExecutionResult());
 
   Uuid timeframe_manager_id;
@@ -690,19 +705,21 @@ TEST(BudgetKeyTest, CheckpointFailureWithTimeframeManager) {
   auto budget_key_manager =
       static_pointer_cast<BudgetKeyTimeframeManagerInterface>(
           mock_budget_key_manager);
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider);
+                       mock_metric_client, mock_config_provider,
+                       mock_aggregate_metric);
 
   mock_budget_key_manager->checkpoint_mock = [](auto&) {
     return FailureExecutionResult(1234);
   };
 
   auto logs = make_shared<list<CheckpointLog>>();
-  EXPECT_EQ(budget_key.Checkpoint(logs), FailureExecutionResult(1234));
+  EXPECT_THAT(budget_key.Checkpoint(logs),
+              ResultIs(FailureExecutionResult(1234)));
   EXPECT_EQ(logs->size(), 1);
 }
 }  // namespace google::scp::pbs::test

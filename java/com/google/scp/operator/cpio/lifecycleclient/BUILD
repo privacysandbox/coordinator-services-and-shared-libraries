@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -45,6 +47,34 @@ java_library(
         "//java/external:guice",
         "//java/external:javax_inject",
         "//java/external:slf4j",
+        "//operator/protos/shared/backend/asginstance:java_proto",
+    ],
+)
+
+java_library(
+    name = "gcp",
+    srcs = glob([
+        "*.java",
+        "gcp/*.java",
+    ]),
+    deps = [
+        "//java/com/google/scp/operator/shared/dao/asginstancesdb/common",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/common",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:gcp",
+        "//java/com/google/scp/shared/clients/configclient:model",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:findbugs",
+        "//java/external:gcp_api_gax",
+        "//java/external:gcp_compute",
+        "//java/external:gcp_compute_proto",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:javax_inject",
+        "//java/external:slf4j",
+        "//java/external:slf4j_simple",
         "//operator/protos/shared/backend/asginstance:java_proto",
     ],
 )

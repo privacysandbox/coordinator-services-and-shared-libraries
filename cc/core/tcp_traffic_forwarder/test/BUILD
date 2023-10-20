@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 cc_test(
     name = "tcp_traffic_forwarder_test",
     size = "small",
@@ -26,6 +28,7 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/tcp_traffic_forwarder/src:core_tcp_traffic_forwarder",
         "//cc/core/test:core_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

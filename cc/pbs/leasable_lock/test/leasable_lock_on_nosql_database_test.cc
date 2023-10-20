@@ -20,6 +20,7 @@
 #include "core/interface/nosql_database_provider_interface.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
 #include "pbs/leasable_lock/src/error_codes.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -39,6 +40,7 @@ using google::scp::core::UpsertDatabaseItemResponse;
 using google::scp::core::common::TimeProvider;
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProviderNoOverrides;
+using google::scp::core::test::ResultIs;
 using std::atomic;
 using std::forward;
 using std::get;
@@ -84,11 +86,12 @@ static const vector<NoSqlDatabaseKeyValuePair>
          make_shared<NoSQLDatabaseValidAttributeValueTypes>("true")}};
 
 void SetOverridesOnMockNoSQLDatabase(
-    shared_ptr<MockNoSQLDatabaseProviderNoOverrides>& mock_db,
-    LeaseInfo& lease_info, milliseconds lease_expiration_timestamp) {
-  mock_db->get_database_item_mock =
-      [=](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-              context) {
+    const shared_ptr<MockNoSQLDatabaseProviderNoOverrides>&
+        mock_nosql_database_provider_,
+    const LeaseInfo& lease_info, milliseconds lease_expiration_timestamp) {
+  ON_CALL(*mock_nosql_database_provider_, GetDatabaseItem)
+      .WillByDefault([=](AsyncContext<GetDatabaseItemRequest,
+                                      GetDatabaseItemResponse>& context) {
         context.response = make_shared<GetDatabaseItemResponse>();
         context.response->attributes =
             make_shared<vector<NoSqlDatabaseKeyValuePair>>();
@@ -111,14 +114,14 @@ void SetOverridesOnMockNoSQLDatabase(
         context.result = SuccessExecutionResult();
         context.callback(context);
         return SuccessExecutionResult();
-      };
-  mock_db->upsert_database_item_mock =
-      [=](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-              context) {
+      });
+  ON_CALL(*mock_nosql_database_provider_, UpsertDatabaseItem)
+      .WillByDefault([=](AsyncContext<UpsertDatabaseItemRequest,
+                                      UpsertDatabaseItemResponse>& context) {
         context.result = SuccessExecutionResult();
         context.callback(context);
         return SuccessExecutionResult();
-      };
+      });
 }
 
 template <class... Args>
@@ -147,60 +150,62 @@ class LeasableLockOnNoSQLDatabasePrivate : public LeasableLockOnNoSQLDatabase {
   bool IsLeaseCached() { return current_lease_.has_value(); }
 };
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     InitializeAndObtainConfiguredLeaseDurationIsSuccessful) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
+class LeasableLockOnNoSQLDatabaseTest : public ::testing::Test {
+ protected:
+  LeasableLockOnNoSQLDatabaseTest() {
+    // Two different acquirers
+    lease_acquirer_1_ = LeaseInfo{"123", "10.1.1.1"};
+    lease_acquirer_2_ = LeaseInfo{"456", "10.1.1.2"};
+    mock_nosql_database_provider_ =
+        make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+    nosql_database_provider_ = mock_nosql_database_provider_;
+  }
 
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+  LeaseInfo lease_acquirer_1_;
+  LeaseInfo lease_acquirer_2_;
+  size_t lease_renewal_percent_time_left_ = 80;
+  milliseconds lease_duration_in_ms_ = milliseconds(1500);
+  string leasable_lock_key_ = "0";
+  string lease_table_name_ = kPBSPartitionLockTableDefaultName;
+  shared_ptr<MockNoSQLDatabaseProviderNoOverrides>
+      mock_nosql_database_provider_;
+  shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider_;
+};
+
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       InitializeAndObtainConfiguredLeaseDurationIsSuccessful) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.GetConfiguredLeaseDurationInMilliseconds(), 1500);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_EQ(leasable_lock.GetConfiguredLeaseDurationInMilliseconds(),
+            lease_duration_in_ms_.count());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     IsCurrentLeaseOwnerReturnsFalseAfterInitalization) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       IsCurrentLeaseOwnerReturnsFalseAfterInitalization) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
-  auto lease_owner = leasable_lock.GetCurrentLeaseOwnerInfo();
-  EXPECT_EQ(lease_owner.has_value(), false);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
+  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), false);
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     ShouldRefreshLeaseIsTrueAfterInitialization) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsTrueAfterInitialization) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.ShouldRefreshLease(), true);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_TRUE(leasable_lock.ShouldRefreshLease());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseReadsAndUpsertsLockRowWithReadValueAsPreconditionValue) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  atomic<int> get_call = {0};
-  atomic<int> upsert_call = {0};
-  mock_db->get_database_item_mock =
-      [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-              context) {
-        get_call++;
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseReadsAndUpsertsLockRowWithReadValueAsPreconditionValue) {
+  EXPECT_CALL(*mock_nosql_database_provider_, GetDatabaseItem)
+      .WillOnce([&](AsyncContext<GetDatabaseItemRequest,
+                                 GetDatabaseItemResponse>& context) {
         context.response = make_shared<GetDatabaseItemResponse>();
         context.response->attributes =
             make_shared<vector<NoSqlDatabaseKeyValuePair>>(
@@ -208,11 +213,10 @@ TEST(LeasableLockOnNoSQLDatabaseTest,
         context.result = SuccessExecutionResult();
         context.callback(context);
         return SuccessExecutionResult();
-      };
-  mock_db->upsert_database_item_mock =
-      [&](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-              context) {
-        upsert_call++;
+      });
+  EXPECT_CALL(*mock_nosql_database_provider_, UpsertDatabaseItem)
+      .WillOnce([&](AsyncContext<UpsertDatabaseItemRequest,
+                                 UpsertDatabaseItemResponse>& context) {
         EXPECT_EQ(context.request->attributes->size(), 3);
         EXPECT_EQ(*kDummyLockRowAttributes[0].attribute_name,
                   *context.request->attributes->at(0).attribute_name);
@@ -243,10 +247,10 @@ TEST(LeasableLockOnNoSQLDatabaseTest,
                   *context.request->new_attributes->at(2).attribute_name);
         EXPECT_EQ(get<string>(
                       *context.request->new_attributes->at(0).attribute_value),
-                  lease_acquirer_info_current.lease_acquirer_id);
+                  lease_acquirer_1_.lease_acquirer_id);
         EXPECT_EQ(get<string>(
                       *context.request->new_attributes->at(1).attribute_value),
-                  lease_acquirer_info_current.service_endpoint_address);
+                  lease_acquirer_1_.service_endpoint_address);
         timestamp =
             stoll(get<string>(
                       *context.request->new_attributes->at(2).attribute_value),
@@ -256,31 +260,23 @@ TEST(LeasableLockOnNoSQLDatabaseTest,
         context.result = SuccessExecutionResult();
         context.callback(context);
         return SuccessExecutionResult();
-      };
+      });
 
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
-  EXPECT_EQ(leasable_lock.RefreshLease(), SuccessExecutionResult());
-  EXPECT_EQ(get_call.load(), 1);
-  EXPECT_EQ(upsert_call.load(), 1);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), true);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(false /* is_read_only_lease_refresh*/));
+  EXPECT_TRUE(leasable_lock.IsLeaseCached());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseFailsIfLeaseAcquisitionIsDisallowed) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  atomic<int> get_call = {0};
-  atomic<int> upsert_call = {0};
-  mock_db->get_database_item_mock =
-      [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-              context) {
-        get_call++;
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseFailsIfLeaseAcquisitionIsDisallowed) {
+  EXPECT_CALL(*mock_nosql_database_provider_, GetDatabaseItem)
+      .WillOnce([&](AsyncContext<GetDatabaseItemRequest,
+                                 GetDatabaseItemResponse>& context) {
         context.response = make_shared<GetDatabaseItemResponse>();
         context.response->attributes =
             make_shared<vector<NoSqlDatabaseKeyValuePair>>(
@@ -288,114 +284,64 @@ TEST(LeasableLockOnNoSQLDatabaseTest,
         context.result = SuccessExecutionResult();
         context.callback(context);
         return SuccessExecutionResult();
-      };
-  mock_db->upsert_database_item_mock =
-      [&](AsyncContext<UpsertDatabaseItemRequest,
-                       UpsertDatabaseItemResponse>&) {
-        upsert_call++;
-        return SuccessExecutionResult();
-      };
-
-  LeasableLockOnNoSQLDatabase leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.RefreshLease(),
+      });
+  LeasableLockOnNoSQLDatabasePrivate leasable_lock(
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_EQ(leasable_lock.RefreshLease(false /*is_read_only_lease_refresh*/),
             FailureExecutionResult(
                 core::errors::SC_LEASABLE_LOCK_ACQUISITION_DISALLOWED));
-  EXPECT_EQ(get_call, 1);
-  EXPECT_EQ(upsert_call, 0);
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseDoesNotCacheIfReadLockRowRequestFails) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  atomic<int> get_call = {0};
-  atomic<int> upsert_call = {0};
-  mock_db->get_database_item_mock =
-      [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-              context) {
-        get_call++;
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseDoesNotCacheIfReadLockRowRequestFails) {
+  EXPECT_CALL(*mock_nosql_database_provider_, GetDatabaseItem)
+      .WillOnce([&](AsyncContext<GetDatabaseItemRequest,
+                                 GetDatabaseItemResponse>& context) {
         context.response = make_shared<GetDatabaseItemResponse>();
         context.response->attributes =
             make_shared<vector<NoSqlDatabaseKeyValuePair>>();
         context.result = SuccessExecutionResult();
         return FailureExecutionResult(SC_UNKNOWN);
-      };
-  mock_db->upsert_database_item_mock =
-      [&](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-              context) {
-        upsert_call++;
-        context.result = SuccessExecutionResult();
-        context.callback(context);
-        return SuccessExecutionResult();
-      };
-
+      });
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
-  EXPECT_NE(leasable_lock.RefreshLease(), SuccessExecutionResult());
-  EXPECT_EQ(get_call.load(), 1);
-  EXPECT_EQ(upsert_call.load(), 0);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
+  EXPECT_NE(leasable_lock.RefreshLease(false /*is_read_only_lease_refresh*/),
+            SuccessExecutionResult());
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseDoesNotCacheIfReadLockRowFails) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  atomic<int> get_call = {0};
-  atomic<int> upsert_call = {0};
-  mock_db->get_database_item_mock =
-      [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-              context) {
-        get_call++;
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseDoesNotCacheIfReadLockRowFails) {
+  EXPECT_CALL(*mock_nosql_database_provider_, GetDatabaseItem)
+      .WillOnce([&](AsyncContext<GetDatabaseItemRequest,
+                                 GetDatabaseItemResponse>& context) {
         context.response = make_shared<GetDatabaseItemResponse>();
         context.response->attributes =
             make_shared<vector<NoSqlDatabaseKeyValuePair>>();
         context.result = FailureExecutionResult(SC_UNKNOWN);
         context.callback(context);
         return SuccessExecutionResult();
-      };
-  mock_db->upsert_database_item_mock =
-      [&](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-              context) {
-        upsert_call++;
-        context.result = SuccessExecutionResult();
-        context.callback(context);
-        return SuccessExecutionResult();
-      };
-
+      });
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
-  EXPECT_NE(leasable_lock.RefreshLease(), SuccessExecutionResult());
-  EXPECT_EQ(get_call.load(), 1);
-  EXPECT_EQ(upsert_call.load(), 0);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
+  EXPECT_NE(leasable_lock.RefreshLease(false /*is_read_only_lease_refresh*/),
+            SuccessExecutionResult());
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseDoesNotCacheIfWriteLockRowRequestFails) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  atomic<int> get_call = {0};
-  atomic<int> upsert_call = {0};
-  mock_db->get_database_item_mock =
-      [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-              context) {
-        get_call++;
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseDoesNotCacheIfWriteLockRowRequestFails) {
+  EXPECT_CALL(*mock_nosql_database_provider_, GetDatabaseItem)
+      .WillOnce([&](AsyncContext<GetDatabaseItemRequest,
+                                 GetDatabaseItemResponse>& context) {
         context.response = make_shared<GetDatabaseItemResponse>();
         context.response->attributes =
             make_shared<vector<NoSqlDatabaseKeyValuePair>>(
@@ -403,38 +349,30 @@ TEST(LeasableLockOnNoSQLDatabaseTest,
         context.result = SuccessExecutionResult();
         context.callback(context);
         return SuccessExecutionResult();
-      };
-  mock_db->upsert_database_item_mock =
-      [&](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-              context) {
-        upsert_call++;
+      });
+
+  EXPECT_CALL(*mock_nosql_database_provider_, UpsertDatabaseItem)
+      .WillOnce([&](AsyncContext<UpsertDatabaseItemRequest,
+                                 UpsertDatabaseItemResponse>& context) {
         context.result = SuccessExecutionResult();
         return FailureExecutionResult(SC_UNKNOWN);
-      };
+      });
 
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
-  EXPECT_NE(leasable_lock.RefreshLease(), SuccessExecutionResult());
-  EXPECT_EQ(get_call.load(), 1);
-  EXPECT_EQ(upsert_call.load(), 1);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
+  EXPECT_NE(leasable_lock.RefreshLease(false /*is_read_only_lease_refresh*/),
+            SuccessExecutionResult());
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseDoesNotCacheIfWriteLockRowFails) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  atomic<int> get_call = {0};
-  atomic<int> upsert_call = {0};
-  mock_db->get_database_item_mock =
-      [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
-              context) {
-        get_call++;
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseDoesNotCacheIfWriteLockRowFails) {
+  EXPECT_CALL(*mock_nosql_database_provider_, GetDatabaseItem)
+      .WillOnce([&](AsyncContext<GetDatabaseItemRequest,
+                                 GetDatabaseItemResponse>& context) {
         context.response = make_shared<GetDatabaseItemResponse>();
         context.response->attributes =
             make_shared<vector<NoSqlDatabaseKeyValuePair>>(
@@ -442,409 +380,357 @@ TEST(LeasableLockOnNoSQLDatabaseTest,
         context.result = SuccessExecutionResult();
         context.callback(context);
         return SuccessExecutionResult();
-      };
-  mock_db->upsert_database_item_mock =
-      [&](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-              context) {
-        upsert_call++;
+      });
+  EXPECT_CALL(*mock_nosql_database_provider_, UpsertDatabaseItem)
+      .WillOnce([&](AsyncContext<UpsertDatabaseItemRequest,
+                                 UpsertDatabaseItemResponse>& context) {
         context.result = FailureExecutionResult(SC_UNKNOWN);
         context.callback(context);
         return SuccessExecutionResult();
-      };
-
+      });
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
-  EXPECT_NE(leasable_lock.RefreshLease(), SuccessExecutionResult());
-  EXPECT_EQ(get_call.load(), 1);
-  EXPECT_EQ(upsert_call.load(), 1);
-  EXPECT_EQ(leasable_lock.IsLeaseCached(), false);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
+  EXPECT_NE(leasable_lock.RefreshLease(false /*is_read_only_lease_refresh*/),
+            SuccessExecutionResult());
+  EXPECT_FALSE(leasable_lock.IsLeaseCached());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     ShouldRefreshLeaseIsTrueIfOwningLeaseIsExpired) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsTrueIfOwningLeaseIsExpired) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
   // Expired lease
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_current,
+      lease_acquirer_1_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() - milliseconds(1)));
-
-  EXPECT_EQ(leasable_lock.ShouldRefreshLease(), true);
+  EXPECT_TRUE(leasable_lock.ShouldRefreshLease());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     ShouldRefreshLeaseIsFalseIfNonOwningLeaseIsNotExpired) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "1";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsFalseIfNonOwningLeaseIsNotExpired) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-
-  LeaseInfo lease_acquirer_info_initial;
-  lease_acquirer_info_initial.lease_acquirer_id = "2";
-  lease_acquirer_info_initial.service_endpoint_address = "10.2.2.2";
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
   // Not expired lease
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_initial,
+      lease_acquirer_2_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() + seconds(100)));
 
-  EXPECT_EQ(leasable_lock.ShouldRefreshLease(), false);
+  EXPECT_FALSE(leasable_lock.ShouldRefreshLease());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     ShouldRefreshLeaseIsTrueIfNonOwningLeaseIsExpired) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "1";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsTrueIfNonOwningLeaseIsExpired) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-
-  LeaseInfo lease_acquirer_info_initial;
-  lease_acquirer_info_initial.lease_acquirer_id = "2";
-  lease_acquirer_info_initial.service_endpoint_address = "10.2.2.2";
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
   // Expired lease and non owner lease
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_initial,
+      lease_acquirer_2_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() - seconds(1)));
 
-  EXPECT_EQ(leasable_lock.ShouldRefreshLease(), true);
+  EXPECT_TRUE(leasable_lock.ShouldRefreshLease());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     ShouldRefreshLeaseIsFalseIfOwningLeaseHasNotMetRenewThreshold) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "1";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsFalseIfOwningLeaseHasNotMetRenewThreshold) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", seconds(15), 20);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_current,
+      lease_acquirer_1_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() + seconds(6)));
 
-  EXPECT_EQ(leasable_lock.ShouldRefreshLease(), false);
+  EXPECT_FALSE(leasable_lock.ShouldRefreshLease());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     ShouldRefreshLeaseIsTrueIfOwningLeaseHasMetRenewThreshold) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "1";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsTrueIfOwningLeaseHasMetRenewThreshold) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", seconds(15), 20);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_current,
+      lease_acquirer_1_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() + seconds(1)));
 
-  EXPECT_EQ(leasable_lock.ShouldRefreshLease(), true);
+  EXPECT_TRUE(leasable_lock.ShouldRefreshLease());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     IsCurrentLeaseOwnerReturnsTrueIfLeaseOwnerIsCurrent) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsTrueIfNonOwningLeaseHasStaleCachedLease) {
+  auto lease_duration = seconds(15);
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration, lease_renewal_percent_time_left_);
+
+  // Non expired lease and non owner lease
+  leasable_lock.SetCachedCurrentLeaseOwner(
+      lease_acquirer_2_,
+      duration_cast<milliseconds>(
+          TimeProvider::GetWallTimestampInNanoseconds() + seconds(2)));
+
+  EXPECT_TRUE(leasable_lock.ShouldRefreshLease());
+}
+
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       ShouldRefreshLeaseIsFalseIfNonOwningLeaseHasFreshCachedLease) {
+  auto lease_duration = seconds(15);
+  LeasableLockOnNoSQLDatabasePrivate leasable_lock(
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration, lease_renewal_percent_time_left_);
+
+  // Non expired lease and non owner lease
+  leasable_lock.SetCachedCurrentLeaseOwner(
+      lease_acquirer_2_,
+      duration_cast<milliseconds>(
+          TimeProvider::GetWallTimestampInNanoseconds() + seconds(9)));
+
+  EXPECT_FALSE(leasable_lock.ShouldRefreshLease());
+}
+
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       IsCurrentLeaseOwnerReturnsTrueIfLeaseOwnerIsCurrent) {
+  LeasableLockOnNoSQLDatabasePrivate leasable_lock(
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_current,
+      lease_acquirer_1_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() + seconds(100)));
 
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), true);
+  EXPECT_TRUE(leasable_lock.IsCurrentLeaseOwner());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     IsCurrentLeaseOwnerReturnsFalseIfLeaseOwnerIsOther) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "1";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       IsCurrentLeaseOwnerReturnsFalseIfLeaseOwnerIsOther) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
-
-  LeaseInfo lease_acquirer_info_initial;
-  lease_acquirer_info_initial.lease_acquirer_id = "2";
-  lease_acquirer_info_initial.service_endpoint_address = "10.2.2.2";
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_initial,
+      lease_acquirer_2_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() + seconds(100)));
 
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     IsCurrentLeaseOwnerReturnsFalseIfLeaseOwnerIsCurrentAndExpired) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "123";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       IsCurrentLeaseOwnerReturnsFalseIfLeaseOwnerIsCurrentAndExpired) {
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", milliseconds(1500), 80);
+      nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_current,
+      lease_acquirer_1_,
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() - seconds(1)));
 
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseRefreshesTheCachedLeaseForFirstTimeOwnerAndExpired) {
-  LeaseInfo lease_acquirer_info_this;
-  lease_acquirer_info_this.lease_acquirer_id = "123";
-  lease_acquirer_info_this.service_endpoint_address = "10.1.1.1";
-
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseRefreshesTheCachedLeaseForFirstTimeOwnerAndExpired) {
   auto current_lease_owner_lease_expiration = duration_cast<milliseconds>(
       TimeProvider::GetWallTimestampInNanoseconds() - seconds(100));
-  LeaseInfo lease_acquirer_info_current_owner = lease_acquirer_info_this;
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  SetOverridesOnMockNoSQLDatabase(mock_db, lease_acquirer_info_current_owner,
+  SetOverridesOnMockNoSQLDatabase(mock_nosql_database_provider_,
+                                  lease_acquirer_1_,
                                   current_lease_owner_lease_expiration);
 
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_this, kPBSPartitionLockTableDefaultName, "0",
-      milliseconds(1500), 80);
+      mock_nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), false);
 
-  EXPECT_EQ(leasable_lock.RefreshLease(), SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(false /* is_read_only_lease_refresh */));
 
   // New lease owner is the other lease owner.
-  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), true);
+  EXPECT_TRUE(leasable_lock.GetCurrentLeaseOwnerInfo().has_value());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
-            lease_acquirer_info_this.lease_acquirer_id);
+            lease_acquirer_1_.lease_acquirer_id);
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
-            lease_acquirer_info_this.service_endpoint_address);
+            lease_acquirer_1_.service_endpoint_address);
 }
 
-TEST(
+TEST_F(
     LeasableLockOnNoSQLDatabaseTest,
     RefreshLeaseRefreshesTheCachedLeaseForFirstTimeNotOwnerAndLeaseNotExpired) {
-  LeaseInfo lease_acquirer_info_this;
-  lease_acquirer_info_this.lease_acquirer_id = "123";
-  lease_acquirer_info_this.service_endpoint_address = "10.1.1.1";
-
   auto current_lease_owner_lease_expiration = duration_cast<milliseconds>(
       TimeProvider::GetWallTimestampInNanoseconds() + seconds(100));
-  LeaseInfo lease_acquirer_info_current_owner;
-  lease_acquirer_info_current_owner.lease_acquirer_id = "456";
-  lease_acquirer_info_current_owner.service_endpoint_address = "11.11.11.11";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  SetOverridesOnMockNoSQLDatabase(mock_db, lease_acquirer_info_current_owner,
+  SetOverridesOnMockNoSQLDatabase(mock_nosql_database_provider_,
+                                  lease_acquirer_2_,
                                   current_lease_owner_lease_expiration);
 
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_this, kPBSPartitionLockTableDefaultName, "0",
-      milliseconds(1500), 80);
+      mock_nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), false);
 
-  EXPECT_EQ(leasable_lock.RefreshLease(), SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(false /* is_read_only_lease_refresh */));
 
   // New lease owner is the other lease owner.
-  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), true);
+  EXPECT_TRUE(leasable_lock.GetCurrentLeaseOwnerInfo().has_value());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
-            lease_acquirer_info_current_owner.lease_acquirer_id);
+            lease_acquirer_2_.lease_acquirer_id);
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
-            lease_acquirer_info_current_owner.service_endpoint_address);
+            lease_acquirer_2_.service_endpoint_address);
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseRefreshesTheCachedLeaseForFirstTimeNotOwnerAndButExpired) {
-  LeaseInfo lease_acquirer_info_this;
-  lease_acquirer_info_this.lease_acquirer_id = "123";
-  lease_acquirer_info_this.service_endpoint_address = "10.1.1.1";
-
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseRefreshesTheCachedLeaseForFirstTimeNotOwnerAndButExpired) {
   auto current_lease_owner_lease_expiration = duration_cast<milliseconds>(
       TimeProvider::GetWallTimestampInNanoseconds() - seconds(1));
-  LeaseInfo lease_acquirer_info_current_owner;
-  lease_acquirer_info_current_owner.lease_acquirer_id = "456";
-  lease_acquirer_info_current_owner.service_endpoint_address = "11.11.11.11";
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  SetOverridesOnMockNoSQLDatabase(mock_db, lease_acquirer_info_current_owner,
+  SetOverridesOnMockNoSQLDatabase(mock_nosql_database_provider_,
+                                  lease_acquirer_2_,
                                   current_lease_owner_lease_expiration);
-
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_this, kPBSPartitionLockTableDefaultName, "0",
-      milliseconds(1500), 80);
+      mock_nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
 
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), false);
 
-  EXPECT_EQ(leasable_lock.RefreshLease(), SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(false /* is_read_only_lease_refresh */));
 
-  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), true);
+  EXPECT_TRUE(leasable_lock.GetCurrentLeaseOwnerInfo().has_value());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
-            lease_acquirer_info_this.lease_acquirer_id);
+            lease_acquirer_1_.lease_acquirer_id);
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
-            lease_acquirer_info_this.service_endpoint_address);
+            lease_acquirer_1_.service_endpoint_address);
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseRefreshesTheCachedLeaseIfOwner) {
-  LeaseInfo lease_acquirer_info_this;
-  lease_acquirer_info_this.lease_acquirer_id = "123";
-  lease_acquirer_info_this.service_endpoint_address = "10.1.1.1";
-
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseRefreshesTheCachedLeaseIfOwner) {
   auto current_lease_owner_lease_expiration = duration_cast<milliseconds>(
       TimeProvider::GetWallTimestampInNanoseconds() - seconds(1));
-  LeaseInfo lease_acquirer_info_current_owner = lease_acquirer_info_this;
-
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  SetOverridesOnMockNoSQLDatabase(mock_db, lease_acquirer_info_current_owner,
+  SetOverridesOnMockNoSQLDatabase(mock_nosql_database_provider_,
+                                  lease_acquirer_1_,
                                   current_lease_owner_lease_expiration);
-
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current_owner,
-      kPBSPartitionLockTableDefaultName, "0", milliseconds(1500), 80);
+      mock_nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_current_owner, current_lease_owner_lease_expiration);
+      lease_acquirer_1_, current_lease_owner_lease_expiration);
 
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), false);
-  EXPECT_EQ(leasable_lock.RefreshLease(), SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(false /* is_read_only_lease_refresh */));
 
-  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), true);
+  EXPECT_TRUE(leasable_lock.GetCurrentLeaseOwnerInfo().has_value());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
-            lease_acquirer_info_this.lease_acquirer_id);
+            lease_acquirer_1_.lease_acquirer_id);
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
-            lease_acquirer_info_this.service_endpoint_address);
+            lease_acquirer_1_.service_endpoint_address);
   EXPECT_GT(leasable_lock.GetCurrentLeaseExpirationTimestamp(),
             current_lease_owner_lease_expiration);
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseRefreshesTheCachedLeaseIfNonOwnerAndExpired) {
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "1";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  LeaseInfo lease_acquirer_info_initial;
-  lease_acquirer_info_initial.lease_acquirer_id = "2";
-  lease_acquirer_info_initial.service_endpoint_address = "20.1.1.1";
-
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseRefreshesTheCachedLeaseIfNonOwnerAndExpired) {
   milliseconds initial_expired_lease_expiration_timestamp =
       duration_cast<milliseconds>(
           TimeProvider::GetWallTimestampInNanoseconds() - milliseconds(1));
-
-  // Initially the database has a lease of other lease acquirer for +10 seconds.
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  SetOverridesOnMockNoSQLDatabase(mock_db, lease_acquirer_info_initial,
+  // Initially the database has a lease of other lease acquirer for +10
+  SetOverridesOnMockNoSQLDatabase(mock_nosql_database_provider_,
+                                  lease_acquirer_2_,
                                   initial_expired_lease_expiration_timestamp);
 
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", seconds(15), 80);
+      mock_nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
   leasable_lock.SetCachedCurrentLeaseOwner(
-      lease_acquirer_info_initial, initial_expired_lease_expiration_timestamp);
+      lease_acquirer_2_, initial_expired_lease_expiration_timestamp);
 
   // Current lease acquirer does not own the lease.
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
 
-  EXPECT_EQ(leasable_lock.RefreshLease(), SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(false /* is_read_only_lease_refresh */));
 
   // Current lease acquirer owns the lease.
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), true);
-  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), true);
+  EXPECT_TRUE(leasable_lock.IsCurrentLeaseOwner());
+  EXPECT_TRUE(leasable_lock.GetCurrentLeaseOwnerInfo().has_value());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
-            lease_acquirer_info_current.lease_acquirer_id);
+            lease_acquirer_1_.lease_acquirer_id);
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
-            lease_acquirer_info_current.service_endpoint_address);
+            lease_acquirer_1_.service_endpoint_address);
 }
 
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     RefreshLeaseDoesNotRefreshTheCachedLeaseIfNonOwnerAndNotExpired) {
-  // Current lease acquirer
-  LeaseInfo lease_acquirer_info_current;
-  lease_acquirer_info_current.lease_acquirer_id = "1";
-  lease_acquirer_info_current.service_endpoint_address = "10.1.1.1";
-
-  // Other lease acquirer
-  LeaseInfo lease_acquirer_info_initial;
-  lease_acquirer_info_initial.lease_acquirer_id = "2";
-  lease_acquirer_info_initial.service_endpoint_address = "20.1.1.1";
-
+TEST_F(LeasableLockOnNoSQLDatabaseTest,
+       RefreshLeaseDoesNotRefreshTheCachedLeaseIfNonOwnerAndNotExpired) {
   auto initial_lease_expiration_timestamp = duration_cast<milliseconds>(
       TimeProvider::GetWallTimestampInNanoseconds() + seconds(10));
 
-  // Initially the database has a lease of other lease acquirer for +10 seconds.
-  auto mock_db = make_shared<MockNoSQLDatabaseProviderNoOverrides>();
-  SetOverridesOnMockNoSQLDatabase(mock_db, lease_acquirer_info_initial,
+  // Initially the database has a lease of other lease acquirer for +10
+  SetOverridesOnMockNoSQLDatabase(mock_nosql_database_provider_,
+                                  lease_acquirer_2_,
                                   initial_lease_expiration_timestamp);
 
   LeasableLockOnNoSQLDatabasePrivate leasable_lock(
-      mock_db, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName,
-      "0", seconds(15), 80);
-  leasable_lock.SetCachedCurrentLeaseOwner(lease_acquirer_info_initial,
+      mock_nosql_database_provider_, lease_acquirer_1_, lease_table_name_,
+      leasable_lock_key_, lease_duration_in_ms_,
+      lease_renewal_percent_time_left_);
+  leasable_lock.SetCachedCurrentLeaseOwner(lease_acquirer_2_,
                                            initial_lease_expiration_timestamp);
 
   // Current lease acquirer does not own the lease.
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
-  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), true);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
+  EXPECT_TRUE(leasable_lock.GetCurrentLeaseOwnerInfo().has_value());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
-            lease_acquirer_info_initial.lease_acquirer_id);
+            lease_acquirer_2_.lease_acquirer_id);
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
-            lease_acquirer_info_initial.service_endpoint_address);
+            lease_acquirer_2_.service_endpoint_address);
   auto prev_lease_expiration_timestamp =
       leasable_lock.GetCurrentLeaseExpirationTimestamp();
   EXPECT_EQ(prev_lease_expiration_timestamp,
             initial_lease_expiration_timestamp);
 
-  EXPECT_EQ(leasable_lock.RefreshLease(), SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(false /* is_read_only_lease_refresh */));
 
   // Current lease acquirer still does not own the lease.
-  EXPECT_EQ(leasable_lock.IsCurrentLeaseOwner(), false);
-  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo().has_value(), true);
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
+  EXPECT_TRUE(leasable_lock.GetCurrentLeaseOwnerInfo().has_value());
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
-            lease_acquirer_info_initial.lease_acquirer_id);
+            lease_acquirer_2_.lease_acquirer_id);
   EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
-            lease_acquirer_info_initial.service_endpoint_address);
+            lease_acquirer_2_.service_endpoint_address);
   auto current_lease_expiration_timestamp =
       leasable_lock.GetCurrentLeaseExpirationTimestamp();
 
@@ -853,104 +739,33 @@ TEST(LeasableLockOnNoSQLDatabaseTest,
             prev_lease_expiration_timestamp);
 }
 
-template <class... Args>
-class LeasableLockOnNoSQLDatabaseLeaseInfoInternalTester
-    : public LeasableLockOnNoSQLDatabase {
- public:
-  explicit LeasableLockOnNoSQLDatabaseLeaseInfoInternalTester(Args... args)
-      : LeasableLockOnNoSQLDatabase(args...) {}
+TEST_F(LeasableLockOnNoSQLDatabaseTest, LeaseIsNotWrittenIfReadOnlyIsTrue) {
+  LeaseInfo lease_acquirer_2_ = {"2", "2.1.1.1"};
+  LeaseInfo lease_acquirer_info_next = {"1", "10.1.1.1"};
+  milliseconds initial_lease_expiration_timestamp = duration_cast<milliseconds>(
+      TimeProvider::GetWallTimestampInNanoseconds() + seconds(100));
+  // Initially the database has a lease of other lease acquirer for +10
+  SetOverridesOnMockNoSQLDatabase(mock_nosql_database_provider_,
+                                  lease_acquirer_2_,
+                                  initial_lease_expiration_timestamp);
 
-  void LeaseInfoInternalTestIsExpired() {
-    LeaseInfo lease_info;
-    lease_info.lease_acquirer_id = "1";
-    lease_info.service_endpoint_address = "10.1.1.1";
+  LeasableLockOnNoSQLDatabasePrivate leasable_lock(
+      mock_nosql_database_provider_, lease_acquirer_info_next,
+      kPBSPartitionLockTableDefaultName, "0", seconds(15), 80);
+  leasable_lock.SetCachedCurrentLeaseOwner(lease_acquirer_2_,
+                                           initial_lease_expiration_timestamp);
 
-    LeaseInfoInternal lease_info_internal(lease_info);
-    EXPECT_TRUE(lease_info_internal.IsExpired());
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
 
-    lease_info_internal = LeaseInfoInternal(
-        lease_info, duration_cast<milliseconds>(
-                        TimeProvider::GetWallTimestampInNanoseconds()) +
-                        seconds(1));
-    EXPECT_FALSE(lease_info_internal.IsExpired());
-  }
-
-  void
-  LeaseInfoInternalExtendLeaseDurationInMillisecondsFromCurrentTimestamp() {
-    LeaseInfo lease_info;
-    lease_info.lease_acquirer_id = "1";
-    lease_info.service_endpoint_address = "10.1.1.1";
-
-    LeaseInfoInternal lease_info_internal(lease_info);
-    EXPECT_TRUE(lease_info_internal.IsExpired());
-
-    lease_info_internal.ExtendLeaseDurationInMillisecondsFromCurrentTimestamp(
-        milliseconds(500));
-    EXPECT_FALSE(lease_info_internal.IsExpired());
-
-    sleep_for(seconds(1));
-    EXPECT_TRUE(lease_info_internal.IsExpired());
-  }
-
-  void LeaseInfoInternalTestIsLeaseOwner() {
-    LeaseInfo lease_info;
-    lease_info.lease_acquirer_id = "1";
-    lease_info.service_endpoint_address = "10.1.1.1";
-
-    LeaseInfoInternal lease_info_internal1(lease_info);
-    EXPECT_TRUE(lease_info_internal1.IsLeaseOwner("1"));
-
-    LeaseInfoInternal lease_info_internal2(lease_info);
-    EXPECT_FALSE(lease_info_internal2.IsLeaseOwner("2"));
-  }
-
-  void LeaseInfoInternalTestIsLeaseRenewalRequired() {
-    LeaseInfo lease_info;
-    lease_info.lease_acquirer_id = "1";
-    lease_info.service_endpoint_address = "10.1.1.1";
-
-    LeaseInfoInternal lease_info_internal(lease_info);
-    lease_info_internal.ExtendLeaseDurationInMillisecondsFromCurrentTimestamp(
-        milliseconds(500));
-
-    EXPECT_FALSE(
-        lease_info_internal.IsLeaseRenewalRequired(milliseconds(500), 50));
-    EXPECT_FALSE(
-        lease_info_internal.IsLeaseRenewalRequired(milliseconds(900), 50));
-    EXPECT_TRUE(
-        lease_info_internal.IsLeaseRenewalRequired(milliseconds(1100), 50));
-  }
-};
-
-TEST(LeasableLockOnNoSQLDatabaseTest, LeaseInfoInternalTestIsExpired) {
-  LeaseInfo lease_acquirer_info_current;
-  LeasableLockOnNoSQLDatabaseLeaseInfoInternalTester leasable_lock(
-      nullptr, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName);
-  leasable_lock.LeaseInfoInternalTestIsExpired();
-}
-
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     LeaseInfoInternalExtendLeaseDurationInMillisecondsFromCurrentTimestamp) {
-  LeaseInfo lease_acquirer_info_current;
-  LeasableLockOnNoSQLDatabaseLeaseInfoInternalTester leasable_lock(
-      nullptr, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName);
-  leasable_lock
-      .LeaseInfoInternalExtendLeaseDurationInMillisecondsFromCurrentTimestamp();
-}
-
-TEST(LeasableLockOnNoSQLDatabaseTest, LeaseInfoInternalTestIsLeaseOwner) {
-  LeaseInfo lease_acquirer_info_current;
-  LeasableLockOnNoSQLDatabaseLeaseInfoInternalTester leasable_lock(
-      nullptr, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName);
-  leasable_lock.LeaseInfoInternalTestIsLeaseOwner();
-}
-
-TEST(LeasableLockOnNoSQLDatabaseTest,
-     LeaseInfoInternalTestIsLeaseRenewalRequired) {
-  LeaseInfo lease_acquirer_info_current;
-  LeasableLockOnNoSQLDatabaseLeaseInfoInternalTester leasable_lock(
-      nullptr, lease_acquirer_info_current, kPBSPartitionLockTableDefaultName);
-  leasable_lock.LeaseInfoInternalTestIsLeaseRenewalRequired();
+  EXPECT_SUCCESS(
+      leasable_lock.RefreshLease(true /* is_read_only_lease_refresh */));
+  // Lease cannot be owned due to readonly refresh. Lease holder will be
+  // 'lease_acquirer_2_'
+  EXPECT_FALSE(leasable_lock.IsCurrentLeaseOwner());
+  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->lease_acquirer_id,
+            lease_acquirer_2_.lease_acquirer_id);
+  EXPECT_EQ(leasable_lock.GetCurrentLeaseOwnerInfo()->service_endpoint_address,
+            lease_acquirer_2_.service_endpoint_address);
 }
 
 }  // namespace google::scp::pbs::test

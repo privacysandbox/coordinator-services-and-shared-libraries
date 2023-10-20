@@ -147,7 +147,7 @@ ExecutionResult PrivacyBudgetServiceClient::GetTransactionStatus(
       make_shared<HttpRequest>(),
       bind(&PrivacyBudgetServiceClient::OnGetTransactionStatusCallback, this,
            get_transaction_status_context, _1),
-      get_transaction_status_context.activity_id);
+      get_transaction_status_context);
 
   string transaction_id =
       ToString(get_transaction_status_context.request->transaction_id);
@@ -170,6 +170,14 @@ ExecutionResult PrivacyBudgetServiceClient::GetTransactionStatus(
   http_context.request->headers->insert(
       {string(kTransactionSecretHeader),
        *get_transaction_status_context.request->transaction_secret});
+
+  // Transaction origin is optional field and is supplied when a coordinator is
+  // acting on bahalf of a remotely coordinated transaction
+  if (get_transaction_status_context.request->transaction_origin) {
+    http_context.request->headers->insert(
+        {string(kTransactionOriginHeader),
+         *get_transaction_status_context.request->transaction_origin});
+  }
 
   return http_client_->PerformRequest(http_context);
 }
@@ -209,7 +217,7 @@ ExecutionResult PrivacyBudgetServiceClient::InitiateConsumeBudgetTransaction(
       bind(&PrivacyBudgetServiceClient::
                OnInitiateConsumeBudgetTransactionCallback,
            this, consume_budget_transaction_context, _1),
-      consume_budget_transaction_context.activity_id);
+      consume_budget_transaction_context);
 
   http_context.request->path = begin_consume_budget_transaction_url_;
   http_context.request->body = BytesBuffer(serialized_body.length());
@@ -281,7 +289,7 @@ ExecutionResult PrivacyBudgetServiceClient::ExecuteTransactionPhase(
       make_shared<HttpRequest>(),
       bind(&PrivacyBudgetServiceClient::OnExecuteTransactionPhaseCallback, this,
            execute_transaction_phase_context, _1),
-      execute_transaction_phase_context.activity_id);
+      execute_transaction_phase_context);
 
   string transaction_id =
       ToString(execute_transaction_phase_context.request->transaction_id);
@@ -327,6 +335,15 @@ ExecutionResult PrivacyBudgetServiceClient::ExecuteTransactionPhase(
   http_context.request->headers->insert(
       {string(kTransactionSecretHeader),
        *execute_transaction_phase_context.request->transaction_secret});
+
+  // Transaction origin is optional field and is supplied when a coordinator
+  // is acting on bahalf of a remotely coordinated transaction
+  if (execute_transaction_phase_context.request->transaction_origin) {
+    http_context.request->headers->insert(
+        {string(kTransactionOriginHeader),
+         *execute_transaction_phase_context.request->transaction_origin});
+  }
+
   http_context.request->headers->insert(
       {string(kTransactionLastExecutionTimestampHeader),
        std::to_string(execute_transaction_phase_context.request

@@ -57,6 +57,7 @@ resource "aws_route53_record" "cert_validation" {
   zone_id         = each.value.zone_id
 }
 
+
 # Resource that handles actual validation. Timeout at 30 minutes. If result is PENDING, then must be tried at a later time
 resource "aws_acm_certificate_validation" "cert" {
   certificate_arn = aws_acm_certificate.ssl_certificate.arn

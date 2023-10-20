@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
@@ -19,29 +21,16 @@ cc_library(
     srcs = [
         "test_aws_metric_client_provider.cc",
         "test_aws_metric_client_provider.h",
-        "//cc/cpio/client_providers/interface:metric_client_provider_interface.h",
-        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_srcs",
         "//cc/cpio/client_providers/metric_client_provider/src/aws:aws_metric_client_provider_srcs",
     ],
     copts = [
         "-DTEST_CPIO=1",
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",
-        "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
-        "//cc/core/interface:async_context_lib",
-        "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
-        "//cc/cpio/client_providers/interface:type_def",
         "//cc/cpio/client_providers/metric_client_provider/src/aws:aws_metric_client_provider_lib",
-        "//cc/cpio/common/src/aws:aws_utils_lib",
         "//cc/cpio/common/test/aws:test_aws_utils_lib",
-        "//cc/public/cpio/interface/metric_client:type_def",
-        "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "//cc/public/cpio/test/metric_client:test_aws_metric_client_options",
-        "@aws_sdk_cpp//:monitoring",
-        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -74,7 +63,7 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/metric_client_provider/src/aws:aws_metric_client_provider_lib",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "@com_google_googletest//:gtest_main",
     ],
@@ -95,7 +84,7 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/metric_client_provider/mock/aws:aws_metric_client_provider_mock",
         "//cc/cpio/client_providers/metric_client_provider/src/aws:aws_metric_client_provider_lib",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "@com_google_googletest//:gtest_main",
     ],

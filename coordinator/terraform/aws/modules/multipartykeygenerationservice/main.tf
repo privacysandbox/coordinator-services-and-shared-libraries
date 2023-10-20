@@ -35,7 +35,10 @@ locals {
   enclave_ssm_parameters = merge(local.required_enclave_ssm_parameters,
     var.enable_public_key_signature ? {
       ENCRYPTION_KEY_SIGNATURE_KEY_ID = aws_kms_key.encryption_key_signature_key[0].arn
-    } : {}
+    } : {},
+    var.key_id_type != "" ? {
+      KEY_ID_TYPE = var.key_id_type
+    } : {},
   )
 }
 

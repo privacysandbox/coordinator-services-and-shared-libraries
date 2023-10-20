@@ -1,18 +1,16 @@
-/**
- * Copyright 2023 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 ########################
 # DO NOT EDIT MANUALLY #
@@ -249,6 +247,20 @@ variable "beanstalk_solution_stack_name" {
   }
 }
 
+variable "autoscaling_min_size" {
+  description = "The minimum number of PBS instances to use for the autoscaling group."
+  type        = number
+  nullable    = false
+  default     = 3
+}
+
+variable "autoscaling_max_size" {
+  description = "The maximum number of PBS instances to use for the autoscaling group."
+  type        = number
+  nullable    = false
+  default     = 3
+}
+
 variable "enable_vpc_flow_logs" {
   description = "Whether to enable VPC flow logs that end up in a cloudwatch log group."
   type        = bool
@@ -355,7 +367,6 @@ variable "pbs_error_log_database_read_threshold" {
   description = "Alarming threshold for the count of logs containing ERROR - metric_filter_database_read. Example: '0'."
   type        = string
   default     = "0"
-
 }
 
 variable "pbs_error_log_database_update_threshold" {
@@ -377,15 +388,15 @@ variable "pbs_error_log_handle_journal_threshold" {
 }
 
 variable "pbs_elb_error_ratio_4xx_threshold" {
-  description = "ELB 4xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  description = "ELB 4xx error ratio rate greater than this to send alarm. Value should be a percentage. Example: 10% is '10.0'."
   type        = string
-  default     = "0.05"
+  default     = "5.0"
 }
 
 variable "pbs_elb_error_ratio_5xx_threshold" {
-  description = "ELB 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  description = "ELB 5xx error ratio rate greater than this to send alarm. Value should be a percentage. Example: 10% is '10.0'."
   type        = string
-  default     = "0.05"
+  default     = "5.0"
 }
 
 variable "budget_key_table_read_capacity_alarm_ratio_threshold" {

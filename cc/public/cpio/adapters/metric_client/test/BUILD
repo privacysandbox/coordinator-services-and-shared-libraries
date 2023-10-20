@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 exports_files(["test_aws_metric_client.h"])
@@ -36,7 +38,7 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/adapters/metric_client/mock:metric_client_mock",
         "//cc/public/cpio/core/mock:lib_cpio_mock",
         "//cc/public/cpio/interface:cpio_errors",

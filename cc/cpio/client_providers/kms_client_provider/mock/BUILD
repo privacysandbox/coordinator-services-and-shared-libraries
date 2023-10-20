@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_library(
@@ -28,8 +30,7 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/message_router/src:message_router_lib",
-        "//cc/cpio/client_providers/kms_client_provider/src:kms_client_provider_lib",
-        "//cc/cpio/proto:cc_proto",
+        "//cc/cpio/client_providers/kms_client_provider/src:kms_client_provider_select_lib",
         "@com_google_protobuf//:protobuf",
     ],
 )

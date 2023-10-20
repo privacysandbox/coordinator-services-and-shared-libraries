@@ -165,10 +165,13 @@ public enum Code {
   /**
    * The operation is not implemented or is not supported/enabled in this service.
    *
-   * <p>HTTP Mapping: 501 Not Implemented UNIMPLEMENTED(12, 501),
-   *
-   * <p>/** Internal errors. This means that some invariants expected by the underlying system have
-   * been broken. This error code is reserved for serious errors.
+   * <p>HTTP Mapping: 501 Not Implemented
+   */
+  UNIMPLEMENTED(12, 501),
+
+  /**
+   * Internal errors. This means that some invariants expected by the underlying system have been
+   * broken. This error code is reserved for serious errors.
    *
    * <p>HTTP Mapping: 500 Internal Server Error
    */

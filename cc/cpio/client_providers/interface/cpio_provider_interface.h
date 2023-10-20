@@ -40,15 +40,35 @@ namespace google::scp::cpio::client_providers {
 class CpioProviderInterface : public core::ServiceInterface {
  public:
   /**
+   * @brief Sets the global Async Executor.
+   *
+   * @param cpu_async_executor the CPU Async Executor.
+   * @return core::ExecutionResult get result.
+   */
+  virtual core::ExecutionResult SetCpuAsyncExecutor(
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          cpu_async_executor) noexcept = 0;
+
+  /**
+   * @brief Sets the global IO Async Executor.
+   *
+   * @param io_async_executor the IO Async Executor.
+   * @return core::ExecutionResult get result.
+   */
+  virtual core::ExecutionResult SetIoAsyncExecutor(
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          io_async_executor) noexcept = 0;
+
+  /**
    * @brief Gets the global Async Executor. Only create it when it is
    * needed.
    *
-   * @param async_executor the Async Executor.
+   * @param cpu_async_executor the CPU Async Executor.
    * @return core::ExecutionResult get result.
    */
-  virtual core::ExecutionResult GetAsyncExecutor(
+  virtual core::ExecutionResult GetCpuAsyncExecutor(
       std::shared_ptr<core::AsyncExecutorInterface>&
-          async_executor) noexcept = 0;
+          cpu_async_executor) noexcept = 0;
 
   /**
    * @brief Gets the global IO Async Executor. Only create it when it is
@@ -57,7 +77,7 @@ class CpioProviderInterface : public core::ServiceInterface {
    * @param io_async_executor the IO Async Executor.
    * @return core::ExecutionResult get result.
    */
-  virtual core::ExecutionResult GetIOAsyncExecutor(
+  virtual core::ExecutionResult GetIoAsyncExecutor(
       std::shared_ptr<core::AsyncExecutorInterface>&
           io_async_executor) noexcept = 0;
 

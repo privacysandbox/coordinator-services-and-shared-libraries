@@ -38,4 +38,3 @@ variable "aws_account_id" {
   type     = string
   nullable = false
 }
-

@@ -29,13 +29,16 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/http_server_interface.h"
-#include "core/interface/transaction_manager_interface.h"
+#include "core/interface/transaction_request_router_interface.h"
+#include "core/interface/type_def.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cpio/client_providers/metric_client_provider/interface/aggregate_metric_interface.h"
 #include "pbs/interface/budget_key_provider_interface.h"
 #include "pbs/interface/front_end_service_interface.h"
 #include "pbs/interface/type_def.h"
+#include "pbs/transactions/src/consume_budget_command_factory_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::pbs {
 /*! @copydoc FrontEndServiceInterface
@@ -45,16 +48,24 @@ class FrontEndService : public FrontEndServiceInterface {
   FrontEndService(
       std::shared_ptr<core::HttpServerInterface>& http_server,
       std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<core::TransactionManagerInterface>& transaction_manager,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      std::unique_ptr<core::TransactionRequestRouterInterface>
+          transaction_request_router,
+      std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+          consume_budget_command_factory,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider);
 
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;
   core::ExecutionResult Stop() noexcept override;
 
+  /**
+   * @brief Execute a transaction with the transaction manager as the
+   * end-to-end orchestrator for the transaction.
+   *
+   * @param consume_budget_transaction_context
+   * @return core::ExecutionResult
+   */
   core::ExecutionResult ExecuteConsumeBudgetTransaction(
       core::AsyncContext<ConsumeBudgetTransactionRequest,
                          ConsumeBudgetTransactionResponse>&
@@ -70,7 +81,7 @@ class FrontEndService : public FrontEndServiceInterface {
    * @return core::ExecutionResult
    */
   virtual core::ExecutionResultOr<
-      std::shared_ptr<cpio::client_providers::AggregateMetricInterface>>
+      std::shared_ptr<cpio::AggregateMetricInterface>>
   RegisterAggregateMetric(const std::string& name,
                           const std::string& phase) noexcept;
 
@@ -82,7 +93,7 @@ class FrontEndService : public FrontEndServiceInterface {
   virtual core::ExecutionResult InitMetricInstances() noexcept;
 
   /**
-   * @brief Is called when the transaction manager execute operation is
+   * @brief Is called when the transaction execute operation is
    * completed.
    *
    * @param metric_instance The metric instance used to track the execution
@@ -91,30 +102,30 @@ class FrontEndService : public FrontEndServiceInterface {
    * @param transaction_context The transaction context of the operation.
    */
   virtual void OnTransactionCallback(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionRequest, core::TransactionResponse>&
           transaction_context) noexcept;
 
   /**
-   * @brief Executes a transaction phase via the transaction manager.
+   * @brief Executes a transaction phase via the transaction request router.
    *
    * @param metric_instance The metric instance used to track the execution
    * status.
    * @param http_context The http context of the operation.
    * @param transaction_id The id of the transaction.
    * @param transaction_secret The secret of the transaction.
+   * @param transaction_origin The origin of the transaction.
    * @param last_execution_timestamp The last execution timestamp.
    * @param transaction_phase The phase of the transaction to be executed.
    * @return core::ExecutionResult
    */
   virtual core::ExecutionResult ExecuteTransactionPhase(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::common::Uuid& transaction_id,
       std::shared_ptr<std::string>& transaction_secret,
+      std::shared_ptr<std::string>& transaction_origin,
       core::Timestamp last_execution_timestamp,
       core::TransactionExecutionPhase transaction_phase) noexcept;
 
@@ -128,8 +139,7 @@ class FrontEndService : public FrontEndServiceInterface {
    * execution.
    */
   virtual void OnExecuteTransactionPhaseCallback(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionPhaseRequest,
                          core::TransactionPhaseResponse>&
@@ -244,28 +254,52 @@ class FrontEndService : public FrontEndServiceInterface {
    * status operation.
    */
   void OnGetTransactionStatusCallback(
-      const std::shared_ptr<cpio::client_providers::AggregateMetricInterface>&
-          metric_instance,
+      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::GetTransactionStatusRequest,
                          core::GetTransactionStatusResponse>&
           get_transaction_status_context) noexcept;
 
-  static std::vector<std::shared_ptr<core::TransactionCommand>>
+  /**
+   * @brief Generate one command per budget to consume
+   *
+   * @param consume_budget_metadata_list
+   * @param authorized_domain
+   * @param transaction_id
+   * @return std::vector<std::shared_ptr<core::TransactionCommand>>
+   */
+  std::vector<std::shared_ptr<core::TransactionCommand>>
   GenerateConsumeBudgetCommands(
       std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
       const std::string& authorized_domain,
-      const core::common::Uuid& transaction_id,
-      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider);
+      const core::common::Uuid& transaction_id);
 
-  static std::vector<std::shared_ptr<core::TransactionCommand>>
+  /**
+   * @brief Generate several commands each with a batch of budgets to consume
+   *
+   * @param consume_budget_metadata_list
+   * @param authorized_domain
+   * @param transaction_id
+   * @return std::vector<std::shared_ptr<core::TransactionCommand>>
+   */
+  std::vector<std::shared_ptr<core::TransactionCommand>>
   GenerateConsumeBudgetCommandsWithBatchesPerDay(
       std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
       const std::string& authorized_domain,
-      const core::common::Uuid& transaction_id,
-      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider);
+      const core::common::Uuid& transaction_id);
+
+  /**
+   * @brief Helper to obtain transaction origin from HTTP Request
+   *
+   * If transaction origin is not supplied in the headers, the authorized domain
+   * is used as transaction origin.
+   *
+   * @param http_context
+   * @return std::shared_ptr<std::string>
+   */
+  std::shared_ptr<std::string> ObtainTransactionOrigin(
+      core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context)
+      const;
 
   /// An instance to the http server.
   std::shared_ptr<core::HttpServerInterface> http_server_;
@@ -273,21 +307,21 @@ class FrontEndService : public FrontEndServiceInterface {
   /// An instance of the async executor.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
 
-  /// An instance of the transaction manager.
-  std::shared_ptr<core::TransactionManagerInterface> transaction_manager_;
+  /// An instance of the transaction request router.
+  std::unique_ptr<core::TransactionRequestRouterInterface>
+      transaction_request_router_;
 
-  /// An instance of the budget key provider.
-  std::shared_ptr<BudgetKeyProviderInterface> budget_key_provider_;
+  /// @brief An instance of factory to create consume budget commands.
+  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+      consume_budget_command_factory_;
 
   /// Metric client instance to set up custom metric service.
-  std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-      metric_client_;
+  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
   absl::flat_hash_map<
       std::string,
-      absl::flat_hash_map<
-          std::string,
-          std::shared_ptr<cpio::client_providers::AggregateMetricInterface>>>
+      absl::flat_hash_map<std::string,
+                          std::shared_ptr<cpio::AggregateMetricInterface>>>
       metrics_instances_map_;
 
   /// An instance of the config provider.

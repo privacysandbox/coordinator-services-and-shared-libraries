@@ -34,15 +34,34 @@ message EncryptionKey {
   EncryptionKeyType encryption_key_type = 2;
   /** Tink keyset handle containing the public key material. */
   string public_keyset_handle = 3;
-  /** The raw public key material, base 64 encoded. */
+  /** The raw public key material, Base64 encoded. */
   string public_key_material = 4;
-  /** Key creation time in Unix Epoch milliseconds. */
+  /** Key creation time in Unix epoch milliseconds. */
   int64 creation_time = 5;
-  /** Key expiration time in Unix Epoch milliseconds. */
+  /**
+   * Timestamp, represented in epoch milliseconds, when keys are first made
+   * active and available through the API for encryption.
+   */
+  optional int64 activation_time = 9;
+  /**
+   * Timestamp, represented in Unix epoch milliseconds, when clients are
+   * expected to no longer use this key for encypting new payloads.
+   *
+   * Depending on use case, clients may still continue to encrypt payloads with
+   * an "expired" key if the client does not yet have new keys available yet.
+   *
+   * Payload processing servers should continue to have access to and cache keys
+   * until ttl_time. The "expiration" time should only be used by a payload
+   * processing server to determine when clients are expected to stop encrypting
+   * new payloads with this key.
+   */
   int64 expiration_time = 6;
   /**
-   * Date in epoch seconds when Key is removed from database. TTL Time must be in seconds due to
-   * DynamoDB TTL requirements
+   * Timestamp, represented in epoch seconds, when this key is removed from
+   * database and will stop being returned to payload processing servers.
+   *
+   * TTL time is represented in seconds, rather than milliseconds, due to
+   * DynamoDB TTL requirements.
    */
   int32 ttl_time = 7;
   /** List of KeyData. */

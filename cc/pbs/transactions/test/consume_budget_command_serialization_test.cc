@@ -100,9 +100,10 @@ TEST(ConsumeBudgetCommandSerializationTest, SerializeVersion_1_0) {
   shared_ptr<AsyncExecutorInterface> async_executor;
 
   shared_ptr<TransactionCommand> consume_budget_command =
-      make_shared<ConsumeBudgetCommand>(transaction_id, budget_key_name,
-                                        time_bucket, total_budget_to_consume,
-                                        async_executor, budget_key_provider);
+      make_shared<ConsumeBudgetCommand>(
+          transaction_id, budget_key_name,
+          ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
+          async_executor, budget_key_provider);
 
   BytesBuffer bytes_buffer;
   EXPECT_EQ(ConsumeBudgetCommandSerialization::SerializeVersion_1_0(
@@ -119,9 +120,10 @@ TEST(ConsumeBudgetCommandSerializationTest, SerializeVersion_1_1) {
   shared_ptr<AsyncExecutorInterface> async_executor;
 
   shared_ptr<TransactionCommand> consume_budget_command =
-      make_shared<ConsumeBudgetCommand>(transaction_id, budget_key_name,
-                                        time_bucket, total_budget_to_consume,
-                                        async_executor, budget_key_provider);
+      make_shared<ConsumeBudgetCommand>(
+          transaction_id, budget_key_name,
+          ConsumeBudgetCommandRequestInfo{time_bucket, total_budget_to_consume},
+          async_executor, budget_key_provider);
 
   BytesBuffer bytes_buffer;
   EXPECT_EQ(ConsumeBudgetCommandSerialization::SerializeVersion_1_1(

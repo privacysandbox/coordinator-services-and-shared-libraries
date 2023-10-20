@@ -39,7 +39,7 @@ void GlobalLogger::SetGlobalLogLevels(
   enabled_log_levels_ = log_levels;
 }
 
-void GlobalLogger::SetGlobalLogger(unique_ptr<LoggerInterface>& logger) {
+void GlobalLogger::SetGlobalLogger(unique_ptr<LoggerInterface> logger) {
   logger_instance_ = move(logger);
 }
 

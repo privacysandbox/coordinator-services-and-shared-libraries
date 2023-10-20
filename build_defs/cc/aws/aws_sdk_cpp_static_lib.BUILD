@@ -1,3 +1,19 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])  # Apache 2.0
@@ -5,23 +21,7 @@ licenses(["notice"])  # Apache 2.0
 exports_files(["LICENSE"])
 
 cc_library(
-    name = "common",
-    srcs =
-        [
-            "lib/libaws-c-common.a",
-        ],
-    hdrs = glob(
-        [
-            "include/aws/common/*.h",
-        ],
-    ),
-    deps = [
-        "@curl",
-    ],
-)
-
-cc_library(
-    name = "checksums",
+    name = "aws_checksums",
     srcs =
         [
             "lib/libaws-checksums.a",
@@ -32,13 +32,13 @@ cc_library(
         ],
     ),
     deps = [
-        ":common",
+        "@aws_c_common",
         "@curl",
     ],
 )
 
 cc_library(
-    name = "event_stream",
+    name = "aws_c_event_stream",
     srcs =
         [
             "lib/libaws-c-event-stream.a",
@@ -49,8 +49,8 @@ cc_library(
         ],
     ),
     deps = [
-        ":checksums",
-        ":common",
+        ":aws_checksums",
+        "@aws_c_common",
         "@curl",
     ],
 )
@@ -67,10 +67,12 @@ cc_library(
             "include/aws/core/**/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
-        ":checksums",
-        ":event_stream",
+        ":aws_c_event_stream",
+        ":aws_checksums",
         "@curl",
     ],
 )
@@ -87,7 +89,9 @@ cc_library(
             "include/aws/s3/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",
@@ -106,7 +110,9 @@ cc_library(
             "include/aws/dynamodb/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",
@@ -125,7 +131,9 @@ cc_library(
             "include/aws/ec2/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",
@@ -144,7 +152,9 @@ cc_library(
             "include/aws/monitoring/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",
@@ -163,7 +173,9 @@ cc_library(
             "include/aws/ssm/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",
@@ -182,7 +194,9 @@ cc_library(
             "include/aws/sts/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",
@@ -201,7 +215,9 @@ cc_library(
             "include/aws/kms/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",
@@ -220,7 +236,30 @@ cc_library(
             "include/aws/sqs/model/*.h",
         ],
     ),
-    strip_include_prefix = "include",
+    includes = [
+        "include",
+    ],
+    deps = [
+        ":core",
+        "@curl",
+    ],
+)
+
+cc_library(
+    name = "autoscaling",
+    srcs =
+        [
+            "lib/libaws-cpp-sdk-autoscaling.a",
+        ],
+    hdrs = glob(
+        [
+            "include/aws/autoscaling/*.h",
+            "include/aws/autoscaling/model/*.h",
+        ],
+    ),
+    includes = [
+        "include",
+    ],
     deps = [
         ":core",
         "@curl",

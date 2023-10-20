@@ -46,6 +46,7 @@ resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_5xx_alarm" {
   }
 
   alarm_actions = [var.get_public_key_sns_topic_arn]
+  ok_actions    = [var.get_public_key_sns_topic_arn]
 }
 
 #Alarms when cache hit ratio dips below certain level
@@ -68,6 +69,7 @@ resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_cache_hit_alar
   }
 
   alarm_actions = [var.get_public_key_sns_topic_arn]
+  ok_actions    = [var.get_public_key_sns_topic_arn]
 }
 
 #Origin latency alarm
@@ -90,4 +92,5 @@ resource "aws_cloudwatch_metric_alarm" "get_public_key_cloudfront_origin_latency
   }
 
   alarm_actions = [var.get_public_key_sns_topic_arn]
+  ok_actions    = [var.get_public_key_sns_topic_arn]
 }

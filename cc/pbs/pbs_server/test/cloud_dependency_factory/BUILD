@@ -32,9 +32,10 @@ cc_test(
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/tcp_traffic_forwarder/mock:tcp_traffic_forwarder_mock",
         "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
+        "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
         "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws:pbs_aws_cloud_platform_dependency_factory_lib",
         "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_lib",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -55,9 +56,10 @@ cc_test(
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/tcp_traffic_forwarder/mock:tcp_traffic_forwarder_mock",
         "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
+        "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
         "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp:pbs_gcp_cloud_platform_dependency_factory_lib",
         "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_lib",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

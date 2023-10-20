@@ -14,18 +14,17 @@
 
 #include "core/token_provider_cache/src/auto_refresh_token_provider.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <thread>
-
-#include <gmock/gmock.h>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/interface/token_fetcher_interface.h"
 #include "core/test/utils/conditional_wait.h"
 #include "core/token_provider_cache/src/error_codes.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
@@ -60,8 +59,8 @@ class AutoRefreshTokenProviderTest : public testing::Test {
       : async_executor_(
             make_shared<AsyncExecutor>(2, 1000, true /* drop tasks */)),
         token_fetcher_(nullptr) {
-    EXPECT_TRUE(async_executor_->Init().Successful());
-    EXPECT_TRUE(async_executor_->Run().Successful());
+    EXPECT_SUCCESS(async_executor_->Init());
+    EXPECT_SUCCESS(async_executor_->Run());
 
     auto token_fetcher_mock = make_unique<TokenFetcherMock>();
     // Explicit fetching of raw pointer for test. In prod, this will not be done
@@ -71,9 +70,7 @@ class AutoRefreshTokenProviderTest : public testing::Test {
         move(token_fetcher_mock), async_executor_);
   }
 
-  void TearDown() override {
-    EXPECT_TRUE(async_executor_->Stop().Successful());
-  }
+  void TearDown() override { EXPECT_SUCCESS(async_executor_->Stop()); }
 
   shared_ptr<AsyncExecutor> async_executor_;
   TokenFetcherMock* token_fetcher_;

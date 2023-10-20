@@ -23,59 +23,12 @@
 namespace google::scp::core::logger {
 
 /// Returns a string representation for LogLevel
-std::string ToString(const LogLevel& level) {
-  switch (level) {
-    case LogLevel::kEmergency:
-      return "Emergency";
-    case LogLevel::kAlert:
-      return "Alert";
-    case LogLevel::kCritical:
-      return "Critical";
-    case LogLevel::kDebug:
-      return "Debug";
-    case LogLevel::kInfo:
-      return "Info";
-    case LogLevel::kWarning:
-      return "Warning";
-    case LogLevel::kError:
-      return "Error";
-    case LogLevel::kNone:
-      return "None";
-  }
-}
+std::string ToString(const LogLevel& level);
 
-LogLevel FromString(const std::string& level) {
-  if (level == "Emergency") {
-    return LogLevel::kEmergency;
-  }
-  if (level == "Alert") {
-    return LogLevel::kAlert;
-  }
-  if (level == "Critical") {
-    return LogLevel::kCritical;
-  }
-  if (level == "Debug") {
-    return LogLevel::kDebug;
-  }
-  if (level == "Info") {
-    return LogLevel::kInfo;
-  }
-  if (level == "Warning") {
-    return LogLevel::kWarning;
-  }
-  if (level == "Error") {
-    return LogLevel::kError;
-  }
+LogLevel FromString(const std::string& level);
 
-  return LogLevel::kNone;
-}
+std::string operator+(const LogLevel& level, const std::string& text);
 
-std::string operator+(const LogLevel& level, const std::string& text) {
-  return ToString(level) + text;
-}
-
-std::string operator+(const std::string& text, const LogLevel& level) {
-  return text + ToString(level);
-}
+std::string operator+(const std::string& text, const LogLevel& level);
 
 }  // namespace google::scp::core::logger

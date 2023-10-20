@@ -26,6 +26,8 @@ static constexpr char kServiceMetricsNamespace[] =
     "google_scp_pbs_metrics_namespace";
 static constexpr char kServiceMetricsBatchPush[] =
     "google_scp_pbs_metrics_batch_push_enabled";
+static constexpr char kServiceMetricsBatchTimeDurationMs[] =
+    "google_scp_pbs_metrics_batch_time_duration_ms";
 static constexpr char kBudgetKeyTableName[] =
     "google_scp_pbs_budget_key_table_name";
 static constexpr char kAsyncExecutorQueueSize[] =
@@ -63,6 +65,41 @@ static constexpr char kPBSPartitionLeaseDurationInSeconds[] =
     "google_scp_pbs_partition_lease_duration_in_seconds";
 static constexpr char kPBSMultiInstanceModeDisabledConfigKey[] =
     "google_scp_pbs_multi_instance_mode_disabled";
+static constexpr char kPBSPartitionLockTableRowKeyForGlobalPartition[] = "0";
+static constexpr char kPBSVNodeLockTableNameConfigName[] =
+    "google_scp_pbs_vnode_lock_table_name";
+static constexpr char kPBSVNodeLeaseDurationInSeconds[] =
+    "google_scp_pbs_vnode_lease_duration_in_seconds";
+
+// NOTE: The following is a breaking change if PBSInstance is upgraded to
+// PBSInstanceV2. Ensure that the table entry is updated from a "0"
+// (kPBSPartitionLockTableRowKeyForGlobalPartition) to
+// "00000000-0000-0000-0000-000000000000".
+static constexpr char kPBSPartitionLockTableRowKeyForGlobalPartitionV2[] =
+    "00000000-0000-0000-0000-000000000000";
+
+// NOTE: Any changes in the following column schema names must be reflected in
+// the terraform deployment script.
+// See coordinator/terraform/aws/services/distributedpbs_storage/main.tf
+static constexpr char kPBSPartitionLockTableLockIdKeyName[] = "LockId";
+static constexpr char kPBSPartitionLockTableLeaseOwnerIdAttributeName[] =
+    "LeaseOwnerId";
+static constexpr char
+    kPBSPartitionLockTableLeaseExpirationTimestampAttributeName[] =
+        "LeaseExpirationTimestamp";
+static constexpr char
+    kPBSLockTableLeaseOwnerServiceEndpointAddressAttributeName[] =
+        "LeaseOwnerServiceEndpointAddress";
+static constexpr char kPBSLockTableLeaseAcquisitionDisallowedAttributeName[] =
+    "LeaseAcquisitionDisallowed";
+
+// Partitioning
+static constexpr char kPBSPartitioningEnabled[] =
+    "google_scp_pbs_partitioning_enabled";
+static constexpr char kPBSPartitionIdList[] =
+    "google_scp_pbs_partition_id_list";
+static constexpr char kPBSVirtualNodeIdList[] =
+    "google_scp_pbs_virtual_node_id_list";
 
 // Remote configurations
 static constexpr char kRemotePrivacyBudgetServiceHostAddress[] =
@@ -100,5 +137,9 @@ static constexpr char
 // Health service
 static constexpr char kPBSHealthServiceEnableMemoryAndStorageCheck[] =
     "google_scp_pbs_health_service_enable_mem_and_storage_check";
+
+// workload generator
+static constexpr char kPBSWorkloadGeneratorMaxHttpRetryCount[] =
+    "pbs_workload_generator_max_http_retry_count";
 
 }  // namespace google::scp::pbs

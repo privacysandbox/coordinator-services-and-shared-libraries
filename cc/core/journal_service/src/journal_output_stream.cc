@@ -31,6 +31,7 @@
 #include "core/blob_storage_provider/src/common/error_codes.h"
 #include "core/common/sized_or_timed_bytes_buffer/src/sized_or_timed_bytes_buffer.h"
 #include "core/common/time_provider/src/time_provider.h"
+#include "core/interface/metrics_def.h"
 #include "core/journal_service/src/journal_serialization.h"
 #include "core/journal_service/src/journal_utils.h"
 #include "google/protobuf/any.pb.h"
@@ -42,6 +43,8 @@ using google::scp::core::journal_service::JournalSerialization;
 using google::scp::core::journal_service::JournalStreamAppendLogRequest;
 using google::scp::core::journal_service::JournalStreamAppendLogResponse;
 using google::scp::core::journal_service::JournalUtils;
+using google::scp::cpio::AggregateMetricInterface;
+using google::scp::cpio::MetricClientInterface;
 using std::atomic;
 using std::bind;
 using std::list;
@@ -61,21 +64,24 @@ static constexpr char kJournalOutputStream[] = "JournalOutputStream";
 
 namespace google::scp::core {
 JournalOutputStream::JournalOutputStream(
-    shared_ptr<string>& bucket_name, shared_ptr<string>& partition_name,
-    shared_ptr<AsyncExecutorInterface>& async_executor,
-    shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client)
+    const shared_ptr<string>& bucket_name,
+    const shared_ptr<string>& partition_name,
+    const shared_ptr<AsyncExecutorInterface>& async_executor,
+    const shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client,
+    const shared_ptr<AggregateMetricInterface>& journal_output_count_metric)
     : current_journal_id_(kInvalidJournalId),
       bucket_name_(bucket_name),
       partition_name_(partition_name),
       async_executor_(async_executor),
       blob_storage_provider_client_(blob_storage_provider_client),
+      journal_output_count_metric_(journal_output_count_metric),
       last_persisted_journal_id_(kInvalidJournalId),
       pending_logs_(0),
       logs_queue_(INT32_MAX),
       activity_id_(Uuid::GenerateUuid()) {
   // Output activity for log correlation in debugging purposes.
-  DEBUG(kJournalBlobNamePrefix, activity_id_, activity_id_,
-        "JournalOutputStream created.");
+  SCP_DEBUG(kJournalBlobNamePrefix, activity_id_,
+            "JournalOutputStream created.");
 }
 
 ExecutionResult JournalOutputStream::CreateNewBuffer() noexcept {
@@ -84,8 +90,8 @@ ExecutionResult JournalOutputStream::CreateNewBuffer() noexcept {
   current_journal_id_ =
       TimeProvider::GetUniqueWallTimestampInNanoseconds().count();
 
-  /// This call will only happen at the creation time of the journal stream and
-  /// will not fail.
+  /// This call will only happen at the creation time of the journal stream
+  /// and will not fail.
   shared_ptr<bool> processed;
   auto pair = make_pair(current_journal_id_, make_shared<bool>(false));
   return journals_to_persist_.Insert(pair, processed);
@@ -199,6 +205,11 @@ ExecutionResult JournalOutputStream::SerializeLog(
 ExecutionResult JournalOutputStream::WriteJournalBlob(
     BytesBuffer& bytes_buffer, JournalId journal_id,
     std::function<void(ExecutionResult&)> callback) noexcept {
+  SCP_DEBUG(
+      kJournalOutputStream, activity_id_,
+      "Writing journal blob of byte count: '%llu' for batch with ID '%llu'",
+      bytes_buffer.bytes->size(), journal_id);
+
   if (bytes_buffer.length == 0) {
     auto execution_result = SuccessExecutionResult();
     callback(execution_result);
@@ -214,11 +225,17 @@ ExecutionResult JournalOutputStream::WriteJournalBlob(
     return execution_result;
   }
 
+  SCP_DEBUG(kJournalOutputStream, activity_id_,
+            "Putting blob for batch with ID '%llu'", journal_id);
+
+  journal_output_count_metric_->Increment(
+      kMetricEventJournalOutputCountWriteJournalScheduledCount);
+
   AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context(
       make_shared<PutBlobRequest>(put_blob_request),
       bind(&JournalOutputStream::OnWriteJournalBlobCallback, this, journal_id,
            callback, _1),
-      activity_id_);
+      activity_id_, activity_id_);
 
   return blob_storage_provider_client_->PutBlob(put_blob_context);
 }
@@ -236,7 +253,7 @@ void JournalOutputStream::OnWriteJournalBlobCallback(
   shared_ptr<bool> processed;
   if (journals_to_persist_.Find(journal_id, processed) !=
       SuccessExecutionResult()) {
-    CRITICAL_CONTEXT(
+    SCP_CRITICAL_CONTEXT(
         kJournalOutputStream, context,
         FailureExecutionResult(
             errors::SC_JOURNAL_SERVICE_OUTPUT_STREAM_JOURNAL_STATE_NOT_FOUND),
@@ -244,19 +261,27 @@ void JournalOutputStream::OnWriteJournalBlobCallback(
         "journal_ids_to_persist_status map",
         journal_id);
   } else {
+    SCP_DEBUG_CONTEXT(kJournalOutputStream, context,
+                      "Journal blob for batch with ID: '%llu' is written",
+                      journal_id);
     *processed = true;
   }
 
   // TODO: Add a quick (local) retry mechanism here for flush failures instead
-  // of letting callers know about the failure and asking them to re-append the
-  // same logs again.
+  // of letting callers know about the failure and asking them to re-append
+  // the same logs again.
   if (!context.result.Successful()) {
-    // PutBlob was not successful, ensure that we have a trace for this. We let
-    // callers (log appenders) retry their appends.
-    ERROR_CONTEXT(kJournalOutputStream, context, context.result,
-                  "Failure in persisting journal [%llu] due to an error in "
-                  "PutBlob.",
-                  journal_id);
+    // PutBlob was not successful, ensure that we have a trace for this. We
+    // let callers (log appenders) retry their appends.
+    SCP_ERROR_CONTEXT(kJournalOutputStream, context, context.result,
+                      "Failure in persisting journal [%llu] due to an error in "
+                      "PutBlob.",
+                      journal_id);
+    journal_output_count_metric_->Increment(
+        kMetricEventJournalOutputCountWriteJournalFailureCount);
+  } else {
+    journal_output_count_metric_->Increment(
+        kMetricEventJournalOutputCountWriteJournalSuccessCount);
   }
 
   callback(context.result);
@@ -267,6 +292,10 @@ void JournalOutputStream::WriteBatch(
                                        JournalStreamAppendLogResponse>>>&
         flush_batch,
     JournalId journal_id) noexcept {
+  SCP_DEBUG(kJournalOutputStream, activity_id_,
+            "Writing a batch with ID '%llu' of count: '%llu'", journal_id,
+            flush_batch->size());
+
   size_t total_size_needed = 0;
   for (auto it = flush_batch->begin(); it != flush_batch->end(); ++it) {
     total_size_needed += GetSerializedLogByteSize(*it);
@@ -307,6 +336,16 @@ void JournalOutputStream::NotifyBatch(
                                        JournalStreamAppendLogResponse>>>&
         flush_batch,
     ExecutionResult& execution_result) noexcept {
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kJournalOutputStream, activity_id_, execution_result,
+              "Failed to flush logs");
+  }
+
+  SCP_DEBUG(kJournalOutputStream, activity_id_,
+            "Notifying callers, finishing append contexts in the batch of "
+            "size: '%llu'",
+            flush_batch->size());
+
   for (auto it = flush_batch->begin(); it != flush_batch->end(); ++it) {
     it->result = execution_result;
     it->Finish();
@@ -345,6 +384,12 @@ ExecutionResult JournalOutputStream::FlushLogs() noexcept {
   }
 
   pending_logs_ -= batch_size;
+
+  SCP_DEBUG(kJournalOutputStream, activity_id_,
+            "Created a batch of logs with ID: '%llu' of size: '%llu'. "
+            "Remaining logs in the queue: '%llu'",
+            current_journal_id, batch_logs->size(), pending_logs_.load());
+
   create_batch_of_logs_mutex_.unlock();
 
   execution_result = async_executor_->Schedule(

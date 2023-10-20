@@ -161,6 +161,11 @@ variable "enable_public_key_signature" {
   type        = bool
 }
 
+variable "key_id_type" {
+  description = "Key ID Type"
+  type        = string
+}
+
 ################################################################################
 # Lambda Variables.
 ################################################################################
@@ -194,6 +199,15 @@ variable "get_public_key_lambda_provisioned_concurrency_enabled" {
 variable "get_public_key_lambda_provisioned_concurrency_count" {
   description = "Number of lambda instances to initialize for provisioned concurrency."
   type        = number
+}
+
+variable "get_encryption_key_lambda_ps_client_shim_enabled" {
+  description = <<-EOT
+        If true, enables shim to ensure response is compatible with privacy sandbox 0.51.x
+	clients. Newer fields such as activationTime is filtered out from the response.
+	This temporary variable will be removed in the future.
+      EOT
+  type        = bool
 }
 
 ################################################################################
@@ -243,6 +257,11 @@ variable "api_env_stage_name" {
   type        = string
 }
 
+variable "application_name" {
+  description = "Application name that provide public key service. Eg: aggregation-service."
+  type        = string
+}
+
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -260,11 +279,6 @@ variable "alarm_notification_email" {
 variable "cloudwatch_logging_retention_days" {
   description = "Number of days to keep logs in Cloudwatch."
   type        = number
-}
-
-variable "application_name" {
-  description = "Application name that provide public key service. Eg: aggregation-service."
-  type        = string
 }
 
 variable "sns_topic_arn" {

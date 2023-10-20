@@ -71,10 +71,10 @@ ExecutionResult AutoRefreshTokenProviderService::RefreshToken() {
       bind(&AutoRefreshTokenProviderService::OnRefreshTokenCallback, this, _1));
   auto execution_result = token_fetcher_->FetchToken(get_token_context);
   if (!execution_result.Successful()) {
-    CRITICAL_CONTEXT(kAutoRefreshTokenProvider, get_token_context,
-                     execution_result,
-                     "Cannot query token, resetting cached token to empty and "
-                     "rescheduling RefreshToken");
+    SCP_CRITICAL_CONTEXT(
+        kAutoRefreshTokenProvider, get_token_context, execution_result,
+        "Cannot query token, resetting cached token to empty and "
+        "rescheduling RefreshToken");
     // Reset the cached token
     {
       unique_lock lock(mutex_);
@@ -94,10 +94,10 @@ ExecutionResult AutoRefreshTokenProviderService::RefreshToken() {
 void AutoRefreshTokenProviderService::OnRefreshTokenCallback(
     AsyncContext<FetchTokenRequest, FetchTokenResponse>& get_token_context) {
   if (!get_token_context.result.Successful()) {
-    ERROR_CONTEXT(kAutoRefreshTokenProvider, get_token_context,
-                  get_token_context.result,
-                  "Cannot query token, resetting cached token to empty and "
-                  "rescheduling RefreshToken");
+    SCP_ERROR_CONTEXT(kAutoRefreshTokenProvider, get_token_context,
+                      get_token_context.result,
+                      "Cannot query token, resetting cached token to empty and "
+                      "rescheduling RefreshToken");
     // Reset the cached token
     {
       unique_lock lock(mutex_);
@@ -111,10 +111,10 @@ void AutoRefreshTokenProviderService::OnRefreshTokenCallback(
             .count(),
         async_task_canceller_);
     if (!execution_result.Successful()) {
-      CRITICAL_CONTEXT(kAutoRefreshTokenProvider, get_token_context,
-                       execution_result,
-                       "Cannot schedule RefreshToken. External requests will "
-                       "start to fail!");
+      SCP_CRITICAL_CONTEXT(
+          kAutoRefreshTokenProvider, get_token_context, execution_result,
+          "Cannot schedule RefreshToken. External requests will "
+          "start to fail!");
     }
     return;
   }
@@ -125,7 +125,8 @@ void AutoRefreshTokenProviderService::OnRefreshTokenCallback(
     cached_token_ = make_shared<string>(get_token_context.response->token);
   }
 
-  INFO_CONTEXT(kAutoRefreshTokenProvider, get_token_context, "Token Refreshed");
+  SCP_INFO_CONTEXT(kAutoRefreshTokenProvider, get_token_context,
+                   "Token Refreshed");
 
   auto execution_result = async_executor_->ScheduleFor(
       [this]() { RefreshToken(); },
@@ -134,10 +135,10 @@ void AutoRefreshTokenProviderService::OnRefreshTokenCallback(
           .count(),
       async_task_canceller_);
   if (!execution_result.Successful()) {
-    CRITICAL_CONTEXT(kAutoRefreshTokenProvider, get_token_context,
-                     execution_result,
-                     "Cannot schedule RefreshToken. External requests will "
-                     "start to fail!");
+    SCP_CRITICAL_CONTEXT(kAutoRefreshTokenProvider, get_token_context,
+                         execution_result,
+                         "Cannot schedule RefreshToken. External requests will "
+                         "start to fail!");
   }
 }
 

@@ -43,10 +43,32 @@ class MockAsyncExecutorWithInternals : public core::AsyncExecutor {
     return AsyncExecutor::Schedule(work, priority);
   }
 
+  ExecutionResult Schedule(
+      const AsyncOperation& work, AsyncPriority priority,
+      AsyncExecutorAffinitySetting affinity) noexcept override {
+    if (schedule_pre_caller) {
+      auto new_work = [&, work]() {
+        if (schedule_pre_caller()) {
+          work();
+        }
+      };
+
+      return AsyncExecutor::Schedule(new_work, priority, affinity);
+    }
+
+    return AsyncExecutor::Schedule(work, priority, affinity);
+  }
+
   ExecutionResult ScheduleFor(const AsyncOperation& work,
                               Timestamp timestamp) noexcept override {
     std::function<bool()> callback;
     return ScheduleFor(work, timestamp, callback);
+  }
+
+  ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp,
+      AsyncExecutorAffinitySetting affinity) noexcept override {
+    return ScheduleFor(work, timestamp, affinity);
   }
 
   ExecutionResult ScheduleFor(
@@ -64,6 +86,25 @@ class MockAsyncExecutorWithInternals : public core::AsyncExecutor {
     }
 
     return AsyncExecutor::ScheduleFor(work, timestamp, cancellation_callback);
+  }
+
+  ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp,
+      std::function<bool()>& cancellation_callback,
+      AsyncExecutorAffinitySetting affinity) noexcept override {
+    if (schedule_for_pre_caller) {
+      auto new_work = [&, work]() {
+        if (schedule_for_pre_caller()) {
+          work();
+        }
+      };
+
+      return AsyncExecutor::ScheduleFor(new_work, timestamp,
+                                        cancellation_callback, affinity);
+    }
+
+    return AsyncExecutor::ScheduleFor(work, timestamp, cancellation_callback,
+                                      affinity);
   }
 
   std::function<bool()> schedule_pre_caller;

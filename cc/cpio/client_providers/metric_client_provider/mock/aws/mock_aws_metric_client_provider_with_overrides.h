@@ -22,7 +22,7 @@
 
 #include "core/async_executor/mock/mock_async_executor.h"
 #include "core/interface/async_context.h"
-#include "cpio/client_providers/instance_client_provider_new/mock/mock_instance_client_provider.h"
+#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/mock/aws/mock_cloud_watch_client.h"
 #include "cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/src/metric_client_provider.h"
@@ -35,12 +35,20 @@ namespace google::scp::cpio::client_providers::mock {
 class MockAwsMetricClientProviderOverrides : public AwsMetricClientProvider {
  public:
   explicit MockAwsMetricClientProviderOverrides(
-      const std::shared_ptr<MetricClientOptions>& metric_client_options)
+      const std::shared_ptr<MetricBatchingOptions>& metric_batching_options)
       : AwsMetricClientProvider(
-            metric_client_options,
+            std::make_shared<MetricClientOptions>(),
             std::make_shared<MockInstanceClientProvider>(),
             std::make_shared<core::async_executor::mock::MockAsyncExecutor>(),
-            std::make_shared<core::async_executor::mock::MockAsyncExecutor>()) {
+            std::make_shared<core::async_executor::mock::MockAsyncExecutor>(),
+            metric_batching_options) {
+    std::dynamic_pointer_cast<core::async_executor::mock::MockAsyncExecutor>(
+        async_executor_)
+        ->schedule_for_mock =
+        [&](const core::AsyncOperation& work, Timestamp timestamp,
+            std::function<bool()>& cancellation_callback) {
+          return core::SuccessExecutionResult();
+        };
   }
 
   std::shared_ptr<MockCloudWatchClient> GetCloudWatchClient() {

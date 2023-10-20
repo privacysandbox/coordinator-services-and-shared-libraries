@@ -24,9 +24,9 @@
 
 #include <boost/asio.hpp>
 
+#include "acceptor_pool.h"
 #include "config.h"
 #include "proxy_bridge.h"
-#include "acceptor_pool.h"
 #include "socket_types.h"
 
 namespace google::scp::proxy {

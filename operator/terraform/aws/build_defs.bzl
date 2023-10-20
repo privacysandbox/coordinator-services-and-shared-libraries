@@ -46,10 +46,6 @@ ami_params_tfvar_file = rule(
     """,
     implementation = _ami_params_tfvar_file_impl,
     attrs = {
-        "file_name": attr.string(
-            mandatory = True,
-            default = "ami_params.auto.tfvars",
-        ),
         "ami_name_flag": attr.label(
             providers = [BuildSettingInfo],
             doc = "Bazel string_flag which provides the value for the ami name.",
@@ -59,6 +55,10 @@ ami_params_tfvar_file = rule(
             providers = [BuildSettingInfo],
             doc = "Bazel string_flag which provides the value for the ami owner.",
             default = "//operator/terraform/aws/applications/operator-service:ami_owners_flag",
+        ),
+        "file_name": attr.string(
+            mandatory = True,
+            default = "ami_params.auto.tfvars",
         ),
     },
 )

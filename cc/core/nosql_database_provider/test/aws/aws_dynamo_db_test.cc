@@ -35,6 +35,7 @@
 #include "core/nosql_database_provider/src/common/error_codes.h"
 #include "core/test/utils/conditional_wait.h"
 #include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::Map;
@@ -244,9 +245,9 @@ TEST(AwsDynamoDBTests, OnGetDatabaseItemCallbackFailure) {
   get_database_item_context.callback =
       [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
               get_database_item_context) {
-        EXPECT_EQ(get_database_item_context.result,
-                  FailureExecutionResult(
-                      errors::SC_NO_SQL_DATABASE_UNRETRIABLE_ERROR));
+        EXPECT_THAT(get_database_item_context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_NO_SQL_DATABASE_UNRETRIABLE_ERROR)));
       };
 
   QueryRequest query_request;
@@ -310,9 +311,9 @@ TEST(AwsDynamoDBTests, OnGetDatabaseItemCallbackZeroOrMoreThanOneResult) {
   get_database_item_context.callback =
       [&](AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>&
               get_database_item_context) {
-        EXPECT_EQ(get_database_item_context.result,
-                  FailureExecutionResult(
-                      errors::SC_NO_SQL_DATABASE_PROVIDER_RECORD_NOT_FOUND));
+        EXPECT_THAT(get_database_item_context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_NO_SQL_DATABASE_PROVIDER_RECORD_NOT_FOUND)));
       };
 
   QueryRequest query_request;
@@ -357,7 +358,7 @@ TEST(AwsDynamoDBTests, OnGetDatabaseItemCallbackOneResult) {
       .callback = [&](AsyncContext<GetDatabaseItemRequest,
                                    GetDatabaseItemResponse>&
                           get_database_item_context) {
-    EXPECT_EQ(get_database_item_context.result, SuccessExecutionResult());
+    EXPECT_SUCCESS(get_database_item_context.result);
     EXPECT_EQ(
         *get_database_item_context.response->partition_key->attribute_name,
         *get_database_item_context.request->partition_key->attribute_name);
@@ -644,9 +645,9 @@ TEST(AwsDynamoDBTests, UpsertDatabaseItemCallbackFailure) {
   upsert_database_item_context.callback =
       [&](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
               upsert_database_item_context) {
-        EXPECT_EQ(upsert_database_item_context.result,
-                  FailureExecutionResult(
-                      errors::SC_NO_SQL_DATABASE_UNRETRIABLE_ERROR));
+        EXPECT_THAT(upsert_database_item_context.result,
+                    ResultIs(FailureExecutionResult(
+                        errors::SC_NO_SQL_DATABASE_UNRETRIABLE_ERROR)));
       };
 
   UpdateItemRequest update_item_request;
@@ -691,8 +692,7 @@ TEST(AwsDynamoDBTests, UpsertDatabaseItemCallback) {
   upsert_database_item_context.callback =
       [&](AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
               upsert_database_item_context) {
-        EXPECT_EQ(upsert_database_item_context.result,
-                  SuccessExecutionResult());
+        EXPECT_SUCCESS(upsert_database_item_context.result);
       };
 
   UpdateItemRequest update_item_request;
@@ -747,10 +747,9 @@ TEST(AwsDynamoDBTests, DISABLED_LeaseManagerWithleasableLockOnDynamoDB) {
     }
   };
 
-  EXPECT_EQ(lease_manager.Init(), SuccessExecutionResult());
-  EXPECT_EQ(lease_manager.ManageLeaseOnLock(leasable_lock, callback),
-            SuccessExecutionResult());
-  EXPECT_EQ(lease_manager.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(lease_manager.Init());
+  EXPECT_SUCCESS(lease_manager.ManageLeaseOnLock(leasable_lock, callback));
+  EXPECT_SUCCESS(lease_manager.Run());
 
   std::cout << "Lease manager is running...\n";
 

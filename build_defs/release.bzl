@@ -81,6 +81,9 @@ fi
 gcs_package_release_rule = rule(
     implementation = _gcs_package_release_impl,
     attrs = {
+        "artifact_base_name": attr.string(
+            mandatory = True,
+        ),
         "gcloud_sdk": attr.label(
             allow_single_file = True,
             default = "@google-cloud-sdk//:google-cloud-sdk",
@@ -93,9 +96,6 @@ gcs_package_release_rule = rule(
             mandatory = True,
         ),
         "release_key": attr.string(
-            mandatory = True,
-        ),
-        "artifact_base_name": attr.string(
             mandatory = True,
         ),
     },

@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,7 +22,7 @@ build_container_tag="$CC_BUILD_CONTAINER_TAG"
 repo_top_level_dir=$(git rev-parse --show-toplevel)
 user_id="$(id -u)"
 
-if [ "$(docker ps -qa -f name=$build_container_tag)" ]; then
+if [ "$(docker ps -q -f name=$build_container_tag)" ]; then
     echo "Container - $build_container_tag is already started."
     exit 0
 fi
@@ -30,7 +30,7 @@ fi
 # Pull and load the build container
 container_image_name="bazel/cc/tools/build:prebuilt_cc_build_container_image"
 bazel build //cc/tools/build:prebuilt_cc_build_container_image.tar
-docker load < bazel-bin/cc/tools/build/prebuilt_cc_build_container_image.tar
+docker load < $repo_top_level_dir/bazel-bin/cc/tools/build/prebuilt_cc_build_container_image.tar
 
 cp /etc/passwd /tmp/passwd.docker
 grep $USER /tmp/passwd.docker || getent passwd | grep $USER >> /tmp/passwd.docker
@@ -58,6 +58,7 @@ docker -D run -d -i \
     -v "$repo_top_level_dir:$repo_top_level_dir" \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -w "$repo_top_level_dir" \
+    -v /tmp:/tmp:rw \
     --name $build_container_tag \
     $container_image_name
 

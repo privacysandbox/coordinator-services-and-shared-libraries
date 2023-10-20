@@ -78,6 +78,8 @@ struct TransactionRequest {
   /// Vector of all the commands for a transaction.
   std::vector<std::shared_ptr<TransactionCommand>> commands;
   /// Timestamp of when the transaction expires.
+  /// NOTE: This is unused, see Transaction Engine.cc for the transaction
+  /// lifetime.
   Timestamp timeout_time;
   /// Indicates whether the transaction is coordinated by a remote transaction
   /// manager.
@@ -161,6 +163,8 @@ struct GetTransactionStatusRequest {
   /// In the case of remote transaction, the transaction secret will provide
   /// other participants to inquiry or update the state of a transaction.
   std::shared_ptr<std::string> transaction_secret;
+  /// The origin of the transaction aka domain name of the caller.
+  std::shared_ptr<std::string> transaction_origin;
 };
 
 /**
@@ -252,7 +256,7 @@ class TransactionManagerInterface : public ServiceInterface {
    * the TM
    * @return ExecutionResult
    */
-  virtual ExecutionResult GetStatus(
+  virtual ExecutionResult GetTransactionManagerStatus(
       const GetTransactionManagerStatusRequest& request,
       GetTransactionManagerStatusResponse& response) noexcept = 0;
 };

@@ -32,6 +32,9 @@ data "aws_availability_zones" "avail" {
 locals {
   region = data.aws_region.current.name
 
+  # At most we can use the number of avilable zones for replicas
+  actual_availability_zone_replicas = min(var.availability_zone_replicas, length(data.aws_availability_zones.avail.names))
+
   # cidrsubnets() creates a list of consecutive subnets with the specified
   # additional bits added to the base subnet mask.
   # The module defines the new subnet masks as follows:
@@ -72,7 +75,7 @@ resource "aws_vpc" "main" {
 
 # Private Subnet
 resource "aws_subnet" "private" {
-  count             = var.availability_zone_replicas
+  count             = local.actual_availability_zone_replicas
   vpc_id            = aws_vpc.main.id
   availability_zone = data.aws_availability_zones.avail.names[count.index]
   cidr_block        = local.subnets[count.index][0]
@@ -97,7 +100,7 @@ resource "aws_subnet" "private" {
 
 # Public Subnet
 resource "aws_subnet" "public" {
-  count = var.create_public_subnet ? var.availability_zone_replicas : 0
+  count = var.create_public_subnet ? local.actual_availability_zone_replicas : 0
 
   vpc_id            = aws_vpc.main.id
   availability_zone = data.aws_availability_zones.avail.names[count.index]
@@ -279,14 +282,14 @@ resource "aws_route" "inet_gateway_route" {
 
 # Create Elastic IPs for the NAT Gateway(s).
 resource "aws_eip" "elastic_ip" {
-  count = var.create_public_subnet ? var.availability_zone_replicas : 0
+  count = var.create_public_subnet ? local.actual_availability_zone_replicas : 0
   vpc   = true
 }
 
 # Create NAT gateway(s) in public subnets to allow egress from Private subnet.
 # The current version of the AWS G3 TF provider does not support private NAT.
 resource "aws_nat_gateway" "nat_gateway" {
-  count = var.create_public_subnet ? var.availability_zone_replicas : 0
+  count = var.create_public_subnet ? local.actual_availability_zone_replicas : 0
   # The NAT Gateway is created in the public subnet to provide access to
   # private subnets, which route to it as a default gateway.
   subnet_id     = aws_subnet.public[count.index].id
@@ -309,7 +312,7 @@ resource "aws_nat_gateway" "nat_gateway" {
 
 # Create subnet route tables for Private Subnet, to enable NAT Gateway routing.
 resource "aws_route_table" "private_route_table" {
-  count  = var.availability_zone_replicas
+  count  = local.actual_availability_zone_replicas
   vpc_id = aws_vpc.main.id
   tags = merge(
     {
@@ -323,21 +326,21 @@ resource "aws_route_table" "private_route_table" {
 }
 
 resource "aws_route_table_association" "private_route_assoc" {
-  count          = var.availability_zone_replicas
+  count          = local.actual_availability_zone_replicas
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private_route_table[count.index].id
 }
 
 # Add a default route to the NAT gateway attached to each public subnet.
 resource "aws_route" "nat_gateway_route" {
-  count                  = var.create_public_subnet ? var.availability_zone_replicas : 0
+  count                  = var.create_public_subnet ? local.actual_availability_zone_replicas : 0
   route_table_id         = aws_route_table.private_route_table[count.index].id
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.nat_gateway[count.index].id
 }
 
 resource "aws_vpc_endpoint_route_table_association" "private_to_keydb_route" {
-  count = var.enable_dynamodb_vpc_endpoint ? var.availability_zone_replicas : 0
+  count = var.enable_dynamodb_vpc_endpoint ? local.actual_availability_zone_replicas : 0
 
   vpc_endpoint_id = aws_vpc_endpoint.dynamodb_endpoint[0].id
   route_table_id  = aws_route_table.private_route_table[count.index].id

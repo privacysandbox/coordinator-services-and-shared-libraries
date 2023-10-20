@@ -20,12 +20,14 @@
 
 #include "core/test/scp_test_base.h"
 #include "process_launcher/argument_parser/src/error_codes.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON;
 using google::scp::core::errors::ARGUMENT_PARSER_INVALID_JSON;
 using google::scp::core::errors::ARGUMENT_PARSER_UNKNOWN_TYPE;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
 using google::scp::process_launcher::ExecutableArgument;
 using google::scp::process_launcher::JsonArgParser;
@@ -40,7 +42,8 @@ TEST_F(JsonArgParserTest,
 
   auto result = parser.Parse("", parsed_value);
 
-  EXPECT_EQ(result, FailureExecutionResult(ARGUMENT_PARSER_UNKNOWN_TYPE));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(ARGUMENT_PARSER_UNKNOWN_TYPE)));
 }
 
 TEST_F(JsonArgParserTest,
@@ -50,7 +53,8 @@ TEST_F(JsonArgParserTest,
 
   auto result = parser.Parse("Invalid JSON", parsed_value);
 
-  EXPECT_EQ(result, FailureExecutionResult(ARGUMENT_PARSER_INVALID_JSON));
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(ARGUMENT_PARSER_INVALID_JSON)));
 }
 
 TEST_F(JsonArgParserTest,
@@ -72,7 +76,7 @@ TEST_F(JsonArgParserTest,
   auto result = parser.Parse(
       "{\"executable_name\":\"/full/path/to/executable\"}", parsed_value);
 
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ("/full/path/to/executable", parsed_value.executable_name);
   EXPECT_EQ(0, parsed_value.command_line_args.size());
 }
@@ -90,11 +94,12 @@ TEST_F(JsonArgParserTest,
 
   auto result = parser.Parse(std::string(json_string), parsed_value);
 
-  EXPECT_EQ(result, SuccessExecutionResult());
+  EXPECT_SUCCESS(result);
   EXPECT_EQ("/full/path/to/executable2", parsed_value.executable_name);
   EXPECT_EQ(2, parsed_value.command_line_args.size());
   EXPECT_EQ("arg1", parsed_value.command_line_args[0]);
   EXPECT_EQ("123", parsed_value.command_line_args[1]);
+  EXPECT_TRUE(parsed_value.restart);
 }
 
 TEST_F(JsonArgParserTest, ExecutableArgShouldBuildExecutableVectorWithArgs) {
@@ -125,5 +130,42 @@ TEST_F(JsonArgParserTest, ExecutableArgShouldBuildExecutableVectorWithNoArgs) {
   EXPECT_EQ(0, strcmp("/some/exe/name", cstring_vec.at(0)))
       << "The executable name should be first in the vector";
   EXPECT_EQ(NULL, cstring_vec.at(1)) << "The last element should be NULL";
+}
+
+TEST_F(JsonArgParserTest, SucceedWithTrueShouldRecoverFailuresFlag) {
+  JsonArgParser<ExecutableArgument> parser;
+  ExecutableArgument parsed_value;
+
+  const char* json_string =
+      "{"
+      "\"executable_name\":\"/full/path/to/executable2\","
+      "\"command_line_args\": [ \"arg1\", \"123\" ],"
+      "\"restart\": true"
+      "}";
+
+  auto result = parser.Parse(std::string(json_string), parsed_value);
+
+  EXPECT_SUCCESS(result);
+  EXPECT_EQ("/full/path/to/executable2", parsed_value.executable_name);
+  EXPECT_EQ(2, parsed_value.command_line_args.size());
+  EXPECT_TRUE(parsed_value.restart);
+}
+
+TEST_F(JsonArgParserTest, SucceedWithFalseShouldRecoverFailuresFlag) {
+  JsonArgParser<ExecutableArgument> parser;
+  ExecutableArgument parsed_value;
+
+  const char* json_string =
+      "{"
+      "\"executable_name\":\"/full/path/to/executable2\","
+      "\"restart\": false"
+      "}";
+
+  auto result = parser.Parse(std::string(json_string), parsed_value);
+
+  EXPECT_SUCCESS(result);
+  EXPECT_EQ("/full/path/to/executable2", parsed_value.executable_name);
+  EXPECT_EQ(0, parsed_value.command_line_args.size());
+  EXPECT_FALSE(parsed_value.restart);
 }
 }  // namespace google::scp::process_launcher::test

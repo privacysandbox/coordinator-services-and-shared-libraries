@@ -30,8 +30,9 @@ import org.junit.runners.JUnit4;
 public class CreateJobRequestToRequestInfoConverterTest {
 
   private static final CreateJobRequest apiCreateJobRequest =
-      ServiceJobGenerator.createFakeCreateJobRequest("123");
-  private static final RequestInfo requestInfo = JobGenerator.createFakeRequestInfo("123");
+      ServiceJobGenerator.createFakeCreateJobRequestWithAccountIdentity("123");
+  private static final RequestInfo requestInfo =
+      JobGenerator.createFakeRequestInfoWithAccountIdentity("123");
 
   @Test
   public void doForward_success() {

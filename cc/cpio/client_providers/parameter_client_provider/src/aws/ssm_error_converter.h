@@ -17,7 +17,6 @@
 
 #include <string>
 
-#include <aws/ec2/EC2Client.h>
 #include <aws/ssm/SSMClient.h>
 
 #include "public/core/interface/execution_result.h"

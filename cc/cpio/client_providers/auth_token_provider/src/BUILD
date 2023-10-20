@@ -12,33 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "auth_token_provider_lib",
-    srcs = select({
-        "//cc/public/cpio/interface:aws_cpio_lib": ["//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_srcs"],
-        "//cc/public/cpio/interface:gcp_cpio_lib": ["//cc/cpio/client_providers/auth_token_provider/src/gcp:gcp_auth_token_provider_srcs"],
-        "//conditions:default": ["//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_srcs"],
-    }),
-    copts = [
-        "-std=c++17",
-    ],
-    deps = select({
-        "//cc/public/cpio/interface:aws_cpio_lib": [
-        ],
-        "//cc/public/cpio/interface:gcp_cpio_lib": [
-            "@com_google_absl//absl/strings",
-            "@nlohmann_json//:lib",
-        ],
-        "//conditions:default": [
-        ],
-    }) + [
-        "//cc:cc_base_include_dir",
-        "//cc/core/interface:interface_lib",
-        "//cc/core/utils/src:core_utils",
-        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
-        "//cc/public/cpio/interface:cpio_errors",
-        "//cc/public/cpio/interface:type_def",
-    ],
+    name = "auth_token_provider_select_lib",
+    deps = select(
+        {
+            "//cc/public/cpio/interface:aws_cpio_lib": [
+                "//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_lib",
+            ],
+            "//cc/public/cpio/interface:gcp_cpio_lib": [
+                "//cc/cpio/client_providers/auth_token_provider/src/gcp:gcp_auth_token_provider_lib",
+            ],
+        },
+        no_match_error = "Please build for AWS or GCP",
+    ),
 )

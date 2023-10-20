@@ -29,11 +29,11 @@
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/async_context.h"
 #include "core/interface/async_executor_interface.h"
-#include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "cpio/client_providers/instance_client_provider_new/src/aws/aws_instance_client_utils.h"
+#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "cpio/common/src/aws/aws_utils.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/interface/metric_client/type_def.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
@@ -61,9 +61,9 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::async_executor::aws::AwsAsyncExecutor;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::
-    SC_AWS_METRIC_CLIENT_PROVIDER_METRIC_CLIENT_OPTIONS_NOT_SET;
-using google::scp::core::errors::
     SC_AWS_METRIC_CLIENT_PROVIDER_REQUEST_PAYLOAD_OVERSIZE;
+using google::scp::core::errors::
+    SC_AWS_METRIC_CLIENT_PROVIDER_SHOULD_ENABLE_BATCH_RECORDING;
 using google::scp::cpio::client_providers::AwsInstanceClientUtils;
 using google::scp::cpio::common::CreateClientConfiguration;
 using std::bind;
@@ -96,8 +96,8 @@ void AwsMetricClientProvider::CreateClientConfiguration(
 ExecutionResult AwsMetricClientProvider::Run() noexcept {
   auto execution_result = MetricClientProvider::Run();
   if (!execution_result.Successful()) {
-    ERROR(kAwsMetricClientProvider, kZeroUuid, kZeroUuid, execution_result,
-          "Failed to initialize MetricClientProvider");
+    SCP_ERROR(kAwsMetricClientProvider, kZeroUuid, execution_result,
+              "Failed to initialize MetricClientProvider");
     return execution_result;
   }
 
@@ -105,14 +105,13 @@ ExecutionResult AwsMetricClientProvider::Run() noexcept {
       AwsInstanceClientUtils::GetCurrentRegionCode(instance_client_provider_);
 
   if (!region_code_or.Successful()) {
-    ERROR(kAwsMetricClientProvider, kZeroUuid, kZeroUuid,
-          region_code_or.result(),
-          "Failed to get region code for current instance");
+    SCP_ERROR(kAwsMetricClientProvider, kZeroUuid, region_code_or.result(),
+              "Failed to get region code for current instance");
     return region_code_or.result();
   }
 
-  INFO(kAwsMetricClientProvider, kZeroUuid, kZeroUuid,
-       "GetCurrentRegionCode: %s", region_code_or->c_str());
+  SCP_INFO(kAwsMetricClientProvider, kZeroUuid, "GetCurrentRegionCode: %s",
+           region_code_or->c_str());
 
   shared_ptr<ClientConfiguration> client_config;
   CreateClientConfiguration(make_shared<string>(move(*region_code_or)),
@@ -131,23 +130,25 @@ ExecutionResult AwsMetricClientProvider::MetricsBatchPush(
     return SuccessExecutionResult();
   }
 
-  // When perform batch recording, metric_client_options_ is required.
-  if (!metric_client_options_ && metric_requests_vector->size() > 1) {
+  // When perform batch recording, enable_batch_recording should be true.
+  if (!metric_batching_options_->enable_batch_recording &&
+      metric_requests_vector->size() > 1) {
     auto execution_result = FailureExecutionResult(
-        SC_AWS_METRIC_CLIENT_PROVIDER_METRIC_CLIENT_OPTIONS_NOT_SET);
-    ERROR(kAwsMetricClientProvider, kZeroUuid, kZeroUuid, execution_result,
-          "Failed to create ClientConfiguration");
+        SC_AWS_METRIC_CLIENT_PROVIDER_SHOULD_ENABLE_BATCH_RECORDING);
+    SCP_ERROR(kAwsMetricClientProvider, kZeroUuid, execution_result,
+              "Should enable batch recording");
     return execution_result;
   }
 
   vector<AsyncContext<PutMetricsRequest, PutMetricsResponse>> context_chunk;
 
   PutMetricDataRequest request_chunk;
-  // Already confirmed if metric_client_options_ is not set,
-  // metric_requests_vector should only have one entry.
+  // Already confirmed if metric_namespace in metric_batching_options is empty,
+  // batch recording is not enabled and metric_requests_vector should only have
+  // one entry.
   string name_space =
-      metric_client_options_
-          ? metric_client_options_->metric_namespace
+      !metric_batching_options_->metric_namespace.empty()
+          ? metric_batching_options_->metric_namespace
           : (*metric_requests_vector)[0].request->metric_namespace();
   request_chunk.SetNamespace(name_space.c_str());
   size_t chunk_payload = 0;
@@ -162,8 +163,8 @@ ExecutionResult AwsMetricClientProvider::MetricsBatchPush(
 
     // Skips the context that failed in ParseRequestToDatum().
     if (!result.Successful()) {
-      ERROR_CONTEXT(kAwsMetricClientProvider, context, result,
-                    "Invalid metric.");
+      SCP_ERROR_CONTEXT(kAwsMetricClientProvider, context, result,
+                        "Invalid metric.");
       continue;
     }
 
@@ -175,8 +176,8 @@ ExecutionResult AwsMetricClientProvider::MetricsBatchPush(
     if (datums_payload > kAwsPayloadSizeLimit) {
       context.result = FailureExecutionResult(
           SC_AWS_METRIC_CLIENT_PROVIDER_REQUEST_PAYLOAD_OVERSIZE);
-      ERROR_CONTEXT(kAwsMetricClientProvider, context, context.result,
-                    "Invalid metric.");
+      SCP_ERROR_CONTEXT(kAwsMetricClientProvider, context, context.result,
+                        "Invalid metric.");
       context.Finish();
       continue;
     }
@@ -228,6 +229,7 @@ void AwsMetricClientProvider::OnPutMetricDataAsyncCallback(
   active_push_count_--;
   if (outcome.IsSuccess()) {
     for (auto& record_metric_context : metric_requests_vector) {
+      record_metric_context.response = make_shared<PutMetricsResponse>();
       FinishContext(SuccessExecutionResult(), record_metric_context,
                     async_executor_);
     }
@@ -238,8 +240,9 @@ void AwsMetricClientProvider::OnPutMetricDataAsyncCallback(
   // watch out HttpResponseCode::REQUEST_ENTITY_TOO_LARGE.
   auto result = CloudWatchErrorConverter::ConvertCloudWatchError(
       outcome.GetError().GetErrorType(), outcome.GetError().GetMessage());
-  ERROR_CONTEXT(kAwsMetricClientProvider, metric_requests_vector.back(), result,
-                "The error is %s", outcome.GetError().GetMessage().c_str());
+  SCP_ERROR_CONTEXT(kAwsMetricClientProvider, metric_requests_vector.back(),
+                    result, "The error is %s",
+                    outcome.GetError().GetMessage().c_str());
   for (auto& record_metric_context : metric_requests_vector) {
     FinishContext(result, record_metric_context, async_executor_);
   }
@@ -247,8 +250,7 @@ void AwsMetricClientProvider::OnPutMetricDataAsyncCallback(
 }
 
 #ifndef TEST_CPIO
-std::shared_ptr<MetricClientProviderInterface>
-MetricClientProviderFactory::Create(
+std::shared_ptr<MetricClientInterface> MetricClientProviderFactory::Create(
     const shared_ptr<MetricClientOptions>& options,
     const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
     const shared_ptr<AsyncExecutorInterface>& async_executor,

@@ -25,3 +25,8 @@ output "create_job_endpoint" {
 output "get_job_endpoint" {
   value = module.frontend.get_job_endpoint
 }
+
+output "notifications_sns_topic_arn" {
+  value       = one(module.notifications[*].notifications_sns_topic_arn)
+  description = "The ARN of the SNS notifications topic."
+}

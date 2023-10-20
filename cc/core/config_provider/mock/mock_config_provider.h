@@ -92,15 +92,15 @@ class MockConfigProvider : public ConfigProviderInterface {
     string_config_map_[key] = std::string(value);
   }
 
-  void Set(const ConfigKey& key, std::string value) {
+  void Set(const ConfigKey& key, const std::string& value) {
     string_config_map_[key] = value;
   }
 
-  void Set(const ConfigKey& key, const size_t value) {
+  void SetInt(const ConfigKey& key, const size_t value) {
     size_t_config_map_[key] = value;
   }
 
-  void Set(const ConfigKey& key, const bool value) {
+  void SetBool(const ConfigKey& key, const bool value) {
     bool_config_map_[key] = value;
   }
 

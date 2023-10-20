@@ -16,15 +16,15 @@
 
 #include "core/authorization_proxy/src/authorization_proxy.h"
 
-#include <gtest/gtest.h>
-
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/authorization_proxy/src/error_codes.h"
 #include "core/interface/async_context.h"
 #include "core/interface/http_request_response_auth_interceptor_interface.h"
 #include "core/test/utils/conditional_wait.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncExecutor;
 using std::make_shared;
@@ -39,11 +39,11 @@ namespace google::scp::core::test {
 class HttpRequestResponseAuthInterceptorMock
     : public HttpRequestResponseAuthInterceptorInterface {
  public:
-  MOCK_METHOD(ExecutionResult, AddHeadersToRequest,
+  MOCK_METHOD(ExecutionResult, PrepareRequest,
               (const AuthorizationMetadata&, HttpRequest&), (override));
   MOCK_METHOD(ExecutionResultOr<AuthorizedMetadata>,
-              ObtainAuthorizedMetadataFromResponse, (const HttpResponse&),
-              (override));
+              ObtainAuthorizedMetadataFromResponse,
+              (const AuthorizationMetadata&, const HttpResponse&), (override));
 };
 
 class HttpClientMock : public HttpClientInterface {
@@ -63,8 +63,8 @@ class AuthorizationProxyTest : public testing::Test {
         async_executor_(
             make_shared<AsyncExecutor>(4, 1000, true /* drop tasks on stop */)),
         server_endpoint_("http://auth.google.com:8080/submit") {
-    EXPECT_EQ(async_executor_->Init(), SuccessExecutionResult());
-    EXPECT_EQ(async_executor_->Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(async_executor_->Init());
+    EXPECT_SUCCESS(async_executor_->Run());
 
     authorization_metadata_.claimed_identity = "google.com";
     authorization_metadata_.authorization_token = "kjgasuif8i2qr1kj215125";
@@ -73,9 +73,7 @@ class AuthorizationProxyTest : public testing::Test {
         std::make_shared<std::string>("google.com");
   }
 
-  void TearDown() override {
-    EXPECT_EQ(async_executor_->Stop(), SuccessExecutionResult());
-  }
+  void TearDown() override { EXPECT_SUCCESS(async_executor_->Stop()); }
 
   std::shared_ptr<HttpClientMock> mock_http_client_;
   std::shared_ptr<AsyncExecutorInterface> async_executor_;
@@ -92,8 +90,9 @@ TEST_F(AuthorizationProxyTest, InvalidServiceEndpointURI) {
   AuthorizationProxy proxy(invalid_server_endpoint_uri, async_executor_,
                            mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), FailureExecutionResult(
-                              errors::SC_AUTHORIZATION_PROXY_INVALID_CONFIG));
+  EXPECT_THAT(proxy.Init(),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_INVALID_CONFIG)));
 }
 
 TEST_F(AuthorizationProxyTest, ValidServiceEndpointURI) {
@@ -102,7 +101,7 @@ TEST_F(AuthorizationProxyTest, ValidServiceEndpointURI) {
           std::make_unique<HttpRequestResponseAuthInterceptorMock>();
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
 }
 
 TEST_F(AuthorizationProxyTest, AuthorizeWithInvalidAuthorizationMetadata) {
@@ -111,30 +110,33 @@ TEST_F(AuthorizationProxyTest, AuthorizeWithInvalidAuthorizationMetadata) {
 
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
-  EXPECT_EQ(proxy.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
+  EXPECT_SUCCESS(proxy.Run());
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request1;
   authorization_request1.request = make_shared<AuthorizationProxyRequest>();
-  EXPECT_EQ(proxy.Authorize(authorization_request1),
-            FailureExecutionResult(errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST));
+  EXPECT_THAT(proxy.Authorize(authorization_request1),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request2;
   authorization_request2.request = make_shared<AuthorizationProxyRequest>();
   authorization_request2.request->authorization_metadata.claimed_identity =
       "claimed_id";
-  EXPECT_EQ(proxy.Authorize(authorization_request2),
-            FailureExecutionResult(errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST));
+  EXPECT_THAT(proxy.Authorize(authorization_request2),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request3;
   authorization_request3.request = make_shared<AuthorizationProxyRequest>();
   authorization_request3.request->authorization_metadata.authorization_token =
       "auth_token";
-  EXPECT_EQ(proxy.Authorize(authorization_request3),
-            FailureExecutionResult(errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST));
+  EXPECT_THAT(proxy.Authorize(authorization_request3),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -147,10 +149,10 @@ TEST_F(AuthorizationProxyTest,
 
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
-  EXPECT_EQ(proxy.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
+  EXPECT_SUCCESS(proxy.Run());
 
-  EXPECT_CALL(*authorization_http_helper_mock, AddHeadersToRequest(_, _))
+  EXPECT_CALL(*authorization_http_helper_mock, PrepareRequest(_, _))
       .WillOnce(Return(FailureExecutionResult(123)));
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
@@ -159,8 +161,9 @@ TEST_F(AuthorizationProxyTest,
   authorization_request.request->authorization_metadata =
       authorization_metadata_;
 
-  EXPECT_EQ(proxy.Authorize(authorization_request),
-            FailureExecutionResult(errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST));
+  EXPECT_THAT(proxy.Authorize(authorization_request),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 }
 
 TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
@@ -172,10 +175,10 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
 
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
-  EXPECT_EQ(proxy.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
+  EXPECT_SUCCESS(proxy.Run());
 
-  EXPECT_CALL(*authorization_http_helper_mock, AddHeadersToRequest(_, _))
+  EXPECT_CALL(*authorization_http_helper_mock, PrepareRequest(_, _))
       .WillOnce(Return(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_http_client_, PerformRequest)
@@ -187,9 +190,9 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
   authorization_request.request->authorization_metadata =
       authorization_metadata_;
 
-  EXPECT_EQ(
-      proxy.Authorize(authorization_request),
-      RetryExecutionResult(errors::SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE));
+  EXPECT_THAT(proxy.Authorize(authorization_request),
+              ResultIs(RetryExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -202,10 +205,10 @@ TEST_F(AuthorizationProxyTest,
 
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
-  EXPECT_EQ(proxy.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
+  EXPECT_SUCCESS(proxy.Run());
 
-  EXPECT_CALL(*authorization_http_helper_mock, AddHeadersToRequest(_, _))
+  EXPECT_CALL(*authorization_http_helper_mock, PrepareRequest(_, _))
       .WillOnce(Return(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_http_client_, PerformRequest)
@@ -224,10 +227,10 @@ TEST_F(AuthorizationProxyTest,
       authorization_metadata_;
   authorization_request.callback = [&](auto context) {
     request_finished = true;
-    EXPECT_EQ(context.result, FailureExecutionResult(123));
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(123)));
     return SuccessExecutionResult();
   };
-  EXPECT_EQ(proxy.Authorize(authorization_request), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Authorize(authorization_request));
   WaitUntil([&]() { return request_finished.load(); });
 }
 
@@ -240,10 +243,10 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
 
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
-  EXPECT_EQ(proxy.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
+  EXPECT_SUCCESS(proxy.Run());
 
-  EXPECT_CALL(*authorization_http_helper_mock, AddHeadersToRequest(_, _))
+  EXPECT_CALL(*authorization_http_helper_mock, PrepareRequest(_, _))
       .WillOnce(Return(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_http_client_, PerformRequest)
@@ -255,7 +258,7 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
   authorization_request1.request->authorization_metadata =
       authorization_metadata_;
 
-  EXPECT_EQ(proxy.Authorize(authorization_request1), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Authorize(authorization_request1));
 
   // Request attempt 2.
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
@@ -264,9 +267,9 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
   authorization_request2.request->authorization_metadata =
       authorization_metadata_;
 
-  EXPECT_EQ(proxy.Authorize(authorization_request2),
-            RetryExecutionResult(
-                errors::SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS));
+  EXPECT_THAT(proxy.Authorize(authorization_request2),
+              ResultIs(RetryExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
 
   // Request attempt 3.
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
@@ -275,9 +278,9 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
   authorization_request3.request->authorization_metadata =
       authorization_metadata_;
 
-  EXPECT_EQ(proxy.Authorize(authorization_request3),
-            RetryExecutionResult(
-                errors::SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS));
+  EXPECT_THAT(proxy.Authorize(authorization_request3),
+              ResultIs(RetryExecutionResult(
+                  errors::SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -290,10 +293,10 @@ TEST_F(AuthorizationProxyTest,
 
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
-  EXPECT_EQ(proxy.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
+  EXPECT_SUCCESS(proxy.Run());
 
-  EXPECT_CALL(*authorization_http_helper_mock, AddHeadersToRequest(_, _))
+  EXPECT_CALL(*authorization_http_helper_mock, PrepareRequest(_, _))
       .WillOnce(Return(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_http_client_, PerformRequest)
@@ -305,8 +308,15 @@ TEST_F(AuthorizationProxyTest,
       });
 
   EXPECT_CALL(*authorization_http_helper_mock,
-              ObtainAuthorizedMetadataFromResponse(_))
-      .WillOnce([=](const HttpResponse& response) {
+              ObtainAuthorizedMetadataFromResponse(_, _))
+      .WillOnce([=](const AuthorizationMetadata& authorization_metadata,
+                    const HttpResponse& response) {
+        // Verify the request's authorization context is supplied in callback
+        // correctly.
+        EXPECT_EQ(authorization_metadata_.authorization_token,
+                  authorization_metadata.authorization_token);
+        EXPECT_EQ(authorization_metadata_.claimed_identity,
+                  authorization_metadata.claimed_identity);
         return AuthorizedMetadata{authorized_metadata_.authorized_domain};
       });
 
@@ -319,13 +329,13 @@ TEST_F(AuthorizationProxyTest,
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
-      EXPECT_EQ(context.result, SuccessExecutionResult());
+      EXPECT_SUCCESS(context.result);
       EXPECT_EQ(*context.response->authorized_metadata.authorized_domain,
                 *authorized_metadata_.authorized_domain);
       request_finished = true;
       return SuccessExecutionResult();
     };
-    EXPECT_EQ(proxy.Authorize(authorization_request), SuccessExecutionResult());
+    EXPECT_SUCCESS(proxy.Authorize(authorization_request));
     WaitUntil([&]() { return request_finished.load(); });
   }
 
@@ -339,13 +349,13 @@ TEST_F(AuthorizationProxyTest,
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
-      EXPECT_EQ(context.result, SuccessExecutionResult());
+      EXPECT_SUCCESS(context.result);
       EXPECT_EQ(*context.response->authorized_metadata.authorized_domain,
                 *authorized_metadata_.authorized_domain);
       request_finished = true;
       return SuccessExecutionResult();
     };
-    EXPECT_EQ(proxy.Authorize(authorization_request), SuccessExecutionResult());
+    EXPECT_SUCCESS(proxy.Authorize(authorization_request));
     EXPECT_EQ(
         *authorization_request.response->authorized_metadata.authorized_domain,
         *authorized_metadata_.authorized_domain);
@@ -363,10 +373,10 @@ TEST_F(AuthorizationProxyTest,
 
   AuthorizationProxy proxy(server_endpoint_, async_executor_, mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_EQ(proxy.Init(), SuccessExecutionResult());
-  EXPECT_EQ(proxy.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(proxy.Init());
+  EXPECT_SUCCESS(proxy.Run());
 
-  EXPECT_CALL(*authorization_http_helper_mock, AddHeadersToRequest(_, _))
+  EXPECT_CALL(*authorization_http_helper_mock, PrepareRequest(_, _))
       .Times(2)
       .WillRepeatedly(Return(SuccessExecutionResult()));
 
@@ -380,12 +390,15 @@ TEST_F(AuthorizationProxyTest,
       });
 
   EXPECT_CALL(*authorization_http_helper_mock,
-              ObtainAuthorizedMetadataFromResponse(_))
-      .WillOnce([=](const HttpResponse& response) {
-        return FailureExecutionResult(1234);
-      })
+              ObtainAuthorizedMetadataFromResponse(_, _))
       .WillOnce(
-          [=](const HttpResponse& response) { return AuthorizedMetadata{}; });
+          [=](const AuthorizationMetadata&, const HttpResponse& response) {
+            return FailureExecutionResult(1234);
+          })
+      .WillOnce(
+          [=](const AuthorizationMetadata&, const HttpResponse& response) {
+            return AuthorizedMetadata{};
+          });
 
   // Request 1
   {
@@ -396,11 +409,11 @@ TEST_F(AuthorizationProxyTest,
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
-      EXPECT_EQ(context.result, FailureExecutionResult(1234));
+      EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1234)));
       request_finished = true;
       return SuccessExecutionResult();
     };
-    EXPECT_EQ(proxy.Authorize(authorization_request), SuccessExecutionResult());
+    EXPECT_SUCCESS(proxy.Authorize(authorization_request));
     WaitUntil([&]() { return request_finished.load(); });
   }
 
@@ -413,11 +426,11 @@ TEST_F(AuthorizationProxyTest,
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
-      EXPECT_EQ(context.result, SuccessExecutionResult());
+      EXPECT_SUCCESS(context.result);
       request_finished = true;
       return SuccessExecutionResult();
     };
-    EXPECT_EQ(proxy.Authorize(authorization_request), SuccessExecutionResult());
+    EXPECT_SUCCESS(proxy.Authorize(authorization_request));
     WaitUntil([&]() { return request_finished.load(); });
   }
 }

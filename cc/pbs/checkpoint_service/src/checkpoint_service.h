@@ -16,23 +16,29 @@
 
 #pragma once
 
+#include <stddef.h>
+
+#include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 
-#include "core/async_executor/src/async_executor.h"
 #include "core/common/uuid/src/uuid.h"
+#include "core/interface/async_executor_interface.h"
 #include "core/interface/blob_storage_provider_interface.h"
 #include "core/interface/checkpoint_service_interface.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/journal_service_interface.h"
 #include "core/interface/nosql_database_provider_interface.h"
+#include "core/interface/partition_types.h"
 #include "core/interface/remote_transaction_manager_interface.h"
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "core/interface/transaction_manager_interface.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
+#include "core/interface/type_def.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/interface/budget_key_provider_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 static constexpr size_t kCheckpointInitialBufferSize =
     512 * 1024 * 1024;  // 512 MB
@@ -45,18 +51,18 @@ class CheckpointService : public core::CheckpointServiceInterface {
   CheckpointService(
       std::shared_ptr<std::string>& bucket_name,
       std::shared_ptr<std::string>& partition_name,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<core::JournalServiceInterface>&
           application_journal_service,
       const std::shared_ptr<core::BlobStorageProviderInterface>&
           blob_storage_provider,
       size_t initial_buffer_size = kCheckpointInitialBufferSize)
-      : is_running(false),
+      : is_running_(false),
         bucket_name_(bucket_name),
         partition_name_(partition_name),
         last_processed_journal_id_(0),
+        last_persisted_checkpoint_id_(0),
         metric_client_(metric_client),
         initial_buffer_size_(initial_buffer_size),
         config_provider_(config_provider),
@@ -70,6 +76,9 @@ class CheckpointService : public core::CheckpointServiceInterface {
   core::ExecutionResult Run() noexcept override;
 
   core::ExecutionResult Stop() noexcept override;
+
+  core::ExecutionResultOr<core::CheckpointId>
+  GetLastPersistedCheckpointId() noexcept override;
 
  protected:
   /// Create all needed components.
@@ -151,16 +160,17 @@ class CheckpointService : public core::CheckpointServiceInterface {
   /// The checkpointing worker thread.
   std::thread worker_thread_;
   /// Indicates whether the checkpoint service is running.
-  std::atomic<bool> is_running;
+  std::atomic<bool> is_running_;
   /// The bucket name of the current partition.
   std::shared_ptr<std::string> bucket_name_;
   /// The name of the partition.
   std::shared_ptr<std::string> partition_name_;
   /// The last processed journal log id;
   core::JournalId last_processed_journal_id_;
+  /// The last persisted checkpoint id;
+  core::CheckpointId last_persisted_checkpoint_id_;
   /// Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::client_providers::MetricClientProviderInterface>
-      metric_client_;
+  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
   /// The initial buffers size to write the blobs.
   size_t initial_buffer_size_;
   /// An instance of the async executor for the IO operations.
@@ -195,5 +205,7 @@ class CheckpointService : public core::CheckpointServiceInterface {
   size_t checkpointing_interval_in_seconds_;
   /// Maximum number of journal entries to process in each checkpointing run.
   size_t max_journals_to_process_in_each_checkpoint_run_;
+  /// Encapsulating partition ID
+  core::PartitionId partition_id_;
 };
 }  // namespace google::scp::pbs

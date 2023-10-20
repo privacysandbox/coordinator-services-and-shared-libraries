@@ -19,6 +19,9 @@ package com.google.scp.coordinator.keymanagement.shared.dao.common;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.stream.Stream;
 
 /** Interface for Key database properties */
 public interface KeyDb {
@@ -27,10 +30,25 @@ public interface KeyDb {
    * Returns active keys up to given keyLimit. Keys are sorted by expiration time in descending
    * order.
    */
-  ImmutableList<EncryptionKey> getActiveKeys(int keyLimit) throws ServiceException;
+  default ImmutableList<EncryptionKey> getActiveKeys(int keyLimit) throws ServiceException {
+    return getActiveKeys(keyLimit, Instant.now());
+  }
+
+  /**
+   * Returns keys that are active at a specific {@code instant} up to given {@code keyLimit}. Keys
+   * are sorted by expiration time in descending order.
+   */
+  ImmutableList<EncryptionKey> getActiveKeys(int keyLimit, Instant instant) throws ServiceException;
 
   /** Returns all keys in the database without explicit ordering */
   ImmutableList<EncryptionKey> getAllKeys() throws ServiceException;
+
+  /**
+   * Returns all the keys of a specified maximum age based on their creation timestamp.
+   *
+   * @param maxAge the maximum age of returned keys.
+   */
+  Stream<EncryptionKey> listRecentKeys(Duration maxAge) throws ServiceException;
 
   /**
    * Performs a lookup of a single key, throwing a ServiceException if the key is not found.
@@ -40,10 +58,15 @@ public interface KeyDb {
   EncryptionKey getKey(String keyId) throws ServiceException;
 
   /** Create given key. */
-  void createKey(EncryptionKey key) throws ServiceException;
+  default void createKey(EncryptionKey key) throws ServiceException {
+    createKey(key, true);
+  }
 
   /** Create given keys. */
   void createKeys(ImmutableList<EncryptionKey> keys) throws ServiceException;
+
+  /** Create key with overwrite option */
+  void createKey(EncryptionKey key, boolean overwrite) throws ServiceException;
 
   /**
    * Thrown when the KeyDB record contains a Status field that does not match a value of

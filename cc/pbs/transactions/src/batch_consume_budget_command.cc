@@ -26,6 +26,7 @@
 #include "core/interface/transaction_manager_interface.h"
 #include "pbs/budget_key_transaction_protocols/src/error_codes.h"
 #include "pbs/interface/budget_key_provider_interface.h"
+#include "pbs/transactions/src/command_error_codes.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -41,6 +42,68 @@ using std::vector;
 using std::placeholders::_1;
 
 namespace google::scp::pbs {
+
+void BatchConsumeBudgetCommand::SetUpCommandPhaseHandlers() {
+  begin = [](core::TransactionCommandCallback& callback) mutable {
+    auto success_result = core::SuccessExecutionResult();
+    callback(success_result);
+    return core::SuccessExecutionResult();
+  };
+  prepare = std::bind(&BatchConsumeBudgetCommand::Prepare, this,
+                      std::placeholders::_1);
+  commit = std::bind(&BatchConsumeBudgetCommand::Commit, this,
+                     std::placeholders::_1);
+  notify = std::bind(&BatchConsumeBudgetCommand::Notify, this,
+                     std::placeholders::_1);
+  abort =
+      std::bind(&BatchConsumeBudgetCommand::Abort, this, std::placeholders::_1);
+  end = begin;
+}
+
+BatchConsumeBudgetCommand::BatchConsumeBudgetCommand(
+    const core::common::Uuid& transaction_id,
+    const std::shared_ptr<BudgetKeyName>& budget_key_name,
+    const std::vector<ConsumeBudgetCommandRequestInfo>& budget_consumptions,
+    const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+    const std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider)
+    : ConsumeBudgetCommandBase(
+          transaction_id, budget_key_provider,
+          std::make_unique<core::common::OperationDispatcher>(
+              async_executor,
+              core::common::RetryStrategy(
+                  core::common::RetryStrategyType::Exponential,
+                  kBatchConsumeBudgetCommandRetryStrategyDelayMs,
+                  kBatchConsumeBudgetCommandRetryStrategyTotalRetries))),
+      budget_key_name_(budget_key_name),
+      budget_consumptions_(budget_consumptions) {
+  SetUpCommandPhaseHandlers();
+  command_id = kBatchConsumeBudgetCommandId;
+}
+
+BatchConsumeBudgetCommand::BatchConsumeBudgetCommand(
+    const core::common::Uuid& transaction_id,
+    const std::shared_ptr<BudgetKeyName>& budget_key_name,
+    const std::vector<ConsumeBudgetCommandRequestInfo>& budget_consumptions)
+    : ConsumeBudgetCommandBase(transaction_id),
+      budget_key_name_(budget_key_name),
+      budget_consumptions_(budget_consumptions) {
+  SetUpCommandPhaseHandlers();
+  command_id = kBatchConsumeBudgetCommandId;
+}
+
+void BatchConsumeBudgetCommand::SetUpCommandExecutionDependencies(
+    const std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider,
+    const std::shared_ptr<core::AsyncExecutorInterface>&
+        async_executor) noexcept {
+  budget_key_provider_ = budget_key_provider;
+  operation_dispatcher_ = std::make_unique<core::common::OperationDispatcher>(
+      core::common::OperationDispatcher(
+          async_executor,
+          core::common::RetryStrategy(
+              core::common::RetryStrategyType::Exponential,
+              kBatchConsumeBudgetCommandRetryStrategyDelayMs,
+              kBatchConsumeBudgetCommandRetryStrategyTotalRetries)));
+}
 
 template <class Request, class Response>
 void BatchConsumeBudgetCommand::SetFailedInsufficientBudgetConsumptions(
@@ -63,16 +126,21 @@ void BatchConsumeBudgetCommand::SetFailedInsufficientBudgetConsumptions(
 
 ExecutionResult BatchConsumeBudgetCommand::Prepare(
     TransactionCommandCallback& transaction_command_callback) noexcept {
+  if (!budget_key_provider_ || !operation_dispatcher_) {
+    return FailureExecutionResult(
+        core::errors::SC_PBS_TRANSACTION_COMMAND_DEPENDENCIES_UNINITIALIZED);
+  }
+
   GetBudgetKeyRequest get_budget_key_request = {.budget_key_name =
                                                     budget_key_name_};
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse> budget_key_context(
       make_shared<GetBudgetKeyRequest>(move(get_budget_key_request)),
       bind(&BatchConsumeBudgetCommand::OnPrepareGetBudgetKeyCallback, this, _1,
            transaction_command_callback),
-      transaction_id_);
+      transaction_id_, transaction_id_);
 
   operation_dispatcher_
-      .Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
+      ->Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
           budget_key_context,
           [budget_key_provider = budget_key_provider_](
               AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>&
@@ -113,9 +181,9 @@ void BatchConsumeBudgetCommand::OnPrepareGetBudgetKeyCallback(
               move(prepare_batch_consume_budget_request)),
           bind(&BatchConsumeBudgetCommand::OnPrepareBatchConsumeBudgetCallback,
                this, _1, transaction_command_callback),
-          transaction_id_);
+          transaction_id_, transaction_id_);
 
-  operation_dispatcher_.Dispatch<AsyncContext<
+  operation_dispatcher_->Dispatch<AsyncContext<
       PrepareBatchConsumeBudgetRequest, PrepareBatchConsumeBudgetResponse>>(
       prepare_batch_consume_budget_context,
       [transaction_protocol](AsyncContext<PrepareBatchConsumeBudgetRequest,
@@ -144,16 +212,21 @@ void BatchConsumeBudgetCommand::OnPrepareBatchConsumeBudgetCallback(
 
 ExecutionResult BatchConsumeBudgetCommand::Commit(
     TransactionCommandCallback& transaction_command_callback) noexcept {
+  if (!budget_key_provider_ || !operation_dispatcher_) {
+    return FailureExecutionResult(
+        core::errors::SC_PBS_TRANSACTION_COMMAND_DEPENDENCIES_UNINITIALIZED);
+  }
+
   GetBudgetKeyRequest get_budget_key_request = {.budget_key_name =
                                                     budget_key_name_};
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse> budget_key_context(
       make_shared<GetBudgetKeyRequest>(move(get_budget_key_request)),
       bind(&BatchConsumeBudgetCommand::OnCommitGetBudgetKeyCallback, this, _1,
            transaction_command_callback),
-      transaction_id_);
+      transaction_id_, transaction_id_);
 
   operation_dispatcher_
-      .Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
+      ->Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
           budget_key_context,
           [budget_key_provider = budget_key_provider_](
               AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>&
@@ -194,9 +267,9 @@ void BatchConsumeBudgetCommand::OnCommitGetBudgetKeyCallback(
               move(commit_batch_consume_budget_request)),
           bind(&BatchConsumeBudgetCommand::OnCommitBatchConsumeBudgetCallback,
                this, _1, transaction_command_callback),
-          transaction_id_);
+          transaction_id_, transaction_id_);
 
-  operation_dispatcher_.Dispatch<AsyncContext<
+  operation_dispatcher_->Dispatch<AsyncContext<
       CommitBatchConsumeBudgetRequest, CommitBatchConsumeBudgetResponse>>(
       commit_batch_consume_budget_context,
       [transaction_protocol](AsyncContext<CommitBatchConsumeBudgetRequest,
@@ -225,16 +298,21 @@ void BatchConsumeBudgetCommand::OnCommitBatchConsumeBudgetCallback(
 
 ExecutionResult BatchConsumeBudgetCommand::Notify(
     TransactionCommandCallback& transaction_command_callback) noexcept {
+  if (!budget_key_provider_ || !operation_dispatcher_) {
+    return FailureExecutionResult(
+        core::errors::SC_PBS_TRANSACTION_COMMAND_DEPENDENCIES_UNINITIALIZED);
+  }
+
   GetBudgetKeyRequest get_budget_key_request = {.budget_key_name =
                                                     budget_key_name_};
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse> budget_key_context(
       make_shared<GetBudgetKeyRequest>(move(get_budget_key_request)),
       bind(&BatchConsumeBudgetCommand::OnNotifyGetBudgetKeyCallback, this, _1,
            transaction_command_callback),
-      transaction_id_);
+      transaction_id_, transaction_id_);
 
   operation_dispatcher_
-      .Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
+      ->Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
           budget_key_context,
           [budget_key_provider = budget_key_provider_](
               AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>&
@@ -272,9 +350,9 @@ void BatchConsumeBudgetCommand::OnNotifyGetBudgetKeyCallback(
               move(notify_batch_consume_budget_request)),
           bind(&BatchConsumeBudgetCommand::OnNotifyBatchConsumeBudgetCallback,
                this, _1, transaction_command_callback),
-          transaction_id_);
+          transaction_id_, transaction_id_);
 
-  operation_dispatcher_.Dispatch<AsyncContext<
+  operation_dispatcher_->Dispatch<AsyncContext<
       NotifyBatchConsumeBudgetRequest, NotifyBatchConsumeBudgetResponse>>(
       notify_batch_consume_budget_context,
       [transaction_protocol](AsyncContext<NotifyBatchConsumeBudgetRequest,
@@ -295,16 +373,21 @@ void BatchConsumeBudgetCommand::OnNotifyBatchConsumeBudgetCallback(
 
 ExecutionResult BatchConsumeBudgetCommand::Abort(
     TransactionCommandCallback& transaction_command_callback) noexcept {
+  if (!budget_key_provider_ || !operation_dispatcher_) {
+    return FailureExecutionResult(
+        core::errors::SC_PBS_TRANSACTION_COMMAND_DEPENDENCIES_UNINITIALIZED);
+  }
+
   GetBudgetKeyRequest get_budget_key_request = {.budget_key_name =
                                                     budget_key_name_};
   AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse> budget_key_context(
       make_shared<GetBudgetKeyRequest>(move(get_budget_key_request)),
       bind(&BatchConsumeBudgetCommand::OnAbortGetBudgetKeyCallback, this, _1,
            transaction_command_callback),
-      transaction_id_);
+      transaction_id_, transaction_id_);
 
   operation_dispatcher_
-      .Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
+      ->Dispatch<AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>>(
           budget_key_context,
           [budget_key_provider = budget_key_provider_](
               AsyncContext<GetBudgetKeyRequest, GetBudgetKeyResponse>&
@@ -341,10 +424,10 @@ void BatchConsumeBudgetCommand::OnAbortGetBudgetKeyCallback(
               move(abort_batch_consume_budget_request)),
           bind(&BatchConsumeBudgetCommand::OnAbortBatchConsumeBudgetCallback,
                this, _1, transaction_command_callback),
-          transaction_id_);
+          transaction_id_, transaction_id_);
 
-  operation_dispatcher_.Dispatch<AsyncContext<AbortBatchConsumeBudgetRequest,
-                                              AbortBatchConsumeBudgetResponse>>(
+  operation_dispatcher_->Dispatch<AsyncContext<
+      AbortBatchConsumeBudgetRequest, AbortBatchConsumeBudgetResponse>>(
       abort_batch_consume_budget_context,
       [transaction_protocol](AsyncContext<AbortBatchConsumeBudgetRequest,
                                           AbortBatchConsumeBudgetResponse>&

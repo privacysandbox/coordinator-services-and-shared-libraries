@@ -44,13 +44,14 @@ class Http1CurlClient : public HttpClientInterface {
    * @param total_retries total retry counts.
    */
   explicit Http1CurlClient(
-      std::shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
-      std::shared_ptr<AsyncExecutorInterface>& io_async_executor,
+      const std::shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<AsyncExecutorInterface>& io_async_executor,
       std::shared_ptr<Http1CurlWrapperProvider> curl_wrapper_provider =
           std::make_shared<Http1CurlWrapperProvider>(),
-      core::common::RetryStrategyType retry_strategy_type =
-          common::RetryStrategyType::Exponential,
-      core::TimeDuration time_duration_ms = 101, size_t total_retries = 12);
+      common::RetryStrategyOptions retry_strategy_options =
+          common::RetryStrategyOptions(common::RetryStrategyType::Exponential,
+                                       kDefaultRetryStrategyDelayInMs,
+                                       kDefaultRetryStrategyMaxRetries));
 
   ExecutionResult Init() noexcept override;
   ExecutionResult Run() noexcept override;
@@ -62,7 +63,7 @@ class Http1CurlClient : public HttpClientInterface {
  private:
   std::shared_ptr<Http1CurlWrapperProvider> curl_wrapper_provider_;
 
-  std::shared_ptr<AsyncExecutorInterface> cpu_async_executor_,
+  const std::shared_ptr<AsyncExecutorInterface> cpu_async_executor_,
       io_async_executor_;
   /// Operation dispatcher
   common::OperationDispatcher operation_dispatcher_;

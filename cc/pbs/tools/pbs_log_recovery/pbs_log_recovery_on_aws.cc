@@ -38,9 +38,9 @@
 #include "core/logger/src/logger.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "core/transaction_manager/src/transaction_manager.h"
-#include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider.h"
 #include "pbs/budget_key_provider/src/budget_key_provider.h"
 #include "pbs/transactions/src/transaction_command_serializer.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using Aws::InitAPI;
 using Aws::MakeShared;
@@ -77,7 +77,7 @@ using google::scp::core::logger::Logger;
 
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
-using google::scp::cpio::client_providers::mock::MockMetricClientProvider;
+using google::scp::cpio::MockMetricClient;
 using google::scp::pbs::BudgetKeyProvider;
 using google::scp::pbs::TransactionCommandSerializer;
 using std::atomic;
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
       make_unique<Logger>(make_unique<ConsoleLogProvider>());
   assert(logger_ptr->Init().Successful());
   assert(logger_ptr->Run().Successful());
-  GlobalLogger::SetGlobalLogger(logger_ptr);
+  GlobalLogger::SetGlobalLogger(std::move(logger_ptr));
 
   if (argc < 2) {
     std::cerr << "Must provide two parameters, 1. Journals S3 bucket name and "
@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
       make_shared<MockBlobStorageProvider>(region_name, async_executor_io,
                                            async_executor);
 
-  auto mock_metric_client = make_shared<MockMetricClientProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
 
   assert(async_executor_io->Init().Successful());
   assert(async_executor_io->Run().Successful());

@@ -71,6 +71,8 @@ module "multipartykeyhosting_secondary" {
   mpkhs_api_gw_error_ratio_5xx_threshold   = var.mpkhs_api_gw_error_ratio_5xx_threshold
   mpkhs_api_gw_total_error_ratio_threshold = var.mpkhs_api_gw_total_error_ratio_threshold
 
+  get_encryption_key_lambda_ps_client_shim_enabled = var.get_encryption_key_lambda_ps_client_shim_enabled
+
   availability_zone_replicas      = var.availability_zone_replicas
   enable_vpc                      = var.enable_vpc
   vpc_cidr                        = var.vpc_cidr

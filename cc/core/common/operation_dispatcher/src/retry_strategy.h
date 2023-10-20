@@ -30,6 +30,27 @@ enum class RetryStrategyType {
   Exponential = 1,
 };
 
+/// RetryStrategy options.
+struct RetryStrategyOptions {
+  RetryStrategyOptions() = delete;
+
+  RetryStrategyOptions(RetryStrategyType retry_strategy_type,
+                       TimeDuration delay_duration_ms,
+                       size_t maximum_allowed_retry_count)
+      : retry_strategy_type(retry_strategy_type),
+        delay_duration_ms(delay_duration_ms),
+        maximum_allowed_retry_count(maximum_allowed_retry_count) {}
+
+  /// The type of the retry strategy, linear or exponential.
+  const RetryStrategyType retry_strategy_type;
+
+  /// The initial delay for any types of retries in milliseconds.
+  const TimeDuration delay_duration_ms;
+
+  /// The maximum number of retries that is allowed.
+  const size_t maximum_allowed_retry_count;
+};
+
 /**
  * @brief A structure to represent retry strategy for operation. Linear and
  * Exponential retry strategies are supported.
@@ -54,6 +75,11 @@ class RetryStrategy {
       : retry_strategy_type_(retry_strategy_type),
         delay_duration_ms_(delay_duration_ms),
         maximum_allowed_retry_count_(maximum_allowed_retry_count) {}
+
+  explicit RetryStrategy(RetryStrategyOptions options)
+      : retry_strategy_type_(options.retry_strategy_type),
+        delay_duration_ms_(options.delay_duration_ms),
+        maximum_allowed_retry_count_(options.maximum_allowed_retry_count) {}
 
   /**
    * @brief Get the back-off duration in milliseconds for any specific retry

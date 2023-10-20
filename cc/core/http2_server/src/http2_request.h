@@ -29,12 +29,16 @@
 
 namespace google::scp::core {
 
-/// Nghttp2 wrapper for the http2 request.
+/**
+ * @brief Wrapper object of a nghttp2::request object to interface with it.
+ */
 class NgHttp2Request : public HttpRequest {
  public:
   explicit NgHttp2Request(
       const nghttp2::asio_http2::server::request& ng2_request)
       : id(common::Uuid::GenerateUuid()), ng2_request_(ng2_request) {}
+
+  using RequestBodyDataReceivedCallback = std::function<void(ExecutionResult)>;
 
   /**
    * @brief Unwraps the ngHttp2 request and update the current object.
@@ -43,11 +47,23 @@ class NgHttp2Request : public HttpRequest {
    */
   ExecutionResult UnwrapNgHttp2Request() noexcept;
 
+  /// Path of the handler in the URI.
+  /// Example: https://www.foo.com/handler/path, '/handler/path' is the
+  /// handler_path.
+  std::string handler_path;
+
   /// The auto-generated id of the request.
   const common::Uuid id;
 
-  /// The callback for when the request body is completely received.
-  std::function<void(ExecutionResult&)> on_request_body_received;
+  /**
+   * @brief Set callback to be invoked when the request body is completely
+   * received.
+   *
+   * @param callback The callback to be invoked once the request body is
+   * completely received.
+   */
+  virtual void SetOnRequestBodyDataReceivedCallback(
+      const RequestBodyDataReceivedCallback& callback);
 
  protected:
   /**
@@ -76,8 +92,12 @@ class NgHttp2Request : public HttpRequest {
    *
    * @param bytes The bytes received.
    * @param length The length of the bytes received.
+   * @param callback The callback to be invoked once the request body is
+   * completely received.
    */
-  void OnBodyDataReceived(const uint8_t* bytes, std::size_t length) noexcept;
+  void OnRequestBodyDataChunkReceived(
+      const uint8_t* bytes, std::size_t length,
+      const RequestBodyDataReceivedCallback& callback) noexcept;
 
  private:
   /// A ref to the original ng2_request.

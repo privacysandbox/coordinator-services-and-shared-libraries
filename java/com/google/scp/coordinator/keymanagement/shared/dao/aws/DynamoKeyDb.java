@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.DYNAMODB_ERROR;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.MISSING_KEY;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.UNKNOWN_ILLEGAL_ARGUMENT_EXCEPTION;
+import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static java.lang.Math.min;
@@ -37,7 +38,9 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.shared.api.exception.ServiceException;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -49,9 +52,11 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.internal.converter.attribute.ListAttributeConverter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.StaticImmutableTableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 /** DynamoDB representation of {@link KeyDb} */
@@ -59,7 +64,17 @@ public final class DynamoKeyDb implements KeyDb {
 
   private static final int PUBLIC_KEY_SCAN_SIZE = 100;
   private static final String GREATER_THAN = " > ";
-  private static final String NOW = ":now";
+  private static final String GREATER_OR_EQUAL = " >= ";
+
+  private static String AND(String e0, String e1) {
+    return String.format("((%s) AND (%s))", e0, e1);
+  }
+
+  private static String NOT(String e) {
+    return String.format(" NOT(%s) ", e);
+  }
+
+  private static final String INSTANT = ":instant";
 
   // Schema field names
   public static final String KEY_ID = "KeyId";
@@ -69,6 +84,7 @@ public final class DynamoKeyDb implements KeyDb {
   public static final String STATUS = "Status";
   public static final String KEY_ENCRYPTION_KEY_URI = "KeyEncryptionKeyUri";
   public static final String CREATION_TIME = "CreationTime";
+  public static final String ACTIVATION_TIME = "ActivationTime";
   public static final String EXPIRATION_TIME = "ExpirationTime";
   public static final String TTL_TIME = "TtlTime";
   public static final String KEY_SPLIT_DATA = "KeySplitData";
@@ -85,7 +101,7 @@ public final class DynamoKeyDb implements KeyDb {
     keyTable = ddbClient.table(tableName, getDynamoDbTableSchema());
   }
 
-  private static TableSchema<EncryptionKey> getDynamoDbTableSchema() {
+  public static TableSchema<EncryptionKey> getDynamoDbTableSchema() {
     return StaticImmutableTableSchema.builder(EncryptionKey.class, EncryptionKey.Builder.class)
         .newItemBuilder(EncryptionKey::newBuilder, EncryptionKey.Builder::build)
         .addAttribute(
@@ -143,6 +159,13 @@ public final class DynamoKeyDb implements KeyDb {
             Long.class,
             attribute ->
                 attribute
+                    .name(ACTIVATION_TIME)
+                    .getter(EncryptionKey::getActivationTime)
+                    .setter(EncryptionKey.Builder::setActivationTime))
+        .addAttribute(
+            Long.class,
+            attribute ->
+                attribute
                     .name(EXPIRATION_TIME)
                     .getter(EncryptionKey::getExpirationTime)
                     .setter(EncryptionKey.Builder::setExpirationTime))
@@ -174,22 +197,24 @@ public final class DynamoKeyDb implements KeyDb {
         .build();
   }
 
-  /**
-   * Gets active keys from Dynamo table. Performs a scan of the table and returns items with
-   * expiration less than now().
-   */
   @Override
-  public ImmutableList<EncryptionKey> getActiveKeys(int keyLimit) throws ServiceException {
+  public ImmutableList<EncryptionKey> getActiveKeys(int keyLimit, Instant instant)
+      throws ServiceException {
     try {
-      AttributeValue nowValue = numberValue(Instant.now().toEpochMilli());
+      AttributeValue instantValue = numberValue(instant.toEpochMilli());
       ImmutableList<EncryptionKey> keyList =
           keyTable
               .scan(
                   ScanEnhancedRequest.builder()
                       .filterExpression(
                           Expression.builder()
-                              .expression(EXPIRATION_TIME + GREATER_THAN + NOW)
-                              .putExpressionValue(NOW, nowValue)
+                              .expression(
+                                  AND(
+                                      EXPIRATION_TIME + GREATER_THAN + INSTANT,
+                                      // Using NOT for backward compatibility for existing rows
+                                      // without ACTIVATION_TIME.
+                                      NOT(ACTIVATION_TIME + GREATER_THAN + INSTANT)))
+                              .putExpressionValue(INSTANT, instantValue)
                               .build())
                       /* defines page size */
                       .limit(PUBLIC_KEY_SCAN_SIZE)
@@ -229,6 +254,29 @@ public final class DynamoKeyDb implements KeyDb {
     }
   }
 
+  @Override
+  public Stream<EncryptionKey> listRecentKeys(Duration maxAage) throws ServiceException {
+    try {
+      long maxCreationTime = Instant.now().minus(maxAage).toEpochMilli();
+      String MAX = ":max";
+      return keyTable
+          .scan(
+              ScanEnhancedRequest.builder()
+                  .filterExpression(
+                      Expression.builder()
+                          .expression(CREATION_TIME + GREATER_OR_EQUAL + MAX)
+                          .putExpressionValue(MAX, numberValue(maxCreationTime))
+                          .build())
+                  .build())
+          .stream()
+          .flatMap(page -> page.items().stream());
+    } catch (DynamoDbException
+        | UnsupportedOperationException
+        | IllegalStateException
+        | InvalidEncryptionKeyStatusException exception) {
+      throw logAndReturnException(exception);
+    }
+  }
   /** Returns encryption key for specific keyId. */
   @Override
   public EncryptionKey getKey(String keyId) throws ServiceException {
@@ -252,19 +300,6 @@ public final class DynamoKeyDb implements KeyDb {
   }
 
   /**
-   * Saves the key to DynamoDb. This process will overwrite existing entries with the same keyId.
-   */
-  @Override
-  public void createKey(EncryptionKey key) throws ServiceException {
-    try {
-      keyTable.putItem(key);
-    } catch (DynamoDbException e) {
-      logger.error("Unknown DynamoDB error when saving key", e);
-      throw new ServiceException(INTERNAL, DYNAMODB_ERROR.name(), e);
-    }
-  }
-
-  /**
    * Writes multiple keys to DynamoDb. This process will overwrite existing entries with the same
    * keyId.
    */
@@ -283,6 +318,37 @@ public final class DynamoKeyDb implements KeyDb {
     } catch (DynamoDbException e) {
       logger.error("Unknown DynamoDB error when saving keys", e);
       throw new ServiceException(INTERNAL, DYNAMODB_ERROR.name(), e);
+    }
+  }
+
+  /** Create key with overwrite option */
+  @Override
+  public void createKey(EncryptionKey key, boolean overwrite) throws ServiceException {
+    if (overwrite) {
+      try {
+        keyTable.putItem(key);
+      } catch (DynamoDbException e) {
+        logger.error("Unknown DynamoDB error when saving key", e);
+        throw new ServiceException(INTERNAL, DYNAMODB_ERROR.name(), e);
+      }
+    } else {
+      PutItemEnhancedRequest<EncryptionKey> putItemEnhancedRequest =
+          PutItemEnhancedRequest.builder(EncryptionKey.class)
+              .item(key)
+              .conditionExpression(
+                  Expression.builder()
+                      .expression(String.format("attribute_not_exists(%s)", KEY_ID))
+                      .build())
+              .build();
+      try {
+        keyTable.putItem(putItemEnhancedRequest);
+      } catch (ConditionalCheckFailedException e) {
+        logger.warn(String.format("KeyId %s already exists in database", key.getKeyId()), e);
+        throw new ServiceException(ALREADY_EXISTS, DYNAMODB_ERROR.name(), e);
+      } catch (DynamoDbException e) {
+        logger.error("Unknown DynamoDB error when saving key", e);
+        throw new ServiceException(INTERNAL, DYNAMODB_ERROR.name(), e);
+      }
     }
   }
 

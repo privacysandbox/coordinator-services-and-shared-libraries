@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
+#include "public/core/test/interface/execution_result_matchers.h"
+
 namespace google::scp::core::test {
 
 // Automatically calls target service's Init()/Run()/Stop() with RAII semantics.
 template <typename Service>
 struct AutoInitRunStop {
   explicit AutoInitRunStop(Service& service) : service_(service) {
-    service_.Init();
-    service_.Run();
+    EXPECT_SUCCESS(service_.Init());
+    EXPECT_SUCCESS(service_.Run());
   }
 
-  ~AutoInitRunStop() { service_.Stop(); }
+  ~AutoInitRunStop() { EXPECT_SUCCESS(service_.Stop()); }
 
   Service& service_;
 };

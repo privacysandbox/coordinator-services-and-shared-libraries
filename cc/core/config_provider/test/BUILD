@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 cc_test(
     name = "config_provider_test",
     size = "small",
@@ -23,6 +25,7 @@ cc_test(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/config_provider/src:config_provider_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -37,6 +40,7 @@ cc_test(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/config_provider/src:config_provider_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

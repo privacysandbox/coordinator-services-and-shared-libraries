@@ -14,6 +14,7 @@
 
 #include "core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <random>
@@ -21,7 +22,7 @@
 #include <thread>
 #include <vector>
 
-#include <gmock/gmock.h>
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::TCPTrafficForwarderSocat;
 using std::cout;
@@ -89,21 +90,21 @@ static bool SocatProcessExists() {
 TEST_F(TcpTrafficForwarderSoCatTest, InitRunStop) {
   auto local_port = to_string(GenerateRandomIntInRange(8000, 60000));
   TCPTrafficForwarderSocat tcp_traffic_forwarder(local_port);
-  EXPECT_EQ(tcp_traffic_forwarder.Init(), SuccessExecutionResult());
-  EXPECT_EQ(tcp_traffic_forwarder.Run(), SuccessExecutionResult());
-  EXPECT_EQ(tcp_traffic_forwarder.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Init());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Run());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Stop());
 }
 
 TEST_F(TcpTrafficForwarderSoCatTest, ShouldStartAndStopSocat) {
   auto local_port = to_string(GenerateRandomIntInRange(8000, 60000));
   TCPTrafficForwarderSocat tcp_traffic_forwarder(local_port);
-  EXPECT_EQ(tcp_traffic_forwarder.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Init());
   // This calls Run()
-  EXPECT_EQ(tcp_traffic_forwarder.ResetForwardingAddress("www.google.com"),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      tcp_traffic_forwarder.ResetForwardingAddress("www.google.com"));
   // Socat should have been started
   while (!SocatProcessExists()) {}
-  EXPECT_EQ(tcp_traffic_forwarder.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Stop());
   // No socat processes should be running
   while (SocatProcessExists()) {}
 }
@@ -113,14 +114,14 @@ TEST_F(TcpTrafficForwarderSoCatTest, ShouldForwardBasicTraffic) {
   auto command = "curl localhost:" + local_port + "> /dev/null";
 
   TCPTrafficForwarderSocat tcp_traffic_forwarder(local_port);
-  EXPECT_EQ(tcp_traffic_forwarder.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Init());
 
-  EXPECT_EQ(tcp_traffic_forwarder.ResetForwardingAddress("www.google.com"),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      tcp_traffic_forwarder.ResetForwardingAddress("www.google.com"));
   // Socat should have been started
   while (!SocatProcessExists()) {}
 
-  EXPECT_EQ(tcp_traffic_forwarder.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Stop());
 
   // No socat processes should be running
   while (SocatProcessExists()) {}
@@ -130,18 +131,17 @@ TEST_F(TcpTrafficForwarderSoCatTest, ShouldBeAbleToResetAddress) {
   auto local_port = to_string(GenerateRandomIntInRange(8000, 60000));
 
   TCPTrafficForwarderSocat tcp_traffic_forwarder(local_port);
-  EXPECT_EQ(tcp_traffic_forwarder.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Init());
 
-  EXPECT_EQ(tcp_traffic_forwarder.ResetForwardingAddress("www.google.com"),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      tcp_traffic_forwarder.ResetForwardingAddress("www.google.com"));
   // Socat should have been started
   while (!SocatProcessExists()) {}
-  EXPECT_EQ(tcp_traffic_forwarder.ResetForwardingAddress("www.yahoo.com"),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.ResetForwardingAddress("www.yahoo.com"));
   // Socat should still be running
   while (!SocatProcessExists()) {}
 
-  EXPECT_EQ(tcp_traffic_forwarder.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Stop());
 
   // No socat processes should be running
   while (SocatProcessExists()) {}
@@ -151,10 +151,10 @@ TEST_F(TcpTrafficForwarderSoCatTest, ShouldForwardTraffic) {
   auto local_port = to_string(GenerateRandomIntInRange(8000, 60000));
 
   TCPTrafficForwarderSocat tcp_traffic_forwarder(local_port);
-  EXPECT_EQ(tcp_traffic_forwarder.Init(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Init());
 
-  EXPECT_EQ(tcp_traffic_forwarder.ResetForwardingAddress("www.google.com:80"),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(
+      tcp_traffic_forwarder.ResetForwardingAddress("www.google.com:80"));
   // Socat should have been started
   while (!SocatProcessExists()) {}
 
@@ -162,7 +162,7 @@ TEST_F(TcpTrafficForwarderSoCatTest, ShouldForwardTraffic) {
   auto result = RunCommandAndGetOutput(curl_command);
   EXPECT_THAT(result, HasSubstr("<!DOCTYPE html>"));
 
-  EXPECT_EQ(tcp_traffic_forwarder.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(tcp_traffic_forwarder.Stop());
 
   // No socat processes should be running
   while (SocatProcessExists()) {}

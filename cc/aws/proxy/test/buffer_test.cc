@@ -315,6 +315,5 @@ TEST(BufferTest, DrainExactBlockToEmptyBuffer) {
   EXPECT_EQ(sz, buf.data_size());
 }
 
-
 }  // namespace test
 }  // namespace google::scp::proxy

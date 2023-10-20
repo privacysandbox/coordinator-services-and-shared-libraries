@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 package(default_visibility = ["//cc:scp_internal_pkg"])
 
 cc_test(
@@ -28,6 +30,7 @@ cc_test(
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
     ],

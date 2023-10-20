@@ -27,6 +27,7 @@
 #include "pbs/budget_key_transaction_protocols/src/error_codes.h"
 #include "pbs/interface/budget_key_timeframe_manager_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -34,6 +35,7 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::Uuid;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using google::scp::pbs::BudgetKeyTimeframe;
 using google::scp::pbs::budget_key::mock::
@@ -961,7 +963,7 @@ TEST(ConsumeBudgetTransactionProtocolTest, OnCommitLogged) {
         [&](AsyncContext<CommitConsumeBudgetRequest,
                          CommitConsumeBudgetResponse>&
                 commit_consume_budget_context) {
-          EXPECT_EQ(commit_consume_budget_context.result, result);
+          EXPECT_THAT(commit_consume_budget_context.result, ResultIs(result));
           EXPECT_EQ(budget_key_timeframe->time_bucket_index, 1);
           EXPECT_EQ(budget_key_timeframe->token_count, 2);
 
@@ -1023,7 +1025,7 @@ TEST(ConsumeBudgetTransactionProtocolTest, OnCommitNotifyLogged) {
         [&](AsyncContext<NotifyConsumeBudgetRequest,
                          NotifyConsumeBudgetResponse>&
                 notify_consume_budget_context) {
-          EXPECT_EQ(notify_consume_budget_context.result, result);
+          EXPECT_THAT(notify_consume_budget_context.result, ResultIs(result));
           EXPECT_EQ(budget_key_timeframe->time_bucket_index, 1);
 
           if (!result.Successful()) {
@@ -1089,7 +1091,7 @@ TEST(ConsumeBudgetTransactionProtocolTest, OnAbortLogged) {
     abort_consume_budget_context.callback =
         [&](AsyncContext<AbortConsumeBudgetRequest, AbortConsumeBudgetResponse>&
                 abort_consume_budget_context) {
-          EXPECT_EQ(abort_consume_budget_context.result, result);
+          EXPECT_THAT(abort_consume_budget_context.result, ResultIs(result));
           EXPECT_EQ(budget_key_timeframe->time_bucket_index, 1);
           EXPECT_EQ(budget_key_timeframe->token_count, 2);
 

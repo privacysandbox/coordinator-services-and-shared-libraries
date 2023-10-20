@@ -21,6 +21,7 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Optional;
 
 /** Interface for blob storage services */
 public interface BlobStorageClient {
@@ -35,6 +36,18 @@ public interface BlobStorageClient {
   InputStream getBlob(DataLocation location) throws BlobStorageClientException;
 
   /**
+   * Blocking call to retrieve a blob object from the storage provider using account identity.
+   *
+   * @param location The data location of the blob to retrieve.
+   * @param accountIdentity The identity to use to make the request. Instance default credentials
+   *     will use if accountIdentity is empty.
+   * @return An {@code InputStream} with the blob contents.
+   * @throws BlobStorageClientException
+   */
+  InputStream getBlob(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException;
+
+  /**
    * Blocking call to upload a blob to the storage provider.
    *
    * @param location The data location of the blob to be uploaded.
@@ -42,6 +55,18 @@ public interface BlobStorageClient {
    * @throws BlobStorageClientException
    */
   void putBlob(DataLocation location, Path filePath) throws BlobStorageClientException;
+
+  /**
+   * Blocking call to upload a blob to the storage provider using account identity.
+   *
+   * @param location The data location of the blob to be uploaded.
+   * @param filePath the file path for the blob to be uploaded.
+   * @param accountIdentity The identity to use to make the request. Instance default credentials
+   *     will use if accountIdentity is empty.
+   * @throws BlobStorageClientException
+   */
+  void putBlob(DataLocation location, Path filePath, Optional<String> accountIdentity)
+      throws BlobStorageClientException;
 
   /**
    * Blocking call to delete a blob from the storage provider.
@@ -52,6 +77,17 @@ public interface BlobStorageClient {
   void deleteBlob(DataLocation location) throws BlobStorageClientException;
 
   /**
+   * Blocking call to delete a blob from the storage provider using account identity.
+   *
+   * @param location The data location of the blob to be deleted.
+   * @param accountIdentity The identity to use to make the request. Instance default credentials
+   *     will use if accountIdentity is empty.
+   * @throws BlobStorageClientException
+   */
+  void deleteBlob(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException;
+
+  /**
    * Blocking call to list the blobs in a bucket on the storage provider, which handles pagination.
    *
    * @param location The data location of the blobs to list.
@@ -59,6 +95,19 @@ public interface BlobStorageClient {
    * @return An {@code ImmutableList<String>} of keys that correspond to blobs in the bucket.
    */
   ImmutableList<String> listBlobs(DataLocation location) throws BlobStorageClientException;
+
+  /**
+   * Blocking call to list the blobs in a bucket on the storage provider, which handles pagination,
+   * using account identity.
+   *
+   * @param location The data location of the blobs to list.
+   * @param accountIdentity The identity to use to make the request. Instance default credentials
+   *     will use if accountIdentity is empty.
+   * @throws BlobStorageClientException
+   * @return An {@code ImmutableList<String>} of keys that correspond to blobs in the bucket.
+   */
+  ImmutableList<String> listBlobs(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException;
 
   /** Returns a data location of the bucket/path. */
   static DataLocation getDataLocation(String bucket, String prefix) {

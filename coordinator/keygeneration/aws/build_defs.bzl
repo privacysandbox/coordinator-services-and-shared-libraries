@@ -14,7 +14,7 @@
 
 load("//build_defs/aws/enclave:container.bzl", "java_enclave_image")
 load("//build_defs/aws/enclave:enclave_ami.bzl", "generic_enclave_ami_pkr_script")
-load("//build_defs:packer.bzl", "packer_build")
+load("//build_defs/shared:packer_build.bzl", "packer_build")
 
 _LICENSES_TARGET = "//licenses:licenses_tar"
 

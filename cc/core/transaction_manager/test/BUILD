@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 cc_test(
     name = "transaction_phase_manager_test",
     size = "small",
@@ -56,8 +58,8 @@ cc_test(
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
         "//cc/core/transaction_manager/mock:core_transaction_manager_mock",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-        "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -78,8 +80,8 @@ cc_test(
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
         "//cc/core/transaction_manager/mock:core_transaction_manager_mock",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-        "//cc/cpio/client_providers/metric_client_provider/mock:metric_client_provider_mock",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
     ],
 )

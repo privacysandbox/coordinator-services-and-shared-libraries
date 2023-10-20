@@ -60,13 +60,20 @@ class MockJournalService : public JournalServiceInterface {
 
   ExecutionResult SubscribeForRecovery(
       const common::Uuid& component_id,
-      std::function<ExecutionResult(const std::shared_ptr<BytesBuffer>&)>
-          callback) noexcept override {
+      OnLogRecoveredCallback callback) noexcept override {
     return SuccessExecutionResult();
   }
 
   ExecutionResult UnsubscribeForRecovery(
       const common::Uuid& component_id) noexcept override {
+    return SuccessExecutionResult();
+  }
+
+  ExecutionResult RunRecoveryMetrics() noexcept override {
+    return SuccessExecutionResult();
+  }
+
+  ExecutionResult StopRecoveryMetrics() noexcept override {
     return SuccessExecutionResult();
   }
 

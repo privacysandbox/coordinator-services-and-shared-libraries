@@ -346,6 +346,24 @@ TEST(FrontEndUtilsTest, ExtractTransactionSecret) {
   EXPECT_EQ(extracted_transaction_secret, string("secret"));
 }
 
+TEST(FrontEndUtilsTest, ExtractTransactionOrigin) {
+  auto headers = make_shared<HttpHeaders>();
+  string transaction_origin;
+  EXPECT_EQ(
+      FrontEndUtils::ExtractTransactionOrigin(headers, transaction_origin),
+      FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+
+  string extracted_transaction_origin;
+  headers->insert(
+      {string(kTransactionOriginHeader), string("This is the origin")});
+  EXPECT_EQ(FrontEndUtils::ExtractTransactionOrigin(
+                headers, extracted_transaction_origin),
+            SuccessExecutionResult());
+
+  EXPECT_EQ(extracted_transaction_origin, string("This is the origin"));
+}
+
 TEST(FrontEndUtilsTest, ExtractRequestClaimedIdentity) {
   shared_ptr<core::HttpHeaders> headers = nullptr;
   string claimed_identity;
@@ -372,13 +390,13 @@ TEST(FrontEndUtilsTest, ExtractRequestClaimedIdentity) {
 TEST(FrontEndUtilsTest, IsCoordinatorRequest) {
   auto headers = make_shared<HttpHeaders>();
   string coordinator_claimed_identity = "other-coordinator";
-  EXPECT_FALSE(FrontEndUtils::IsCoordinatorRequest(headers,
-                                                coordinator_claimed_identity));
+  EXPECT_FALSE(FrontEndUtils::IsCoordinatorRequest(
+      headers, coordinator_claimed_identity));
 
   headers->insert(
       {string(core::kClaimedIdentityHeader), string("other-coordinator")});
-  EXPECT_TRUE(FrontEndUtils::IsCoordinatorRequest(headers,
-                                                coordinator_claimed_identity));
+  EXPECT_TRUE(FrontEndUtils::IsCoordinatorRequest(
+      headers, coordinator_claimed_identity));
 }
 
 TEST(FrontEndUtilsTest, DeserializeGetTransactionStatusInvalidBuffer) {

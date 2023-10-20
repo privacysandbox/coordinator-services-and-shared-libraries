@@ -19,7 +19,7 @@
 
 #include "core/curl_client/src/error_codes.h"
 #include "core/test/utils/http1_helper/test_http1_server.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using boost::beast::http::status;
 using std::get;

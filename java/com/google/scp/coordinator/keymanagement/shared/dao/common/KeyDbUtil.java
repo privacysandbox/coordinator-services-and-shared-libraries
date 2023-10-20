@@ -30,6 +30,7 @@ public final class KeyDbUtil {
    */
   public static Comparator<EncryptionKey> getActiveKeysComparator() {
     return Comparator.comparing(EncryptionKey::getExpirationTime)
+        .thenComparing(EncryptionKey::getActivationTime)
         .reversed()
         .thenComparing(EncryptionKey::getKeyId);
   }

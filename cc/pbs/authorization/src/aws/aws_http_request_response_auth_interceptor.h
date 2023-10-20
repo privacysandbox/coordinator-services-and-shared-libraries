@@ -18,11 +18,9 @@
 
 #include <string>
 
-#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
-#include "core/interface/async_executor_interface.h"
 #include "core/interface/authorization_proxy_interface.h"
 #include "core/interface/http_request_response_auth_interceptor_interface.h"
-#include "core/interface/type_def.h"
+#include "core/interface/http_types.h"
 #include "public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
@@ -33,12 +31,13 @@ class AwsHttpRequestResponseAuthInterceptor
   explicit AwsHttpRequestResponseAuthInterceptor(const std::string& aws_region)
       : aws_region_(aws_region) {}
 
-  core::ExecutionResult AddHeadersToRequest(
+  core::ExecutionResult PrepareRequest(
       const core::AuthorizationMetadata& authorization_metadata,
       core::HttpRequest& http_request) override;
 
   core::ExecutionResultOr<core::AuthorizedMetadata>
   ObtainAuthorizedMetadataFromResponse(
+      const core::AuthorizationMetadata& authorization_metadata,
       const core::HttpResponse& http_response) override;
 
  private:

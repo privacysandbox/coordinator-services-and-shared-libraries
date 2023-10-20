@@ -31,6 +31,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_error_ratio_high" {
   alarm_description         = "4XXError rate ratio has exceeded ${var.error_ratio_4xx_threshold}%"
   insufficient_data_actions = []
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -83,6 +84,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_error_ratio_high" {
   alarm_description         = "5XXError rate ratio has exceeded ${var.error_ratio_5xx_threshold}%"
   insufficient_data_actions = []
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment
@@ -135,6 +137,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_total_error_ratio_high" {
   alarm_description         = "Total error rate ratio has exceeded ${var.total_error_ratio_threshold}%"
   insufficient_data_actions = []
   alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
 
   tags = {
     environment = var.environment

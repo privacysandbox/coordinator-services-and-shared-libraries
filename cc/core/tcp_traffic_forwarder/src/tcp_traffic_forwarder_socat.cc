@@ -38,7 +38,6 @@ using std::chrono::milliseconds;
 using std::this_thread::sleep_for;
 
 static constexpr char kTCPTrafficForwarderSocat[] = "TCPTrafficForwarderSocat";
-static constexpr int kNobodyUserId = 65534;
 
 namespace google::scp::core {
 TCPTrafficForwarderSocat::TCPTrafficForwarderSocat(
@@ -60,8 +59,8 @@ ExecutionResult TCPTrafficForwarderSocat::Run() noexcept {
   system("pkill -f socat");
 
   if (forwarding_address_.empty()) {
-    INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-         "Forwarding address is empty, not starting socat just yet");
+    SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+             "Forwarding address is empty, not starting socat just yet");
     return SuccessExecutionResult();
   }
 
@@ -80,17 +79,17 @@ ExecutionResult TCPTrafficForwarderSocat::Run() noexcept {
                                       const_cast<char*>(arg5.c_str()),
                                       const_cast<char*>(arg6.c_str()),
                                       NULL};
-  INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-       "Executing command: '%s %s %s %s %s %s %s'", socat_command_name,
-       arg1.c_str(), arg2.c_str(), arg3.c_str(), arg4.c_str(), arg5.c_str(),
-       arg6.c_str());
+  SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+           "Executing command: '%s %s %s %s %s %s %s'", socat_command_name,
+           arg1.c_str(), arg2.c_str(), arg3.c_str(), arg4.c_str(), arg5.c_str(),
+           arg6.c_str());
 
   // Fork an intermediate process that can wait pid other children
   int child_pid = fork();
   if (child_pid == -1) {
-    ERROR(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-          FailureExecutionResult(SC_UNKNOWN),
-          "Failed to start child process. Error: %d", errno);
+    SCP_ERROR(kTCPTrafficForwarderSocat, kZeroUuid,
+              FailureExecutionResult(SC_UNKNOWN),
+              "Failed to start child process. Error: %d", errno);
     return FailureExecutionResult(
         errors::SC_TCP_TRAFFIC_FORWARDER_CANNOT_START_DUE_TO_FORK_ERROR);
   }
@@ -124,6 +123,7 @@ ExecutionResult TCPTrafficForwarderSocat::Run() noexcept {
     }
 
 #if !defined(_SCP_CORE_SOCAT_FORWARDER_NON_PRIVILEGED)
+    static constexpr int kNobodyUserId = 65534;
     error = setgid(kNobodyUserId);
     if (error == -1) {
       cerr << "Child: Failed to set process group ID. errno: " << errno << endl;
@@ -146,9 +146,9 @@ ExecutionResult TCPTrafficForwarderSocat::Run() noexcept {
     auto socat_pid = fork();
 
     if (socat_pid == -1) {
-      ERROR(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-            FailureExecutionResult(SC_UNKNOWN),
-            "Failed to start socat process. Error: %d", errno);
+      SCP_ERROR(kTCPTrafficForwarderSocat, kZeroUuid,
+                FailureExecutionResult(SC_UNKNOWN),
+                "Failed to start socat process. Error: %d", errno);
       exit(1);
     }
 
@@ -156,17 +156,17 @@ ExecutionResult TCPTrafficForwarderSocat::Run() noexcept {
       error = execvp(socat_command_name, command_arguments);
       if (error == -1) {
         // Exec failure, exit the child process
-        ERROR(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-              FailureExecutionResult(SC_UNKNOWN),
-              "Failed to exec socat process. Error: %d", errno);
+        SCP_ERROR(kTCPTrafficForwarderSocat, kZeroUuid,
+                  FailureExecutionResult(SC_UNKNOWN),
+                  "Failed to exec socat process. Error: %d", errno);
         exit(1);
       }
     } else {
       waitpid(socat_pid, NULL, 0);
     }
   } else {
-    INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-         "Child process started with pid: %d", child_pid);
+    SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+             "Child process started with pid: %d", child_pid);
     child_pid_ = child_pid;
   }
 
@@ -174,11 +174,11 @@ ExecutionResult TCPTrafficForwarderSocat::Run() noexcept {
 }
 
 ExecutionResult TCPTrafficForwarderSocat::Stop() noexcept {
-  INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid, "About to stop socat.");
+  SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid, "About to stop socat.");
   auto child_pid = child_pid_.load();
   if (child_pid == -1) {
-    INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-         "Socat process not started. So nothing to stop.");
+    SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+             "Socat process not started. So nothing to stop.");
     return SuccessExecutionResult();
   }
 
@@ -186,12 +186,12 @@ ExecutionResult TCPTrafficForwarderSocat::Stop() noexcept {
   // instead of process with the PID.
   int error = kill(-child_pid, SIGTERM);
   if (error == -1) {
-    ERROR(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-          FailureExecutionResult(SC_UNKNOWN),
-          "Could not kill the socat processes. errno: %d", errno);
+    SCP_ERROR(kTCPTrafficForwarderSocat, kZeroUuid,
+              FailureExecutionResult(SC_UNKNOWN),
+              "Could not kill the socat processes. errno: %d", errno);
   } else {
-    INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-         "Successfully killed socat processes with pid %d", child_pid);
+    SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+             "Successfully killed socat processes with pid %d", child_pid);
     child_pid_ = -1;
   }
 
@@ -235,8 +235,8 @@ ExecutionResult TCPTrafficForwarderSocat::Stop() noexcept {
   };
 
   while (!kill_all_socat_processes()) {
-    INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-         "Waiting for all socat processes to die.");
+    SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+             "Waiting for all socat processes to die.");
     sleep_for(milliseconds(100));
   }
 
@@ -247,15 +247,15 @@ ExecutionResult TCPTrafficForwarderSocat::Stop() noexcept {
 ExecutionResult TCPTrafficForwarderSocat::ResetForwardingAddress(
     const string& forwarding_address) noexcept {
   if (forwarding_address == forwarding_address_) {
-    INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-         "Forwarding address is same as before: %s. Not resetting.",
-         forwarding_address.c_str());
+    SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+             "Forwarding address is same as before: %s. Not resetting.",
+             forwarding_address.c_str());
     return SuccessExecutionResult();
   }
-  INFO(kTCPTrafficForwarderSocat, kZeroUuid, kZeroUuid,
-       "Forwarding address changed. Restarting Traffic Forwarder "
-       "with address: %s",
-       forwarding_address.c_str());
+  SCP_INFO(kTCPTrafficForwarderSocat, kZeroUuid,
+           "Forwarding address changed. Restarting Traffic Forwarder "
+           "with address: %s",
+           forwarding_address.c_str());
   auto execution_result = Stop();
   if (!execution_result.Successful()) {
     return execution_result;

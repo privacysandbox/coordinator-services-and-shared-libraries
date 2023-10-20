@@ -39,8 +39,9 @@ using std::placeholders::_2;
 static constexpr size_t kMaxRequestBodySize = 1 * 1024 * 1024 * 1024;  // 100MB
 
 namespace google::scp::core {
+
 ExecutionResult NgHttp2Request::ReadUri() noexcept {
-  path = make_shared<string>(ng2_request_.uri().path);
+  handler_path = ng2_request_.uri().path;
   return SuccessExecutionResult();
 }
 
@@ -67,25 +68,23 @@ ExecutionResult NgHttp2Request::ReadHeaders() noexcept {
   return SuccessExecutionResult();
 }
 
-void NgHttp2Request::OnBodyDataReceived(const uint8_t* data,
-                                        std::size_t length) noexcept {
+void NgHttp2Request::OnRequestBodyDataChunkReceived(
+    const uint8_t* data, std::size_t length,
+    const RequestBodyDataReceivedCallback& callback) noexcept {
   if (length == 0) {
-    if (!on_request_body_received) {
-      return;
-    }
     auto execution_result = SuccessExecutionResult();
     if (body.length < body.capacity) {
       execution_result =
           FailureExecutionResult(errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY);
     }
-    on_request_body_received(execution_result);
+    callback(execution_result);
     return;
   }
   // Check if we are out of capacity. Avoiding overflow here.
   if (length > body.capacity || body.length > body.capacity - length) {
     auto execution_result =
         FailureExecutionResult(errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY);
-    on_request_body_received(execution_result);
+    callback(execution_result);
     return;
   }
   // Otherwise, copy in data.
@@ -124,8 +123,13 @@ ExecutionResult NgHttp2Request::UnwrapNgHttp2Request() noexcept {
   body.bytes = make_shared<vector<Byte>>(content_length);
   body.length = 0;
   body.capacity = content_length;
-
-  ng2_request_.on_data(bind(&NgHttp2Request::OnBodyDataReceived, this, _1, _2));
   return SuccessExecutionResult();
 }
+
+void NgHttp2Request::SetOnRequestBodyDataReceivedCallback(
+    const RequestBodyDataReceivedCallback& callback) {
+  ng2_request_.on_data(bind(&NgHttp2Request::OnRequestBodyDataChunkReceived,
+                            this, _1, _2, callback));
+}
+
 }  // namespace google::scp::core

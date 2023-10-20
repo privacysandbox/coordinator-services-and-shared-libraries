@@ -1,5 +1,4 @@
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 ################################################################################
 # Rules JVM External: Begin
@@ -29,322 +28,47 @@ rules_jvm_external_setup()
 # Download all http_archives and git_repositories: Begin
 ################################################################################
 
-# Declare explicit protobuf version, to override any implicit dependencies.
+# Declare explicit protobuf version and hash, to override any implicit dependencies.
+# Please update both while upgrading to new versions.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568",
-    strip_prefix = "protobuf-%s" % PROTOBUF_CORE_VERSION,
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v%s.tar.gz" % PROTOBUF_CORE_VERSION,
-    ],
+PROTOBUF_SHA_256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568"
+
+##########################
+# SDK Dependencies Rules #
+##########################
+
+load("//build_defs/cc:sdk.bzl", "sdk_dependencies")
+
+sdk_dependencies(PROTOBUF_CORE_VERSION, PROTOBUF_SHA_256)
+
+#################################
+# SCP Shared Dependencies Rules #
+#################################
+
+# This bazel file contains all the dependencies in SCP, except the dependencies
+# only used in SDK. Eventually, each project will have its own bazel file for
+# its dependencies, and this file will be removed.
+load("//build_defs:scp_dependencies.bzl", "scp_dependencies")
+
+scp_dependencies(PROTOBUF_CORE_VERSION, PROTOBUF_SHA_256)
+
+######### To gegerate Java interface for SDK #########
+load("@com_google_api_gax_java//:repository_rules.bzl", "com_google_api_gax_java_properties")
+
+com_google_api_gax_java_properties(
+    name = "com_google_api_gax_java_properties",
+    file = "@com_google_api_gax_java//:dependencies.properties",
 )
 
-http_archive(
-    name = "rules_java",
-    sha256 = "34b41ec683e67253043ab1a3d1e8b7c61e4e8edefbcad485381328c934d072fe",
-    url = "https://github.com/bazelbuild/rules_java/releases/download/4.0.0/rules_java-4.0.0.tar.gz",
-)
+load("@com_google_api_gax_java//:repositories.bzl", "com_google_api_gax_java_repositories")
 
-# Load specific version of differential privacy from github.
+com_google_api_gax_java_repositories()
 
-DIFFERENTIAL_PRIVACY_COMMIT = "68bdbb24fe493638d937120c08927398604c55af"
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
 
-# value recommended by the differential privacy repo.
-# date, not after the specified commit to allow for more shallow clone of repo
-# for faster build times.
-DIFFERENTIAL_PRIVACY_SHALLOW_SINCE = "1618997113 +0200"
-
-git_repository(
-    name = "com_google_differential_privacy",
-    commit = DIFFERENTIAL_PRIVACY_COMMIT,
-    remote = "https://github.com/google/differential-privacy.git",
-    shallow_since = DIFFERENTIAL_PRIVACY_SHALLOW_SINCE,
-)
-
-#############
-# PKG Rules #
-#############
-
-http_archive(
-    name = "rules_pkg",
-    sha256 = "a89e203d3cf264e564fcb96b6e06dd70bc0557356eb48400ce4b5d97c2c3720d",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
-        "https://github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
-    ],
-)
-
-############
-# Go rules #
-############
-
-# Note: Go build rules are an indirect dependency of "io_bazel_rules_docker" and
-# a direct dependency of rpmpack. These rules are not used for deploying go code
-# at the time of writing.
-
-http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.31.0/rules_go-v0.31.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.31.0/rules_go-v0.31.0.zip",
-    ],
-)
-
-http_archive(
-    name = "bazel_gazelle",
-    sha256 = "de69a09dc70417580aabf20a28619bb3ef60d038470c7cf8442fafcf627c21cb",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
-    ],
-)
-
-###################
-# Container rules #
-###################
-
-# Note: these rules add a dependency on the golang toolchain and must be ordered
-# after any `go_register_toolchains` calls in this file (or else the toolchain
-# defined in io_bazel_rules_docker are used for future go toolchains)
-http_archive(
-    name = "io_bazel_rules_docker",
-    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
-    strip_prefix = "rules_docker-0.17.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
-)
-
-load(
-    "@io_bazel_rules_docker//repositories:repositories.bzl",
-    container_repositories = "repositories",
-)
-
-#############
-# CPP Rules #
-#############
-
-http_archive(
-    name = "com_google_googletest",
-    sha256 = "8daa1a71395892f7c1ec5f7cb5b099a02e606be720d62f1a6a98f8f8898ec826",
-    strip_prefix = "googletest-e2239ee6043f73722e7aa812a459f54a28552929",
-    urls = ["https://github.com/google/googletest/archive/e2239ee6043f73722e7aa812a459f54a28552929.zip"],
-)
-
-http_archive(
-    name = "rules_cc",
-    sha256 = "b295cad8c5899e371dde175079c0a2cdc0151f5127acc92366a8c986beb95c76",
-    strip_prefix = "rules_cc-daf6ace7cfeacd6a83e9ff2ed659f416537b6c74",
-    urls = ["https://github.com/bazelbuild/rules_cc/archive/daf6ace7cfeacd6a83e9ff2ed659f416537b6c74.zip"],
-)
-
-################
-# Python Rules #
-################
-
-http_archive(
-    name = "rules_python",
-    sha256 = "a30abdfc7126d497a7698c29c46ea9901c6392d6ed315171a6df5ce433aa4502",
-    strip_prefix = "rules_python-0.6.0",
-    url = "https://github.com/bazelbuild/rules_python/archive/0.6.0.tar.gz",
-)
-
-###############
-# Proto rules #
-###############
-
-http_archive(
-    name = "rules_proto",
-    sha256 = "66bfdf8782796239d3875d37e7de19b1d94301e8972b3cbd2446b332429b4df1",
-    strip_prefix = "rules_proto-4.0.0",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0.tar.gz",
-        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0.tar.gz",
-    ],
-)
-
-# Download the AWS enclave SDK repo and apply a patch for building the kmstool dependencies.
-load("//build_defs/shared:enclaves_kmstools.bzl", "import_aws_nitro_enclaves_sdk_c")
-
-import_aws_nitro_enclaves_sdk_c()
-
-###########################
-# Binary Dev Dependencies #
-###########################
-
-http_archive(
-    name = "packer",
-    build_file_content = """
-package(default_visibility = ["//visibility:public"])
-exports_files(["packer"])
-""",
-    sha256 = "57d0411e578aea62918d36ed186951139d5d49d44b76e5666d1fbf2427b385ae",
-    url = "https://releases.hashicorp.com/packer/1.8.6/packer_1.8.6_linux_amd64.zip",
-)
-
-http_archive(
-    name = "terraform",
-    build_file_content = """
-package(default_visibility = ["//visibility:public"])
-exports_files(["terraform"])
-""",
-    sha256 = "728b6fbcb288ad1b7b6590585410a98d3b7e05efe4601ef776c37e15e9a83a96",
-    url = "https://releases.hashicorp.com/terraform/1.2.3/terraform_1.2.3_linux_amd64.zip",
-)
-
-# google cloud sdk for releasing artifacts to gcs
-http_archive(
-    name = "google-cloud-sdk",
-    build_file_content = """
-package(default_visibility = ["//visibility:public"])
-exports_files(["google-cloud-sdk"])
-""",
-    # latest from https://cloud.google.com/storage/docs/gsutil_install#linux as of 2021-12-16
-    sha256 = "94328b9c6559a1b7ec2eeaab9ef0e4702215e16e8327c5b99718750526ae1efe",
-    url = "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-367.0.0-linux-x86_64.tar.gz",
-)
-
-# google-java-format for presubmit checks of format and unused imports
-http_file(
-    name = "google_java_format",
-    downloaded_file_path = "google-java-format.jar",
-    sha256 = "a356bb0236b29c57a3ab678f17a7b027aad603b0960c183a18f1fe322e4f38ea",
-    urls = ["https://github.com/google/google-java-format/releases/download/v1.15.0/google-java-format-1.15.0-all-deps.jar"],
-)
-
-git_repository(
-    name = "com_github_google_rpmpack",
-    # Lastest commit in main branch as of 2021-11-29
-    commit = "d0ed9b1b61b95992d3c4e83df3e997f3538a7b6c",
-    remote = "https://github.com/google/rpmpack.git",
-    shallow_since = "1637822718 +0200",
-)
-
-# Note: requires golang toolchain.
-http_archive(
-    name = "com_github_bazelbuild_buildtools",
-    sha256 = "ae34c344514e08c23e90da0e2d6cb700fcd28e80c02e23e4d5715dddcb42f7b3",
-    strip_prefix = "buildtools-4.2.2",
-    urls = [
-        "https://github.com/bazelbuild/buildtools/archive/refs/tags/4.2.2.tar.gz",
-    ],
-)
-
-###################
-# CC Dependencies #
-###################
-
-new_git_repository(
-    name = "moodycamel_concurrent_queue",
-    build_file = "//build_defs/cc:moodycamel.BUILD",
-    # Commited Mar 20, 2022
-    commit = "22c78daf65d2c8cce9399a29171676054aa98807",
-    remote = "https://github.com/cameron314/concurrentqueue.git",
-    shallow_since = "1647803790 -0400",
-)
-
-new_git_repository(
-    name = "nlohmann_json",
-    build_file = "//build_defs/cc:nlohmann.BUILD",
-    # Commits on Apr 6, 2022
-    commit = "15fa6a342af7b51cb51a22599026e01f1d81957b",
-    remote = "https://github.com/nlohmann/json.git",
-)
-
-git_repository(
-    name = "oneTBB",
-    # Commits on Apr 18, 2022
-    commit = "9d2a3477ce276d437bf34b1582781e5b11f9b37a",
-    remote = "https://github.com/oneapi-src/oneTBB.git",
-    shallow_since = "1648820995 +0300",
-)
-
-load("//build_defs/cc/aws:aws_sdk_cpp_deps.bzl", "import_aws_sdk_cpp")
-
-import_aws_sdk_cpp()
-
-# Boost
-# latest as of 2022-06-09
-_RULES_BOOST_COMMIT = "789a047e61c0292c3b989514f5ca18a9945b0029"
-
-http_archive(
-    name = "com_github_nelhage_rules_boost",
-    sha256 = "c1298755d1e5f458a45c410c56fb7a8d2e44586413ef6e2d48dd83cc2eaf6a98",
-    strip_prefix = "rules_boost-%s" % _RULES_BOOST_COMMIT,
-    urls = [
-        "https://github.com/nelhage/rules_boost/archive/%s.tar.gz" % _RULES_BOOST_COMMIT,
-    ],
-)
-
-http_archive(
-    name = "rules_foreign_cc",
-    sha256 = "6041f1374ff32ba711564374ad8e007aef77f71561a7ce784123b9b4b88614fc",
-    strip_prefix = "rules_foreign_cc-0.8.0",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.8.0.tar.gz",
-)
-
-# nghttp2
-http_archive(
-    name = "com_github_nghttp2_nghttp2",
-    build_file = "//build_defs/cc:nghttp2.BUILD",
-    patch_args = ["-p1"],
-    patches = ["//build_defs/cc:nghttp2.patch"],
-    sha256 = "62f50f0e9fc479e48b34e1526df8dd2e94136de4c426b7680048181606832b7c",
-    strip_prefix = "nghttp2-1.47.0",
-    url = "https://github.com/nghttp2/nghttp2/releases/download/v1.47.0/nghttp2-1.47.0.tar.gz",
-)
-
-http_archive(
-    name = "curl",
-    build_file = "//build_defs/cc:curl.BUILD",
-    sha256 = "ff3e80c1ca6a068428726cd7dd19037a47cc538ce58ef61c59587191039b2ca6",
-    strip_prefix = "curl-7.49.1",
-    urls = [
-        "https://mirror.bazel.build/curl.haxx.se/download/curl-7.49.1.tar.gz",
-    ],
-)
-
-http_archive(
-    name = "com_google_absl",
-    # Committed on Nov 3, 2021.
-    sha256 = "a4567ff02faca671b95e31d315bab18b42b6c6f1a60e91c6ea84e5a2142112c2",
-    strip_prefix = "abseil-cpp-20211102.0",
-    urls = [
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20211102.0.zip",
-    ],
-)
-
-git_repository(
-    name = "boringssl",
-    # Committed on Oct 3, 2022
-    # https://github.com/google/boringssl/commit/c2837229f381f5fcd8894f0cca792a94b557ac52
-    commit = "c2837229f381f5fcd8894f0cca792a94b557ac52",
-    remote = "https://github.com/google/boringssl.git",
-)
-
-#####################
-# GRPC C & GCP APIs #
-#####################
-# Loads com_github_grpc_grpc.
-# Defines @com_github_grpc_grpc before @com_github_googleapis_google_cloud_cpp
-# to override the dependenices in @com_github_googleapis_google_cloud_cpp.
-http_archive(
-    name = "com_github_grpc_grpc",
-    sha256 = "e18b16f7976aab9a36c14c38180f042bb0fd196b75c9fd6a20a2b5f934876ad6",
-    strip_prefix = "grpc-1.45.2",
-    urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.45.2.tar.gz"],
-)
-
-# Builds Google cloud cpp
-# --> must be before grpc_deps() and grpc_extra_deps()
-# --> and after http_archive com_github_grpc_grpc
-http_archive(
-    name = "com_github_googleapis_google_cloud_cpp",
-    sha256 = "02ea232bbac826e36ad1140a45cfe2f4552e7e1fbb8f86e839fa2fb3620cdd64",
-    strip_prefix = "google-cloud-cpp-1.41.0",
-    url = "https://github.com/googleapis/google-cloud-cpp/archive/v1.41.0.tar.gz",
-)
+grpc_java_repositories()
+##########################################################
 
 ################################################################################
 # Download all http_archives and git_repositories: End
@@ -354,6 +78,7 @@ http_archive(
 # Download Maven Dependencies: Begin
 ################################################################################
 load("@rules_jvm_external//:defs.bzl", "maven_install")
+load("//build_defs/shared:java_grpc.bzl", "GAPIC_GENERATOR_JAVA_VERSION")
 load("//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
 
 JACKSON_VERSION = "2.15.2"
@@ -367,6 +92,7 @@ GOOGLE_GAX_VERSION = "2.4.0"
 AUTO_SERVICE_VERSION = "1.0"
 
 maven_install(
+    name = "maven",
     artifacts = [
         "com.amazonaws:aws-lambda-java-core:1.2.1",
         "com.amazonaws:aws-lambda-java-events:3.8.0",
@@ -467,10 +193,24 @@ maven_install(
         "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
+        "com.google.api:gapic-generator-java:" + GAPIC_GENERATOR_JAVA_VERSION,  # To use generated gRpc Java interface
+        "io.grpc:grpc-netty:1.54.0",
     ] + TINK_MAVEN_ARTIFACTS,
     repositories = [
         "https://repo1.maven.org/maven2",
     ],
+)
+
+maven_install(
+    name = "maven_yaml",
+    artifacts = [
+        "org.yaml:snakeyaml:1.27",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+    # Pin the working version for snakeyaml.
+    version_conflict_policy = "pinned",
 )
 
 ################################################################################
@@ -481,7 +221,6 @@ maven_install(
 # Download Indirect Dependencies: Begin
 ################################################################################
 # Note: The order of statements in this section is extremely fragile
-
 load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
 
 rules_java_dependencies()
@@ -499,34 +238,6 @@ differential_privacy_deps()
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
-
-############
-# Go rules #
-############
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-go_rules_dependencies()
-
-go_register_toolchains(version = "1.18")
-
-gazelle_dependencies()
-
-###################
-# Container rules #
-###################
-load(
-    "@io_bazel_rules_docker//repositories:repositories.bzl",
-    container_repositories = "repositories",
-)
-
-container_repositories()
-
-load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
-
-container_deps()
-
-load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 
 #############
 # CPP Rules #
@@ -551,21 +262,9 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 protobuf_deps()
 
 ###########################
-# Binary Dev Dependencies #
-###########################
-load("@com_github_google_rpmpack//:deps.bzl", "rpmpack_dependencies")
-
-rpmpack_dependencies()
-
-# Imports Tink git repo to this workspace as @tink_java. To be used only for
-# testing changes not yet published to Maven.
-load("//build_defs/tink:tink_defs.bzl", "import_tink_git")
-
-import_tink_git()
-
-###########################
 # CC Dependencies #
 ###########################
+
 # Load indirect dependencies due to
 #     https://github.com/bazelbuild/bazel/issues/1943
 load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
@@ -578,6 +277,7 @@ switched_rules_by_language(
     name = "com_google_googleapis_imports",
     cc = True,
     grpc = True,
+    java = True,
 )
 
 # Boost
@@ -585,6 +285,7 @@ load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 
 boost_deps()
 
+# Foreign CC
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
 rules_foreign_cc_dependencies()
@@ -605,6 +306,40 @@ grpc_extra_deps()
 ################################################################################
 # Download Indirect Dependencies: End
 ################################################################################
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
+############
+# Go rules #
+############
+# Need to be after grpc_extra_deps to share go_register_toolchains.
+load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies")
+
+go_rules_dependencies()
+
+gazelle_dependencies()
+
+###################
+# Container rules #
+###################
+load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+
+container_repositories()
+
+load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+
+container_deps()
+
+###########################
+# Binary Dev Dependencies #
+###########################
+load("@com_github_google_rpmpack//:deps.bzl", "rpmpack_dependencies")
+load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+
+rpmpack_dependencies()
 
 ################################################################################
 # Download Containers: Begin
@@ -650,19 +385,59 @@ container_pull(
     tag = "2.0.20230912.0",
 )
 
-# Needed for build containers which must execute bazel commands (e.g. //cc/aws/proxy).
-http_file(
-    name = "bazelisk",
-    downloaded_file_path = "bazelisk",
-    executable = True,
-    sha256 = "84e946ed8537eaaa4d540df338a593e373e70c5ddca9f2f49e1aaf3a04bdd6ca",
-    urls = ["https://github.com/bazelbuild/bazelisk/releases/download/v1.14.0/bazelisk-linux-amd64"],
+########################################################################
+# Roma dependencies
+load("//build_defs/cc:roma.bzl", "roma_dependencies")
+
+roma_dependencies()
+
+load(
+    "@com_google_sandboxed_api//sandboxed_api/bazel:llvm_config.bzl",
+    "llvm_disable_optional_support_deps",
 )
+
+# Must be right after roma_dependencies
+load(
+    "@com_google_sandboxed_api//sandboxed_api/bazel:sapi_deps.bzl",
+    "sapi_deps",
+)
+
+llvm_disable_optional_support_deps()
+
+sapi_deps()
+########################################################################
+
+# Needed for cc reproducible builds
+load("//cc/tools/build:build_container_params.bzl", "CC_BUILD_CONTAINER_REGISTRY", "CC_BUILD_CONTAINER_REPOSITORY", "CC_BUILD_CONTAINER_TAG")
+
+container_pull(
+    name = "prebuilt_cc_build_container_image_pull",
+    registry = CC_BUILD_CONTAINER_REGISTRY,
+    repository = CC_BUILD_CONTAINER_REPOSITORY,
+    tag = CC_BUILD_CONTAINER_TAG,
+)
+
+##########################
+## Closure dependencies ##
+##########################
+load("//build_defs/shared:bazel_rules_closure.bzl", "bazel_rules_closure")
+
+bazel_rules_closure()
+
+load(
+    "@io_bazel_rules_closure//closure:repositories.bzl",
+    "rules_closure_dependencies",
+    "rules_closure_toolchains",
+)
+
+rules_closure_dependencies()
+
+rules_closure_toolchains()
 
 # Needed for cc/pbs/deploy/pbs_server/build_defs
 container_pull(
     name = "debian_11",
-    digest = "sha256:3098a8fda8e7bc6bc92c37aaaa9d46fa0dd93992203ca3f53bb84e1d00ffb796",
+    digest = "sha256:9d23db14fbdc095689c423af56b9525538de139a1bbe950b4f0467698fb874d2",
     registry = "index.docker.io",
     repository = "amd64/debian",
     tag = "11",
@@ -676,22 +451,43 @@ container_pull(
     tag = "debug-nonroot-amd64",
 )
 
-# Needed for cc reproducible builds
-load("//cc/tools/build:build_container_params.bzl", "CC_BUILD_CONTAINER_REGISTRY", "CC_BUILD_CONTAINER_REPOSITORY", "CC_BUILD_CONTAINER_TAG")
-
-container_pull(
-    name = "prebuilt_cc_build_container_image_pull",
-    registry = CC_BUILD_CONTAINER_REGISTRY,
-    repository = CC_BUILD_CONTAINER_REPOSITORY,
-    tag = CC_BUILD_CONTAINER_TAG,
-)
 ################################################################################
 # Download Containers: End
 ################################################################################
 
 http_archive(
     name = "jemalloc",
-    build_file = "//build_defs/cc:libjemalloc.BUILD",
+    build_file = "//build_defs/cc/shared/build_targets:libjemalloc.BUILD",
     sha256 = "1f35888bad9fd331f5a03445bc1bff808a59378be61fef01e9736179d76f2fab",
     url = "https://github.com/jemalloc/jemalloc/archive/refs/tags/5.3.0.zip",
 )
+
+#########################
+## NodeJS dependencies ##
+#########################
+
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "94070eff79305be05b7699207fbac5d2608054dd53e6109f7d00d923919ff45a",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.2/rules_nodejs-5.8.2.tar.gz"],
+)
+
+load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
+
+build_bazel_rules_nodejs_dependencies()
+
+load("@build_bazel_rules_nodejs//:index.bzl", "npm_install")
+
+npm_install(
+    name = "npm",
+    package_json = "//typescript/coordinator/aws/adtechmanagement:package.json",
+    package_lock_json = "//typescript/coordinator/aws/adtechmanagement:package-lock.json",
+)
+
+#######################
+## rules_esbuild setup #
+#######################
+
+load("@build_bazel_rules_nodejs//toolchains/esbuild:esbuild_repositories.bzl", "esbuild_repositories")
+
+esbuild_repositories(npm_repository = "npm")

@@ -105,7 +105,7 @@ void AwsAssumeRoleCredentialsProvider::OnGetCredentialsCallback(
     const AssumeRoleOutcome& get_credentials_outcome,
     const shared_ptr<const AsyncCallerContext> async_context) noexcept {
   if (!get_credentials_outcome.IsSuccess()) {
-    DEBUG_CONTEXT(
+    SCP_DEBUG_CONTEXT(
         kAwsAssumeRoleCredentialsProvider, get_credentials_context,
         "AwsAssumeRoleCredentialsProvider assume role request failed. "
         "Error code: %d, message: %s",

@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
 # Agu 10, 2022
 # Commit for v1.7.0
-TINK_COMMIT = "5f92a043d35e03ce4b81561220c71d550865fefa"
-TINK_SHALLOW_SINCE = "1643960098 -0800"
 TINK_VERSION = "1.7.0"
+TINK_STRIP_PREFIX = "tink-{}".format(TINK_VERSION)
+TINK_SHA256 = "ff272c968827ce06b262767934dc56ab520caa357a4747fc4a885b1cc711222f"
+TINK_URLS = ["https://github.com/google/tink/archive/refs/tags/v1.7.0.zip"]
 
 # List of Maven dependencies necessary for Tink to compile -- to be included in
 # the list of Maven dependenceis passed to maven_install by the workspace.
@@ -42,7 +43,8 @@ def import_tink_git(repo_name = ""):
     """
 
     # Must be present to use Tink BUILD files which contain Android build rules.
-    http_archive(
+    maybe(
+        http_archive,
         name = "build_bazel_rules_android",
         urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
         sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
@@ -51,20 +53,22 @@ def import_tink_git(repo_name = ""):
 
     # Tink contains multiple Bazel Workspaces. The "tink_java" workspace is what's
     # needed but it references the "tink_base" workspace so import both here.
-    git_repository(
+    maybe(
+        http_archive,
         name = "tink_base",
-        commit = TINK_COMMIT,
-        remote = "https://github.com/google/tink.git",
-        shallow_since = TINK_SHALLOW_SINCE,
+        sha256 = TINK_SHA256,
+        strip_prefix = TINK_STRIP_PREFIX,
+        urls = TINK_URLS,
     )
 
     # Note: loading and invoking `tink_java_deps` causes a cyclical dependency issue
     # so Tink's dependencies are just included directly in this workspace above.
 
     # Needed by Tink for JsonKeysetRead.
-    http_archive(
+    maybe(
+        http_archive,
         name = "rapidjson",
-        build_file = Label("//build_defs/cc:rapidjson.BUILD"),
+        build_file = Label("//build_defs/cc/shared/build_targets:rapidjson.BUILD"),
         sha256 = "30bd2c428216e50400d493b38ca33a25efb1dd65f79dfc614ab0c957a3ac2c28",
         strip_prefix = "rapidjson-418331e99f859f00bdc8306f69eba67e8693c55e",
         urls = [
@@ -72,15 +76,10 @@ def import_tink_git(repo_name = ""):
         ],
     )
 
-    git_repository(
+    maybe(
+        http_archive,
         name = "tink_cc",
-        commit = TINK_COMMIT,
-        remote = "https://github.com/google/tink.git",
-        shallow_since = TINK_SHALLOW_SINCE,
-        strip_prefix = "cc",
-        patches = [],
-        patch_args = [
-            # Needed to import Git-based patches.
-            "-p1",
-        ],
+        sha256 = TINK_SHA256,
+        strip_prefix = "{}/cc".format(TINK_STRIP_PREFIX),
+        urls = TINK_URLS,
     )

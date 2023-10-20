@@ -23,6 +23,7 @@
 #include "core/interface/service_interface.h"
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/parameter_client/type_def.h"
 #include "public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
 
 namespace google::scp::cpio::client_providers {
@@ -44,11 +45,6 @@ class ParameterClientProviderInterface : public core::ServiceInterface {
           context) noexcept = 0;
 };
 
-/// Configurations for ParameterClient.
-struct ParameterClientOptions {
-  virtual ~ParameterClientOptions() = default;
-};
-
 class ParameterClientProviderFactory {
  public:
   /**
@@ -61,6 +57,8 @@ class ParameterClientProviderFactory {
   static std::shared_ptr<ParameterClientProviderInterface> Create(
       const std::shared_ptr<ParameterClientOptions>& options,
       const std::shared_ptr<InstanceClientProviderInterface>&
-          instance_client_provider);
+          instance_client_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor);
 };
 }  // namespace google::scp::cpio::client_providers

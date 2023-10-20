@@ -16,29 +16,22 @@ syntax = "proto3";
 
 package google.cmrt.sdk.private_key_service.v1;
 
+option java_multiple_files = true;
+option java_outer_classname = "PrivateKeyServiceProto";
+option java_package = "com.google.cmrt.sdk.private_key_service.v1";
+
 import "cc/core/common/proto/common.proto";
+import "google/protobuf/timestamp.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
 
 // Service to fetch private keys.
 service PrivateKeyService {
-  // Fetches private keys from KeyService for the given Key Ids. These keys are
+  // Fetches private keys from KeyService. These keys are
   // already decrypted.
-  rpc ListPrivateKeysByIds(ListPrivateKeysByIdsRequest)
-      returns (ListPrivateKeysByIdsResponse) {}
-}
-
-// Request to list private keys.
-message ListPrivateKeysByIdsRequest {
-  repeated string key_ids = 1;
-}
-
-// Response of listing private keys
-message ListPrivateKeysByIdsResponse {
-  // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
-  repeated PrivateKey private_keys = 2;
+  rpc ListPrivateKeys(ListPrivateKeysRequest)
+      returns (ListPrivateKeysResponse) {}
 }
 
 // Wrap of private key.
@@ -50,5 +43,24 @@ message PrivateKey {
   // The value of the private key.
   string private_key = 3;
   // The expiration time of the private key.
-  int64 expiration_time_in_ms = 4;
-};
+  google.protobuf.Timestamp expiration_time = 4;
+  // The creation time of the private key.
+  google.protobuf.Timestamp creation_time = 5;
+}
+
+// Request to list private keys by key IDs or age.
+message ListPrivateKeysRequest {
+  // Given key IDs. If set, don't honor the max_age_seconds filter.
+  repeated string key_ids = 1;
+  // Given age. It should be positive integer.
+  // If the the key_ids filter is not set, max_age_seconds will be used.
+  int64 max_age_seconds = 2;
+}
+
+// Response of listing private keys by key IDs or age.
+message ListPrivateKeysResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Returned private key list.
+  repeated PrivateKey private_keys = 2;
+}

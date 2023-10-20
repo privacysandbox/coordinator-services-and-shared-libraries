@@ -94,19 +94,6 @@ public final class HttpEncryptionKeyFetchingServiceTest {
 
   @Test
   @SuppressWarnings("unchecked") // Ignore Http{Request,Response,Client} casting warnings.
-  public void fetchEncryptionKey_unsupportedKeyTypeResponse() throws Exception {
-    HttpClientResponse response =
-        HttpClientResponse.create(200, getUnsupportedKeyTypeResponse(), ImmutableMap.of());
-    when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
-
-    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com/v1");
-    EncryptionKeyFetchingServiceException exception =
-        assertThrows(
-            EncryptionKeyFetchingServiceException.class, () -> service.fetchEncryptionKey("12345"));
-  }
-
-  @Test
-  @SuppressWarnings("unchecked") // Ignore Http{Request,Response,Client} casting warnings.
   public void fetchEncryptionKey_success() throws Exception {
     HttpClientResponse response =
         HttpClientResponse.create(200, getSingleKeyResponse(), ImmutableMap.of());
@@ -129,22 +116,6 @@ public final class HttpEncryptionKeyFetchingServiceTest {
   private static String getNotFoundResponse() {
     return "{\"code\":5,\"message\":\"Unable to find item with keyId"
         + " 03a0c66b-e8ff-42db-a750-31009c5894f8\",\"details\":[{\"reason\":\"MISSING_KEY\"}]}";
-  }
-
-  private static String getUnsupportedKeyTypeResponse() {
-    return "{\n"
-        + "    \"name\": \"encryptionKeys/12345\",\n"
-        + "    \"encryptionKeyType\": \"UNSUPPORTED_KEY_TYPE\",\n"
-        + "    \"publicKeysetHandle\": \"myPublicKeysetHandle\",\n"
-        + "    \"publicKeyMaterial\": \"abc==\",\n"
-        + "    \"keyData\": [\n"
-        + "        {\n"
-        + "            \"publicKeySignature\": \"a\",\n"
-        + "            \"keyEncryptionKeyUri\": \"b\",\n"
-        + "            \"keyMaterial\": \"efg==\"\n"
-        + "        }\n"
-        + "    ]\n"
-        + "}";
   }
 
   private static String getSingleKeyResponse() {

@@ -25,19 +25,18 @@
 #include "pbs/transactions/src/consume_budget_command.h"
 #include "public/core/interface/execution_result.h"
 
-namespace google::scp::pbs::transactions {
+namespace google::scp::pbs::transactions::mock {
 
 class MockConsumeBudgetCommand : public ConsumeBudgetCommand {
  public:
   MockConsumeBudgetCommand(
-      core::common::Uuid transaction_id,
-      std::shared_ptr<BudgetKeyName>& budget_key_name, TimeBucket time_bucket,
-      TokenCount total_budgets_to_consume,
+      const core::common::Uuid transaction_id,
+      const std::shared_ptr<BudgetKeyName>& budget_key_name,
+      const ConsumeBudgetCommandRequestInfo& budget_info,
       std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
       std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider)
-      : ConsumeBudgetCommand(transaction_id, budget_key_name, time_bucket,
-                             total_budgets_to_consume, async_executor,
-                             budget_key_provider) {}
+      : ConsumeBudgetCommand(transaction_id, budget_key_name, budget_info,
+                             async_executor, budget_key_provider) {}
 
   std::function<core::ExecutionResult(core::TransactionCommandCallback&)>
       prepare_mock;
@@ -255,4 +254,4 @@ class MockConsumeBudgetCommand : public ConsumeBudgetCommand {
   }
 };
 
-}  // namespace google::scp::pbs::transactions
+}  // namespace google::scp::pbs::transactions::mock

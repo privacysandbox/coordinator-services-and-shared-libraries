@@ -25,7 +25,7 @@
 namespace google::scp::core::lease_manager::mock {
 class MockLeasableLock : public LeasableLockInterface {
  public:
-  ExecutionResult RefreshLease() noexcept {
+  ExecutionResult RefreshLease(bool is_read_only_lease_refresh) noexcept {
     on_before_lease_acquire_();
     return SuccessExecutionResult();
   }

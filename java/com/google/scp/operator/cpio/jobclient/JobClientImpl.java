@@ -17,6 +17,7 @@
 package com.google.scp.operator.cpio.jobclient;
 
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+import static com.google.scp.shared.clients.configclient.model.WorkerParameter.NOTIFICATIONS_TOPIC_ID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -29,6 +30,9 @@ import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient.LifecycleCli
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.notificationclient.NotificationClient;
+import com.google.scp.operator.cpio.notificationclient.NotificationClient.NotificationClientException;
+import com.google.scp.operator.cpio.notificationclient.model.PublishMessageRequest;
 import com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
@@ -43,6 +47,8 @@ import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue.JobQueueExcep
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataConflictException;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataDbException;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Clock;
 import java.time.Duration;
@@ -82,6 +88,8 @@ public final class JobClientImpl implements JobClient {
   ImmutableList<JobValidator> jobValidators;
   private final LifecycleClient lifecycleClient;
   private final MetricClient metricClient;
+  private final Optional<NotificationClient> notificationClient;
+  private final ParameterClient parameterClient;
   private boolean pollForJob = false;
   private Clock clock;
 
@@ -99,6 +107,8 @@ public final class JobClientImpl implements JobClient {
       @JobClientJobValidatorsBinding ImmutableList<JobValidator> jobValidators,
       MetricClient metricClient,
       LifecycleClient lifecycleClient,
+      Optional<NotificationClient> notificationClient,
+      ParameterClient parameterClient,
       Clock clock) {
     this.jobQueue = jobQueue;
     this.metadataDb = metadataDb;
@@ -106,6 +116,8 @@ public final class JobClientImpl implements JobClient {
     this.jobValidators = jobValidators;
     this.metricClient = metricClient;
     this.lifecycleClient = lifecycleClient;
+    this.notificationClient = notificationClient;
+    this.parameterClient = parameterClient;
     this.clock = clock;
     startJobProcessingExtender();
   }
@@ -280,6 +292,28 @@ public final class JobClientImpl implements JobClient {
 
       // Remove cache entry for the job once it is successfully marked as completed.
       cache.remove(toJobKeyString(jobResult.jobKey()));
+
+      // Publish a notification of job completion.
+      try {
+        Optional<String> topicId = parameterClient.getParameter(NOTIFICATIONS_TOPIC_ID.name());
+        if (topicId.isPresent() && notificationClient.isPresent()) {
+          String messageBody =
+              String.format("{\"jobId\": \"%s\"}", toJobKeyString(jobResult.jobKey()));
+          PublishMessageRequest publishMessageRequest =
+              PublishMessageRequest.builder()
+                  .setNotificationTopic(topicId.get())
+                  .setMessageBody(messageBody)
+                  .build();
+          notificationClient.get().publishMessage(publishMessageRequest);
+        }
+      } catch (NotificationClientException | ParameterClientException e) {
+        logger.log(
+            Level.INFO,
+            String.format(
+                "Failed to publish notification for the completion of jobId '%s'.",
+                toJobKeyString(jobResult.jobKey())),
+            e);
+      }
 
       logger.info(
           String.format(

@@ -34,6 +34,7 @@
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/pbs_client/src/pbs_transactional_client.h"
 #include "pbs/pbs_server/src/pbs_instance/pbs_instance.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::Byte;
@@ -52,6 +53,7 @@ using google::scp::core::common::Uuid;
 using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::logger::Logger;
 using google::scp::core::logger::log_providers::SyslogLogProvider;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using google::scp::pbs::PBSInstance;
 using google::scp::pbs::PrivacyBudgetServiceTransactionalClient;
@@ -202,12 +204,12 @@ void StartServer(PBSInstance& pbs_instance) {
   if (!execution_result.Successful()) {
     std::cout << core::errors::GetErrorMessage(execution_result.status_code);
   }
-  EXPECT_EQ(execution_result, SuccessExecutionResult());
+  EXPECT_SUCCESS(execution_result);
   execution_result = pbs_instance.Run();
   if (!execution_result.Successful()) {
     std::cout << core::errors::GetErrorMessage(execution_result.status_code);
   }
-  EXPECT_EQ(execution_result, SuccessExecutionResult());
+  EXPECT_SUCCESS(execution_result);
 }
 
 TEST(PBSE2ETest, TwoServersConsumeBudget) {
@@ -215,15 +217,9 @@ TEST(PBSE2ETest, TwoServersConsumeBudget) {
   auto pbs_server_2_config_provider = GetConfigProvider("PBS2_");
   PBSInstance pbs_instance_1(pbs_server_1_config_provider);
   PBSInstance pbs_instance_2(pbs_server_2_config_provider);
-  unique_ptr<LoggerInterface> logger_ptr =
-      make_unique<Logger>(make_unique<SyslogLogProvider>());
-  if (!logger_ptr->Init().Successful()) {
-    throw runtime_error("Cannot initialize logger.");
-  }
-  if (!logger_ptr->Run().Successful()) {
-    throw runtime_error("Cannot run logger.");
-  }
-  GlobalLogger::SetGlobalLogger(logger_ptr);
+
+  TestLoggingUtils::EnableLogOutputToSyslog();
+
   if (fork() == 0) {
     StartServer(pbs_instance_1);
     std::cout << "Started service 1" << std::endl;
@@ -262,8 +258,8 @@ TEST(PBSE2ETest, TwoServersConsumeBudget) {
   PrivacyBudgetServiceTransactionalClient pbs_transactional_client(
       reporting_origin, pbs1_region, pbs1_endpoint, pbs1_auth_endpoint,
       pbs2_region, pbs2_endpoint, pbs2_auth_endpoint);
-  EXPECT_EQ(pbs_transactional_client.Init(), SuccessExecutionResult());
-  EXPECT_EQ(pbs_transactional_client.Run(), SuccessExecutionResult());
+  EXPECT_SUCCESS(pbs_transactional_client.Init());
+  EXPECT_SUCCESS(pbs_transactional_client.Run());
   AsyncContext<ConsumeBudgetTransactionRequest,
                ConsumeBudgetTransactionResponse>
       consume_budget_transaction_context;
@@ -293,6 +289,6 @@ TEST(PBSE2ETest, TwoServersConsumeBudget) {
                 consume_budget_transaction_context),
             SuccessExecutionResult());
   WaitUntil([&]() { return finished.load(); }, std::chrono::seconds(100000));
-  EXPECT_EQ(pbs_transactional_client.Stop(), SuccessExecutionResult());
+  EXPECT_SUCCESS(pbs_transactional_client.Stop());
 }
 }  // namespace google::scp::pbs::test::e2e

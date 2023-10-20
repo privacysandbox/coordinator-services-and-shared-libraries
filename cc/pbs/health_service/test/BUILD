@@ -31,7 +31,11 @@ cc_test(
         "files/ninety_six_percent_meminfo_file.txt",
     ],
     deps = [
+        "//cc/core/async_executor/src:core_async_executor_lib",
+        "//cc/core/http2_server/mock:core_http2_server_mock",
         "//cc/pbs/health_service/src:pbs_health_service_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
     ],
 )

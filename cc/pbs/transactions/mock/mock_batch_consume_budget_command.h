@@ -27,14 +27,14 @@
 #include "pbs/transactions/src/batch_consume_budget_command.h"
 #include "public/core/interface/execution_result.h"
 
-namespace google::scp::pbs::transactions {
+namespace google::scp::pbs::transactions::mock {
 
 class MockBatchConsumeBudgetCommand : public BatchConsumeBudgetCommand {
  public:
   MockBatchConsumeBudgetCommand(
-      core::common::Uuid transaction_id,
-      std::shared_ptr<BudgetKeyName>& budget_key_name,
-      std::vector<ConsumeBudgetCommandRequestInfo>&& budget_consumptions,
+      const core::common::Uuid transaction_id,
+      const std::shared_ptr<BudgetKeyName>& budget_key_name,
+      const std::vector<ConsumeBudgetCommandRequestInfo>& budget_consumptions,
       std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
       std::shared_ptr<BudgetKeyProviderInterface>& budget_key_provider)
       : BatchConsumeBudgetCommand(transaction_id, budget_key_name,
@@ -258,4 +258,4 @@ class MockBatchConsumeBudgetCommand : public BatchConsumeBudgetCommand {
   }
 };
 
-}  // namespace google::scp::pbs::transactions
+}  // namespace google::scp::pbs::transactions::mock

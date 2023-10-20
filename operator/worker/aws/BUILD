@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//operator/worker/aws/build_defs:deploy.bzl", "worker_aws_deployment")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 

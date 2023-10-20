@@ -24,6 +24,7 @@
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 using google::cmrt::sdk::public_key_service::v1::ListPublicKeysRequest;
@@ -46,6 +47,7 @@ using google::scp::core::errors::
 using google::scp::core::errors::
     SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_CONFIG_OPTIONS;
 using google::scp::core::http2_client::mock::MockHttpClient;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using std::atomic;
 using std::make_shared;
@@ -61,7 +63,7 @@ static constexpr char kPrivateKeyBaseUri1[] = "http://public_key/publicKeys1";
 static constexpr char kPrivateKeyBaseUri2[] = "http://public_key/publicKeys2";
 static constexpr char kHeaderDateExample[] = "Wed, 16 Nov 2022 00:02:48 GMT";
 static constexpr char kCacheControlExample[] = "max-age=254838";
-static constexpr uint64_t kExpectedExpiredTimeMs = 1668811806000;
+static constexpr uint64_t kExpectedExpiredTimeInSeconds = 1668811806;
 
 namespace google::scp::cpio::client_providers::test {
 
@@ -73,9 +75,9 @@ TEST(PublicKeyClientProviderTestI, InitFailedWithInvalidConfig) {
   auto public_key_client = make_unique<PublicKeyClientProvider>(
       public_key_client_options, http_client);
 
-  EXPECT_EQ(public_key_client->Init(),
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_CONFIG_OPTIONS));
+  EXPECT_THAT(public_key_client->Init(),
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_CONFIG_OPTIONS)));
 }
 
 TEST(PublicKeyClientProviderTestI, InitFailedInvalidHttpClient) {
@@ -85,9 +87,9 @@ TEST(PublicKeyClientProviderTestI, InitFailedInvalidHttpClient) {
   auto public_key_client =
       make_unique<PublicKeyClientProvider>(public_key_client_options, nullptr);
 
-  EXPECT_EQ(public_key_client->Init(),
-            FailureExecutionResult(
-                SC_PUBLIC_KEY_CLIENT_PROVIDER_HTTP_CLIENT_REQUIRED));
+  EXPECT_THAT(public_key_client->Init(),
+              ResultIs(FailureExecutionResult(
+                  SC_PUBLIC_KEY_CLIENT_PROVIDER_HTTP_CLIENT_REQUIRED)));
 }
 
 class PublicKeyClientProviderTestII : public ::testing::Test {
@@ -102,8 +104,8 @@ class PublicKeyClientProviderTestII : public ::testing::Test {
     public_key_client_ = make_unique<PublicKeyClientProvider>(
         public_key_client_options, http_client_);
 
-    EXPECT_EQ(public_key_client_->Init(), SuccessExecutionResult());
-    EXPECT_EQ(public_key_client_->Run(), SuccessExecutionResult());
+    EXPECT_SUCCESS(public_key_client_->Init());
+    EXPECT_SUCCESS(public_key_client_->Run());
   }
 
   HttpResponse GetValidHttpResponse() {
@@ -125,7 +127,7 @@ class PublicKeyClientProviderTestII : public ::testing::Test {
 
   void TearDown() override {
     if (public_key_client_) {
-      EXPECT_EQ(public_key_client_->Stop(), SuccessExecutionResult());
+      EXPECT_SUCCESS(public_key_client_->Stop());
     }
   }
 
@@ -151,18 +153,17 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccess) {
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
       move(request), [&](AsyncContext<ListPublicKeysRequest,
                                       ListPublicKeysResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         EXPECT_EQ(context.response->public_keys()[0].key_id(), "1234");
         EXPECT_EQ(context.response->public_keys()[0].public_key(), "abcdefg");
         EXPECT_EQ(context.response->public_keys()[1].key_id(), "5678");
         EXPECT_EQ(context.response->public_keys()[1].public_key(), "hijklmn");
-        EXPECT_EQ(context.response->expiration_time_in_ms(),
-                  kExpectedExpiredTimeMs);
+        EXPECT_EQ(context.response->expiration_time().seconds(),
+                  kExpectedExpiredTimeInSeconds);
         success_callback++;
       });
 
-  EXPECT_EQ(public_key_client_->ListPublicKeys(context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(public_key_client_->ListPublicKeys(context));
   // ListPublicKeys context callback will only run once even all uri get
   // success.
   WaitUntil([&]() { return success_callback.load() == 1; });
@@ -191,12 +192,12 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysFailure) {
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
       move(request), [&](AsyncContext<ListPublicKeysRequest,
                                       ListPublicKeysResponse>& context) {
-        EXPECT_EQ(context.result, FailureExecutionResult(SC_UNKNOWN));
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(SC_UNKNOWN)));
         failure_callback++;
       });
 
-  EXPECT_EQ(public_key_client_->ListPublicKeys(context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(public_key_client_->ListPublicKeys(context));
 
   // ListPublicKeys context callback will only run once even all uri get
   // fail.
@@ -222,11 +223,12 @@ TEST_F(PublicKeyClientProviderTestII, AllUrisPerformRequestFailed) {
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
       move(request), [&](AsyncContext<ListPublicKeysRequest,
                                       ListPublicKeysResponse>& context) {
-        EXPECT_EQ(context.result, cpio_failure);
+        EXPECT_THAT(context.result, ResultIs(cpio_failure));
         failure_callback++;
       });
 
-  EXPECT_EQ(public_key_client_->ListPublicKeys(context), cpio_failure);
+  EXPECT_THAT(public_key_client_->ListPublicKeys(context),
+              ResultIs(cpio_failure));
 
   // ListPublicKeys context callback will only run once even all uri get
   // fail.
@@ -259,12 +261,11 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysPartialUriSuccess) {
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
       move(request), [&](AsyncContext<ListPublicKeysRequest,
                                       ListPublicKeysResponse>& context) {
-        EXPECT_EQ(context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(context.result);
         success_callback++;
       });
 
-  EXPECT_EQ(public_key_client_->ListPublicKeys(context),
-            SuccessExecutionResult());
+  EXPECT_SUCCESS(public_key_client_->ListPublicKeys(context));
   // ListPublicKeys success with partial uris got success response.
   WaitUntil([&]() { return success_callback.load() == 1; });
   WaitUntil([&]() { return perform_calls.load() == 2; });

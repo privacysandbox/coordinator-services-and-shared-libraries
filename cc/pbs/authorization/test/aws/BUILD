@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
 cc_test(
     name = "aws_http_request_response_auth_interceptor_test",
     srcs = ["aws_http_request_response_auth_interceptor_test.cc"],
@@ -22,7 +24,7 @@ cc_test(
         "//cc/core/utils/src:core_utils",
         "//cc/pbs/authorization/src/aws:aws_http_request_response_auth_interceptor",
         "//cc/public/core/interface:execution_result",
-        "//cc/public/core/test/interface:execution_result_test_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@nlohmann_json//:lib",

@@ -26,6 +26,11 @@
 #include "public/cpio/interface/type_def.h"
 
 namespace google::scp::cpio::client_providers {
+/// Configurations for RoleCredentialProvider.
+struct RoleCredentialsProviderOptions {
+  virtual ~RoleCredentialsProviderOptions() = default;
+};
+
 /// Represents the get credentials request object.
 struct GetRoleCredentialsRequest {
   // The identity of the account. In AWS, it would be IAM role. In GCP, it would
@@ -66,8 +71,11 @@ class RoleCredentialsProviderFactory {
    * RoleCredentialsProviderInterface.
    */
   static std::shared_ptr<RoleCredentialsProviderInterface> Create(
+      const std::shared_ptr<RoleCredentialsProviderOptions>& options,
       const std::shared_ptr<InstanceClientProviderInterface>&
           instance_client_provider,
-      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor);
+      const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          io_async_executor) noexcept;
 };
 }  // namespace google::scp::cpio::client_providers

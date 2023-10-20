@@ -16,12 +16,11 @@
 
 #include "pbs/pbs_client/src/pbs_client.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <vector>
-
-#include <gmock/gmock.h>
 
 #include "core/async_executor/mock/mock_async_executor.h"
 #include "core/authorization_service/src/error_codes.h"
@@ -32,7 +31,7 @@
 #include "pbs/front_end_service/src/error_codes.h"
 #include "pbs/pbs_client/mock/mock_pbs_client_with_overrides.h"
 #include "pbs/pbs_client/src/error_codes.h"
-#include "public/core/test/interface/execution_result_test_lib.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
@@ -94,6 +93,8 @@ class PBSClientTest : public testing::Test {
     auto request = make_shared<TransactionPhaseRequest>();
     request->transaction_id = Uuid::GenerateUuid();
     request->transaction_secret = make_shared<string>("This is secret");
+    request->transaction_origin =
+        make_shared<string>("This is transaction origin");
     request->transaction_execution_phase = TransactionExecutionPhase::Commit;
     request->last_execution_timestamp = 1234567890;
     return request;
@@ -116,6 +117,8 @@ class PBSClientTest : public testing::Test {
     auto request = make_shared<GetTransactionStatusRequest>();
     request->transaction_id = Uuid::GenerateUuid();
     request->transaction_secret = make_shared<string>("This is secret");
+    request->transaction_origin =
+        make_shared<string>("This is transaction origin");
     return request;
   }
 
@@ -299,7 +302,8 @@ TEST_F(PBSClientTest, OnInitiateConsumeBudgetTransactionCallbackHttpFailure) {
         [&](AsyncContext<ConsumeBudgetTransactionRequest,
                          ConsumeBudgetTransactionResponse>&
                 consume_budget_transaction_context) {
-          EXPECT_EQ(consume_budget_transaction_context.result, result);
+          EXPECT_THAT(consume_budget_transaction_context.result,
+                      ResultIs(result));
           is_called = true;
         };
 
@@ -328,9 +332,10 @@ TEST_F(PBSClientTest, OnInitiateConsumeBudgetTransactionCallbackHttpNoHeader) {
       [&](AsyncContext<ConsumeBudgetTransactionRequest,
                        ConsumeBudgetTransactionResponse>&
               consume_budget_transaction_context) {
-        EXPECT_EQ(consume_budget_transaction_context.result,
-                  FailureExecutionResult(
-                      core::errors::SC_PBS_CLIENT_RESPONSE_HEADER_NOT_FOUND));
+        EXPECT_THAT(
+            consume_budget_transaction_context.result,
+            ResultIs(FailureExecutionResult(
+                core::errors::SC_PBS_CLIENT_RESPONSE_HEADER_NOT_FOUND)));
         is_called = true;
       };
 
@@ -432,7 +437,8 @@ void PBSClientTest::ExecuteTransactionPhaseHelper(
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       transaction_phase_context;
   transaction_phase_context.request = make_shared<TransactionPhaseRequest>();
-
+  transaction_phase_context.request->transaction_origin =
+      make_shared<string>("This is transaction origin");
   transaction_phase_context.request->transaction_id = Uuid::GenerateUuid();
   transaction_phase_context.request->transaction_secret =
       make_shared<string>("This is secret");
@@ -460,7 +466,11 @@ void PBSClientTest::ExecuteTransactionPhaseHelper(
         EXPECT_EQ(http_context.request->headers
                       ->find(string(kTransactionSecretHeader))
                       ->second,
-                  *transaction_phase_context.request->transaction_secret);
+                  "This is secret");
+        EXPECT_EQ(http_context.request->headers
+                      ->find(string(kTransactionOriginHeader))
+                      ->second,
+                  "This is transaction origin");
         EXPECT_EQ(http_context.request->headers
                       ->find(string(kTransactionLastExecutionTimestampHeader))
                       ->second,
@@ -497,6 +507,8 @@ TEST_F(PBSClientTest, ExecuteTransactionPhaseHttpFailure) {
   transaction_phase_context.request->transaction_id = Uuid::GenerateUuid();
   transaction_phase_context.request->transaction_secret =
       make_shared<string>("This is secret");
+  transaction_phase_context.request->transaction_origin =
+      make_shared<string>("This is transaction origin");
   transaction_phase_context.request->transaction_execution_phase =
       TransactionExecutionPhase::End;
   transaction_phase_context.request->last_execution_timestamp = 1234567890;
@@ -537,7 +549,7 @@ TEST_F(PBSClientTest, OnExecuteTransactionPhaseCallbackHttpFailure) {
     transaction_phase_context.callback =
         [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
                 transaction_phase_context) {
-          EXPECT_EQ(transaction_phase_context.result, result);
+          EXPECT_THAT(transaction_phase_context.result, ResultIs(result));
           is_called = true;
         };
 
@@ -636,7 +648,7 @@ TEST_F(PBSClientTest, OnExecuteTransactionPhaseCallback) {
   transaction_phase_context.callback =
       [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
               transaction_phase_context) {
-        EXPECT_EQ(transaction_phase_context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(transaction_phase_context.result);
         EXPECT_EQ(transaction_phase_context.response->last_execution_timestamp,
                   1234567890123456789);
         is_called = true;
@@ -704,6 +716,8 @@ TEST_F(PBSClientTest, GetTransactionStatus) {
   get_transaction_status_context.request->transaction_id = Uuid::GenerateUuid();
   get_transaction_status_context.request->transaction_secret =
       make_shared<string>("This is secret");
+  get_transaction_status_context.request->transaction_origin =
+      make_shared<string>("This is transaction origin");
 
   bool is_called = false;
   mock_http_client_->perform_request_mock =
@@ -725,8 +739,10 @@ TEST_F(PBSClientTest, GetTransactionStatus) {
                   reporting_origin_);
         auto transaction_secret =
             http_context.request->headers->find(kTransactionSecretHeader);
-        EXPECT_EQ(transaction_secret->second,
-                  *get_transaction_status_context.request->transaction_secret);
+        EXPECT_EQ(transaction_secret->second, "This is secret");
+        auto transaction_origin =
+            http_context.request->headers->find(kTransactionOriginHeader);
+        EXPECT_EQ(transaction_origin->second, "This is transaction origin");
         is_called = true;
         return SuccessExecutionResult();
       };
@@ -753,7 +769,8 @@ TEST_F(PBSClientTest, OnGetTransactionStatusCallback) {
   get_transaction_context.callback =
       [&](AsyncContext<GetTransactionStatusRequest,
                        GetTransactionStatusResponse>& get_transaction_context) {
-        EXPECT_EQ(get_transaction_context.result, FailureExecutionResult(1234));
+        EXPECT_THAT(get_transaction_context.result,
+                    ResultIs(FailureExecutionResult(1234)));
         is_called = true;
       };
   http_context.result = FailureExecutionResult(1234);
@@ -764,7 +781,8 @@ TEST_F(PBSClientTest, OnGetTransactionStatusCallback) {
   get_transaction_context.callback =
       [&](AsyncContext<GetTransactionStatusRequest,
                        GetTransactionStatusResponse>& get_transaction_context) {
-        EXPECT_EQ(get_transaction_context.result, RetryExecutionResult(1234));
+        EXPECT_THAT(get_transaction_context.result,
+                    ResultIs(RetryExecutionResult(1234)));
         is_called = true;
       };
   http_context.result = RetryExecutionResult(1234);
@@ -792,7 +810,7 @@ TEST_F(PBSClientTest, OnGetTransactionStatusCallback) {
   get_transaction_context.callback =
       [&](AsyncContext<GetTransactionStatusRequest,
                        GetTransactionStatusResponse>& get_transaction_context) {
-        EXPECT_EQ(get_transaction_context.result, SuccessExecutionResult());
+        EXPECT_SUCCESS(get_transaction_context.result);
         EXPECT_EQ(get_transaction_context.response->is_expired, false);
         EXPECT_EQ(get_transaction_context.response->has_failure, true);
         EXPECT_EQ(get_transaction_context.response->last_execution_timestamp,

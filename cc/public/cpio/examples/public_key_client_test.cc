@@ -17,8 +17,6 @@
 #include <memory>
 #include <string>
 
-#include <aws/core/Aws.h>
-
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -27,19 +25,17 @@
 #include "public/cpio/interface/public_key_client/public_key_client_interface.h"
 #include "public/cpio/interface/public_key_client/type_def.h"
 #include "public/cpio/interface/type_def.h"
+#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
-using Aws::InitAPI;
-using Aws::SDKOptions;
-using Aws::ShutdownAPI;
-using google::scp::core::AsyncContext;
+using google::cmrt::sdk::public_key_service::v1::ListPublicKeysRequest;
+using google::cmrt::sdk::public_key_service::v1::ListPublicKeysResponse;
+using google::cmrt::sdk::public_key_service::v1::PublicKey;
 using google::scp::core::ExecutionResult;
 using google::scp::core::GetErrorMessage;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::Cpio;
 using google::scp::cpio::CpioOptions;
-using google::scp::cpio::ListPublicKeysRequest;
-using google::scp::cpio::ListPublicKeysResponse;
 using google::scp::cpio::LogOption;
 using google::scp::cpio::PublicKeyClientFactory;
 using google::scp::cpio::PublicKeyClientInterface;
@@ -59,8 +55,6 @@ using std::chrono::milliseconds;
 constexpr char kPublicKeyEndpoint[] = "https://test.publickey.com";
 
 int main(int argc, char* argv[]) {
-  SDKOptions options;
-  InitAPI(options);
   CpioOptions cpio_options;
   cpio_options.log_option = LogOption::kConsoleLog;
   auto result = Cpio::InitCpio(cpio_options);
@@ -99,7 +93,7 @@ int main(int argc, char* argv[]) {
                     << GetErrorMessage(result.status_code) << std::endl;
         } else {
           std::cout << "ListPublicKeys succeeded. The key count is: "
-                    << response.public_keys.size() << std::endl;
+                    << response.public_keys_size() << std::endl;
         }
         finished = true;
       });
@@ -121,5 +115,4 @@ int main(int argc, char* argv[]) {
     std::cout << "Failed to shutdown CPIO: "
               << GetErrorMessage(result.status_code) << std::endl;
   }
-  ShutdownAPI(options);
 }

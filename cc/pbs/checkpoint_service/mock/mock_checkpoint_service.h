@@ -28,8 +28,7 @@ class MockCheckpointService : public CheckpointService {
   MockCheckpointService(
       std::shared_ptr<std::string>& bucket_name,
       std::shared_ptr<std::string>& partition_name,
-      const std::shared_ptr<
-          cpio::client_providers::MetricClientProviderInterface>& metric_client,
+      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<core::JournalServiceInterface>& journal_service,
       const std::shared_ptr<core::BlobStorageProviderInterface>&

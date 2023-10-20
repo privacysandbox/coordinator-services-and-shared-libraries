@@ -25,7 +25,8 @@
 namespace google::scp::cpio {
 /// MetricClientOptions for testing on AWS.
 struct TestAwsMetricClientOptions : public MetricClientOptions {
-  std::shared_ptr<std::string> cloud_watch_endpoint_override;
+  std::shared_ptr<std::string> cloud_watch_endpoint_override =
+      std::make_shared<std::string>();
 };
 }  // namespace google::scp::cpio
 

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -23,12 +25,6 @@ java_library(
 )
 
 java_library(
-    name = "common",
-    srcs = glob(["common/*.java"]),
-    deps = [],
-)
-
-java_library(
     name = "aws",
     srcs = glob([
         "aws/*.java",
@@ -36,11 +32,11 @@ java_library(
         "common/*.java",
     ]),
     deps = [
-        ":common",
         "//java/com/google/scp/operator/cpio/configclient",
         "//java/com/google/scp/shared/api/util",
         "//java/com/google/scp/shared/aws/credsprovider",
         "//java/com/google/scp/shared/aws/util",
+        "//java/com/google/scp/shared/clients",
         "//java/com/google/scp/shared/clients/configclient:aws",
         "//java/com/google/scp/shared/clients/configclient:model",
         "//java/external:apache_httpclient",
@@ -59,5 +55,40 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+    ],
+)
+
+java_library(
+    name = "gcp",
+    srcs = glob([
+        "gcp/*.java",
+        "local/*.java",
+        "common/*.java",
+    ]),
+    deps = [
+        "//java/com/google/scp/operator/cpio/configclient",
+        "//java/com/google/scp/shared/api/util",
+        "//java/com/google/scp/shared/clients",
+        "//java/com/google/scp/shared/clients/configclient:gcp",
+        "//java/com/google/scp/shared/clients/configclient:model",
+        "//java/com/google/scp/shared/gcp/util",
+        "//java/external:apache_httpclient",
+        "//java/external:apache_httpcore",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:gcp_api_gax",
+        "//java/external:gcp_secretmanager",
+        "//java/external:gcp_secretmanager_proto",
+        "//java/external:google_api_client",
+        "//java/external:google_auth_library_oauth2_http",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:jackson_annotations",
+        "//java/external:jackson_core",
+        "//java/external:jackson_databind",
+        "//java/external:javax_inject",
+        "//java/external:slf4j",
+        "//java/external:tink",
+        "//java/external:tink-gcpkms",
     ],
 )

@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_binary(
     name = "pbs_workload_generator",
+    testonly = True,
     srcs = glob(["*.cc"]),
     copts = [
         "-std=c++17",
@@ -33,6 +36,7 @@ cc_binary(
         "//cc/core/logger/src:logger_lib",
         "//cc/core/logger/src/log_providers/syslog:syslog_lib",
         "//cc/core/test/utils:utils_lib",
+        "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
         "//cc/core/token_provider_cache/src:core_auto_refresh_token_provider",
         "//cc/pbs/authorization_token_fetcher/src/aws:pbs_aws_authorization_token_fetcher",
         "//cc/pbs/authorization_token_fetcher/src/gcp:pbs_gcp_authorization_token_fetcher",

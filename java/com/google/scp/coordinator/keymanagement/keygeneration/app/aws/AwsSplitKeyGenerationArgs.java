@@ -168,6 +168,9 @@ public final class AwsSplitKeyGenerationArgs {
       description = "Number of days after creation before purging a key from the database")
   private int ttlInDays = 365;
 
+  @Parameter(names = "--key_id_type", description = "Key ID Type")
+  private String keyIdType = "";
+
   SplitKeyParameterClientSelector getParamClient() {
     return paramClient;
   }
@@ -186,6 +189,10 @@ public final class AwsSplitKeyGenerationArgs {
 
   public int getKeyGenerationQueueMessageLeaseSeconds() {
     return keyGenerationQueueMessageLeaseSeconds;
+  }
+
+  public Optional<String> getKeyIdType() {
+    return Optional.of(keyIdType).filter(type -> !type.isEmpty());
   }
 
   public String getApplicationRegionOverride() {

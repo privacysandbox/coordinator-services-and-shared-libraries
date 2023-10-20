@@ -20,6 +20,9 @@ package(default_visibility = ["//visibility:public"])
 proto_library(
     name = "proto",
     srcs = glob(["*.proto"]),
+    deps = [
+        "//coordinator/protos/keymanagement/shared/api/v1:proto",
+    ],
 )
 
 java_proto_library(

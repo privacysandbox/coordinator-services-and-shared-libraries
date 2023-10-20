@@ -34,8 +34,12 @@
 #include "core/nosql_database_provider/src/common/error_codes.h"
 #include "pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
 #include "pbs/interface/configuration_keys.h"
+#include "pbs/interface/metrics_def.h"
 #include "pbs/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
+#include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
+#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 #include "budget_key_timeframe_serialization.h"
 #include "budget_key_timeframe_utils.h"
@@ -83,6 +87,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 using std::placeholders::_1;
+using std::placeholders::_2;
 
 static constexpr char kBudgetKeyPartitionKey[] = "Budget_Key";
 static constexpr char kTimeframeSortKey[] = "Timeframe";
@@ -98,7 +103,7 @@ ExecutionResult BudgetKeyTimeframeManager::Init() noexcept {
   }
   return journal_service_->SubscribeForRecovery(
       id_, bind(&BudgetKeyTimeframeManager::OnJournalServiceRecoverCallback,
-                this, _1));
+                this, _1, _2));
 }
 
 ExecutionResult BudgetKeyTimeframeManager::Run() noexcept {
@@ -120,10 +125,10 @@ void BudgetKeyTimeframeManager::OnBeforeGarbageCollection(
     TimeGroup& time_group,
     shared_ptr<BudgetKeyTimeframeGroup>& budget_key_timeframe_group,
     function<void(bool)> should_delete_entry) noexcept {
-  auto activity_id = Uuid::GenerateUuid();
-  DEBUG(kBudgetKeyTimeframeManager, id_, activity_id,
-        "Unloading budget key timeframe for budget key %s with time_group %llu",
-        budget_key_name_->c_str(), time_group);
+  SCP_DEBUG(
+      kBudgetKeyTimeframeManager, id_,
+      "Unloading budget key timeframe for budget key %s with time_group %llu",
+      budget_key_name_->c_str(), time_group);
 
   // Check to see if there is any active transaction id.
   vector<TimeBucket> time_buckets;
@@ -193,7 +198,7 @@ void BudgetKeyTimeframeManager::OnBeforeGarbageCollection(
           bind(&BudgetKeyTimeframeManager::OnStoreTimeframeGroupToDBCallback,
                this, _1, time_group, budget_key_timeframe_group,
                should_delete_entry),
-          activity_id);
+          id_, id_);
 
   upsert_database_item_context.request->table_name = key_table_name;
   upsert_database_item_context.request->partition_key =
@@ -221,29 +226,32 @@ void BudgetKeyTimeframeManager::OnBeforeGarbageCollection(
       make_shared<NoSQLDatabaseValidAttributeValueTypes>(serialized_tokens);
   upsert_database_item_context.request->new_attributes->push_back(
       key_value_pair);
+  budget_key_count_metric_->Increment(kMetricEventUnloadFromDBScheduled);
 
-  operation_dispatcher_.Dispatch<
-      AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>>(
-      upsert_database_item_context,
-      [nosql_database_provider = nosql_database_provider_](
-          AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
-              upsert_database_item_context) {
-        return nosql_database_provider->UpsertDatabaseItem(
-            upsert_database_item_context);
-      });
+  // Request-level retry is not necessary here. If the request is unsuccessful,
+  // retry in next round of OnBeforeGarbageCollection.
+  execution_result =
+      nosql_database_provider_for_background_operations_->UpsertDatabaseItem(
+          upsert_database_item_context);
+  if (!execution_result.Successful()) {
+    should_delete_entry(false);
+    return;
+  }
 }
 
 void BudgetKeyTimeframeManager::OnStoreTimeframeGroupToDBCallback(
-    core::AsyncContext<core::UpsertDatabaseItemRequest,
-                       core::UpsertDatabaseItemResponse>&
+    AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>&
         upsert_database_item_context,
     TimeGroup& time_group,
     shared_ptr<BudgetKeyTimeframeGroup>& budget_key_timeframe_group,
     function<void(bool)> should_delete_entry) noexcept {
   if (upsert_database_item_context.result != SuccessExecutionResult()) {
+    budget_key_count_metric_->Increment(kMetricEventUnloadFromDBFailed);
     should_delete_entry(false);
     return;
   }
+
+  budget_key_count_metric_->Increment(kMetricEventUnloadFromDBSuccess);
 
   BytesBuffer budget_key_timeframe_manager_log_bytes_buffer;
   auto execution_result =
@@ -251,8 +259,9 @@ void BudgetKeyTimeframeManager::OnStoreTimeframeGroupToDBCallback(
           budget_key_timeframe_group,
           budget_key_timeframe_manager_log_bytes_buffer);
   if (execution_result != SuccessExecutionResult()) {
-    ERROR_CONTEXT(kBudgetKeyTimeframeManager, upsert_database_item_context,
-                  execution_result, "Failed to serialize budget key removal");
+    SCP_ERROR_CONTEXT(kBudgetKeyTimeframeManager, upsert_database_item_context,
+                      execution_result,
+                      "Failed to serialize budget key removal");
     should_delete_entry(false);
     return;
   }
@@ -260,7 +269,10 @@ void BudgetKeyTimeframeManager::OnStoreTimeframeGroupToDBCallback(
   // Sending the journal service log.
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
   journal_log_context.request = make_shared<JournalLogRequest>();
-  journal_log_context.parent_activity_id = Uuid::GenerateUuid();
+  journal_log_context.parent_activity_id =
+      upsert_database_item_context.activity_id;
+  journal_log_context.correlation_id =
+      upsert_database_item_context.correlation_id;
   journal_log_context.request->component_id = id_;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
   journal_log_context.request->log_status = JournalLogStatus::Log;
@@ -274,14 +286,14 @@ void BudgetKeyTimeframeManager::OnStoreTimeframeGroupToDBCallback(
   journal_log_context.callback =
       bind(&BudgetKeyTimeframeManager::OnRemoveEntryFromCacheLogged, this,
            should_delete_entry, _1);
-  operation_dispatcher_
-      .Dispatch<AsyncContext<JournalLogRequest, JournalLogResponse>>(
-          journal_log_context,
-          [journal_service = journal_service_](
-              AsyncContext<JournalLogRequest, JournalLogResponse>&
-                  journal_log_context) {
-            return journal_service->Log(journal_log_context);
-          });
+
+  // Request-level retry is not necessary here. If the request is unsuccessful,
+  // retry in next round of OnBeforeGarbageCollection.
+  execution_result = journal_service_->Log(journal_log_context);
+  if (!execution_result.Successful()) {
+    should_delete_entry(false);
+    return;
+  }
 }
 
 void BudgetKeyTimeframeManager::OnRemoveEntryFromCacheLogged(
@@ -441,7 +453,7 @@ ExecutionResult BudgetKeyTimeframeManager::LoadTimeframeGroupFromDB(
         load_budget_key_timeframe_context,
     shared_ptr<BudgetKeyTimeframeGroup>& budget_key_timeframe_group) noexcept {
   auto time_frame_manager_id_str = core::common::ToString(id_);
-  DEBUG_CONTEXT(
+  SCP_DEBUG_CONTEXT(
       kBudgetKeyTimeframeManager, load_budget_key_timeframe_context,
       "Timeframe manager %s loading budget key name %s with time_group %llu",
       time_frame_manager_id_str.c_str(), budget_key_name_->c_str(),
@@ -453,7 +465,7 @@ ExecutionResult BudgetKeyTimeframeManager::LoadTimeframeGroupFromDB(
           bind(&BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback,
                this, load_budget_key_timeframe_context,
                budget_key_timeframe_group, _1),
-          load_budget_key_timeframe_context.activity_id);
+          load_budget_key_timeframe_context);
 
   auto key_table_name = make_shared<string>();
   auto execution_result =
@@ -478,7 +490,10 @@ ExecutionResult BudgetKeyTimeframeManager::LoadTimeframeGroupFromDB(
   get_database_item_context.request->sort_key->attribute_value =
       make_shared<NoSQLDatabaseValidAttributeValueTypes>(time_group);
 
-  return nosql_database_provider_->GetDatabaseItem(get_database_item_context);
+  budget_key_count_metric_->Increment(kMetricEventLoadFromDBScheduled);
+
+  return nosql_database_provider_for_live_traffic_->GetDatabaseItem(
+      get_database_item_context);
 }
 
 void BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback(
@@ -490,7 +505,7 @@ void BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback(
   auto execution_result = budget_key_timeframe_groups_->EnableEviction(
       budget_key_timeframe_group->time_group);
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(
+    SCP_ERROR_CONTEXT(
         kBudgetKeyTimeframeManager, get_database_item_context, execution_result,
         "Cache eviction failed for %s time_group %d", budget_key_name_->c_str(),
         budget_key_timeframe_group->time_group);
@@ -499,6 +514,7 @@ void BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback(
   if (!get_database_item_context.result.Successful()) {
     if (get_database_item_context.result.status_code !=
         core::errors::SC_NO_SQL_DATABASE_PROVIDER_RECORD_NOT_FOUND) {
+      budget_key_count_metric_->Increment(kMetricEventLoadFromDBFailed);
       budget_key_timeframe_group->needs_loader = true;
       load_budget_key_timeframe_context.result =
           get_database_item_context.result;
@@ -506,6 +522,8 @@ void BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback(
       return;
     }
   }
+
+  budget_key_count_metric_->Increment(kMetricEventLoadFromDBSuccess);
 
   vector<TokenCount> tokens_per_hour;
   if (get_database_item_context.result.status_code ==
@@ -595,6 +613,8 @@ void BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback(
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
   journal_log_context.parent_activity_id =
       load_budget_key_timeframe_context.activity_id;
+  journal_log_context.correlation_id =
+      load_budget_key_timeframe_context.correlation_id;
   journal_log_context.request = make_shared<JournalLogRequest>();
   journal_log_context.request->component_id = id_;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
@@ -738,6 +758,8 @@ ExecutionResult BudgetKeyTimeframeManager::Update(
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_log_context;
   journal_log_context.parent_activity_id =
       update_budget_key_timeframe_context.activity_id;
+  journal_log_context.correlation_id =
+      update_budget_key_timeframe_context.correlation_id;
   journal_log_context.request = make_shared<JournalLogRequest>();
   journal_log_context.request->component_id = id_;
   journal_log_context.request->log_id = Uuid::GenerateUuid();
@@ -781,10 +803,10 @@ void BudgetKeyTimeframeManager::OnLogUpdateCallback(
       budget_key_timeframe_groups_->EnableEviction(time_group);
 
   if (!execution_result.Successful()) {
-    ERROR_CONTEXT(kBudgetKeyTimeframeManager,
-                  update_budget_key_timeframe_context, execution_result,
-                  "Cache eviction failed for %s time group %d",
-                  budget_key_name_->c_str(), time_group);
+    SCP_ERROR_CONTEXT(kBudgetKeyTimeframeManager,
+                      update_budget_key_timeframe_context, execution_result,
+                      "Cache eviction failed for %s time group %d",
+                      budget_key_name_->c_str(), time_group);
   }
 
   if (!journal_log_context.result.Successful()) {
@@ -813,12 +835,12 @@ void BudgetKeyTimeframeManager::OnLogUpdateCallback(
 }
 
 ExecutionResult BudgetKeyTimeframeManager::OnJournalServiceRecoverCallback(
-    const shared_ptr<BytesBuffer>& bytes_buffer) noexcept {
-  auto activity_id = Uuid::GenerateUuid();
-  DEBUG(kBudgetKeyTimeframeManager, id_, activity_id,
-        "Recovering budget key timeframe manager from the stored logs. The "
-        "current bytes size: %zu.",
-        bytes_buffer->length);
+    const shared_ptr<BytesBuffer>& bytes_buffer,
+    const Uuid& activity_id) noexcept {
+  SCP_DEBUG(kBudgetKeyTimeframeManager, activity_id,
+            "Recovering budget key timeframe manager from the stored logs. The "
+            "current bytes size: %zu.",
+            bytes_buffer->length);
 
   BudgetKeyTimeframeManagerLog budget_key_time_frame_manager_log;
   auto execution_result =

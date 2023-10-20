@@ -17,8 +17,6 @@
 #include <memory>
 #include <string>
 
-#include <aws/core/Aws.h>
-
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
 #include "public/core/interface/execution_result.h"
@@ -26,25 +24,23 @@
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/interface/metric_client/type_def.h"
 #include "public/cpio/interface/type_def.h"
+#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
-using Aws::InitAPI;
-using Aws::SDKOptions;
-using Aws::ShutdownAPI;
+using google::cmrt::sdk::metric_service::v1::MetricUnit;
+using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
+using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
+using google::protobuf::MapPair;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::GetErrorMessage;
+using google::scp::core::SuccessExecutionResult;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::Cpio;
 using google::scp::cpio::CpioOptions;
 using google::scp::cpio::LogOption;
-using google::scp::cpio::Metric;
 using google::scp::cpio::MetricClientFactory;
 using google::scp::cpio::MetricClientInterface;
 using google::scp::cpio::MetricClientOptions;
-using google::scp::cpio::MetricUnit;
-using google::scp::cpio::PutMetricsRequest;
-using google::scp::cpio::PutMetricsResponse;
 using std::atomic;
 using std::make_shared;
 using std::make_unique;
@@ -58,8 +54,6 @@ using std::unique_ptr;
 using std::chrono::milliseconds;
 
 int main(int argc, char* argv[]) {
-  SDKOptions options;
-  InitAPI(options);
   CpioOptions cpio_options;
   cpio_options.log_option = LogOption::kConsoleLog;
   auto result = Cpio::InitCpio(cpio_options);
@@ -69,9 +63,6 @@ int main(int argc, char* argv[]) {
   }
 
   MetricClientOptions metric_client_options;
-  metric_client_options.metric_namespace = "MetricClientTest";
-  metric_client_options.enable_batch_recording = true;
-  metric_client_options.batch_recording_time_duration = milliseconds(10);
   auto metric_client = MetricClientFactory::Create(move(metric_client_options));
   result = metric_client->Init();
   if (!result.Successful()) {
@@ -86,26 +77,28 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  Metric metric;
-  metric.name = "test_metric";
-  metric.value = "12";
-  metric.unit = MetricUnit::kCount;
-  metric.labels = {{"lable_key", "label_value"}};
-  PutMetricsRequest request;
-  request.metrics.push_back(metric);
+  auto request = make_shared<PutMetricsRequest>();
+  request->set_metric_namespace("test");
+  auto metric = request->add_metrics();
+  metric->set_name("test_metric");
+  metric->set_value("12");
+  metric->set_unit(MetricUnit::METRIC_UNIT_COUNT);
+  auto labels = metric->mutable_labels();
+  labels->insert(MapPair(string("lable_key"), string("label_value")));
 
   atomic<bool> finished = false;
-  result = metric_client->PutMetrics(
+  auto context = AsyncContext<PutMetricsRequest, PutMetricsResponse>(
       move(request),
-      [&](const ExecutionResult result, PutMetricsResponse response) {
-        if (!result.Successful()) {
+      [&](AsyncContext<PutMetricsRequest, PutMetricsResponse> context) {
+        if (!context.result.Successful()) {
           std::cout << "PutMetrics failed: "
-                    << GetErrorMessage(result.status_code) << std::endl;
+                    << GetErrorMessage(context.result.status_code) << std::endl;
         } else {
           std::cout << "PutMetrics succeeded." << std::endl;
         }
         finished = true;
       });
+  result = metric_client->PutMetrics(context);
   if (!result.Successful()) {
     std::cout << "PutMetrics failed immediately: "
               << GetErrorMessage(result.status_code) << std::endl;
@@ -124,5 +117,4 @@ int main(int argc, char* argv[]) {
     std::cout << "Failed to shutdown CPIO: "
               << GetErrorMessage(result.status_code) << std::endl;
   }
-  ShutdownAPI(options);
 }

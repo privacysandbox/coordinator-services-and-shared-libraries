@@ -726,4 +726,3 @@ resource "aws_cloudwatch_dashboard" "key_storage_dashboard" {
     }
   )
 }
-

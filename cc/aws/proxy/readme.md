@@ -11,11 +11,11 @@ current list of overridden symbols are listed as below:
 * accept4
 * bind
 * connect
+* epoll_add
 * getsockopt
 * ioctl
 * listen
 * setsockopt
-* socket
 
 On outgoing connection, all traffic starts with `connect()` call. When a TCP
 socket is created via `socket()`, namely a `AF_INET`/`AF_INET6` socket with
@@ -37,7 +37,13 @@ Any application that dynamically links libc to do syscalls will work. This
 includes C/C++ based applications, rust, CPython, and Java, etc.
 
 Application that statically links libc, or uses its own syscall implementation,
-won't work. This likely includes golang.
+won't work. This likely includes golang. A future improvement may be using eBPF
+inside the enclave if possible, to replace the LD_PRELOAD libs.
+
+The LD_PRELOAD library currently keeps no internal state of each socket. It
+functions by looking at the type and domain of each socket. This means, if you
+call getsockname/getpeername after connection establishment, you'll probably get
+some garbage.
 
 # Build
 ## Building the proxy
@@ -61,7 +67,7 @@ steps:
 1. Build and run the enclave image.
 
 ## Notes
-1. Currently we only support TCP. UDP is not supported at the moment. DNS
+1. **Currently we only support TCP**. UDP is not supported at the moment. DNS
    lookups that goes through UDP won't work. We uses 'use-vc' option in
    resolv.conf to make DNS lookup to go through TCP as well.
 1. In nitro enclaves, `/etc/resolv.conf` is likely to be a dangling symlink.

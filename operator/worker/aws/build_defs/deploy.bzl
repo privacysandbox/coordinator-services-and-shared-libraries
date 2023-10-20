@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//operator/worker/aws/build_defs:ami.bzl", "packer_worker_ami")
 load("//build_defs/aws/enclave:container.bzl", "java_enclave_image")
+load("//operator/worker/aws/build_defs:ami.bzl", "packer_worker_ami")
 
 def worker_aws_deployment(
         *,

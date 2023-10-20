@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <memory>
 
 #include "oneapi/tbb/concurrent_queue.h"

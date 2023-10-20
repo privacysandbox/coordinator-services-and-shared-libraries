@@ -41,6 +41,7 @@
 
 using boost::algorithm::to_lower;
 using boost::system::error_code;
+using google::scp::core::common::kZeroUuid;
 using nghttp2::asio_http2::host_service_from_uri;
 using std::lock_guard;
 using std::make_shared;
@@ -50,6 +51,7 @@ using std::vector;
 
 static constexpr char kHttpsTag[] = "https";
 static constexpr char kHttpTag[] = "http";
+static constexpr char kHttpConnection[] = "HttpConnection";
 
 namespace google::scp::core {
 ExecutionResult HttpConnectionPool::Init() noexcept {
@@ -64,14 +66,14 @@ ExecutionResult HttpConnectionPool::Run() noexcept {
 ExecutionResult HttpConnectionPool::Stop() noexcept {
   is_running_ = false;
   vector<string> keys;
-  auto execution_result = sessions_.Keys(keys);
+  auto execution_result = connections_.Keys(keys);
   if (!execution_result.Successful()) {
     return execution_result;
   }
 
   for (const auto& key : keys) {
     shared_ptr<HttpConnectionPoolEntry> entry;
-    execution_result = sessions_.Find(key, entry);
+    execution_result = connections_.Find(key, entry);
     if (!execution_result.Successful()) {
       return execution_result;
     }
@@ -85,6 +87,13 @@ ExecutionResult HttpConnectionPool::Stop() noexcept {
   }
 
   return SuccessExecutionResult();
+}
+
+shared_ptr<HttpConnection> HttpConnectionPool::CreateHttpConnection(
+    string host, string service, bool is_https,
+    TimeDuration http2_read_timeout_in_sec) {
+  return make_shared<HttpConnection>(async_executor_, host, service, is_https,
+                                     http2_read_timeout_in_sec_);
 }
 
 ExecutionResult HttpConnectionPool::GetConnection(
@@ -105,35 +114,47 @@ ExecutionResult HttpConnectionPool::GetConnection(
 
   to_lower(scheme);
   // TODO: remove support of non-https
-  bool https = false;
+  bool is_https = false;
   if (scheme == kHttpsTag) {
-    https = true;
+    is_https = true;
   } else if (scheme == kHttpTag) {
-    https = false;
+    is_https = false;
   } else {
     return FailureExecutionResult(errors::SC_HTTP2_CLIENT_INVALID_URI);
   }
 
   auto http_connection_entry = make_shared<HttpConnectionPoolEntry>();
   auto pair = std::make_pair(host + ":" + service, http_connection_entry);
-  if (sessions_.Insert(pair, http_connection_entry) ==
-      SuccessExecutionResult()) {
-    for (size_t i = 0; i < max_connection_per_host_; ++i) {
-      auto http_connection =
-          make_shared<HttpConnection>(async_executor_, host, service, https);
+  if (connections_.Insert(pair, http_connection_entry).Successful()) {
+    for (size_t i = 0; i < max_connections_per_host_; ++i) {
+      auto http_connection = CreateHttpConnection(host, service, is_https,
+                                                  http2_read_timeout_in_sec_);
       http_connection_entry->http_connections.push_back(http_connection);
       auto execution_result = http_connection->Init();
 
       if (!execution_result.Successful()) {
-        sessions_.Erase(pair.first);
+        // Stop the connections already created before.
+        http_connection_entry->http_connections.pop_back();
+        for (auto& http_connection : http_connection_entry->http_connections) {
+          http_connection->Stop();
+        }
+        connections_.Erase(pair.first);
         return execution_result;
       }
 
       execution_result = http_connection->Run();
       if (!execution_result.Successful()) {
-        sessions_.Erase(pair.first);
+        // Stop the connections already created before.
+        http_connection_entry->http_connections.pop_back();
+        for (auto& http_connection : http_connection_entry->http_connections) {
+          http_connection->Stop();
+        }
+        connections_.Erase(pair.first);
         return execution_result;
       }
+      SCP_INFO(kHttpConnection, kZeroUuid,
+               "Successfully initialized a connection %p for %s",
+               http_connection.get(), pair.first.c_str());
     }
     http_connection_entry->is_initialized = true;
   }
@@ -144,13 +165,31 @@ ExecutionResult HttpConnectionPool::GetConnection(
   }
 
   auto value = http_connection_entry->order_counter.fetch_add(1);
-  connection = http_connection_entry->http_connections.at(
-      value % max_connection_per_host_);
+  auto connections_index = value % max_connections_per_host_;
+  connection = http_connection_entry->http_connections.at(connections_index);
 
   if (connection->IsDropped()) {
     RecycleConnection(connection);
-    return RetryExecutionResult(
-        errors::SC_HTTP2_CLIENT_NO_CONNECTION_ESTABLISHED);
+    // If the current connection is not ready, pick another connection that is
+    // ready. This allows the caller's request execution attempt to not go
+    // waste.
+    if (!connection->IsReady()) {
+      size_t cur_index = connections_index;
+      for (int i = 0; i < http_connection_entry->http_connections.size(); i++) {
+        auto http_connection =
+            http_connection_entry->http_connections[cur_index];
+        if (http_connection->IsReady()) {
+          connection = http_connection;
+          break;
+        }
+        cur_index = (cur_index + 1) % max_connections_per_host_;
+      }
+      // Return a retry if we are not able to pick a ready connection.
+      if (!connection->IsReady()) {
+        return RetryExecutionResult(
+            errors::SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY);
+      }
+    }
   }
 
   return SuccessExecutionResult();
@@ -168,5 +207,8 @@ void HttpConnectionPool::RecycleConnection(
   connection->Reset();
   connection->Init();
   connection->Run();
+
+  SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+            "Successfully recycled connection %p", connection.get());
 }
 }  // namespace google::scp::core

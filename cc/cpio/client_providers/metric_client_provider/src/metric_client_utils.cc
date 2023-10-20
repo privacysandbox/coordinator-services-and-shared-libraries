@@ -19,8 +19,10 @@
 #include <map>
 #include <memory>
 
+#include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "cpio/client_providers/metric_client_provider/src/error_codes.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/interface/metric_client/type_def.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
@@ -115,9 +117,10 @@ MetricClientUtils::ConvertToMetricUnitProto(MetricUnit metric_unit) {
 
 ExecutionResult MetricClientUtils::ValidateRequest(
     const PutMetricsRequest& request,
-    const shared_ptr<MetricClientOptions>& options) {
-  // If options is set, the namespace is passed in through options.
-  if (!options && request.metric_namespace().empty()) {
+    const shared_ptr<MetricBatchingOptions>& options) {
+  // If batching recording is not enabled, the namespace should be set in the
+  // request.
+  if (!options->enable_batch_recording && request.metric_namespace().empty()) {
     return FailureExecutionResult(SC_METRIC_CLIENT_PROVIDER_NAMESPACE_NOT_SET);
   }
 

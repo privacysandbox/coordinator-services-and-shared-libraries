@@ -16,6 +16,7 @@
 
 #include "process_launcher/daemonizer/src/daemonizer.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <sys/prctl.h>
@@ -23,7 +24,6 @@
 
 #include <string>
 
-#include <gmock/gmock.h>
 #include <nlohmann/json.hpp>
 
 #include "core/common/uuid/src/uuid.h"
@@ -31,12 +31,14 @@
 #include "process_launcher/argument_parser/src/json_arg_parser.h"
 #include "process_launcher/daemonizer/src/error_codes.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::common::Uuid;
 using google::scp::core::test::ScpTestBase;
 using json = nlohmann::json;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::errors::DAEMONIZER_INVALID_INPUT;
+using google::scp::core::test::ResultIs;
 using google::scp::process_launcher::Daemonizer;
 using google::scp::process_launcher::ExecutableArgument;
 
@@ -80,13 +82,17 @@ static std::string GetRandomProcessName() {
  * @param process_name the name of the process
  * @return std::string the command
  */
-static std::string GetCommandToStartNamedProcess(std::string process_name) {
+static std::string GetCommandToStartNamedProcess(std::string process_name,
+                                                 bool restart = true) {
   // Start a named process:
   // bash -c "exec -a <name> <cmd_to_execute>"
   json json_cmd;
   json_cmd["executable_name"] = "bash";
   auto cmd = "exec -a " + process_name + " sleep 600";
   json_cmd["command_line_args"] = std::vector<std::string>{"-c", cmd};
+  if (!restart) {
+    json_cmd["restart"] = false;
+  }
   return json_cmd.dump();
 }
 
@@ -281,7 +287,8 @@ TEST_F(DaemonizerTest, RunShouldFailIfInvalidArgs) {
 
   auto result = d.Run();
 
-  EXPECT_EQ(FailureExecutionResult(DAEMONIZER_INVALID_INPUT), result);
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(DAEMONIZER_INVALID_INPUT)));
 }
 
 TEST_F(DaemonizerTest, ShouldBuildExecutableArgsVector) {
@@ -310,5 +317,53 @@ TEST_F(DaemonizerTest, ShouldBuildExecutableArgsVector) {
   ASSERT_EQ("exe_2", parsed_args.at(1)->executable_name);
   ASSERT_THAT(parsed_args.at(1)->command_line_args,
               testing::ElementsAre("2arg1", "2arg2", "2arg3"));
+}
+
+TEST_F(DaemonizerTest, ShouldNotRestartProcessIfConfigured) {
+  std::string process_name1 = GetRandomProcessName();
+  std::string cmd1 = GetCommandToStartNamedProcess(process_name1);
+  std::string process_name2 = GetRandomProcessName();
+  std::string cmd2 =
+      GetCommandToStartNamedProcess(process_name2, false /*restart*/);
+  char* args[] = {const_cast<char*>(cmd1.c_str()),
+                  const_cast<char*>(cmd2.c_str())};
+
+  DaemonizerForTests d(2, args);
+  // This ensures the daemonizer process restarts each process only once
+  d.StopAfterThisManyRestarts(2);
+  // d.Run() should start processes with name process_name1 and process_name2
+  pid_t daemonizer_proc_id = ExecuteInNewProcess([&] { d.Run(); });
+
+  // Both processes should exist, as the daemonizer should have started them
+  WaitForProcessToExist(process_name1);
+  WaitForProcessToExist(process_name2);
+  if (!ProcessExists(process_name1)) {
+    FAIL() << "The daemonizer failed to start the child process 1";
+  }
+  if (!ProcessExists(process_name2)) {
+    FAIL() << "The daemonizer failed to start the child process 2";
+  }
+
+  // Kill the processes since we want daemonizer to restart them
+  KillProcessByName(process_name1);
+  KillProcessByName(process_name2);
+
+  // Process 1 should exist, as the daemonizer should have restarted it
+  WaitForProcessToExist(process_name1);
+  if (!ProcessExists(process_name1)) {
+    FAIL() << "The daemonizer failed to restart the child process 1";
+  }
+
+  // Process 2 should not exist even after some wait, as the daemonizer should
+  // not restart it
+  WaitForProcessToExist(process_name2);
+  if (ProcessExists(process_name2)) {
+    FAIL() << "The daemonizer should not restart the child process 2";
+  }
+
+  // As cleanup, kill the process we started
+  KillProcessByName(process_name1);
+  // Make sure the daemonizer process exited
+  waitpid(daemonizer_proc_id, NULL, 0);
 }
 }  // namespace google::scp::process_launcher::test

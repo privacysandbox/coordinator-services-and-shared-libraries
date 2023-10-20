@@ -35,7 +35,7 @@ DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_ALREADY_STARTED,
 
 DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_NOT_STARTED, SC_TRANSACTION_MANAGER,
                   0x0003, "Transaction manager has not started.",
-                  HttpStatusCode::BAD_REQUEST)
+                  HttpStatusCode::SERVICE_UNAVAILABLE)
 
 DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_CANNOT_ACCEPT_NEW_REQUESTS,
                   SC_TRANSACTION_MANAGER, 0x0004,
@@ -87,8 +87,9 @@ DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_INVALID_TRANSACTION_PHASE,
 
 DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_CURRENT_TRANSACTION_IS_RUNNING,
                   SC_TRANSACTION_MANAGER, 0x000F,
-                  "The transaction is currently running.",
-                  HttpStatusCode::BAD_REQUEST)
+                  "The transaction is currently running so the requested phase "
+                  "cannot be executed at this time.",
+                  HttpStatusCode::SERVICE_UNAVAILABLE)
 
 DEFINE_ERROR_CODE(
     SC_TRANSACTION_MANAGER_CANNOT_CREATE_CHECKPOINT_WHEN_STARTED,
@@ -179,6 +180,17 @@ DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_STATUS_CANNOT_BE_OBTAINED,
 DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_QUEUE_FAILURE, SC_TRANSACTION_MANAGER,
                   0x0021, "Transaction Manager's queue has an issue.",
                   HttpStatusCode::SERVICE_UNAVAILABLE)
+
+DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_STATE_IS_INVALID,
+                  SC_TRANSACTION_MANAGER, 0x0022,
+                  "Transaction Manager's state is invalid.",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+
+DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_TRANSACTION_IS_NOT_LOCKED,
+                  SC_TRANSACTION_MANAGER, 0x0023,
+                  "The remote transaction must be in a locked state to "
+                  "execute a phase.",
+                  HttpStatusCode::BAD_REQUEST)
 
 DEFINE_ERROR_CODE(SC_TRANSACTION_MANAGER_TRANSACTION_ALREADY_EXISTS,
                   SC_TRANSACTION_MANAGER, 0x0024,

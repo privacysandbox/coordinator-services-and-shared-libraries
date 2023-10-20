@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -37,13 +39,14 @@ cc_library(
         "//cc/core/nosql_database_provider/src/aws:core_nosql_database_provider_aws_lib",
         "//cc/core/token_provider_cache/src:core_auto_refresh_token_provider",
         "//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_lib",
-        "//cc/cpio/client_providers/instance_client_provider_new/src/aws:aws_instance_client_provider_lib",
-        "//cc/cpio/client_providers/metric_client_provider/interface:metric_utils_interface_lib",
+        "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_provider_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/authorization/src/aws:aws_http_request_response_auth_interceptor",
         "//cc/pbs/authorization_token_fetcher/src/aws:pbs_aws_authorization_token_fetcher",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
         "//cc/public/cpio/interface/metric_client",
+        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
+        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
     ],
 )

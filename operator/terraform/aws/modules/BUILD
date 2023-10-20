@@ -27,6 +27,7 @@ pkg_filegroup(
         "//operator/terraform/aws/modules/frontenddashboard",
         "//operator/terraform/aws/modules/jobqueue",
         "//operator/terraform/aws/modules/metadatadb",
+        "//operator/terraform/aws/modules/notifications",
         "//operator/terraform/aws/modules/parameters",
         "//operator/terraform/aws/modules/vpc",
         "//operator/terraform/aws/modules/worker",

@@ -37,4 +37,6 @@ message RequestInfo {
   string postback_url = 6;
   /** Data plane application specific parameters. */
   map<string, string> job_parameters = 7;
+  /** The caller identity (email or service account in GCP). */
+  string account_identity = 8;
 }

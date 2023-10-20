@@ -214,6 +214,18 @@ variable "beanstalk_solution_stack_name" {
   }
 }
 
+variable "autoscaling_min_size" {
+  description = "The minimum number of PBS instances to use for the autoscaling group."
+  type        = number
+  nullable    = false
+}
+
+variable "autoscaling_max_size" {
+  description = "The maximum number of PBS instances to use for the autoscaling group."
+  type        = number
+  nullable    = false
+}
+
 variable "pbs_aws_lb_arn" {
   description = "Elastic Load Balancing account ARN to grant ELB access log policy permission."
   type        = map(string)
@@ -304,12 +316,12 @@ variable "pbs_error_log_handle_journal_threshold" {
 }
 
 variable "pbs_elb_error_ratio_4xx_threshold" {
-  description = "ELB 4xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  description = "ELB 4xx error ratio rate greater than this to send alarm. Value should be a percentage. Example: 10% is '10.0'."
   type        = string
 }
 
 variable "pbs_elb_error_ratio_5xx_threshold" {
-  description = "ELB 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  description = "ELB 5xx error ratio rate greater than this to send alarm. Value should be a percentage. Example: 10% is '10.0'."
   type        = string
 }
 
@@ -367,5 +379,3 @@ variable "privacy_budget_dashboard_time_period_seconds" {
   description = "Time period that acts as a window for dashboard metrics. Measured in seconds."
   type        = number
 }
-
-

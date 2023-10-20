@@ -13,8 +13,7 @@
 # limitations under the License.
 
 locals {
-  role_name_prefix                               = "${var.environment}_${local.region}_get_encryption_key_lambda"
-  function_name                                  = "${var.environment}_${local.region}_get_encryption_key_lambda"
+  role_name_prefix                               = "${var.environment}_${local.region}_encryption_key_service_lambda"
   get_encryption_key_lambda_alarm_label          = "GetEncryptionKey"
   get_encryption_key_function_name               = "${var.environment}_${local.region}_get_encryption_key_lambda"
   list_recent_encryption_keys_lambda_alarm_label = "ListRecentEncryptionKeys"
@@ -26,9 +25,9 @@ module "lambda_roles" {
   role_name_prefix = local.role_name_prefix
 }
 
-resource "aws_s3_bucket_object" "get_encryption_key_lambda_package" {
+resource "aws_s3_bucket_object" "encryption_key_lambda_package" {
   bucket = var.keymanagement_package_bucket
-  key    = "app/get_encryption_key_lambda.jar"
+  key    = "app/encryption_key_lambda.jar"
   source = var.encryption_key_service_jar
   etag   = filemd5(var.encryption_key_service_jar)
 }
@@ -36,14 +35,59 @@ resource "aws_s3_bucket_object" "get_encryption_key_lambda_package" {
 # Functions are not instrumented with X-Ray.
 #tfsec:ignore:aws-lambda-enable-tracing
 resource "aws_lambda_function" "get_encryption_key_lambda" {
-  function_name = local.function_name
+  function_name = local.get_encryption_key_function_name
 
-  s3_bucket = var.keymanagement_package_bucket
-  s3_key    = aws_s3_bucket_object.get_encryption_key_lambda_package.key
+  s3_bucket = aws_s3_bucket_object.encryption_key_lambda_package.bucket
+  s3_key    = aws_s3_bucket_object.encryption_key_lambda_package.key
 
   source_code_hash = filebase64sha256(var.encryption_key_service_jar)
 
   handler = "com.google.scp.coordinator.keymanagement.keyhosting.service.aws.GetEncryptionKeyApiGatewayHandler"
+  runtime = "java11"
+
+  timeout     = 10
+  memory_size = 1024
+
+  role = module.lambda_roles.trustedparty_lambda_role_arn
+
+  # TODO(b/297923272): Remove DISABLE_ACTIVATION_TIME
+  environment {
+    variables = {
+      KEYSTORE_TABLE_NAME     = var.dynamo_keydb.name
+      KEY_DB_REGION           = var.dynamo_keydb.region
+      DISABLE_ACTIVATION_TIME = var.get_encryption_key_lambda_ps_client_shim_enabled != "" ? var.get_encryption_key_lambda_ps_client_shim_enabled : "false"
+    }
+  }
+
+  dynamic "vpc_config" {
+    # Add vpc_config block if VPC is enabled. List is a placeholder to use `for_each`.
+    for_each = var.enable_vpc ? ["ununsed"] : []
+    content {
+      security_group_ids = var.lambda_sg_ids
+      subnet_ids         = var.private_subnet_ids
+    }
+  }
+
+  depends_on = [
+    module.lambda_roles.trustedparty_lambda_log_attachment,
+    # This group is auto-created when creating the lambda, force the log group
+    # to be created first so terraform doesn't get a
+    # ResourceAlreadyExistsException.
+    aws_cloudwatch_log_group.get_encryption_key_lambda_cloudwatch
+  ]
+}
+
+# Functions are not instrumented with X-Ray.
+#tfsec:ignore:aws-lambda-enable-tracing
+resource "aws_lambda_function" "list_recent_encryption_keys_lambda" {
+  function_name = local.list_recent_encryption_keys_function_name
+
+  s3_bucket = aws_s3_bucket_object.encryption_key_lambda_package.bucket
+  s3_key    = aws_s3_bucket_object.encryption_key_lambda_package.key
+
+  source_code_hash = filebase64sha256(var.encryption_key_service_jar)
+
+  handler = "com.google.scp.coordinator.keymanagement.keyhosting.service.aws.ListRecentEncryptionKeysApiGatewayHandler"
   runtime = "java11"
 
   timeout     = 10
@@ -72,7 +116,7 @@ resource "aws_lambda_function" "get_encryption_key_lambda" {
     # This group is auto-created when creating the lambda, force the log group
     # to be created first so terraform doesn't get a
     # ResourceAlreadyExistsException.
-    aws_cloudwatch_log_group.get_encryption_key_lambda_cloudwatch
+    aws_cloudwatch_log_group.list_recent_encryption_keys_lambda_cloudwatch
   ]
 }
 
@@ -101,6 +145,7 @@ resource "aws_iam_role_policy" "get_encryption_key_policy" {
         Effect = "Allow",
         Action = [
           "dynamodb:GetItem",
+          "dynamodb:Scan",
         ],
         Resource = var.dynamo_keydb.arn
         Condition = {
@@ -116,6 +161,7 @@ resource "aws_iam_role_policy" "get_encryption_key_policy" {
       {
         Action = [
           "dynamodb:GetItem",
+          "dynamodb:Scan",
         ],
         Resource = var.dynamo_keydb.arn
         Effect   = "Allow"
@@ -126,6 +172,11 @@ resource "aws_iam_role_policy" "get_encryption_key_policy" {
 
 # Set retention policy for cloudwatch logs.
 resource "aws_cloudwatch_log_group" "get_encryption_key_lambda_cloudwatch" {
-  name              = "/aws/lambda/${local.function_name}"
-  retention_in_days = var.get_encryption_key_logging_retention_days
+  name              = "/aws/lambda/${local.get_encryption_key_function_name}"
+  retention_in_days = var.logging_retention_days
+}
+
+resource "aws_cloudwatch_log_group" "list_recent_encryption_keys_lambda_cloudwatch" {
+  name              = "/aws/lambda/${local.list_recent_encryption_keys_function_name}"
+  retention_in_days = var.logging_retention_days
 }

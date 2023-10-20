@@ -17,9 +17,6 @@
 #include <memory>
 #include <string>
 
-#include <aws/core/Aws.h>
-
-#include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
 #include "public/core/interface/execution_result.h"
@@ -28,16 +25,12 @@
 #include "public/cpio/interface/type_def.h"
 #include "public/cpio/test/global_cpio/test_lib_cpio.h"
 
-using Aws::InitAPI;
-using Aws::SDKOptions;
-using Aws::ShutdownAPI;
-using google::scp::core::AsyncContext;
+using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest;
+using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse;
 using google::scp::core::ExecutionResult;
 using google::scp::core::GetErrorMessage;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::test::WaitUntil;
-using google::scp::cpio::ListPrivateKeysByIdsRequest;
-using google::scp::cpio::ListPrivateKeysByIdsResponse;
 using google::scp::cpio::LogOption;
 using google::scp::cpio::PrivateKeyClientFactory;
 using google::scp::cpio::PrivateKeyClientInterface;
@@ -57,24 +50,14 @@ using std::to_string;
 using std::unique_ptr;
 using std::chrono::milliseconds;
 
-constexpr char kPrivateKeyEndpoint1[] =
-    "https://uun5qzrqvj.execute-api.us-east-1.amazonaws.com/stage/v1alpha/"
-    "encryptionKeys";
-constexpr char kPrivateKeyEndpoint2[] =
-    "https://ddqkl8ay59.execute-api.us-east-1.amazonaws.com/stage/v1alpha/"
-    "encryptionKeys";
-constexpr char kIamRole1[] =
-    "arn:aws:iam::221820322062:role/"
-    "mp-primary-staging_221820322062_coordinator_assume_role";
-constexpr char kIamRole2[] =
-    "arn:aws:iam::221820322062:role/"
-    "mp-secondary-staging_221820322062_coordinator_assume_role";
+constexpr char kPrivateKeyEndpoint1[] = "https://test.privatekey1.com";
+constexpr char kPrivateKeyEndpoint2[] = "https://test.privatekey2.com";
+constexpr char kIamRole1[] = "arn:aws:iam::1234:role/test_assume_role_1";
+constexpr char kIamRole2[] = "arn:aws:iam::1234:role/test_assume_role_2";
 constexpr char kServiceRegion[] = "us-east-1";
-constexpr char kKeyId1[] = "055e9f89-a4fe-449d-aabd-4688861e341d";
+constexpr char kKeyId1[] = "key-id";
 
 int main(int argc, char* argv[]) {
-  SDKOptions options;
-  InitAPI(options);
   TestCpioOptions cpio_options;
   cpio_options.log_option = LogOption::kConsoleLog;
   cpio_options.region = kServiceRegion;
@@ -117,22 +100,22 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Run private key client successfully!" << std::endl;
 
-  ListPrivateKeysByIdsRequest request;
-  request.key_ids.emplace_back(kKeyId1);
+  ListPrivateKeysRequest request;
+  request.add_key_ids(kKeyId1);
   atomic<bool> finished = false;
-  result = private_key_client->ListPrivateKeysByIds(
+  result = private_key_client->ListPrivateKeys(
       move(request),
-      [&](const ExecutionResult result, ListPrivateKeysByIdsResponse response) {
+      [&](const ExecutionResult result, ListPrivateKeysResponse response) {
         if (!result.Successful()) {
-          std::cout << "ListPrivateKeysByIds failed: "
+          std::cout << "ListPrivateKeys failed: "
                     << GetErrorMessage(result.status_code) << std::endl;
         } else {
-          std::cout << "ListPrivateKeysByIds succeeded." << std::endl;
+          std::cout << "ListPrivateKeys succeeded." << std::endl;
         }
         finished = true;
       });
   if (!result.Successful()) {
-    std::cout << "ListPrivateKeysByIds failed immediately: "
+    std::cout << "ListPrivateKeys failed immediately: "
               << GetErrorMessage(result.status_code) << std::endl;
   }
   WaitUntil([&finished]() { return finished.load(); },
@@ -149,5 +132,4 @@ int main(int argc, char* argv[]) {
     std::cout << "Failed to shutdown CPIO: "
               << GetErrorMessage(result.status_code) << std::endl;
   }
-  ShutdownAPI(options);
 }
