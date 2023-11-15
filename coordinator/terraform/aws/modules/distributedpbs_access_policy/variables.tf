@@ -30,6 +30,12 @@ variable "pbs_auth_table_name" {
   nullable    = false
 }
 
+variable "pbs_auth_table_v2_name" {
+  description = "DynamoDB table name of distributed pbs auth table V2."
+  type        = string
+  nullable    = false
+}
+
 variable "remote_environment" {
   description = "The name of the remote coordinator's environment used as a role prefix."
   type        = string

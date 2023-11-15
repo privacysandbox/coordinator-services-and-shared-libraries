@@ -281,13 +281,23 @@ variable "cloudwatch_logging_retention_days" {
   type        = number
 }
 
-variable "sns_topic_arn" {
-  description = "SNS topic ARN to forward alerts to"
+variable "primary_region_sns_topic_arn" {
+  description = "SNS topic ARN to forward alerts to in the primary region"
   type        = string
 }
 
-variable "sqs_queue_arn" {
-  description = "SQS queue ARN to forward alerts to"
+variable "primary_region_sqs_queue_arn" {
+  description = "SQS queue ARN to forward alerts to in the primary region"
+  type        = string
+}
+
+variable "secondary_region_sns_topic_arn" {
+  description = "SNS topic ARN to forward alerts to in the secondary region"
+  type        = string
+}
+
+variable "secondary_region_sqs_queue_arn" {
+  description = "SQS queue ARN to forward alerts to in the secondary region"
   type        = string
 }
 
@@ -298,7 +308,7 @@ variable "sqs_queue_arn" {
 variable "mpkhs_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
-  default     = "60"
+  default     = "300"
 }
 
 variable "mpkhs_lambda_error_threshold" {
@@ -338,11 +348,6 @@ variable "mpkhs_api_gw_error_ratio_4xx_threshold" {
 
 variable "mpkhs_api_gw_error_ratio_5xx_threshold" {
   description = "API Gateway 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-}
-
-variable "mpkhs_api_gw_total_error_ratio_threshold" {
-  description = "API Gateway total error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 

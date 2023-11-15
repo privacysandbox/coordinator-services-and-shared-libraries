@@ -31,6 +31,11 @@ variable "allowed_principals_map" {
   description = "Map of AWS account IDs that will assume coordinator_assume_role associated with their reporting_origin domain"
 }
 
+variable "allowed_principals_map_v2" {
+  type        = map(list(string))
+  description = "Map of AWS account IDs, that will assume the coordinator_assume_role, to the list of their associated (eTLD+1) sites."
+}
+
 variable "private_key_encryptor_arn" {
   type        = string
   description = "KMS key which will be used to decrypt."
@@ -48,6 +53,11 @@ variable "privacy_budget_api_gateway_arn" {
 
 variable "privacy_budget_auth_table_name" {
   description = "DynamoDB table name of distributed pbs auth table"
+  type        = string
+}
+
+variable "privacy_budget_auth_table_v2_name" {
+  description = "DynamoDB table name of distributed pbs auth table V2"
   type        = string
 }
 

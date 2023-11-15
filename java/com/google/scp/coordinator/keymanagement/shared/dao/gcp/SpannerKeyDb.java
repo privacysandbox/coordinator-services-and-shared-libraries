@@ -3,7 +3,6 @@ package com.google.scp.coordinator.keymanagement.shared.dao.gcp;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.DATASTORE_ERROR;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.MISSING_KEY;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.UNSUPPORTED_OPERATION;
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
@@ -101,8 +100,14 @@ public final class SpannerKeyDb implements KeyDb {
 
   @Override
   public ImmutableList<EncryptionKey> getAllKeys() throws ServiceException {
-    throw new ServiceException(
-        NOT_FOUND, UNSUPPORTED_OPERATION.name(), "Unsupported operation in Spanner");
+    Statement statement = Statement.newBuilder("SELECT * FROM " + TABLE_NAME).build();
+    ImmutableList.Builder<EncryptionKey> keysBuilder = ImmutableList.builder();
+    try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
+      while (resultSet.next()) {
+        keysBuilder.add(buildEncryptionKey(resultSet));
+      }
+    }
+    return keysBuilder.build();
   }
 
   @Override

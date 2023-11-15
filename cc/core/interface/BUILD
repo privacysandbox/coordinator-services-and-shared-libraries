@@ -29,6 +29,7 @@ cc_library(
             "async_context.h",
             "streaming_context.h",
             "type_def.h",
+            "type_def.cc",
             "logger_interface.h",
             "service_interface.h",
         ],
@@ -115,6 +116,7 @@ cc_library(
     name = "type_def_lib",
     srcs =
         [
+            "type_def.cc",
             "type_def.h",
         ],
     copts = [
@@ -123,6 +125,7 @@ cc_library(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/proto:core_common_proto_lib",
+        "@com_google_absl//absl/base:core_headers",
     ],
 )
 

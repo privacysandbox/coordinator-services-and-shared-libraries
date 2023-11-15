@@ -116,6 +116,10 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
 
   http_request.headers->insert({string(core::kClaimedIdentityHeader),
                                 authorization_metadata.claimed_identity});
+  if (enable_site_based_authorization_) {
+    http_request.headers->insert(
+        {std::string(core::kEnablePerSiteEnrollmentHeader), "true"});
+  }
 
   AwsV4Signer signer(access_key, "", security_token, "execute-api",
                      aws_region_);

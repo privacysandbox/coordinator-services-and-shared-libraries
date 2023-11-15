@@ -50,7 +50,8 @@ class AuthLambdaHandlerTest(unittest.TestCase):
 
     def test_unauthorized_if_missing_identity_header(self):
         event = {'requestContext': {
-            'identity': {'userArn': 'arn'}}, 'headers': {}}
+            'identity': {'userArn': 'arn'}},
+            'headers': {}}
         ret = auth_lambda_handler.lambda_handler(
             event, {})
         self.assertEqual(ret['statusCode'], 403)
@@ -83,7 +84,7 @@ class AuthLambdaHandlerTest(unittest.TestCase):
 
     def test_unauthorized_if_mismatching_reporting_origins(self):
         # The received reported origin
-        reported_origin = 'my-reported-origin.com'
+        reported_origin = 'top-level-private-suffix.com'
 
         event = {'requestContext': {'identity': {'userArn': 'arn'}},
                  'headers': {'x-gscp-claimed-identity': reported_origin}}
@@ -125,10 +126,7 @@ class AuthLambdaHandlerTest(unittest.TestCase):
         db_reporting_origin = reported_origin
         db_item_return = {'Item': {'reporting_origin': db_reporting_origin}}
 
-        dynamodb_table_mock.mock_override_get_item_return(db_item_return)
-        dynamodb_resource_mock = boto3.DynamoDbResourceMock(
-            dynamodb_table_mock)
-        boto3.resource = MagicMock(return_value=dynamodb_resource_mock)
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
 
         ret = auth_lambda_handler.lambda_handler(event, {})
 
@@ -136,6 +134,92 @@ class AuthLambdaHandlerTest(unittest.TestCase):
         self.assertEqual(
             ret['body'], '{"authorized_domain": "' + reported_origin + '"}')
 
+    def test_lambda_handler_evaluates_v1_when_flag_false(self):
+        # The recieved ARN
+        user_arn = "arn:aws:iam::123456789012:role/demo"
+        reported_origin = 'my-reported-origin.com'
+
+        event = {'requestContext': {'identity': {'userArn': user_arn}},
+                 'headers': {'x-gscp-claimed-identity': reported_origin,
+                             'x-gscp-enable-per-site-enrollment': 'false'}}
+
+        # Mock the call to get the table name from an environment variable
+        os.environ = MagicMock(return_value="my-table-name")
+        # Mock the calls to boto3
+        dynamodb_table_mock = boto3.DynamoDbTableMock()
+
+        # Item the DB returns
+        db_reporting_origin = reported_origin
+        db_item_return = {'Item': {'reporting_origin': db_reporting_origin}}
+
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
+
+        ret = auth_lambda_handler.lambda_handler(event, {})
+
+        self.assertEqual(ret['statusCode'], 200)
+        self.assertEqual(
+            ret['body'], '{"authorized_domain": "' + reported_origin + '"}')
+
+    def test_should_parse_public_suffix(self):
+        os.environ["enable_site_enrollment"] = "True"
+        # The recieved ARN
+        user_arn = "arn:aws:iam::123456789012:role/demo"
+        reported_origin = 'extra-prefix.top-level-private-suffix.kimitsu.chiba.jp'
+
+        event = {'requestContext': {'identity': {'userArn': user_arn}},
+                 'headers': {'x-gscp-claimed-identity': reported_origin,
+                             'x-gscp-enable-per-site-enrollment': 'true'}}
+
+        # Mock the call to get the table name from an environment variable
+        os.environ = MagicMock(return_value="my-table-name")
+        # Mock the calls to boto3
+        dynamodb_table_mock = boto3.DynamoDbTableMock()
+
+        # Item the DB returns
+        db_adtech_sites = 'https://top-level-private-suffix.kimitsu.chiba.jp'
+        db_item_return = {'Item': {'adtech_sites': {db_adtech_sites}}}
+
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
+
+        ret = auth_lambda_handler.lambda_handler(event, {})
+
+        self.assertEqual(ret['statusCode'], 200)
+        self.assertEqual(
+            ret['body'], '{"authorized_domain": "' + db_adtech_sites + '"}')
+
+    def test_authorized_if_no_protocol_reported_origin_belongs_to_allowlisted_site(
+        self,
+    ):
+        # The recieved ARN
+        user_arn = "arn:aws:iam::123456789012:role/demo"
+        reported_origin = 'my-origin.my-top-level-site.com'
+
+        event = {'requestContext': {'identity': {'userArn': user_arn}},
+                 'headers': {'x-gscp-claimed-identity': reported_origin,
+                             'x-gscp-enable-per-site-enrollment': 'true'}}
+
+        # Mock the call to get the table name from an environment variable
+        os.environ = MagicMock(return_value="my-table-name")
+        # Mock the calls to boto3
+        dynamodb_table_mock = boto3.DynamoDbTableMock()
+
+        # Item the DB returns
+        db_item_return = {'Item': {'adtech_sites': {'https://my-top-level-site.com'}}}
+
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
+
+        ret = auth_lambda_handler.lambda_handler(event, {})
+
+        self.assertEqual(ret['statusCode'], 200)
+        self.assertEqual(
+            ret['body'], '{"authorized_domain": "https://my-top-level-site.com"}')
+
+
+    def _init_dynamodb_mock(self, dynamodb_table_mock, db_item_return):
+        dynamodb_table_mock.mock_override_get_item_return(db_item_return)
+        dynamodb_resource_mock = boto3.DynamoDbResourceMock(
+            dynamodb_table_mock)
+        boto3.resource = MagicMock(return_value=dynamodb_resource_mock)
 
 if __name__ == '__main__':
     unittest.main()

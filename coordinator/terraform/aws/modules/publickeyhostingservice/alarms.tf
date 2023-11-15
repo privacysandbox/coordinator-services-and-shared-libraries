@@ -14,7 +14,7 @@
 
 module "lambda_alarms" {
   count                      = var.public_key_service_alarms_enabled ? 1 : 0
-  source                     = "../shared/lambda_alarms"
+  source                     = "../../monitoring/common/lambda_alarms"
   environment                = var.environment
   lambda_function_name       = aws_lambda_function.get_public_key_lambda.function_name
   cloudwatch_log_group_name  = aws_cloudwatch_log_group.get_public_key_lambda_cloudwatch.name
@@ -29,7 +29,7 @@ module "lambda_alarms" {
 
 module "api_gateway_alarms" {
   count               = var.public_key_service_alarms_enabled ? 1 : 0
-  source              = "../shared/api_gateway_alarms"
+  source              = "../../monitoring/common/api_gateway_alarms"
   api_name            = local.api_gateway_alarm_label
   environment         = var.environment
   api_gateway_id      = aws_apigatewayv2_api.get_public_key_api_gateway.id

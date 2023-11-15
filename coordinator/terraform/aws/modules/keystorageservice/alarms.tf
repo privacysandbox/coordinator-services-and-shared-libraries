@@ -14,7 +14,7 @@
 
 module "create_key_lambda_alarms" {
   count                      = var.key_storage_service_alarms_enabled ? 1 : 0
-  source                     = "../shared/lambda_alarms"
+  source                     = "../../monitoring/common/lambda_alarms"
   environment                = var.environment
   lambda_function_name       = aws_lambda_function.create_key_lambda.function_name
   cloudwatch_log_group_name  = aws_cloudwatch_log_group.create_key_lambda_cloudwatch.name
@@ -29,7 +29,7 @@ module "create_key_lambda_alarms" {
 
 module "get_data_key_lambda_alarms" {
   count                      = var.key_storage_service_alarms_enabled ? 1 : 0
-  source                     = "../shared/lambda_alarms"
+  source                     = "../../monitoring/common/lambda_alarms"
   environment                = var.environment
   lambda_function_name       = aws_lambda_function.get_data_key_lambda.function_name
   cloudwatch_log_group_name  = aws_cloudwatch_log_group.get_data_key_lambda_cloudwatch.name

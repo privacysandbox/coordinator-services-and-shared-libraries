@@ -41,6 +41,7 @@ cc_library(
         "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
         "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/strings",
         "@nlohmann_json//:lib",
     ],
 )

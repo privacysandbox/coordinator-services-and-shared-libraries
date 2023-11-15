@@ -91,7 +91,7 @@ variable "frontend_service_jar" {
         Build with `bazel build //operator/terraform/gcp/applications/jobservice:all`.
       EOT
   type        = string
-  default     = ""
+  default     = "../../jars/FrontendServiceHttpCloudFunction_deploy.jar"
 }
 
 variable "frontend_service_cloudfunction_memory_mb" {
@@ -314,7 +314,7 @@ variable "worker_scale_in_jar" {
         Build with `bazel build //operator/terraform/gcp/applications/jobservice:all`.
       EOT
   type        = string
-  default     = ""
+  default     = "../../jars/WorkerScaleInCloudFunction_deploy.jar"
 }
 
 variable "termination_wait_timeout_sec" {

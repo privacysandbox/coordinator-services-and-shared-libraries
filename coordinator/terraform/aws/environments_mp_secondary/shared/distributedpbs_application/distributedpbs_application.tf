@@ -60,8 +60,9 @@ module "distributedpbs_application" {
   vpc_cidr                   = var.vpc_cidr
   availability_zone_replicas = var.availability_zone_replicas
 
-  auth_table_enable_point_in_time_recovery   = var.auth_table_enable_point_in_time_recovery
-  budget_table_enable_point_in_time_recovery = var.budget_table_enable_point_in_time_recovery
+  auth_table_enable_point_in_time_recovery           = var.auth_table_enable_point_in_time_recovery
+  budget_table_enable_point_in_time_recovery         = var.budget_table_enable_point_in_time_recovery
+  partition_lock_table_enable_point_in_time_recovery = var.partition_lock_table_enable_point_in_time_recovery
 
   beanstalk_solution_stack_name = var.beanstalk_solution_stack_name
 

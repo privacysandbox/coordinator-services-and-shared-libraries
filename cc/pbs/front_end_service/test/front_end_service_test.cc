@@ -31,6 +31,7 @@
 #include "core/config_provider/mock/mock_config_provider.h"
 #include "core/http2_server/mock/mock_http2_server.h"
 #include "core/interface/async_context.h"
+#include "core/interface/configuration_keys.h"
 #include "core/interface/http_server_interface.h"
 #include "core/interface/journal_service_interface.h"
 #include "core/interface/remote_transaction_manager_interface.h"
@@ -129,7 +130,7 @@ GetMockTransactionRequestRouter() {
 
 class FrontEndServiceTest : public testing::Test {
  protected:
-  FrontEndServiceTest() {
+  void SetUp() override {
     InitializeClassComponents();
     InitializeTransactionContext();
   }
@@ -311,7 +312,31 @@ class FrontEndServiceTest : public testing::Test {
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context_;
 };
 
-TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
+struct TestCase {
+  std::string test_name;
+  bool enable_per_site_enrollment;
+};
+
+class FrontEndServiceTestWithParam
+    : public FrontEndServiceTest,
+      public testing::WithParamInterface<TestCase> {
+  void SetUp() override {
+    setenv(core::kPBSAuthorizationEnableSiteBasedAuthorization,
+           GetParam().enable_per_site_enrollment ? "true" : "false",
+           /*replace=*/1);
+    FrontEndServiceTest::SetUp();
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    FrontEndServiceTestWithParam, FrontEndServiceTestWithParam,
+    testing::Values(TestCase{"EnablePerSiteEnrollment", true},
+                    TestCase{"DisablePerSiteEnrollment", false}),
+    [](const testing::TestParamInfo<FrontEndServiceTestWithParam::ParamType>&
+           info) { return info.param.test_name; });
+
+TEST_P(FrontEndServiceTestWithParam,
+       ExecuteConsumeBudgetOperationInvalidRequest) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -351,7 +376,7 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        ExecuteConsumeBudgetOperationTransactionManagerFailure) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
@@ -408,7 +433,8 @@ TEST_F(FrontEndServiceTest,
   }
 }
 
-TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
+TEST_P(FrontEndServiceTestWithParam,
+       ExecuteConsumeBudgetOperationCommandConstruction) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -470,7 +496,8 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
       consume_budget_transaction_context));
 }
 
-TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationTransactionResults) {
+TEST_P(FrontEndServiceTestWithParam,
+       ExecuteConsumeBudgetOperationTransactionResults) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -536,7 +563,7 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationTransactionResults) {
   }
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        BeginTransactionFailsIfNewTransactionsAreDisallowed) {
   auto begin_transaction_context =
       GetBeginTransactionHttpRequestContext_Sample();
@@ -561,7 +588,7 @@ TEST_F(FrontEndServiceTest,
               ResultIs(FailureExecutionResult(12345)));
 }
 
-TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
+TEST_P(FrontEndServiceTestWithParam, BeginTransactionInvalidBody) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -626,7 +653,7 @@ TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
       client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 3);
 }
 
-TEST_F(FrontEndServiceTest, BeginTransactionValidBody) {
+TEST_P(FrontEndServiceTestWithParam, BeginTransactionValidBody) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -723,7 +750,7 @@ TEST_F(FrontEndServiceTest, BeginTransactionValidBody) {
   WaitUntil([&]() { return condition.load(); });
 }
 
-TEST_F(FrontEndServiceTest, OnTransactionCallbackFailed) {
+TEST_P(FrontEndServiceTestWithParam, OnTransactionCallbackFailed) {
   atomic<bool> condition = false;
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
@@ -748,7 +775,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackFailed) {
             0);
 }
 
-TEST_F(FrontEndServiceTest, OnTransactionCallback) {
+TEST_P(FrontEndServiceTestWithParam, OnTransactionCallback) {
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
   transaction_context.request = make_shared<TransactionRequest>();
   transaction_context.request->transaction_id = Uuid::GenerateUuid();
@@ -827,7 +854,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallback) {
   }
 }
 
-TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
+TEST_P(FrontEndServiceTestWithParam, OnTransactionCallbackWithBatchCommands) {
   // Create Batch
   auto batch_budgets1 = GetBatchBudgetConsumptions_Sample1();
   auto batch_command1 = GetBatchConsumeBudgetCommandOverride(
@@ -927,7 +954,8 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
   }
 }
 
-TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsAuthorizedDomain) {
+TEST_P(FrontEndServiceTestWithParam,
+       ObtainTransactionOriginReturnsAuthorizedDomain) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -939,7 +967,8 @@ TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsAuthorizedDomain) {
             "origin");
 }
 
-TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsHeaderValue) {
+TEST_P(FrontEndServiceTestWithParam,
+       ObtainTransactionOriginReturnsHeaderValue) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -954,7 +983,7 @@ TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsHeaderValue) {
             "origin from header");
 }
 
-TEST_F(FrontEndServiceTest, InvalidTransactionId) {
+TEST_P(FrontEndServiceTestWithParam, InvalidTransactionId) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1045,7 +1074,7 @@ TEST_F(FrontEndServiceTest, InvalidTransactionId) {
       client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 }
 
-TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
+TEST_P(FrontEndServiceTestWithParam, ValidTransactionNotValidPhase) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1099,7 +1128,7 @@ TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
               ResultIs(FailureExecutionResult(123)));
 }
 
-TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
+TEST_P(FrontEndServiceTestWithParam, ValidTransactionValidPhase) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1218,7 +1247,7 @@ TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
             SuccessExecutionResult());
 }
 
-TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
+TEST_P(FrontEndServiceTestWithParam, OnExecuteTransactionPhaseCallback) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1282,7 +1311,8 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
   }
 }
 
-TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallbackFailureWithKeys) {
+TEST_P(FrontEndServiceTestWithParam,
+       OnExecuteTransactionPhaseCallbackFailureWithKeys) {
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
@@ -1336,7 +1366,7 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallbackFailureWithKeys) {
   }
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        OnExecuteTransactionPhaseCallbackFailureWithBatchCommands) {
   // Create Batch
   auto batch_budgets1 = GetBatchBudgetConsumptions_Sample1();
@@ -1417,7 +1447,7 @@ TEST_F(FrontEndServiceTest,
   }
 }
 
-TEST_F(FrontEndServiceTest, GetServiceStatus) {
+TEST_P(FrontEndServiceTestWithParam, GetServiceStatus) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -1453,7 +1483,7 @@ TEST_F(FrontEndServiceTest, GetServiceStatus) {
   WaitUntil([&]() { return callback_invoked.load(); });
 }
 
-TEST_F(FrontEndServiceTest, GetServiceStatusFailure) {
+TEST_P(FrontEndServiceTestWithParam, GetServiceStatusFailure) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -1482,7 +1512,7 @@ TEST_F(FrontEndServiceTest, GetServiceStatusFailure) {
   EXPECT_EQ(callback_invoked, false);
 }
 
-TEST_F(FrontEndServiceTest, GetTransactionStatus) {
+TEST_P(FrontEndServiceTestWithParam, GetTransactionStatus) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1592,7 +1622,7 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
   WaitUntil([&]() { return condition.load(); });
 }
 
-TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
+TEST_P(FrontEndServiceTestWithParam, OnGetTransactionStatusCallback) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1684,7 +1714,7 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
   WaitUntil([&]() { return called.load(); });
 }
 
-TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommands) {
+TEST_P(FrontEndServiceTestWithParam, GenerateConsumeBudgetCommands) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
@@ -1754,7 +1784,8 @@ TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommands) {
   EXPECT_EQ(consume_budget_command3->GetBudgetConsumption().request_index, 2);
 }
 
-TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
+TEST_P(FrontEndServiceTestWithParam,
+       GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
@@ -1824,7 +1855,7 @@ TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
             2);
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        GenerateConsumeBudgetCommandsBatchedPerDayDifferentKeys) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -1896,7 +1927,7 @@ TEST_F(FrontEndServiceTest,
             2);
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        GenerateConsumeBudgetCommandsBatchedPerDayDifferentDaysSameKey) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -1971,7 +2002,7 @@ TEST_F(FrontEndServiceTest,
   EXPECT_EQ(consume_budget_command3->GetBudgetConsumption().request_index, 2);
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        GenerateConsumeBudgetCommandsBatchedPerDayCommonDay) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -2102,7 +2133,7 @@ TEST_F(
   }
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        GenerateConsumeBudgetCommandsBatchedPerDayMultipleBatches) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -2204,7 +2235,7 @@ TEST_F(FrontEndServiceTest,
       3);
 }
 
-TEST_F(FrontEndServiceTest,
+TEST_P(FrontEndServiceTestWithParam,
        GenerateConsumeBudgetCommandsBatchedPerDayMultipleBatchesDiffKeys) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();

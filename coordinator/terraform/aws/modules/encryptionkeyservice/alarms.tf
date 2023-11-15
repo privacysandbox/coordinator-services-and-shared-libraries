@@ -14,7 +14,7 @@
 
 module "get_encryption_key_lambda_alarms" {
   count                      = var.alarms_enabled ? 1 : 0
-  source                     = "../shared/lambda_alarms"
+  source                     = "../../monitoring/common/lambda_alarms"
   environment                = var.environment
   lambda_function_name       = aws_lambda_function.get_encryption_key_lambda.function_name
   cloudwatch_log_group_name  = aws_cloudwatch_log_group.get_encryption_key_lambda_cloudwatch.name
@@ -29,7 +29,7 @@ module "get_encryption_key_lambda_alarms" {
 
 module "list_recent_encryption_keys_lambda_alarms" {
   count                      = var.alarms_enabled ? 1 : 0
-  source                     = "../shared/lambda_alarms"
+  source                     = "../../monitoring/common/lambda_alarms"
   environment                = var.environment
   lambda_function_name       = aws_lambda_function.list_recent_encryption_keys_lambda.function_name
   cloudwatch_log_group_name  = aws_cloudwatch_log_group.list_recent_encryption_keys_lambda_cloudwatch.name

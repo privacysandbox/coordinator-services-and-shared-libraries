@@ -12,20 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "local_file" "lambda_python_script" {
-  filename = var.auth_lambda_handler_path
-}
-
-data "archive_file" "python_script_zip" {
-  type        = "zip"
-  output_path = "${path.module}/files/auth_lambda_handler.zip"
-
-  source {
-    content  = data.local_file.lambda_python_script.content
-    filename = "auth_lambda_handler.py"
-  }
-}
-
 data "aws_iam_policy_document" "lambda_iam_role_policy_document" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -45,7 +31,7 @@ resource "aws_iam_role" "lambda_iam_role" {
 data "aws_iam_policy_document" "dynamo_db_access_policy_document" {
   statement {
     actions   = ["dynamodb:GetItem"]
-    resources = ["${var.auth_dynamo_db_table_arn}"]
+    resources = ["${var.auth_dynamo_db_table_arn}", "${var.pbs_authorization_v2_table_arn}"]
   }
 }
 
@@ -70,16 +56,17 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
 }
 
 resource "aws_lambda_function" "lambda" {
-  filename         = data.archive_file.python_script_zip.output_path
+  filename         = var.auth_lambda_handler_path
   function_name    = "${var.environment_prefix}-google-scp-pbs-auth-lambda"
   role             = aws_iam_role.lambda_iam_role.arn
   handler          = "auth_lambda_handler.lambda_handler"
-  source_code_hash = filebase64sha256("${data.archive_file.python_script_zip.output_path}")
+  source_code_hash = filebase64sha256("${var.auth_lambda_handler_path}")
   runtime          = "python3.8"
 
   environment {
     variables = {
-      REPORTING_ORIGIN_AUTH_DYNAMO_DB_TABLE_NAME = "${var.auth_dynamo_db_table_name}"
+      REPORTING_ORIGIN_AUTH_DYNAMO_DB_TABLE_NAME = "${var.auth_dynamo_db_table_name}",
+      PBS_AUTHORIZATION_V2_DYNAMODB_TABLE_NAME   = "${var.pbs_authorization_v2_table_name}"
     }
   }
 }

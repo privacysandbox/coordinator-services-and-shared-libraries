@@ -27,3 +27,7 @@ output "pbs_auth_api_gateway_arn" {
 output "pbs_auth_table_name" {
   value = module.auth_db.auth_dynamo_db_table_name
 }
+
+output "pbs_auth_table_v2_name" {
+  value = module.auth_db.authorization_dynamo_db_table_v2_name
+}

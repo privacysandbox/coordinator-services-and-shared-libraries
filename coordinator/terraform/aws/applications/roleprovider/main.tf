@@ -24,3 +24,10 @@ module "singlepartyroleprovider" {
   privacy_budget_auth_table_name = var.privacy_budget_auth_table_name
   attestation_condition_keys     = var.attestation_condition_keys
 }
+
+module "pbs_authorization_table_v2_records_populator" {
+  source                         = "../../modules/distributedpbs_auth_records"
+  allowed_principals_map_v2      = var.allowed_principals_map_v2
+  coordinator_assume_role_arns   = module.singlepartyroleprovider.coordinator_assume_role_arns
+  privacy_budget_auth_table_name = var.privacy_budget_auth_table_v2_name
+}

@@ -69,16 +69,16 @@ variable "ec2_instance_type" {
 
 variable "auth_lambda_handler_path" {
   description = <<-EOT
-        Path to the python auth lambda handler script.
+        Path to the python auth lambda handler zip.
 
-        If provided as a blank string, uses project-local script
-        "//python/privacybudget/aws/pbs_auth_handler/auth_lambda_handler.py"
+        When deployed with multiparty_coordinator_tar.tgz, this is extracted
+        at "dist/pbs_auth_handler_lambda.zip".
 
-        If not provided, uses the relative path in the distribution tarball
-        (top level under /dist/...)
+        When developing within the scp project itself, it is found in
+        "//bazel-bin/python/privacybudget/aws/pbs_auth_handler/pbs_auth_handler_lambda.zip"
       EOT
   type        = string
-  default     = "../../../dist/auth_lambda_handler.py"
+  default     = "../../../dist/pbs_auth_handler_lambda.zip"
 }
 
 variable "beanstalk_app_version" {
@@ -227,6 +227,12 @@ variable "auth_table_enable_point_in_time_recovery" {
 
 variable "budget_table_enable_point_in_time_recovery" {
   description = "Whether to enable point in time recovery for the budget-keys DynamoDB table."
+  type        = bool
+  default     = true
+}
+
+variable "partition_lock_table_enable_point_in_time_recovery" {
+  description = "Whether to enable point in time recovery for the partition lock DynamoDB table."
   type        = bool
   default     = true
 }

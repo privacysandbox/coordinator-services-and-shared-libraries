@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@py3_privacybudget_gcp_pbs_auth_handler_test_deps//:requirements.bzl", "requirement")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 load("@rules_python//python:defs.bzl", "py_test")
 
@@ -26,6 +27,7 @@ py_test(
         "functions_framework.py",
         "google/cloud.py",
     ],
+    deps = [requirement("publicsuffixlist")],
 )
 
 pkg_files(

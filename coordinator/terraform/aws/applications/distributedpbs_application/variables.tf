@@ -44,15 +44,13 @@ variable "beanstalk_app_version" {
 
 variable "auth_lambda_handler_path" {
   description = <<-EOT
-        Path to the python auth lambda handler script.
+        Path to the python auth lambda handler zip.
 
         When deployed with multiparty_coordinator_tar.tgz, this is extracted
-        at "dist/auth_lambda_handler.py".
+        at "dist/pbs_auth_handler_lambda.zip".
 
         When developing within the scp project itself, it is found in
-        "//python/privacybudget/aws/pbs_auth_handler/auth_lambda_handler.py", but can
-        be copied to the above location using the build script at
-        "//coordinator/terraform/aws/python/copy_local_multiparty_python.sh"
+        "//bazel-bin/python/privacybudget/aws/pbs_auth_handler/pbs_auth_handler_lambda.zip"
       EOT
   type        = string
   nullable    = false
@@ -195,6 +193,10 @@ variable "auth_table_enable_point_in_time_recovery" {
 }
 
 variable "budget_table_enable_point_in_time_recovery" {
+  type = bool
+}
+
+variable "partition_lock_table_enable_point_in_time_recovery" {
   type = bool
 }
 

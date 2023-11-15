@@ -29,46 +29,48 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "core/authorization_service/src/error_codes.h"
+#include "core/config_provider/mock/mock_config_provider.h"
 #include "core/http2_client/src/aws/aws_v4_signer.h"
+#include "core/interface/configuration_keys.h"
 #include "core/interface/type_def.h"
 #include "core/utils/src/base64.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::AuthorizationMetadata;
-using google::scp::core::AuthorizedMetadata;
-using google::scp::core::AwsV4Signer;
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::HttpHeaders;
-using google::scp::core::HttpRequest;
-using google::scp::core::HttpResponse;
-using google::scp::core::RetryExecutionResult;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::test::IsSuccessful;
-using google::scp::core::test::IsSuccessfulAndHolds;
-using google::scp::core::test::ResultIs;
-using google::scp::core::utils::Base64Encode;
-using std::make_pair;
-using std::make_shared;
-using std::shared_ptr;
-using std::string;
-using testing::ContainsRegex;
-using testing::Eq;
-using testing::FieldsAre;
-using testing::Pointee;
-
-using json = nlohmann::json;
-
 namespace google::scp::pbs {
 namespace {
+
+using ::google::scp::core::AuthorizationMetadata;
+using ::google::scp::core::AuthorizedMetadata;
+using ::google::scp::core::AwsV4Signer;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::HttpHeaders;
+using ::google::scp::core::HttpRequest;
+using ::google::scp::core::HttpResponse;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::google::scp::core::test::IsSuccessful;
+using ::google::scp::core::test::IsSuccessfulAndHolds;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::utils::Base64Encode;
+using ::std::make_pair;
+using ::std::make_shared;
+using ::std::shared_ptr;
+using ::std::string;
+using ::testing::ContainsRegex;
+using ::testing::Eq;
+using ::testing::FieldsAre;
+using ::testing::Pointee;
+
+using json = nlohmann::json;
 
 constexpr char kRegion[] = "us-east-1";
 constexpr char kIdentity[] = "identity";
@@ -121,6 +123,52 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest, PrepareRequest) {
               ContainsRegex(absl::StrCat(
                   "SignedHeaders=", absl::StrJoin(kSignedHeaders, ";"), ".*",
                   "signature")));
+  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
+}
+
+TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
+       PrepareRequestWithConfigProvider) {
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  subject_ =
+      AwsHttpRequestResponseAuthInterceptor(kRegion, mock_config_provider);
+  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+              IsSuccessful());
+
+  const auto& headers = *http_request_.headers;
+
+  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
+  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
+
+  ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
+  EXPECT_THAT(headers.find(kAuthorizationHeader)->second,
+              ContainsRegex(absl::StrCat(
+                  "SignedHeaders=", absl::StrJoin(kSignedHeaders, ";"), ".*",
+                  "signature")));
+  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
+}
+
+TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
+       PrepareRequestEnablePerSiteEnrollment) {
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  mock_config_provider->SetBool(
+      core::kPBSAuthorizationEnableSiteBasedAuthorization, true);
+  subject_ =
+      AwsHttpRequestResponseAuthInterceptor(kRegion, mock_config_provider);
+  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+              IsSuccessful());
+
+  const auto& headers = *http_request_.headers;
+
+  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
+  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
+
+  ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
+  EXPECT_THAT(headers.find(kAuthorizationHeader)->second,
+              ContainsRegex(absl::StrCat(
+                  "SignedHeaders=", absl::StrJoin(kSignedHeaders, ";"), ".*",
+                  "signature")));
+  ASSERT_NE(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
+  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader)->second, "true");
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest,

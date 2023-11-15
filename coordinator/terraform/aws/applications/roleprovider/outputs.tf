@@ -16,3 +16,8 @@ output "coordinator_assume_role_arns" {
   description = "Map of assumed role ARNs. Key = principal. Value = assumed role ARN"
   value       = module.singlepartyroleprovider.coordinator_assume_role_arns
 }
+
+output "pbs_authorization_table_v2_auth_records" {
+  description = "Map of assumed role ARNs to string set of adtech sites. Key = IAM role ARN. Value = String set of adtech sites"
+  value       = module.pbs_authorization_table_v2_records_populator.pbs_authorization_table_v2_auth_records
+}

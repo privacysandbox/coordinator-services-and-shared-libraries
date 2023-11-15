@@ -35,3 +35,7 @@ output "pbs_auth_api_gateway_arn" {
 output "pbs_auth_table_name" {
   value = module.distributedpbs_application.pbs_auth_table_name
 }
+
+output "pbs_auth_table_v2_name" {
+  value = module.distributedpbs_application.pbs_auth_table_v2_name
+}

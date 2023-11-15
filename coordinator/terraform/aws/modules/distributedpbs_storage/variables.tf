@@ -51,3 +51,7 @@ variable "partition_lock_table_write_capacity" {
 variable "budget_table_enable_point_in_time_recovery" {
   type = bool
 }
+
+variable "partition_lock_table_enable_point_in_time_recovery" {
+  type = bool
+}

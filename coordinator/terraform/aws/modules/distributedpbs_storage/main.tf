@@ -197,6 +197,10 @@ resource "aws_dynamodb_table" "partition_lock_table" {
   read_capacity  = var.partition_lock_table_read_capacity
   write_capacity = var.partition_lock_table_write_capacity
 
+  point_in_time_recovery {
+    enabled = var.partition_lock_table_enable_point_in_time_recovery
+  }
+
   hash_key = "LockId"
 
   attribute {

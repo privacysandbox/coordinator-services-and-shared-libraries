@@ -25,12 +25,13 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Like with the lambda jars for mpkhs, this defaults to the scp repo file.
-# When used outside of developing within scp repo, proper path must be
-# explicitly given for var.auth_lambda_handler_path, ie.
-# "./python/auth_lambda_handler.py" as indicated in the distribution tarball.
+# auth_lambda_handler_path defaults to the zip file built via the genrule()
+# in //python/privacybudget/aws/pbs_auth_handler/BUILD
+# When used outside of developing within ps-coordinator-all repo, proper path must be
+# explicitly given for var.auth_lambda_handler_path. In the default distribution tarball we generate,
+# the path is "dist/pbs_auth_handler_lambda.zip".
 locals {
-  auth_lambda_handler_path          = var.auth_lambda_handler_path != "" ? var.auth_lambda_handler_path : "${path.module}/../../../../../python/privacybudget/aws/pbs_auth_handler/auth_lambda_handler.py"
+  auth_lambda_handler_path          = var.auth_lambda_handler_path != "" ? var.auth_lambda_handler_path : "${path.module}/../../../../../bazel-bin/python/privacybudget/aws/pbs_auth_handler/pbs_auth_handler_lambda.zip"
   container_repo_name               = (var.container_repo_name == "") ? "${var.environment}-google-scp-pbs-ecr-repository" : var.container_repo_name
   use_sns_to_sqs                    = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != ""
   remote_coordinator_aws_account_id = (var.remote_coordinator_aws_account_id == "" ? data.aws_caller_identity.current.account_id : var.remote_coordinator_aws_account_id)
@@ -94,14 +95,16 @@ module "vpc" {
 module "auth_service" {
   source = "../../modules/distributedpbs_auth_service"
 
-  environment_prefix        = var.environment
-  auth_lambda_handler_path  = local.auth_lambda_handler_path
-  auth_dynamo_db_table_name = module.auth_db.auth_dynamo_db_table_name
-  auth_dynamo_db_table_arn  = module.auth_db.auth_dynamo_db_table_arn
-  enable_domain_management  = var.enable_domain_management
-  parent_domain_name        = var.parent_domain_name
-  service_subdomain         = var.service_subdomain
-  domain_hosted_zone_id     = var.enable_domain_management ? data.aws_route53_zone.hosted_zone[0].zone_id : null
+  environment_prefix              = var.environment
+  auth_lambda_handler_path        = local.auth_lambda_handler_path
+  auth_dynamo_db_table_name       = module.auth_db.auth_dynamo_db_table_name
+  auth_dynamo_db_table_arn        = module.auth_db.auth_dynamo_db_table_arn
+  enable_domain_management        = var.enable_domain_management
+  parent_domain_name              = var.parent_domain_name
+  service_subdomain               = var.service_subdomain
+  domain_hosted_zone_id           = var.enable_domain_management ? data.aws_route53_zone.hosted_zone[0].zone_id : null
+  pbs_authorization_v2_table_arn  = module.auth_db.authorization_dynamo_db_table_v2_arn
+  pbs_authorization_v2_table_name = module.auth_db.authorization_dynamo_db_table_v2_name
 }
 
 module "access_policy" {
@@ -110,6 +113,7 @@ module "access_policy" {
   remote_coordinator_aws_account_id = local.remote_coordinator_aws_account_id
   pbs_auth_api_gateway_arn          = module.auth_service.api_gateway_arn
   pbs_auth_table_name               = module.auth_db.auth_dynamo_db_table_name
+  pbs_auth_table_v2_name            = module.auth_db.authorization_dynamo_db_table_v2_name
   remote_environment                = var.remote_environment
 
   depends_on = [
@@ -128,7 +132,8 @@ module "storage" {
   partition_lock_table_read_capacity  = var.partition_lock_table_read_capacity
   partition_lock_table_write_capacity = var.partition_lock_table_write_capacity
 
-  budget_table_enable_point_in_time_recovery = var.budget_table_enable_point_in_time_recovery
+  budget_table_enable_point_in_time_recovery         = var.budget_table_enable_point_in_time_recovery
+  partition_lock_table_enable_point_in_time_recovery = var.partition_lock_table_enable_point_in_time_recovery
 }
 
 module "beanstalk_storage" {

@@ -50,7 +50,7 @@ resource "google_compute_instance_template" "collector" {
   name        = "${var.environment}-${var.collector_service_name}"
   description = "This template is used to create an opentelemetry collector."
   project     = var.project_id
-  tags        = ["allow-otlp", "allow-hc", "allow-all-egress", "egress-internet"]
+  tags        = ["allow-otlp", "allow-hc", "allow-all-egress", var.egress_internet_tag]
   disk {
     auto_delete  = true
     boot         = true
@@ -98,6 +98,7 @@ resource "google_compute_region_instance_group_manager" "collector" {
     initial_delay_sec = var.vm_startup_delay_seconds
   }
 }
+
 resource "google_compute_region_autoscaler" "collector" {
   name   = "${var.environment}-${var.collector_service_name}-as"
   target = google_compute_region_instance_group_manager.collector.self_link
@@ -110,6 +111,7 @@ resource "google_compute_region_autoscaler" "collector" {
     }
   }
 }
+
 resource "google_compute_health_check" "collector" {
   name = "${var.environment}-${var.collector_service_name}-auto-heal-hc"
   tcp_health_check {
@@ -125,6 +127,18 @@ resource "google_compute_health_check" "collector" {
   }
 }
 
+resource "google_compute_firewall" "fw_allow_otlp" {
+  name          = "${var.environment}-${var.collector_service_name}-fw-allow-otlp"
+  direction     = "INGRESS"
+  network       = var.network
+  source_ranges = ["10.128.0.0/16"]
+  allow {
+    protocol = "tcp"
+    ports    = [var.collector_service_port]
+  }
+  target_tags = ["allow-otlp"]
+}
+
 resource "google_compute_firewall" "fw_allow_hc" {
   name          = "${var.environment}-${var.collector_service_name}-fw-allow-hc"
   provider      = google
@@ -133,7 +147,16 @@ resource "google_compute_firewall" "fw_allow_hc" {
   source_ranges = ["130.211.0.0/22", "35.191.0.0/16", "35.235.240.0/20"]
   allow {
     protocol = "tcp"
-    ports    = [var.collector_service_port]
   }
   target_tags = ["allow-hc"]
+}
+
+resource "google_compute_firewall" "fw_allow_all_egress" {
+  name      = "${var.environment}-${var.collector_service_name}-fw-allow-all-egress"
+  direction = "EGRESS"
+  network   = var.network
+  allow {
+    protocol = "tcp"
+  }
+  target_tags = ["allow-all-egress"]
 }

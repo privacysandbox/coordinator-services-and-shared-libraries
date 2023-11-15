@@ -16,12 +16,9 @@
 
 #pragma once
 
-#include <functional>
 #include <list>
-#include <map>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -29,12 +26,10 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/http_server_interface.h"
+#include "core/interface/http_types.h"
 #include "core/interface/transaction_request_router_interface.h"
 #include "core/interface/type_def.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "pbs/interface/budget_key_provider_interface.h"
 #include "pbs/interface/front_end_service_interface.h"
-#include "pbs/interface/type_def.h"
 #include "pbs/transactions/src/consume_budget_command_factory_interface.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
@@ -337,6 +332,8 @@ class FrontEndService : public FrontEndServiceInterface {
   /// present in the requests coming from the remote coordinator and can be
   /// used to identify such requests.
   std::string remote_coordinator_claimed_identity_;
+
+  bool enable_site_based_authorization_;
 };
 
 }  // namespace google::scp::pbs

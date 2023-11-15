@@ -73,8 +73,10 @@ module "multipartykeyhosting_primary" {
 
   alarms_enabled                    = var.alarms_enabled
   alarm_notification_email          = var.alarm_notification_email
-  sns_topic_arn                     = var.sns_topic_arn
-  sqs_queue_arn                     = var.sqs_queue_arn
+  primary_region_sns_topic_arn      = var.primary_region_sns_topic_arn
+  secondary_region_sns_topic_arn    = var.secondary_region_sns_topic_arn
+  primary_region_sqs_queue_arn      = var.primary_region_sqs_queue_arn
+  secondary_region_sqs_queue_arn    = var.secondary_region_sqs_queue_arn
   cloudwatch_logging_retention_days = var.cloudwatch_logging_retention_days
 
   mpkhs_alarm_eval_period_sec               = var.mpkhs_alarm_eval_period_sec
@@ -85,7 +87,6 @@ module "multipartykeyhosting_primary" {
   mpkhs_api_gw_5xx_threshold                = var.mpkhs_api_gw_5xx_threshold
   mpkhs_api_gw_error_ratio_4xx_threshold    = var.mpkhs_api_gw_error_ratio_4xx_threshold
   mpkhs_api_gw_error_ratio_5xx_threshold    = var.mpkhs_api_gw_error_ratio_5xx_threshold
-  mpkhs_api_gw_total_error_ratio_threshold  = var.mpkhs_api_gw_total_error_ratio_threshold
   mpkhs_total_queue_messages_high_threshold = var.mpkhs_total_queue_messages_high_threshold
 
   get_public_key_cloudfront_5xx_threshold            = var.get_public_key_cloudfront_5xx_threshold

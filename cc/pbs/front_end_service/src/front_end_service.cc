@@ -23,7 +23,6 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -32,7 +31,7 @@
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/configuration_keys.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "core/interface/http_types.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/front_end_service_interface.h"
@@ -123,7 +122,15 @@ FrontEndService::FrontEndService(
       metric_client_(metric_client),
       config_provider_(config_provider),
       aggregated_metric_interval_ms_(core::kDefaultAggregatedMetricIntervalMs),
-      generate_batch_budget_consume_commands_per_day_(false) {}
+      generate_batch_budget_consume_commands_per_day_(false),
+      enable_site_based_authorization_(false) {
+  if (config_provider_ &&
+      !config_provider_->Get(
+          core::kPBSAuthorizationEnableSiteBasedAuthorization,
+          enable_site_based_authorization_)) {
+    enable_site_based_authorization_ = false;
+  }
+}
 
 core::ExecutionResultOr<std::shared_ptr<cpio::AggregateMetricInterface>>
 FrontEndService::RegisterAggregateMetric(const string& name,
@@ -289,16 +296,21 @@ shared_ptr<string> FrontEndService::ObtainTransactionOrigin(
 vector<shared_ptr<TransactionCommand>>
 FrontEndService::GenerateConsumeBudgetCommands(
     list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-    const string& authorized_domain, const Uuid& transaction_id) {
+    const std::string& authorized_domain, const Uuid& transaction_id) {
   vector<shared_ptr<TransactionCommand>> commands;
   size_t index = 0;
   for (auto& budget : consume_budget_metadata_list) {
-    auto budget_key_name_ptr = make_shared<string>(
-        absl::StrCat(authorized_domain, string("/"), *budget.budget_key_name));
+    std::shared_ptr<std::string> budget_key_name;
+    if (enable_site_based_authorization_) {
+      budget_key_name = budget.budget_key_name;
+    } else {
+      budget_key_name = std::make_shared<std::string>(absl::StrCat(
+          authorized_domain, string("/"), *budget.budget_key_name));
+    }
     ConsumeBudgetCommandRequestInfo budget_info(budget.time_bucket,
                                                 budget.token_count, index);
     commands.push_back(consume_budget_command_factory_->ConstructCommand(
-        transaction_id, budget_key_name_ptr, budget_info));
+        transaction_id, budget_key_name, budget_info));
     index++;
   }
   return commands;
@@ -347,8 +359,12 @@ FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
   // Generate
   vector<shared_ptr<TransactionCommand>> generated_commands;
   for (auto& budget_key_time_groups : budget_key_time_groups_map) {
-    auto budget_key_name_ptr = make_shared<string>(absl::StrCat(
+    auto budget_key_name = std::make_shared<std::string>(absl::StrCat(
         authorized_domain, string("/"), budget_key_time_groups.first));
+    if (enable_site_based_authorization_) {
+      budget_key_name =
+          std::make_shared<std::string>(budget_key_time_groups.first);
+    }
     for (auto& time_groups : budget_key_time_groups.second) {
       if (time_groups.second.size() > 1) {
         vector<ConsumeBudgetCommandRequestInfo> budgets;
@@ -358,7 +374,7 @@ FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
         }
         generated_commands.push_back(
             consume_budget_command_factory_->ConstructBatchCommand(
-                transaction_id, budget_key_name_ptr, move(budgets)));
+                transaction_id, budget_key_name, std::move(budgets)));
       } else {
         ConsumeBudgetCommandRequestInfo budget(
             (*time_groups.second.begin()).first->time_bucket,
@@ -366,7 +382,7 @@ FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
             (*time_groups.second.begin()).second);
         generated_commands.push_back(
             consume_budget_command_factory_->ConstructCommand(
-                transaction_id, budget_key_name_ptr, move(budget)));
+                transaction_id, budget_key_name, std::move(budget)));
       }
     }
   }
@@ -415,8 +431,10 @@ ExecutionResult FrontEndService::BeginTransaction(
   }
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
-  execution_result = FrontEndUtils::ParseBeginTransactionRequestBody(
-      http_context.request->body, consume_budget_metadata_list);
+  execution_result = ParseBeginTransactionRequestBody(
+      *http_context.request->auth_context.authorized_domain,
+      http_context.request->body, consume_budget_metadata_list,
+      enable_site_based_authorization_);
 
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
@@ -445,14 +463,18 @@ ExecutionResult FrontEndService::BeginTransaction(
       http_context);
 
   // Log the request's budget info
-  for (auto& consume_budget_metadata : consume_budget_metadata_list) {
+  for (const auto& consume_budget_metadata : consume_budget_metadata_list) {
+    std::string budget_key =
+        enable_site_based_authorization_
+            ? *consume_budget_metadata.budget_key_name
+            : absl::StrCat(
+                  *http_context.request->auth_context.authorized_domain, "/",
+                  *consume_budget_metadata.budget_key_name);
     SCP_DEBUG_CONTEXT(
         kFrontEndService, http_context,
-        "Transaction: %s Budget Key: %s/%s Reporting Time Bucket: %llu Token "
+        "Transaction: %s Budget Key: %s Reporting Time Bucket: %llu Token "
         "Count: %d",
-        transaction_id_string.c_str(),
-        http_context.request->auth_context.authorized_domain->c_str(),
-        consume_budget_metadata.budget_key_name->c_str(),
+        transaction_id_string.c_str(), budget_key.c_str(),
         consume_budget_metadata.time_bucket,
         consume_budget_metadata.token_count);
   }

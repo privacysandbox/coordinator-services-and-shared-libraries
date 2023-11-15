@@ -83,6 +83,8 @@ application_environment_variables = {
   google_scp_pbs_remote_host_address = "<secondary-url>"
   # AWS Region of the secondary environment
   google_scp_pbs_remote_cloud_region = "<secondary-deployment-region>"
+  # Enable site-based authorization in PBS
+  google_scp_pbs_authorization_enable_site_based_authorization = "false"
 
   ## Uncomment one of the configuration blocks below depending on your type of deployment
 
@@ -100,6 +102,3 @@ application_environment_variables = {
   # google_scp_pbs_io_async_executor_threads_count = "160"
   ## END - production default configuration values
 }
-
-# Path to the auth lambda handler relative to this module
-auth_lambda_handler_path = "../../../dist/auth_lambda_handler.py"

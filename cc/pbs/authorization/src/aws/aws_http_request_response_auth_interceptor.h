@@ -16,9 +16,12 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "core/interface/authorization_proxy_interface.h"
+#include "core/interface/config_provider_interface.h"
+#include "core/interface/configuration_keys.h"
 #include "core/interface/http_request_response_auth_interceptor_interface.h"
 #include "core/interface/http_types.h"
 #include "public/core/interface/execution_result.h"
@@ -29,7 +32,19 @@ class AwsHttpRequestResponseAuthInterceptor
     : public core::HttpRequestResponseAuthInterceptorInterface {
  public:
   explicit AwsHttpRequestResponseAuthInterceptor(const std::string& aws_region)
-      : aws_region_(aws_region) {}
+      : aws_region_(aws_region), enable_site_based_authorization_(false) {}
+
+  AwsHttpRequestResponseAuthInterceptor(
+      const std::string& aws_region,
+      std::shared_ptr<core::ConfigProviderInterface> config_provider)
+      : aws_region_(aws_region), enable_site_based_authorization_(false) {
+    if (config_provider &&
+        !config_provider->Get(
+            core::kPBSAuthorizationEnableSiteBasedAuthorization,
+            enable_site_based_authorization_)) {
+      enable_site_based_authorization_ = false;
+    }
+  }
 
   core::ExecutionResult PrepareRequest(
       const core::AuthorizationMetadata& authorization_metadata,
@@ -42,6 +57,7 @@ class AwsHttpRequestResponseAuthInterceptor
 
  private:
   std::string aws_region_;
+  bool enable_site_based_authorization_;
 };
 
 }  // namespace google::scp::pbs

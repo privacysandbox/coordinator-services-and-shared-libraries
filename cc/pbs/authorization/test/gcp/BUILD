@@ -19,6 +19,7 @@ cc_test(
     srcs = ["gcp_http_request_response_auth_interceptor_test.cc"],
     deps = [
         "//cc/core/authorization_service/src:core_authorization_service",
+        "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",

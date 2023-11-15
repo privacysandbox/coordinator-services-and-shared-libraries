@@ -51,6 +51,12 @@ variable "allowed_principals_map" {
   default     = {}
 }
 
+variable "allowed_principals_map_v2" {
+  description = "Map of AWS account IDs, that will assume the coordinator_assume_role, to the list of their associated (eTLD+1) sites."
+  type        = map(list(string))
+  default     = {}
+}
+
 variable "private_key_encryptor_arn" {
   description = "KMS key which will be used to decrypt."
   type        = string
@@ -70,6 +76,15 @@ variable "privacy_budget_auth_table_name" {
   description = "DynamoDB table name of distributed pbs auth table"
   type        = string
   default     = ""
+}
+
+variable "privacy_budget_auth_table_v2_name_suffix" {
+  description = <<-EOT
+    DynamoDB table name suffix of distributed pbs auth table V2.
+    This suffix when combined with environment name prefix forms the table name.
+    EOT
+  type        = string
+  default     = "pbs-authorization-v2"
 }
 
 variable "attestation_condition_keys" {

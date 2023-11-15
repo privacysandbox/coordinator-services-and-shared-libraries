@@ -27,14 +27,17 @@ environment = "operator-demo-env"
 # https://cloud.google.com/spanner/docs/instance-configurations#regional-configurations
 spanner_instance_config = "regional-us-central1"
 # Adjust this based on the job load you expect for your deployment.
-# Monitor the spanner instance utilization to decided on scale out / scale in.
+# Monitor the spanner instance utilization to decide on scale out / scale in.
 # https://console.cloud.google.com/spanner/instances
 spanner_processing_units = 100
 
-# Container image location that packages the job service application
-worker_image  = "<location>/<project>/<repository>/<image>:<tag or digest>"
 instance_type = "n2d-standard-8" # 8 cores, 32GiB
+
+# copybara:strip_begin
+# Container image location that packages the job service application
+worker_image = "<location>/<project>/<repository>/<image>:<tag or digest>"
 
 # Coordinator service accounts to impersonate for authorization and authentication
 coordinator_a_impersonate_service_account = "<CoordinatorAServiceAccountEmail>"
 coordinator_b_impersonate_service_account = "<CoordinatorBServiceAccountEmail>"
+# copybara:strip_end

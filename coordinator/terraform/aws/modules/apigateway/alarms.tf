@@ -14,7 +14,7 @@
 
 module "api_gateway_alarms" {
   count               = var.api_gateway_alarms_enabled ? 1 : 0
-  source              = "../shared/api_gateway_alarms"
+  source              = "../../monitoring/common/api_gateway_alarms"
   api_name            = var.name
   environment         = var.environment
   api_gateway_id      = aws_apigatewayv2_api.api_gateway.id

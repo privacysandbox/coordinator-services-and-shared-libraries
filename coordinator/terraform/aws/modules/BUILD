@@ -111,6 +111,14 @@ pkg_files(
 )
 
 pkg_files(
+    name = "distributed_pbs_auth_records_pkg",
+    srcs = [
+        "//coordinator/terraform/aws/modules/distributedpbs_auth_records",
+    ],
+    prefix = "modules/distributedpbs_auth_records",
+)
+
+pkg_files(
     name = "distributed_pbs_auth_service_pkg",
     srcs = [
         "//coordinator/terraform/aws/modules/distributedpbs_auth_service",
@@ -267,42 +275,6 @@ pkg_files(
 )
 
 pkg_files(
-    name = "shared_lambda_alarms_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/shared/lambda_alarms",
-    ],
-    prefix = "modules/shared/lambda_alarms",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "shared_mp_api_gateway_alarms_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/shared/mp_api_gateway_alarms",
-    ],
-    prefix = "modules/shared/mp_api_gateway_alarms",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "shared_sqs_queue_alarms_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/shared/sqs_queue_alarms",
-    ],
-    prefix = "modules/shared/sqs_queue_alarms",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "shared_api_gateway_alarms_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/shared/api_gateway_alarms",
-    ],
-    prefix = "modules/shared/api_gateway_alarms",
-    strip_prefix = ".",
-)
-
-pkg_files(
     name = "shared_workerenclaveencryptionkey_pkg",
     srcs = [
         "//coordinator/terraform/aws/modules/shared/workerenclaveencryptionkey",
@@ -335,41 +307,5 @@ pkg_files(
         "//coordinator/terraform/aws/modules/publickeyhostingdashboard",
     ],
     prefix = "modules/publickeyhostingdashboard",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "pbsprober_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/pbsprober",
-    ],
-    prefix = "modules/pbsprober",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "adtechmanagement_db_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/adtechmanagement_db",
-    ],
-    prefix = "modules/adtechmanagement_db",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "adtechmanagement_service_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/adtechmanagement_service",
-    ],
-    prefix = "modules/adtechmanagement_service",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "adtechmanagement_storage_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/adtechmanagement_storage",
-    ],
-    prefix = "modules/adtechmanagement_storage",
     strip_prefix = ".",
 )

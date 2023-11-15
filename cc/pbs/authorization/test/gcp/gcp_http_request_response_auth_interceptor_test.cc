@@ -34,35 +34,37 @@
 
 #include "absl/strings/str_cat.h"
 #include "core/authorization_service/src/error_codes.h"
+#include "core/config_provider/mock/mock_config_provider.h"
+#include "core/interface/configuration_keys.h"
 #include "core/interface/type_def.h"
 #include "core/utils/src/base64.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::AuthorizationMetadata;
-using google::scp::core::AuthorizedMetadata;
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::HttpHeaders;
-using google::scp::core::HttpRequest;
-using google::scp::core::HttpResponse;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::test::IsSuccessful;
-using google::scp::core::test::IsSuccessfulAndHolds;
-using google::scp::core::test::ResultIs;
-using google::scp::core::utils::Base64Encode;
-using std::make_shared;
-using std::shared_ptr;
-using std::string;
-using std::vector;
-using testing::Eq;
-using testing::FieldsAre;
-using testing::Pointee;
-
-using json = nlohmann::json;
-
 namespace google::scp::pbs {
 namespace {
+using ::google::scp::core::AuthorizationMetadata;
+using ::google::scp::core::AuthorizedMetadata;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::HttpHeaders;
+using ::google::scp::core::HttpRequest;
+using ::google::scp::core::HttpResponse;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::google::scp::core::test::IsSuccessful;
+using ::google::scp::core::test::IsSuccessfulAndHolds;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::utils::Base64Encode;
+using ::std::make_shared;
+using ::std::shared_ptr;
+using ::std::string;
+using ::std::vector;
+using ::testing::Eq;
+using ::testing::FieldsAre;
+using ::testing::Pointee;
+
+using json = nlohmann::json;
 
 constexpr char kAuthorizationHeader[] = "Authorization";
 
@@ -116,6 +118,48 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest, PrepareRequest) {
   EXPECT_EQ(
       headers.find(kAuthorizationHeader)->second,
       absl::StrCat("Bearer ", authorization_metadata_.authorization_token));
+  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
+}
+
+TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
+       PrepareRequestWithConfigProvider) {
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  subject_ = GcpHttpRequestResponseAuthInterceptor(mock_config_provider);
+  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+              IsSuccessful());
+
+  const auto& headers = *http_request_.headers;
+
+  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
+  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
+
+  ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
+  EXPECT_EQ(
+      headers.find(kAuthorizationHeader)->second,
+      absl::StrCat("Bearer ", authorization_metadata_.authorization_token));
+  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
+}
+
+TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
+       PrepareRequestEnablePerSiteEnrollment) {
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  mock_config_provider->SetBool(
+      core::kPBSAuthorizationEnableSiteBasedAuthorization, true);
+  subject_ = GcpHttpRequestResponseAuthInterceptor(mock_config_provider);
+  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
+              IsSuccessful());
+
+  const auto& headers = *http_request_.headers;
+
+  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
+  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
+
+  ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
+  EXPECT_EQ(
+      headers.find(kAuthorizationHeader)->second,
+      absl::StrCat("Bearer ", authorization_metadata_.authorization_token));
+  ASSERT_NE(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
+  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader)->second, "true");
 }
 
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest,

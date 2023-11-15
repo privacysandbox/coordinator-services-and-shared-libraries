@@ -189,7 +189,8 @@ GcpDependencyFactory::ConstructAuthorizationProxyClient(
     shared_ptr<core::HttpClientInterface> http_client) noexcept {
   return make_unique<core::AuthorizationProxy>(
       auth_service_endpoint_, async_executor, http_client,
-      make_unique<GcpHttpRequestResponseAuthInterceptor>());
+      std::make_unique<GcpHttpRequestResponseAuthInterceptor>(
+          config_provider_));
 }
 
 unique_ptr<BlobStorageProviderInterface>

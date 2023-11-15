@@ -78,21 +78,3 @@ pkg_files(
     prefix = "applications/distributedpbs_application",
     strip_prefix = ".",
 )
-
-pkg_files(
-    name = "distributed_pbs_prober_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/applications/distributedpbs_prober",
-    ],
-    prefix = "applications/distributedpbs_prober",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "adtechmanagement_application_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/applications/adtechmanagement_application",
-    ],
-    prefix = "applications/adtechmanagement_application",
-    strip_prefix = ".",
-)

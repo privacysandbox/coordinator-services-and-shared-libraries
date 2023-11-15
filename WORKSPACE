@@ -345,15 +345,17 @@ rpmpack_dependencies()
 # Download Containers: Begin
 ################################################################################
 
-# Distroless image for running Java.
-container_pull(
-    name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-09-27.
-    digest = "sha256:5cc4322dea54a6732cd2d3feebb18138f62af280a167afcbe94d3be7a607f1e5",
-    registry = "gcr.io",
-    repository = "distroless/java17-debian11",
-    tag = "latest-amd64",
-)
+load("//build_defs:container_dependencies.bzl", container_dependencies = "CONTAINER_DEPS")
+
+[
+    container_pull(
+        name = img_name,
+        digest = img_info["digest"],
+        registry = img_info["registry"],
+        repository = img_info["repository"],
+    )
+    for img_name, img_info in container_dependencies.items()
+]
 
 # Distroless image for running C++.
 container_pull(
@@ -373,16 +375,6 @@ container_pull(
     # Using SHA-256 for reproducibility.
     # TODO: use digest instead of tag, currently it's not working.
     tag = "latest",
-)
-
-# Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
-container_pull(
-    name = "amazonlinux_2",
-    # Latest as of 2023-09-27.
-    digest = "sha256:b081fff5a5d0ad435bc0e61ff06175880dadd76a50597b5cf9087d51906d126a",
-    registry = "index.docker.io",
-    repository = "amazonlinux",
-    tag = "2.0.20230912.0",
 )
 
 ########################################################################
@@ -482,6 +474,26 @@ npm_install(
     name = "npm",
     package_json = "//typescript/coordinator/aws/adtechmanagement:package.json",
     package_lock_json = "//typescript/coordinator/aws/adtechmanagement:package-lock.json",
+)
+
+#######################
+## Python dependencies #
+#######################
+
+load("@rules_python//python:pip.bzl", "pip_install")
+
+# Separate test dependencies are needed for GCP Auth lambda because the regular requirements.txt
+# install the cloud spanner dependency and it times out during local builds. This spanner dependency is only needed
+# for actual code and not for unit tests. Creating a separate test dependencies bundle allows pulling only those deps
+# needed for tests during local builds
+pip_install(
+    name = "py3_privacybudget_gcp_pbs_auth_handler_test_deps",
+    requirements = "//:python/privacybudget/gcp/pbs_auth_handler/config/test_requirements.txt",
+)
+
+pip_install(
+    name = "py3_privacybudget_aws_pbs_auth_handler_deps",
+    requirements = "//:python/privacybudget/aws/pbs_auth_handler/requirements.txt",
 )
 
 #######################

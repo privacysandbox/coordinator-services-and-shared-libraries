@@ -28,9 +28,14 @@ provider "aws" {
 }
 
 locals {
-  public_key_service_jar             = var.public_key_service_jar != "" ? var.public_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/PublicKeyApiGatewayHandlerLambda_deploy.jar"
-  encryption_key_service_jar         = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/EncryptionKeyServiceLambda_deploy.jar"
-  use_sns_to_sqs                     = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != "" && var.primary_region == "us-east-1"
+  public_key_service_jar     = var.public_key_service_jar != "" ? var.public_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/PublicKeyApiGatewayHandlerLambda_deploy.jar"
+  encryption_key_service_jar = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/EncryptionKeyServiceLambda_deploy.jar"
+  use_sns_to_sqs_primary     = var.alarms_enabled && var.primary_region_sns_topic_arn != "" && var.primary_region_sqs_queue_arn != ""
+  use_sns_to_sqs_secondary   = var.alarms_enabled && var.secondary_region_sns_topic_arn != "" && var.secondary_region_sqs_queue_arn != ""
+  # Always must be us-east-1 -- either the primary or secondary is us-east-1
+  sns_cloudfront_arn                 = var.primary_region == "us-east-1" ? var.primary_region_sns_topic_arn : var.secondary_region_sns_topic_arn
+  sqs_cloudfront_arn                 = var.primary_region == "us-east-1" ? var.primary_region_sqs_queue_arn : var.secondary_region_sqs_queue_arn
+  use_cloudfront_arn                 = local.sns_cloudfront_arn != "" && local.sqs_cloudfront_arn != ""
   keydb_table_name                   = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
   keyhosting_api_gateway_name        = "unified_key_hosting"
   keyhosting_api_gateway_alarm_label = "UnifiedKeyHosting"
@@ -187,9 +192,9 @@ resource "aws_sns_topic" "mpkhs" {
 
 resource "aws_sns_topic_subscription" "mpkhs" {
   count     = var.alarms_enabled ? 1 : 0
-  topic_arn = local.use_sns_to_sqs ? var.sns_topic_arn : aws_sns_topic.mpkhs[0].arn
-  protocol  = local.use_sns_to_sqs ? "sqs" : "email"
-  endpoint  = local.use_sns_to_sqs ? var.sqs_queue_arn : var.alarm_notification_email
+  topic_arn = local.use_sns_to_sqs_primary ? var.primary_region_sns_topic_arn : aws_sns_topic.mpkhs[0].arn
+  protocol  = local.use_sns_to_sqs_primary ? "sqs" : "email"
+  endpoint  = local.use_sns_to_sqs_primary ? var.primary_region_sqs_queue_arn : var.alarm_notification_email
 }
 
 # Topic is used for alarms such that messages are not sensitive data.
@@ -205,13 +210,14 @@ resource "aws_sns_topic" "mpkhs_snstopic_secondary" {
 }
 
 resource "aws_sns_topic_subscription" "mpkhs_snstopic_secondary_email_subscription" {
-  count     = var.alarms_enabled ? 1 : 0
-  provider  = aws.secondary
-  topic_arn = aws_sns_topic.mpkhs_snstopic_secondary[0].arn
+  count    = var.alarms_enabled ? 1 : 0
+  provider = aws.secondary
+
+  topic_arn = local.use_sns_to_sqs_secondary ? var.secondary_region_sns_topic_arn : aws_sns_topic.mpkhs_snstopic_secondary[0].arn
 
   #Email requires confirmation
-  protocol = "email"
-  endpoint = var.alarm_notification_email
+  protocol = local.use_sns_to_sqs_secondary ? "sqs" : "email"
+  endpoint = local.use_sns_to_sqs_secondary ? var.secondary_region_sqs_queue_arn : var.alarm_notification_email
 }
 
 # Resource is created only if us-east-1 is not primary or secondary region.
@@ -232,11 +238,11 @@ resource "aws_sns_topic" "mpkhs_snstopic_useast1" {
 resource "aws_sns_topic_subscription" "mpkhs_snstopic_useast1_email_subscription" {
   count     = var.alarms_enabled ? 1 : 0
   provider  = aws.useast1
-  topic_arn = local.use_sns_to_sqs ? var.sns_topic_arn : aws_sns_topic.mpkhs_snstopic_useast1[0].arn
+  topic_arn = local.use_cloudfront_arn ? local.sns_cloudfront_arn : aws_sns_topic.mpkhs_snstopic_useast1[0].arn
 
   #Email requires confirmation
-  protocol = local.use_sns_to_sqs ? "sqs" : "email"
-  endpoint = local.use_sns_to_sqs ? var.sqs_queue_arn : var.alarm_notification_email
+  protocol = local.use_cloudfront_arn ? "sqs" : "email"
+  endpoint = local.use_cloudfront_arn ? local.sqs_cloudfront_arn : aws_sns_topic.mpkhs_snstopic_useast1[0].arn
 }
 
 module "keydb" {
@@ -276,7 +282,7 @@ module "encryptionkeyservice" {
   logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
   alarms_enabled                = var.alarms_enabled
-  sns_topic_arn                 = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  sns_topic_arn                 = var.alarms_enabled ? (var.primary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.primary_region_sns_topic_arn) : null
   alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
   lambda_error_threshold        = var.mpkhs_lambda_error_threshold
   lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
@@ -336,7 +342,7 @@ module "publickeyhostingservice_primary" {
   get_public_key_logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
   public_key_service_alarms_enabled            = var.alarms_enabled
-  get_public_key_sns_topic_arn                 = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  get_public_key_sns_topic_arn                 = var.alarms_enabled ? (var.primary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.primary_region_sns_topic_arn) : null
   get_public_key_alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
   get_public_key_lambda_error_threshold        = var.mpkhs_lambda_error_threshold
   get_public_key_lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
@@ -384,7 +390,7 @@ module "publickeyhostingservice_secondary" {
   get_public_key_logging_retention_days = var.cloudwatch_logging_retention_days
   #Alarms
   public_key_service_alarms_enabled            = var.alarms_enabled
-  get_public_key_sns_topic_arn                 = var.alarms_enabled ? aws_sns_topic.mpkhs_snstopic_secondary[0].arn : null
+  get_public_key_sns_topic_arn                 = var.alarms_enabled ? (var.secondary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs_snstopic_secondary[0].arn : var.secondary_region_sns_topic_arn) : null
   get_public_key_alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
   get_public_key_lambda_error_threshold        = var.mpkhs_lambda_error_threshold
   get_public_key_lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
@@ -421,7 +427,8 @@ module "publickeyhostingcloudfront" {
   service_alternate_domain_names       = var.public_key_service_alternate_domain_names
 
   #Must be us-east-1
-  get_public_key_sns_topic_arn = var.alarms_enabled ? aws_sns_topic.mpkhs_snstopic_useast1[0].arn : null
+  get_public_key_sns_topic_arn = var.alarms_enabled ? (local.sns_cloudfront_arn == "" ? aws_sns_topic.mpkhs_snstopic_useast1[0].arn : local.sns_cloudfront_arn) : null
+
   #Alarms
   public_key_service_alarms_enabled                  = var.alarms_enabled
   get_public_key_alarm_eval_period_sec               = var.mpkhs_alarm_eval_period_sec
@@ -444,7 +451,7 @@ module "apigateway" {
   api_gateway_5xx_threshold         = var.mpkhs_api_gw_5xx_threshold
   api_gateway_alarm_eval_period_sec = var.mpkhs_alarm_eval_period_sec
   api_gateway_api_max_latency_ms    = var.mpkhs_api_gw_max_latency_ms
-  api_gateway_sns_topic_arn         = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.sns_topic_arn) : null
+  api_gateway_sns_topic_arn         = var.alarms_enabled ? (var.primary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.primary_region_sns_topic_arn) : null
   custom_alarm_label                = var.custom_alarm_label
 }
 

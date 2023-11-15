@@ -14,7 +14,7 @@
 
 module "unified_key_hosting_api_gateway_alarms" {
   count  = var.alarms_enabled ? 1 : 0
-  source = "../../modules/shared/mp_api_gateway_alarms"
+  source = "../../monitoring/common/mp_api_gateway_alarms"
 
   environment     = var.environment
   api_name        = local.keyhosting_api_gateway_alarm_label
@@ -23,15 +23,14 @@ module "unified_key_hosting_api_gateway_alarms" {
   eval_period_sec = var.mpkhs_alarm_eval_period_sec
 
   #Alarms
-  error_ratio_4xx_threshold   = var.mpkhs_api_gw_error_ratio_4xx_threshold
-  error_ratio_5xx_threshold   = var.mpkhs_api_gw_error_ratio_5xx_threshold
-  total_error_ratio_threshold = var.mpkhs_api_gw_total_error_ratio_threshold
-  custom_alarm_label          = var.custom_alarm_label
+  error_ratio_4xx_threshold = var.mpkhs_api_gw_error_ratio_4xx_threshold
+  error_ratio_5xx_threshold = var.mpkhs_api_gw_error_ratio_5xx_threshold
+  custom_alarm_label        = var.custom_alarm_label
 }
 
 module "keystorage_api_gateway_alarms" {
   count  = var.alarms_enabled ? 1 : 0
-  source = "../../modules/shared/mp_api_gateway_alarms"
+  source = "../../monitoring/common/mp_api_gateway_alarms"
 
   environment     = var.environment
   api_name        = local.keystorage_api_gateway_alarm_label
@@ -40,8 +39,7 @@ module "keystorage_api_gateway_alarms" {
   eval_period_sec = var.mpkhs_alarm_eval_period_sec
 
   #Alarms
-  error_ratio_4xx_threshold   = var.mpkhs_api_gw_error_ratio_4xx_threshold
-  error_ratio_5xx_threshold   = var.mpkhs_api_gw_error_ratio_5xx_threshold
-  total_error_ratio_threshold = var.mpkhs_api_gw_total_error_ratio_threshold
-  custom_alarm_label          = var.custom_alarm_label
+  error_ratio_4xx_threshold = var.mpkhs_api_gw_error_ratio_4xx_threshold
+  error_ratio_5xx_threshold = var.mpkhs_api_gw_error_ratio_5xx_threshold
+  custom_alarm_label        = var.custom_alarm_label
 }

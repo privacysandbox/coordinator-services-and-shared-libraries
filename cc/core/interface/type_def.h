@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "core/common/proto/common.pb.h"
 
 namespace google::scp::core {
@@ -119,6 +120,7 @@ struct Version {
 static constexpr char kClientActivityIdHeader[] = "x-gscp-client-activity-id";
 static constexpr char kClaimedIdentityHeader[] = "x-gscp-claimed-identity";
 static constexpr const char kAuthHeader[] = "x-auth-token";
+ABSL_CONST_INIT extern const char kEnablePerSiteEnrollmentHeader[];
 
 struct LoadableObject {
   LoadableObject() : is_loaded(false), needs_loader(false) {}

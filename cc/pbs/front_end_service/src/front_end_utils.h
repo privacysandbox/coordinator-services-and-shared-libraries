@@ -17,7 +17,6 @@
 #pragma once
 
 #include <chrono>
-#include <functional>
 #include <list>
 #include <memory>
 #include <string>
@@ -27,9 +26,9 @@
 #include <google/protobuf/util/time_util.h>
 #include <nlohmann/json.hpp>
 
+#include "absl/strings/str_cat.h"
 #include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "core/interface/http_server_interface.h"
+#include "core/interface/http_types.h"
 #include "core/interface/transaction_manager_interface.h"
 #include "core/interface/type_def.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
@@ -40,98 +39,14 @@
 #include "error_codes.h"
 
 namespace google::scp::pbs {
-/*! @copydoc FrontEndServiceInterface
- */
+
+core::ExecutionResult ParseBeginTransactionRequestBody(
+    const std::string& authorized_domain, const core::BytesBuffer& request_body,
+    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
+    bool enable_site_based_authorization) noexcept;
+
 class FrontEndUtils {
  public:
-  static core::ExecutionResult ParseBeginTransactionRequestBody(
-      const core::BytesBuffer& request_body,
-      std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
-    try {
-      auto transaction_request = nlohmann::json::parse(
-          request_body.bytes->begin(), request_body.bytes->end());
-
-      /// The body format of the begin transaction request is:
-      /// {v: "1.0", t: [{ key: '', token: '', reporting_time: ''}, ....]}
-      if (transaction_request.find("v") == transaction_request.end() ||
-          transaction_request.find("t") == transaction_request.end()) {
-        return core::FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-      }
-
-      if (transaction_request["v"] != "1.0") {
-        return core::FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-      }
-
-      std::unordered_set<std::string> visited;
-      for (auto it = transaction_request["t"].begin();
-           it != transaction_request["t"].end(); ++it) {
-        auto consume_budget_transaction_key = it.value();
-        ConsumeBudgetMetadata consume_budget_metadata;
-
-        if (consume_budget_transaction_key.count("key") == 0 ||
-            consume_budget_transaction_key.count("token") == 0 ||
-            consume_budget_transaction_key.count("reporting_time") == 0) {
-          return core::FailureExecutionResult(
-              core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-        }
-
-        consume_budget_metadata.budget_key_name = std::make_shared<std::string>(
-            consume_budget_transaction_key.at("key"));
-        consume_budget_metadata.token_count =
-            consume_budget_transaction_key["token"].get<TokenCount>();
-
-        auto reporting_time =
-            consume_budget_transaction_key["reporting_time"].get<std::string>();
-        google::protobuf::Timestamp reporting_timestamp;
-        if (!google::protobuf::util::TimeUtil::FromString(
-                reporting_time, &reporting_timestamp)) {
-          return core::FailureExecutionResult(
-              core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-        }
-
-        if (reporting_timestamp.seconds() < 0) {
-          return core::FailureExecutionResult(
-              core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-        }
-
-        uint64_t seconds_since_epoch = reporting_timestamp.seconds();
-        std::chrono::nanoseconds reporting_time_nanoseconds =
-            std::chrono::seconds(seconds_since_epoch);
-
-        consume_budget_metadata.time_bucket =
-            reporting_time_nanoseconds.count();
-
-        // TODO: This is a temporary solution to prevent transaction
-        // commands belong to the same reporting hour to execute within the
-        // same transaction. The proper solution is to move this logic to
-        // the transaction commands.
-        auto time_group = budget_key_timeframe_manager::Utils::GetTimeGroup(
-            consume_budget_metadata.time_bucket);
-        auto time_bucket = budget_key_timeframe_manager::Utils::GetTimeBucket(
-            consume_budget_metadata.time_bucket);
-
-        auto visited_str = *consume_budget_metadata.budget_key_name + "_" +
-                           std::to_string(time_group) + "_" +
-                           std::to_string(time_bucket);
-
-        if (visited.find(visited_str) != visited.end()) {
-          return core::FailureExecutionResult(
-              core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-        }
-
-        visited.emplace(visited_str);
-        consume_budget_metadata_list.push_back(consume_budget_metadata);
-      }
-    } catch (...) {
-      return core::FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-
-    return core::SuccessExecutionResult();
-  }
-
   static core::ExecutionResult SerializeTransactionFailedCommandIndicesResponse(
       const std::list<size_t> command_failed_indices,
       core::BytesBuffer& response_body) noexcept {

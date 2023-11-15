@@ -39,11 +39,20 @@ public final class SequenceKeyIdFactory implements KeyIdFactory {
   public String getNextKeyId(KeyDb keyDb) throws ServiceException {
     return encodeKeyIdToString(
         keyDb
-            .listRecentKeys(Duration.ofHours(336))
+            // List all keys that were created in the past 7 weeks.
+            // This is longer than the duration that keys will be used.
+            // Allows for recovering non-production environments that don't
+            // have monitoring of key generation issues and may have failed
+            // for a while.
+            .listRecentKeys(Duration.ofHours(1176))
             .map(a -> decodeKeyIdFromString(a.getKeyId()))
             .sorted()
+            // Find the value of the first keyId where incrementing it by 1
+            // does not equal the next.
             .reduce((i, j) -> i + 1 == j ? j : i)
+            // There should be a single keyId remaining - increment it by 1
             .map(i -> i + 1)
+            // If there are no keys, return 0
             .orElse(0L));
   }
 }

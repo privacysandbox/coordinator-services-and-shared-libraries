@@ -26,8 +26,8 @@ terraform {
   # state in a remote backend.
 
   # backend "gcs" {
-  #   bucket = "[bucket name goes here]"
-  #   prefix = "[key name goes here].tfstate"
+  #   bucket = "<tf_state_bucket_name>"
+  #   prefix = "adtech-services-tfstate"
   # }
 
   required_providers {

@@ -61,15 +61,14 @@ module "multipartykeyhosting_secondary" {
   sqs_queue_arn                     = var.sqs_queue_arn
   cloudwatch_logging_retention_days = var.cloudwatch_logging_retention_days
 
-  mpkhs_alarm_eval_period_sec              = var.mpkhs_alarm_eval_period_sec
-  mpkhs_lambda_error_threshold             = var.mpkhs_lambda_error_threshold
-  mpkhs_lambda_error_log_threshold         = var.mpkhs_lambda_error_log_threshold
-  mpkhs_lambda_max_duration_threshold      = var.mpkhs_lambda_max_duration_threshold
-  mpkhs_api_gw_max_latency_ms              = var.mpkhs_api_gw_max_latency_ms
-  mpkhs_api_gw_5xx_threshold               = var.mpkhs_api_gw_5xx_threshold
-  mpkhs_api_gw_error_ratio_4xx_threshold   = var.mpkhs_api_gw_error_ratio_4xx_threshold
-  mpkhs_api_gw_error_ratio_5xx_threshold   = var.mpkhs_api_gw_error_ratio_5xx_threshold
-  mpkhs_api_gw_total_error_ratio_threshold = var.mpkhs_api_gw_total_error_ratio_threshold
+  mpkhs_alarm_eval_period_sec            = var.mpkhs_alarm_eval_period_sec
+  mpkhs_lambda_error_threshold           = var.mpkhs_lambda_error_threshold
+  mpkhs_lambda_error_log_threshold       = var.mpkhs_lambda_error_log_threshold
+  mpkhs_lambda_max_duration_threshold    = var.mpkhs_lambda_max_duration_threshold
+  mpkhs_api_gw_max_latency_ms            = var.mpkhs_api_gw_max_latency_ms
+  mpkhs_api_gw_5xx_threshold             = var.mpkhs_api_gw_5xx_threshold
+  mpkhs_api_gw_error_ratio_4xx_threshold = var.mpkhs_api_gw_error_ratio_4xx_threshold
+  mpkhs_api_gw_error_ratio_5xx_threshold = var.mpkhs_api_gw_error_ratio_5xx_threshold
 
   get_encryption_key_lambda_ps_client_shim_enabled = var.get_encryption_key_lambda_ps_client_shim_enabled
 

@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 pkg_filegroup(
     name = "modules_pkg",
     srcs = [
+        "//operator/terraform/gcp/modules/adtech_setup",
         "//operator/terraform/gcp/modules/autoscaling",
         "//operator/terraform/gcp/modules/bazel",
         "//operator/terraform/gcp/modules/frontend",

@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 pkg_filegroup(
     name = "operator_tar_environments",
     srcs = [
+        "//operator/terraform/gcp/environments/adtech_setup",
         "//operator/terraform/gcp/environments/demo:demo_files",
         "//operator/terraform/gcp/environments/demo:job_service_link",
         "//operator/terraform/gcp/environments/demo:job_service_outputs_link",

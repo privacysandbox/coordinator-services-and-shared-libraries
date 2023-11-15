@@ -86,7 +86,8 @@ resource "aws_apigatewayv2_stage" "get_public_key_api_gateway_stage" {
       routeKey        = "$context.routeKey",
       status          = "$context.status",
       responseLatency = "$context.responseLatency",
-      responseLength  = "$context.responseLength"
+      responseLength  = "$context.responseLength",
+      userArn         = "$context.identity.userArn"
     })
   }
 

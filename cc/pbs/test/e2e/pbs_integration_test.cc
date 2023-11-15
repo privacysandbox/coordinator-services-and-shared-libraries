@@ -40,7 +40,6 @@
 #include "core/test/utils/logging_utils.h"
 #include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
 #include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/type_def.h"
 #include "pbs/pbs_client/src/pbs_client.h"
 #include "pbs/pbs_client/src/transactional/pbs_transactional_client.h"
 #include "pbs/test/e2e/test_pbs_server_starter/test_pbs_server_starter.h"
@@ -119,12 +118,12 @@ static constexpr size_t kAsyncExecutorQueueCapValue = 10000;
 // NOTE: Transaction Timeout should be atleast the
 // kDefaultPBSRequestWaitTimeInSeconds in these tests.
 static constexpr TimeDuration kTransactionTimeoutInSeconds = 120;
-static constexpr TimeDuration kHTTPClientBackoffDurationInMs = 1000;
+static constexpr TimeDuration kHTTPClientBackoffDurationInMs = 2000;
 static constexpr size_t kHTTPClientMaxRetries = 6;
 static constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 10;
 // NOTE: kDefaultPBSRequestWaitTimeInSeconds > sum(1, 2, 3 ...,
 // kHTTPClientMaxRetries)
-static constexpr seconds kDefaultPBSRequestWaitTimeInSeconds = seconds(30);
+static constexpr seconds kDefaultPBSRequestWaitTimeInSeconds = seconds(60);
 
 namespace google::scp::pbs::test::e2e {
 static string GetRandomString(const string& prefix) {
@@ -360,6 +359,9 @@ class PBSIntegrationTestForTwoServers : public ::testing::Test {
     map<string, string> env_overrides;
     env_overrides[core::kTransactionTimeoutInSecondsConfigName] =
         kTransactionTimeoutInSeconds;
+    env_overrides[core::kPBSAuthorizationEnableSiteBasedAuthorization] = "true";
+    env_overrides[kServiceMetricsBatchPush] = "true";
+    env_overrides[kServiceMetricsNamespace] = "pbs";
 
     auto result =
         server_starter_->RunTwoPbsServers(pbs_config_,

@@ -131,6 +131,11 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
        absl::StrFormat(kAuthHeaderFormat,
                        authorization_metadata.authorization_token)});
 
+  if (enable_site_based_authorization_) {
+    http_request.headers->insert(
+        {std::string(core::kEnablePerSiteEnrollmentHeader), "true"});
+  }
+
   return SuccessExecutionResult();
 }
 

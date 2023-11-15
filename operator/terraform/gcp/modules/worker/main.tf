@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 locals {
-  worker_service_account_email = var.user_provided_worker_sa_email == "" ? google_service_account.worker_service_account[0].email : var.user_provided_worker_sa_email
+  worker_service_account_email = var.user_provided_worker_sa_email
   disk_image_family            = split("/", var.instance_disk_image)[1]
   disk_image_project           = split("/", var.instance_disk_image)[0]
-}
-
-resource "google_service_account" "worker_service_account" {
-  count = var.user_provided_worker_sa_email == "" ? 1 : 0
-  # Service account id has a 30 character limit
-  account_id   = "${var.environment}-worker"
-  display_name = "Worker Service Account"
 }
 
 data "google_compute_image" "tee_image" {
@@ -99,7 +92,6 @@ resource "google_compute_instance_template" "worker_instance_template" {
 
 # JobMetadata read/write permissions
 resource "google_spanner_database_iam_member" "worker_jobmetadatadb_iam" {
-  count    = var.user_provided_worker_sa_email == "" ? 1 : 0
   instance = var.metadatadb_instance_name
   database = var.metadatadb_name
   role     = "roles/spanner.databaseUser"
@@ -108,63 +100,8 @@ resource "google_spanner_database_iam_member" "worker_jobmetadatadb_iam" {
 
 # JobQueue read/write permissions
 resource "google_pubsub_subscription_iam_member" "worker_jobqueue_iam" {
-  count        = var.user_provided_worker_sa_email == "" ? 1 : 0
   role         = "roles/pubsub.subscriber"
   member       = "serviceAccount:${local.worker_service_account_email}"
   subscription = var.job_queue_sub
 }
 
-resource "google_project_iam_member" "worker_storage_iam" {
-  count   = var.user_provided_worker_sa_email == "" ? 1 : 0
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_secretmanager_iam" {
-  count   = var.user_provided_worker_sa_email == "" ? 1 : 0
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_logging_iam" {
-  count   = var.user_provided_worker_sa_email == "" ? 1 : 0
-  role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_traces_iam" {
-  role    = "roles/cloudtrace.admin"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_monitoring_iam" {
-  count   = var.user_provided_worker_sa_email == "" ? 1 : 0
-  role    = "roles/monitoring.editor"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_instance_group_iam" {
-  count   = var.user_provided_worker_sa_email == "" ? 1 : 0
-  role    = "roles/compute.networkAdmin"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_workload_user_iam" {
-  count   = var.user_provided_worker_sa_email == "" ? 1 : 0
-  role    = "roles/confidentialcomputing.workloadUser"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_pubsub_publisher_iam" {
-  count   = var.user_provided_worker_sa_email == "" ? 1 : 0
-  role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
