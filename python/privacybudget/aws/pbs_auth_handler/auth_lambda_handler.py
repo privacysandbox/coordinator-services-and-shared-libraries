@@ -25,7 +25,7 @@ If the value exists, then authorization succeeds. Otherwise it does not.
 """
 
 authorization_failure_stage = ""
-
+psl = PublicSuffixList()
 
 def lambda_handler(event, context):
     if (
@@ -190,7 +190,7 @@ def convert_reported_origin_url_to_site(claimed_identity_url):
     # Hence we remove any http or https protocols from the input.
     # We force https to be the only allowed protocol. http is not allowed.
     # Thus we add https to the dervied site
-    psl = PublicSuffixList()
+    global psl
     claimed_identity_url = claimed_identity_url.replace('http://', '').replace(
         'https://', ''
     )

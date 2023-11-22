@@ -43,11 +43,16 @@ module "distributed_pbs_logs_alarms" {
   reporting_origin_table_read_capacity_alarm_ratio_threshold  = var.reporting_origin_table_read_capacity_alarm_ratio_threshold
   reporting_origin_table_write_capacity_alarm_ratio_threshold = var.reporting_origin_table_write_capacity_alarm_ratio_threshold
 
-  partition_lock_table_read_capacity  = var.partition_lock_table_read_capacity
-  partition_lock_table_write_capacity = var.partition_lock_table_write_capacity
-  budget_table_read_capacity          = var.budget_table_read_capacity
-  budget_table_write_capacity         = var.budget_table_write_capacity
-  auth_table_read_max_capacity        = var.auth_table_read_max_capacity
-  auth_table_write_max_capacity       = var.auth_table_write_max_capacity
-  custom_alarm_label                  = var.custom_alarm_label
+  partition_lock_table_read_capacity                              = var.partition_lock_table_read_capacity
+  partition_lock_table_write_capacity                             = var.partition_lock_table_write_capacity
+  budget_table_read_capacity                                      = var.budget_table_read_capacity
+  budget_table_write_capacity                                     = var.budget_table_write_capacity
+  auth_table_read_max_capacity                                    = var.auth_table_read_max_capacity
+  auth_table_write_max_capacity                                   = var.auth_table_write_max_capacity
+  custom_alarm_label                                              = var.custom_alarm_label
+  pbs_authorization_v2_table_name                                 = module.auth_db.authorization_dynamo_db_table_v2_name
+  pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold  = var.pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold
+  pbs_authorization_v2_table_read_max_capacity                    = var.auth_table_read_max_capacity
+  pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold
+  pbs_authorization_v2_table_write_max_capacity                   = var.auth_table_write_max_capacity
 }

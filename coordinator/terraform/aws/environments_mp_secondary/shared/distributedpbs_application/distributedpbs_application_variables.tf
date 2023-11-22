@@ -430,6 +430,18 @@ variable "reporting_origin_table_write_capacity_alarm_ratio_threshold" {
   default     = "0.99"
 }
 
+variable "pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold" {
+  description = "The capacity limit of PBS authorization V2 table read processing unit"
+  type        = string
+  default     = "0.99"
+}
+
+variable "pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold" {
+  description = "The capacity limit of PBS authorization V2 table write processing unit"
+  type        = string
+  default     = "0.99"
+}
+
 variable "partition_lock_table_read_capacity_alarm_ratio_threshold" {
   description = "The capacity limit of partition lock table read processing unit"
   type        = string

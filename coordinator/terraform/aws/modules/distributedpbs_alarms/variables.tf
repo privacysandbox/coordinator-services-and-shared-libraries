@@ -104,6 +104,11 @@ variable "reporting_origin_table_name" {
   type        = string
 }
 
+variable "pbs_authorization_v2_table_name" {
+  description = "Name of the PBS authorization V2 table"
+  type        = string
+}
+
 variable "budget_key_table_name" {
   description = "Name of the budget key table"
   type        = string
@@ -121,6 +126,18 @@ variable "auth_table_read_max_capacity" {
 }
 
 variable "auth_table_write_max_capacity" {
+  type        = number
+  description = "Max write capacity for auth table"
+
+}
+
+variable "pbs_authorization_v2_table_read_max_capacity" {
+  type        = number
+  description = "Max read capacity for auth table"
+
+}
+
+variable "pbs_authorization_v2_table_write_max_capacity" {
   type        = number
   description = "Max write capacity for auth table"
 
@@ -163,6 +180,16 @@ variable "reporting_origin_table_read_capacity_alarm_ratio_threshold" {
 
 variable "reporting_origin_table_write_capacity_alarm_ratio_threshold" {
   description = "The capacity limit of reporting origin table write processing unit"
+  type        = string
+}
+
+variable "pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold" {
+  description = "The capacity limit of PBS authorization V2 table read processing unit"
+  type        = string
+}
+
+variable "pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold" {
+  description = "The capacity limit of PBS authorization V2 table write processing unit"
   type        = string
 }
 

@@ -95,6 +95,8 @@ module "distributedpbs_application" {
   vcp_flow_logs_traffic_type      = var.vpc_flow_logs_traffic_type
   vpc_flow_logs_retention_in_days = var.vpc_flow_logs_retention_in_days
 
-  privacy_budget_dashboard_time_period_seconds = var.privacy_budget_dashboard_time_period_seconds
-  custom_alarm_label                           = var.custom_alarm_label
+  privacy_budget_dashboard_time_period_seconds                    = var.privacy_budget_dashboard_time_period_seconds
+  custom_alarm_label                                              = var.custom_alarm_label
+  pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold  = var.pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold
+  pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold
 }

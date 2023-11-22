@@ -629,3 +629,85 @@ resource "aws_cloudwatch_metric_alarm" "reporting_origin_table_write_capacity_al
     environment = var.environment
   }
 }
+
+resource "aws_cloudwatch_metric_alarm" "pbs_authorization_v2_table_read_capacity_alarm" {
+  alarm_name        = "InfoDynamodbPBSAuthorizationV2TableReadCapacityRatio${var.custom_alarm_label}"
+  alarm_description = "PBS authorization V2 table is reaching its read capacity units limit."
+
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = var.pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold
+
+  evaluation_periods = 1
+
+  insufficient_data_actions = []
+  treat_missing_data        = "notBreaching"
+  alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
+
+  metric_query {
+    id          = "e1"
+    expression  = "m1/(${var.pbs_authorization_v2_table_read_max_capacity}*${var.eval_period_sec})"
+    label       = "${var.environment} ${var.pbs_authorization_v2_table_name} Read Capacity Usage Ratio"
+    return_data = "true"
+  }
+
+  metric_query {
+    id = "m1"
+
+    metric {
+      metric_name = "ConsumedReadCapacityUnits"
+      namespace   = "AWS/DynamoDB"
+      period      = var.eval_period_sec
+      stat        = "Sum"
+
+      dimensions = {
+        TableName = var.pbs_authorization_v2_table_name
+      }
+    }
+  }
+
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "pbs_authorization_v2_table_write_capacity_alarm" {
+  alarm_name        = "InfoDynamodbPBSAuthorizationV2TableWriteCapacityRatio${var.custom_alarm_label}"
+  alarm_description = "PBS authorization V2 table is reaching its write capacity units limit."
+
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold
+
+  evaluation_periods = 1
+
+  insufficient_data_actions = []
+  treat_missing_data        = "notBreaching"
+  alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
+
+  metric_query {
+    id          = "e1"
+    expression  = "m1/(${var.pbs_authorization_v2_table_write_max_capacity}*${var.eval_period_sec})"
+    label       = "${var.environment} ${var.pbs_authorization_v2_table_name} Write Capacity Usage Ratio"
+    return_data = "true"
+  }
+
+  metric_query {
+    id = "m1"
+
+    metric {
+      metric_name = "ConsumedWriteCapacityUnits"
+      namespace   = "AWS/DynamoDB"
+      period      = var.eval_period_sec
+      stat        = "Sum"
+
+      dimensions = {
+        TableName = var.pbs_authorization_v2_table_name
+      }
+    }
+  }
+
+  tags = {
+    environment = var.environment
+  }
+}

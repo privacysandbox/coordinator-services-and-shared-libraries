@@ -22,7 +22,7 @@ from publicsuffixlist import PublicSuffixList
 FAILURE = -1
 
 add_failure_stage_context = False
-
+psl = PublicSuffixList()
 
 def forbidden(stage):
   if add_failure_stage_context:
@@ -130,7 +130,7 @@ def convert_claimed_identity_url_to_site(claimed_identity_url):
     # Hence we remove any http or https protocols from the input.
     # We force https to be the only allowed protocol. http is not allowed.
     # Thus we add https to the dervied site
-    psl = PublicSuffixList()
+    global psl
     claimed_identity_url = claimed_identity_url.replace('http://', '').replace(
         'https://', ''
     )

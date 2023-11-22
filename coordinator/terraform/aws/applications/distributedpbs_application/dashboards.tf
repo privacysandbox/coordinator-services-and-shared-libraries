@@ -15,9 +15,10 @@ module "distributed_pbs_dashboards" {
   source = "../../modules/privacybudgetdashboard"
   count  = var.alarms_enabled ? 1 : 0
 
-  environment = var.environment
-  region      = var.aws_region
-  account_id  = local.account_id
+  environment        = var.environment
+  region             = var.aws_region
+  account_id         = local.account_id
+  custom_alarm_label = var.custom_alarm_label
 
   privacy_budget_api_gateway_id                = module.auth_service.api_gateway_id
   privacy_budget_load_balancer_id              = regex("app/.*", module.beanstalk_environment.elb_loadbalancers[0])

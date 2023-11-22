@@ -45,3 +45,8 @@ variable "privacy_budget_autoscaling_group_name" {
   description = "Logical grouping of PBS EC2 instances."
   type        = string
 }
+
+variable "custom_alarm_label" {
+  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
+  type        = string
+}

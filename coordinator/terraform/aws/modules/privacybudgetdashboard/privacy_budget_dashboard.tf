@@ -355,6 +355,45 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
         {
           "height" : 6,
           "width" : 12,
+          "y" : 71,
+          "x" : 24,
+          "type" : "metric",
+          "properties" : {
+            "metrics" : [
+              ["AWS/DynamoDB", "ProvisionedWriteCapacityUnits", "TableName", "${var.environment}-pbs-authorization-v2", { "region" : "${var.region}" }],
+              [".", "ConsumedWriteCapacityUnits", ".", ".", { "region" : "${var.region}" }]
+            ],
+            "view" : "timeSeries",
+            "stacked" : false,
+            "region" : "${var.region}",
+            "title" : "pbs-authorization-v2 Write Capacity",
+            "period" : var.privacy_budget_dashboard_time_period_seconds,
+            "stat" : "Sum"
+          }
+        },
+        {
+          "height" : 6,
+          "width" : 12,
+          "y" : 71,
+          "x" : 36,
+          "type" : "metric",
+          "properties" : {
+            "metrics" : [
+              ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${var.environment}-pbs-authorization-v2", { "region" : "${var.region}", "color" : "#ff7f0e" }],
+              [".", "ProvisionedReadCapacityUnits", ".", ".", { "region" : "${var.region}", "color" : "#1f77b4" }]
+            ],
+            "view" : "timeSeries",
+            "stacked" : false,
+            "region" : "${var.region}",
+            "title" : "pbs-authorization-v2 Read Capacity",
+            "period" : var.privacy_budget_dashboard_time_period_seconds,
+            "stat" : "Sum"
+          }
+        },
+
+        {
+          "height" : 6,
+          "width" : 12,
           "y" : 77,
           "x" : 12,
           "type" : "metric",
@@ -399,12 +438,14 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "properties" : {
             "title" : "PBS Dynamo DB Alarms",
             "alarms" : [
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:${var.environment}_pbs_dynamodb_budget_key_table_write_capacity_ratio_alarm",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:${var.environment}_pbs_dynamodb_reporting_origin_table_write_capacity_ratio_alarm",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:${var.environment}_pbs_dynamodb_partition_lock_table_write_capacity_ratio_alarm",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:${var.environment}_pbs_dynamodb_partition_lock_table_read_capacity_ratio_alarm",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:${var.environment}_pbs_dynamodb_reporting_origin_table_read_capacity_ratio_alarm",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:${var.environment}_pbs_dynamodb_budget_key_table_read_capacity_ratio_alarm"
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbBudgetKeyTableWriteCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbBudgetKeyTableReadCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbReportingOriginTableWriteCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbReportingOriginTableReadCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPBSAuthorizationV2TableWriteCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPBSAuthorizationV2TableReadCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPartitionLockTableReadCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPartitionLockTableWriteCapacityRatio${var.custom_alarm_label}"
             ]
           }
         },
@@ -426,10 +467,9 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "x" : 0,
           "type" : "alarm",
           "properties" : {
-            "title" : "PBS ELB Errors",
+            "title" : "PBS ELB Errors alarms",
             "alarms" : [
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:PBS_ELB4xxErrorRatioHigh",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:PBS_ELB5xxErrorRatioHigh"
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:WarningELB4xxErrorRatioHigh${var.custom_alarm_label}",
             ]
           }
         },
@@ -441,14 +481,12 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["AWS/ApplicationELB", "RequestCountPerTarget", "TargetGroup", "targetgroup/awseb-AWSEB-1JDWQ5B65VLJ1/33660c498cedb7b4", "AvailabilityZone", "${var.region}a", { "region" : "${var.region}" }],
-              ["...", "${var.region}b", { "region" : "${var.region}" }],
-              ["...", "${var.region}c", { "region" : "${var.region}" }]
+              ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${var.privacy_budget_load_balancer_id}"]
             ],
             "view" : "timeSeries",
             "stacked" : false,
             "region" : "${var.region}",
-            "title" : "ELB Request Count Per Target",
+            "title" : "ELB Request Count",
             "period" : var.privacy_budget_dashboard_time_period_seconds,
             "stat" : "Sum",
             "yAxis" : {
@@ -653,7 +691,9 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
               [".", "HTTPCode_ELB_5XX_Count", ".", "."]
             ],
             "region" : "${var.region}",
-            "title" : "ELB Error Count"
+            "title" : "ELB Error Count",
+            "period" : var.privacy_budget_dashboard_time_period_seconds,
+            "stat" : "Sum"
           }
         },
         {
@@ -670,7 +710,9 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
               [".", "HTTPCode_Target_2XX_Count", ".", "."]
             ],
             "region" : "${var.region}",
-            "title" : "Target Response Codes"
+            "title" : "Target Response Codes",
+            "period" : var.privacy_budget_dashboard_time_period_seconds,
+            "stat" : "Sum"
           }
         },
         {
@@ -685,7 +727,10 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
             "metrics" : [
               ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${var.privacy_budget_load_balancer_id}"]
             ],
-            "region" : "${var.region}"
+            "region" : "${var.region}",
+            "title" : "Target Response Time",
+            "period" : var.privacy_budget_dashboard_time_period_seconds,
+            "stat" : "Average"
           }
         }
       ]
