@@ -353,10 +353,21 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           }
         },
         {
+          "height" : 1,
+          "width" : 24,
+          "y" : 104,
+          "x" : 0,
+          "type" : "text",
+          "properties" : {
+            "markdown" : "## PBS Authorization V2 DynamoDB table",
+            "background" : "transparent"
+          }
+        },
+        {
           "height" : 6,
           "width" : 12,
-          "y" : 71,
-          "x" : 24,
+          "y" : 105,
+          "x" : 0,
           "type" : "metric",
           "properties" : {
             "metrics" : [
@@ -374,8 +385,8 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
         {
           "height" : 6,
           "width" : 12,
-          "y" : 71,
-          "x" : 36,
+          "y" : 105,
+          "x" : 12,
           "type" : "metric",
           "properties" : {
             "metrics" : [
@@ -390,7 +401,6 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
             "stat" : "Sum"
           }
         },
-
         {
           "height" : 6,
           "width" : 12,
