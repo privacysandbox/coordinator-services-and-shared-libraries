@@ -16,8 +16,7 @@ module "singlepartyroleprovider" {
   source = "../../modules/keymanagementroleprovider"
 
   environment                    = var.environment
-  allowed_principals             = var.allowed_principals
-  allowed_principals_map         = var.allowed_principals_map
+  allowed_principals_map_v2      = var.allowed_principals_map_v2
   private_key_encryptor_arn      = var.private_key_encryptor_arn
   private_key_api_gateway_arn    = var.private_key_api_gateway_arn
   privacy_budget_api_gateway_arn = var.privacy_budget_api_gateway_arn

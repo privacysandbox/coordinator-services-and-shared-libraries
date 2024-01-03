@@ -36,9 +36,9 @@ import org.mockito.Mockito;
 
 public class GcpMetricClientManualTest {
   // Change PROJECT_ID, ZONE, INSTANCE_ID to your own testing params.
-  private static final String PROJECT_ID = "admcloud-adtech1";
+  private static final String PROJECT_ID = "";
   private static final String ZONE = "us-central1-c";
-  private static final String INSTANCE_ID = "8002517643298911683";
+  private static final String INSTANCE_ID = "";
 
   // Make your own metric or leave with default value
   private static final String METRIC_NAME = "test metric avoid duplicate";

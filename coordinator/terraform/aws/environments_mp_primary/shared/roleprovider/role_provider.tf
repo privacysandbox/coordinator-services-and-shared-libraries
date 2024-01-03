@@ -32,8 +32,6 @@ module "roleprovider" {
   source = "../../../applications/roleprovider"
 
   environment                       = var.environment
-  allowed_principals                = var.allowed_principals
-  allowed_principals_map            = var.allowed_principals_map
   private_key_encryptor_arn         = var.private_key_encryptor_arn
   private_key_api_gateway_arn       = var.private_key_api_gateway_arn
   privacy_budget_api_gateway_arn    = var.privacy_budget_api_gateway_arn

@@ -44,15 +44,15 @@ function deploy_pbs_base() {
 
     if [ "$auto_approve" = true ]; then
       if [ "$use_tf_plan" = true ]; then
-        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false -auto-approve dpbs_base_tfplan_$plan_version_suffix | tee tfapply.dpbs_base_$plan_version_suffix.txt
+        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false -auto-approve tfplan.pbs_base_$plan_version_suffix | tee $environment_dir/distributedpbs_base/tfapply.pbs_base_$plan_version_suffix.txt
       else
-        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false -auto-approve | tee tfapply.dpbs_base_$plan_version_suffix.txt
+        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false -auto-approve | tee $environment_dir/distributedpbs_base/tfapply.pbs_base_$plan_version_suffix.txt
       fi
     else
       if [ "$use_tf_plan" = true ]; then
-        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false dpbs_base_tfplan_$plan_version_suffix | tee tfapply.dpbs_base_$plan_version_suffix.txt
+        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false tfplan.pbs_base_$plan_version_suffix | tee $environment_dir/distributedpbs_base/tfapply.pbs_base_$plan_version_suffix.txt
       else
-        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false | tee tfapply.dpbs_base_$plan_version_suffix.txt
+        terraform -chdir=$environment_dir/distributedpbs_base apply -input=false | tee $environment_dir/distributedpbs_base/tfapply.pbs_base_$plan_version_suffix.txt
       fi
     fi
 
@@ -88,16 +88,16 @@ function deploy_pbs_application() {
     if [ "$auto_approve" = true ]; then
       if [ "$use_tf_plan" = true ]; then
         terraform -chdir=$environment_dir/distributedpbs_application apply -input=false \
-                  -auto-approve dpbs_app_tfplan_$plan_version_suffix | tee tfapply.dpbs_app_$plan_version_suffix.txt
+                  -auto-approve tfplan.pbs_app_$plan_version_suffix | tee $environment_dir/distributedpbs_application/tfapply.pbs_app_$plan_version_suffix.txt
       else
         terraform -chdir=$environment_dir/distributedpbs_application apply -input=false \
-          -auto-approve | tee tfapply.dpbs_app_$plan_version_suffix.txt
+          -auto-approve | tee $environment_dir/distributedpbs_application/tfapply.pbs_app_$plan_version_suffix.txt
       fi
     else
       if [ "$use_tf_plan" = true ]; then
-        terraform -chdir=$environment_dir/distributedpbs_application apply -input=false dpbs_app_tfplan_$plan_version_suffix | tee tfapply.dpbs_app_$plan_version_suffix.txt
+        terraform -chdir=$environment_dir/distributedpbs_application apply -input=false tfplan.pbs_app_$plan_version_suffix | tee $environment_dir/distributedpbs_application/tfapply.pbs_app_$plan_version_suffix.txt
       else
-        terraform -chdir=$environment_dir/distributedpbs_application apply -input=false | tee tfapply.dpbs_app_$plan_version_suffix.txt
+        terraform -chdir=$environment_dir/distributedpbs_application apply -input=false | tee $environment_dir/distributedpbs_application/tfapply.pbs_app_$plan_version_suffix.txt
       fi
     fi
 }
@@ -114,12 +114,12 @@ function validate_input() {
   fi
 
   if [ "$use_tf_plan" = true ]; then
-    if [ ! -f "$environment_dir/distributedpbs_base/dpbs_base_tfplan_$plan_version_suffix" ]; then
-      echo "Trying to apply a tf_plan but \'dpbs_base_tfplan_$plan_version_suffix\' does not exist."
+    if [ ! -f "$environment_dir/distributedpbs_base/tfplan.pbs_base_$plan_version_suffix" ]; then
+      echo "Trying to apply a tf_plan but \'tfplan.pbs_base_$plan_version_suffix\' does not exist."
       exit 1
     fi
-    if [ ! -f "$environment_dir/distributedpbs_application/dpbs_app_tfplan_$plan_version_suffix" ]; then
-      echo "Trying to apply a tf_plan but \'dpbs_app_tfplan_$plan_version_suffix\' does not exist."
+    if [ ! -f "$environment_dir/distributedpbs_application/tfplan.pbs_app_$plan_version_suffix" ]; then
+      echo "Trying to apply a tf_plan but \'tfplan.pbs_app_$plan_version_suffix\' does not exist."
       exit 1
     fi
   fi

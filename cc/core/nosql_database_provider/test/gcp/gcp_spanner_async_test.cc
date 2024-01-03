@@ -107,7 +107,7 @@ constexpr char kDefaultPartitionKeyName[] = "BudgetKeyId";
 constexpr char kDefaultSortKeyName[] = "Timeframe";
 constexpr char kValueName[] = "Value";
 
-#define PROJECT "admcloud-coordinator1"
+#define PROJECT "not-a-real-project"
 #define INSTANCE "test-instance"
 #define DATABASE "test-database"
 

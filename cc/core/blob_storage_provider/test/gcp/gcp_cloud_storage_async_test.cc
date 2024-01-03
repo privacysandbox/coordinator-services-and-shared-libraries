@@ -93,7 +93,7 @@ using testing::Pointwise;
 
 using CloudStatusCode = google::cloud::StatusCode;
 
-constexpr char kProject[] = "admcloud-coordinator1";
+constexpr char kProject[] = "not-a-real-project";
 
 constexpr char kBucketName[] = "test-bucket";
 

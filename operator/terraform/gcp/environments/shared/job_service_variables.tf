@@ -189,7 +189,7 @@ variable "instance_type" {
 variable "instance_disk_image" {
   description = "The image from which to initialize the worker instance disk."
   type        = string
-  default     = "confidential-space-images/confidential-space-debug"
+  default     = "confidential-space-images/confidential-space"
 }
 
 variable "worker_logging_enabled" {

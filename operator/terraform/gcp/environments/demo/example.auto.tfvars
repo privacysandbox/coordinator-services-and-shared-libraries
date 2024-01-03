@@ -33,11 +33,11 @@ spanner_processing_units = 100
 
 instance_type = "n2d-standard-8" # 8 cores, 32GiB
 
-# copybara:strip_begin
 # Container image location that packages the job service application
-worker_image = "<location>/<project>/<repository>/<image>:<tag or digest>"
+# If not set otherwise, uncomment and edit the line below:
+#worker_image = "<location>/<project>/<repository>/<image>:<tag or digest>"
 
 # Coordinator service accounts to impersonate for authorization and authentication
-coordinator_a_impersonate_service_account = "<CoordinatorAServiceAccountEmail>"
-coordinator_b_impersonate_service_account = "<CoordinatorBServiceAccountEmail>"
-# copybara:strip_end
+# If not set otherwise, uncomment and edit the lines below:
+#coordinator_a_impersonate_service_account = "<CoordinatorAServiceAccountEmail>"
+#coordinator_b_impersonate_service_account = "<CoordinatorBServiceAccountEmail>"

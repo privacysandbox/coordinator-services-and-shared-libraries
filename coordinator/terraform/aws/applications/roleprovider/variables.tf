@@ -17,20 +17,6 @@ variable "environment" {
   type        = string
 }
 
-variable "allowed_principals" {
-  type        = list(string)
-  description = <<-EOT
-  AWS account IDs that will assume coordinator_assume_role
-
-  DEPRECATED: Use allowed_principals_map instead.
-  EOT
-}
-
-variable "allowed_principals_map" {
-  type        = map(string)
-  description = "Map of AWS account IDs that will assume coordinator_assume_role associated with their reporting_origin domain"
-}
-
 variable "allowed_principals_map_v2" {
   type        = map(list(string))
   description = "Map of AWS account IDs, that will assume the coordinator_assume_role, to the list of their associated (eTLD+1) sites."

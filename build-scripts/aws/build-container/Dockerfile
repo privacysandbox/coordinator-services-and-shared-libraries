@@ -21,11 +21,13 @@ RUN \
     apt-get -y upgrade && \
     apt-get -y install \
         python3 \
+        python3-venv \
         python3-pkg-resources \
         python-is-python3 \
         2to3 \
         software-properties-common \
         unzip \
+        zip \
         git \
         curl \
         gnupg \
