@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.5.0...v1.5.1) (2023-12-12)
+
+* **Important note**
+  * SSH access to PBS EC2 instances restricted to localhost only
+  * Starting with this patch, terraform variables allowed_principals_map and allowed_principals are no longer supported and need to be removed from the tfvars file in roleprovider environment
+
+### Changes
+  * Limited SSH access to PBS EC2 instances from localhost only.
+  * Changed to generate operator IAM roles based on new allowed_principals_map_v2 map.
+  * Added python3-venv and zip utilities while building container and updated
+    container dependencies.
+  * Fixed GCP alarm window functions.
+
 ## [1.5.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.4.0...v1.5.0) (2023-11-14)
 
 * **Important note**

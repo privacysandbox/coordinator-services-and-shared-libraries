@@ -36,7 +36,7 @@ using google::scp::core::errors::GetErrorMessage;
 using std::make_shared;
 using std::string;
 
-constexpr char kProject[] = "admcloud-coordinator1";
+constexpr char kProject[] = "not-a-real-project";
 
 constexpr char kBucketName[] = "test-bucket";
 

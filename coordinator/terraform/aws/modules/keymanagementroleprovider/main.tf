@@ -37,7 +37,6 @@ locals {
     Effect   = "Allow",
     Resource = arn
   } if arn != ""])
-  allowed_principals_map = merge({ for arn in var.allowed_principals : arn => "" }, var.allowed_principals_map)
 }
 
 # KMS Decrypt policy contains attestation condition keys (enclave hashes) only if attestation_condition_keys variable is not empty.
@@ -76,7 +75,7 @@ resource "aws_iam_policy" "coordinator_assume_role_policy" {
 
 # Create a role for each allowed_principal
 resource "aws_iam_role" "coordinator_assume_role" {
-  for_each = local.allowed_principals_map
+  for_each = var.allowed_principals_map_v2
 
   name = "${var.environment}_${each.key}_coordinator_assume_role"
   assume_role_policy = jsonencode({
@@ -100,18 +99,4 @@ resource "aws_iam_role_policy_attachment" "coordinator_assume_role_policy" {
 
   role       = each.value.name
   policy_arn = aws_iam_policy.coordinator_assume_role_policy.arn
-}
-
-resource "aws_dynamodb_table_item" "pbs_auth_table_item" {
-  # Create nothing if no table name is given
-  for_each   = var.privacy_budget_auth_table_name == "" ? {} : local.allowed_principals_map
-  table_name = var.privacy_budget_auth_table_name
-  hash_key   = "iam_role"
-
-  item = <<ITEM
-{
-  "iam_role": {"S": "${aws_iam_role.coordinator_assume_role[each.key].arn}"},
-  "reporting_origin": {"S": "${each.value}"}
-}
-ITEM
 }

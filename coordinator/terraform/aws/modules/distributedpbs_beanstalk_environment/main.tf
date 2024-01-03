@@ -529,6 +529,14 @@ resource "aws_elastic_beanstalk_environment" "beanstalk_app_environment" {
     resource  = ""
   }
 
+  # Limit SSH to VMs to localhost only.
+  setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "SSHSourceRestriction"
+    value     = "tcp,22,22,127.0.0.1/32"
+    resource  = ""
+  }
+
   setting {
     namespace = "aws:elasticbeanstalk:cloudwatch:logs"
     name      = "StreamLogs"

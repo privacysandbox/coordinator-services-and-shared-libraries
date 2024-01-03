@@ -35,8 +35,8 @@ function plan_pbs_base() {
 
 
     terraform -chdir=$environment_dir/distributedpbs_base init -input=false
-    terraform -chdir=$environment_dir/distributedpbs_base plan -input=false -out=dpbs_base_tfplan_$plan_version_suffix
-    terraform -chdir=$environment_dir/distributedpbs_base show -no-color dpbs_base_tfplan_$plan_version_suffix > tfplan.dpbs_base_$plan_version_suffix.txt
+    terraform -chdir=$environment_dir/distributedpbs_base plan -input=false -out=tfplan.pbs_base_$plan_version_suffix
+    terraform -chdir=$environment_dir/distributedpbs_base show -no-color tfplan.pbs_base_$plan_version_suffix > $environment_dir/distributedpbs_base/tfplan.pbs_base_$plan_version_suffix.txt
 }
 
 function plan_pbs_application() {
@@ -57,8 +57,8 @@ function plan_pbs_application() {
     echo "beanstalk_app_version = \"$image_version_tag\"" >> $generated_version_tf_vars_file
 
     terraform -chdir=$environment_dir/distributedpbs_application init -input=false
-    terraform -chdir=$environment_dir/distributedpbs_application plan -input=false -out=dpbs_app_tfplan_$plan_version_suffix
-    terraform -chdir=$environment_dir/distributedpbs_application show -no-color dpbs_app_tfplan_$plan_version_suffix > tfplan.dpbs_app_$plan_version_suffix.txt
+    terraform -chdir=$environment_dir/distributedpbs_application plan -input=false -out=tfplan.pbs_app_$plan_version_suffix
+    terraform -chdir=$environment_dir/distributedpbs_application show -no-color tfplan.pbs_app_$plan_version_suffix > $environment_dir/distributedpbs_application/tfplan.pbs_app_$plan_version_suffix.txt
 }
 
 function validate_input() {

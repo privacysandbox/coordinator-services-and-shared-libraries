@@ -15,7 +15,6 @@
 environment = "<environment>"
 aws_region  = "us-west-2"
 
-allowed_principals_map    = { /* example: "123456789109" = "foo.com" */ }
 allowed_principals_map_v2 = { /* example: "123456789109" = ["foo.com"] */ }
 
 private_key_encryptor_arn      = "<from mpkhs_secondary output>"
