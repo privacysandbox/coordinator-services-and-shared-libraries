@@ -368,55 +368,13 @@ variable "secondary_region_sqs_queue_arn" {
 }
 
 ################################################################################
-# Shared Alarm Variables.
+# SQS Queue Alarm Variables.
 ################################################################################
 
-variable "mpkhs_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
+variable "mpkhs_total_queue_messages_high_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
-  default     = "300"
-}
-
-variable "mpkhs_lambda_error_threshold" {
-  description = "Error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-  default     = "0.0"
-}
-
-variable "mpkhs_lambda_error_log_threshold" {
-  description = "Error log sum greater than this to send alarm. Example: '0'."
-  type        = string
-  default     = "0"
-}
-
-variable "mpkhs_lambda_max_duration_threshold" {
-  description = "Lambda max duration in ms to send alarm. Useful for timeouts. Default 9999ms since lambda time out is set to 10s."
-  type        = string
-  default     = "9999"
-}
-
-variable "mpkhs_api_gw_max_latency_ms" {
-  description = "API Gateway max latency to send alarm. Measured in milliseconds. Default 10s because API takes 6-7 seconds on cold start."
-  type        = string
-  default     = "10000"
-}
-
-variable "mpkhs_api_gw_5xx_threshold" {
-  description = "API Gateway 5xx error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-  default     = "0.01"
-}
-
-variable "mpkhs_api_gw_error_ratio_4xx_threshold" {
-  description = "API Gateway 4xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-  default     = "5"
-}
-
-variable "mpkhs_api_gw_error_ratio_5xx_threshold" {
-  description = "API Gateway 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-  default     = "5"
+  default     = "1"
 }
 
 variable "mpkhs_total_queue_messages_high_threshold" {
@@ -426,8 +384,214 @@ variable "mpkhs_total_queue_messages_high_threshold" {
 }
 
 ################################################################################
+# GetEncryptionKey Lambda Alarm Variables.
+################################################################################
+
+variable "gek_lambda_execution_error_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gek_lambda_execution_error_threshold" {
+  description = "Alarming threshold for Lambda execution errors. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+  default     = "0.0"
+}
+
+variable "gek_lambda_error_log_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gek_lambda_error_log_threshold" {
+  description = "Alarming threshold for the the count of logs containing ERROR found in the provided cloudwatch_log_group_name. Example: '0'."
+  type        = string
+  default     = "0"
+}
+
+variable "gek_lambda_max_duration_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gek_lambda_max_duration_threshold_ms" {
+  description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
+  type        = string
+  default     = "9999"
+}
+
+################################################################################
+# ListEncryptionKeys Lambda Alarm Variables.
+################################################################################
+
+variable "lrek_lambda_execution_error_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "lrek_lambda_execution_error_threshold" {
+  description = "Alarming threshold for Lambda execution errors. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+  default     = "0.0"
+}
+
+variable "lrek_lambda_error_log_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "lrek_lambda_error_log_threshold" {
+  description = "Alarming threshold for the the count of logs containing ERROR found in the provided cloudwatch_log_group_name. Example: '0'."
+  type        = string
+  default     = "0"
+}
+
+variable "lrek_lambda_max_duration_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "lrek_lambda_max_duration_threshold_ms" {
+  description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
+  type        = string
+  default     = "9999"
+}
+
+################################################################################
+# GetPublicKey Lambda Alarm Variables.
+################################################################################
+
+variable "gpk_lambda_execution_error_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gpk_lambda_execution_error_threshold" {
+  description = "Alarming threshold for Lambda execution errors. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+  default     = "0.0"
+}
+
+variable "gpk_lambda_error_log_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gpk_lambda_error_log_threshold" {
+  description = "Alarming threshold for the the count of logs containing ERROR found in the provided cloudwatch_log_group_name. Example: '0'."
+  type        = string
+  default     = "0"
+}
+
+variable "gpk_lambda_max_duration_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gpk_lambda_max_duration_threshold_ms" {
+  description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
+  type        = string
+  default     = "9999"
+}
+
+################################################################################
+# Unified Key Hosting API Gateway Alarm Variables.
+################################################################################
+
+variable "ukh_api_gw_max_latency_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "ukh_api_gw_max_latency_ms_threshold" {
+  description = "API Gateway max latency to send alarm. Measured in milliseconds. Default 10s because API takes 6-7 seconds on cold start."
+  type        = string
+  default     = "10000"
+}
+
+variable "ukh_api_gw_4xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "ukh_api_gw_error_ratio_4xx_threshold" {
+  description = "API Gateway 4xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+  default     = "5"
+}
+
+variable "ukh_api_gw_5xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "ukh_api_gw_error_ratio_5xx_threshold" {
+  description = "API Gateway 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+  default     = "5"
+}
+
+################################################################################
+# Get Public Key API Gateway Alarm Variables.
+################################################################################
+
+variable "gpk_api_gw_max_latency_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gpk_api_gw_max_latency_ms_threshold" {
+  description = "API Gateway max latency to send alarm. Measured in milliseconds. Default 10s because API takes 6-7 seconds on cold start."
+  type        = string
+  default     = "10000"
+}
+
+variable "gpk_api_gw_4xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gpk_api_gw_error_ratio_4xx_threshold" {
+  description = "API Gateway 4xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+  default     = "5"
+}
+
+variable "gpk_api_gw_5xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "15"
+}
+
+variable "gpk_api_gw_error_ratio_5xx_threshold" {
+  description = "API Gateway 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+  default     = "5"
+}
+
+################################################################################
 # Cloudfront Alarm Variables.
 ################################################################################
+
+variable "get_public_key_cloudfront_5xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "5"
+}
 
 variable "get_public_key_cloudfront_5xx_threshold" {
   description = "5xx error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
@@ -435,10 +599,22 @@ variable "get_public_key_cloudfront_5xx_threshold" {
   default     = "0.0"
 }
 
+variable "get_public_key_cloudfront_cache_hit_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "5"
+}
+
 variable "get_public_key_cloudfront_cache_hit_threshold" {
   description = "Cache hits ratio below which to send alarm. Measured in percentage. Example: '99'."
   type        = string
   default     = "0"
+}
+
+variable "get_public_key_cloudfront_origin_latency_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "5"
 }
 
 variable "get_public_key_cloudfront_origin_latency_threshold" {

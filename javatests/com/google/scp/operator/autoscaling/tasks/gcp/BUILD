@@ -44,6 +44,33 @@ java_test(
 )
 
 java_test(
+    name = "RequestUpdateTaskTest",
+    srcs = ["RequestUpdateTaskTest.java"],
+    runtime_deps = [
+        "//java/external:slf4j_simple",
+    ],
+    deps = [
+        ":FakeWorkerScaleInModule",
+        "//java/com/google/scp/operator/autoscaling/tasks/gcp",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/common",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_asg_instances_dao",
+        "//java/com/google/scp/operator/shared/testing",
+        "//java/com/google/scp/shared/proto",
+        "//java/external:acai",
+        "//java/external:gcp_api_gax",
+        "//java/external:gcp_compute",
+        "//java/external:gcp_compute_proto",
+        "//java/external:guice",
+        "//java/external:mockito",
+        "//java/external:protobuf_java",
+        "//java/external:protobuf_java_util",
+        "//operator/protos/shared/backend:java_proto",
+        "//operator/protos/shared/backend/asginstance:java_proto",
+    ],
+)
+
+java_test(
     name = "RequestScaleInTaskTest",
     srcs = ["RequestScaleInTaskTest.java"],
     runtime_deps = [

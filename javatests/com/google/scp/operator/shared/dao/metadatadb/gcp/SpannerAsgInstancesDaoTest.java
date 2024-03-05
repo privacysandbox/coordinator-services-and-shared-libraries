@@ -18,6 +18,7 @@ package com.google.scp.operator.shared.dao.metadatadb.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static com.google.scp.operator.protos.shared.backend.asginstance.InstanceTerminationReasonProto.InstanceTerminationReason.TERMINATION_REASON_UNKNOWN;
 import static org.junit.Assert.assertThrows;
 
 import com.google.acai.Acai;
@@ -60,6 +61,7 @@ public final class SpannerAsgInstancesDaoTest {
             .setRequestTime(ProtoUtil.toProtoTimestamp(Instant.parse("2020-01-01T00:00:00Z")))
             .setTerminationTime(ProtoUtil.toProtoTimestamp(Instant.parse("2020-01-01T00:00:00Z")))
             .setTtl(ProtoUtil.toProtoTimestamp(Instant.parse("2025-01-01T00:00:00Z")).getSeconds())
+            .setTerminationReason(TERMINATION_REASON_UNKNOWN)
             .build();
   }
 

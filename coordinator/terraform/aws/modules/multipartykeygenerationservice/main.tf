@@ -194,7 +194,7 @@ data "aws_iam_policy_document" "split_key_gen_policy" {
   statement {
     sid       = "AllowDDBAccess"
     effect    = "Allow"
-    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Scan"]
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Scan", "dynamodb:DeleteItem"]
     resources = [var.keydb_arn]
   }
 

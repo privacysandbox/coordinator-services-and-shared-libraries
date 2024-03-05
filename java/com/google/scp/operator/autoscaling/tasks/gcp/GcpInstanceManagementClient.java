@@ -18,6 +18,7 @@ package com.google.scp.operator.autoscaling.tasks.gcp;
 
 import com.google.api.gax.longrunning.OperationFuture;
 import com.google.cloud.compute.v1.Autoscaler;
+import com.google.cloud.compute.v1.GetRegionInstanceGroupManagerRequest;
 import com.google.cloud.compute.v1.InstanceGroupManager;
 import com.google.cloud.compute.v1.ListManagedInstancesRegionInstanceGroupManagersRequest;
 import com.google.cloud.compute.v1.ManagedInstance.CurrentAction;
@@ -59,7 +60,7 @@ public class GcpInstanceManagementClient {
    * Returns the list of instances in the worker managed instance group that are not in the process
    * of deleting. An empty list is returned if there are none.
    */
-  public List<String> listActiveInstanceGroupInstances() {
+  public List<GcpComputeInstance> listActiveInstanceGroupInstances() {
     ListManagedInstancesRegionInstanceGroupManagersRequest listManagedInstanceRequest =
         ListManagedInstancesRegionInstanceGroupManagersRequest.newBuilder()
             .setProject(projectId)
@@ -69,9 +70,18 @@ public class GcpInstanceManagementClient {
             .build();
     ListManagedInstancesPagedResponse listInstanceResponse =
         instanceGroupManagerClient.listManagedInstances(listManagedInstanceRequest);
-    List<String> instanceIds = new ArrayList<>();
-    listInstanceResponse.iterateAll().forEach(e -> instanceIds.add(e.getInstance()));
-    return instanceIds;
+    List<GcpComputeInstance> activeInstances = new ArrayList<>();
+    listInstanceResponse
+        .iterateAll()
+        .forEach(
+            e -> {
+              activeInstances.add(
+                  GcpComputeInstance.builder()
+                      .setInstanceId(e.getInstance())
+                      .setInstanceTemplate(e.getVersion().getInstanceTemplate())
+                      .build());
+            });
+    return activeInstances;
   }
 
   /** Deletes the list of instances provided from the worker managed instance group. */
@@ -111,5 +121,16 @@ public class GcpInstanceManagementClient {
               projectId, region, autoscalerUri.substring(autoscalerUri.lastIndexOf("/") + 1)));
     }
     return Optional.empty();
+  }
+
+  /** Returns the current instance template for the managed instance group. */
+  public String getCurrentInstanceTemplate() {
+    GetRegionInstanceGroupManagerRequest getManagedInstanceRequest =
+        GetRegionInstanceGroupManagerRequest.newBuilder()
+            .setInstanceGroupManager(managedInstanceGroupId)
+            .setProject(projectId)
+            .setRegion(region)
+            .build();
+    return instanceGroupManagerClient.get(getManagedInstanceRequest).getInstanceTemplate();
   }
 }

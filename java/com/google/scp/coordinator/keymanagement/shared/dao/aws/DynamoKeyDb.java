@@ -277,6 +277,7 @@ public final class DynamoKeyDb implements KeyDb {
       throw logAndReturnException(exception);
     }
   }
+
   /** Returns encryption key for specific keyId. */
   @Override
   public EncryptionKey getKey(String keyId) throws ServiceException {
@@ -349,6 +350,17 @@ public final class DynamoKeyDb implements KeyDb {
         logger.error("Unknown DynamoDB error when saving key", e);
         throw new ServiceException(INTERNAL, DYNAMODB_ERROR.name(), e);
       }
+    }
+  }
+
+  @Override
+  public void deleteKey(String keyId) throws ServiceException {
+    Key key = Key.builder().partitionValue(keyId).build();
+    try {
+      keyTable.deleteItem(key);
+    } catch (DynamoDbException e) {
+      logger.error("Unknown DynamoDB error when deleting key", e);
+      throw new ServiceException(INTERNAL, DYNAMODB_ERROR.name(), e);
     }
   }
 

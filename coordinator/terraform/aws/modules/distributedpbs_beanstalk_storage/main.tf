@@ -150,8 +150,35 @@ resource "aws_s3_bucket_policy" "pbs_elb_access_logs_policy" {
         Principal = {
           AWS = "arn:aws:iam::${var.pbs_aws_lb_arn["${var.aws_region}"]}:root"
         }
-        Action   = ["s3:PutObject"]
-        Resource = ["arn:aws:s3:::${aws_s3_bucket.pbs_elb_access_logs.id}/AWSLogs/${var.aws_account_id}/*"]
+        Action = ["s3:PutObject"]
+        Resource = [
+          "arn:aws:s3:::${aws_s3_bucket.pbs_elb_access_logs.id}/AWSLogs/${var.aws_account_id}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_s3_bucket_policy" "pbs_elb_access_logs_deny_non_ssl_requests" {
+  bucket = aws_s3_bucket.pbs_elb_access_logs.id
+
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Sid" : "DenyNonSslRequests",
+        "Action" : "s3:*",
+        "Effect" : "Deny",
+        "Resource" : [
+          "${aws_s3_bucket.pbs_elb_access_logs.arn}",
+          "${aws_s3_bucket.pbs_elb_access_logs.arn}/*"
+        ],
+        "Condition" : {
+          "Bool" : {
+            "aws:SecureTransport" : "false"
+          }
+        },
+        "Principal" : "*"
       }
     ]
   })

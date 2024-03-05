@@ -47,3 +47,19 @@ output "create_key_lambda_version" {
 output "get_data_key_lambda_version" {
   value = aws_lambda_function.get_data_key_lambda.version
 }
+
+output "create_key_lambda_function_name" {
+  value = aws_lambda_function.create_key_lambda.function_name
+}
+
+output "get_data_key_lambda_function_name" {
+  value = aws_lambda_function.get_data_key_lambda.function_name
+}
+
+output "create_key_lambda_cloudwatch_log_group_name" {
+  value = aws_cloudwatch_log_group.create_key_lambda_cloudwatch.name
+}
+
+output "get_data_key_lambda_cloudwatch_log_group_name" {
+  value = aws_cloudwatch_log_group.get_data_key_lambda_cloudwatch.name
+}

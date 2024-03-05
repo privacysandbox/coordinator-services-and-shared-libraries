@@ -21,11 +21,6 @@ variable "environment" {
   type        = string
 }
 
-variable "custom_alarm_label" {
-  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
-  type        = string
-}
-
 ################################################################################
 # Lambda Variables
 ################################################################################
@@ -95,50 +90,6 @@ variable "api_env_stage_name" {
 
 variable "application_name" {
   description = "Application name that provide public key service. Eg: aggregation-service."
-  type        = string
-}
-
-################################################################################
-# Alarm Variables
-################################################################################
-
-variable "public_key_service_alarms_enabled" {
-  description = "Enable alarms for public key service"
-  type        = bool
-}
-
-variable "get_public_key_sns_topic_arn" {
-  description = "SNS topic ARN for alarm actions"
-  type        = string
-}
-
-variable "get_public_key_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
-}
-
-variable "get_public_key_lambda_error_threshold" {
-  description = "Error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-}
-
-variable "get_public_key_lambda_error_log_threshold" {
-  description = "Error log sum greater than this to send alarm. Example: '0'."
-  type        = string
-}
-
-variable "get_public_key_lambda_max_duration_threshold" {
-  description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
-  type        = string
-}
-
-variable "get_public_key_api_max_latency_ms" {
-  description = "API Gateway max latency to send alarm. Measured in milliseconds. Example: '5000'."
-  type        = string
-}
-
-variable "get_public_key_5xx_threshold" {
-  description = "API Gateway 5xx error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 

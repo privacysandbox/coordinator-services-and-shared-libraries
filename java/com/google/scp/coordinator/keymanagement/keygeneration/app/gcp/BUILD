@@ -49,6 +49,7 @@ java_library(
 
 java_binary(
     name = "KeyGenerationApp",
+    classpath_resources = ["//java/com/google/scp:slf4jconfig_prod"],
     main_class = "com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.KeyGenerationApplication",
     runtime_deps = [
         ":key_generation",

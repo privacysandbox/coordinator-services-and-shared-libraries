@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
+load("@rules_pkg//:mappings.bzl", "pkg_files")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
@@ -48,4 +49,9 @@ pkg_tar(
     ] + glob(["*.bzl"]),
     mode = "0777",
     package_dir = "scp",
+)
+
+pkg_files(
+    name = "version_file",
+    srcs = ["version.txt"],
 )

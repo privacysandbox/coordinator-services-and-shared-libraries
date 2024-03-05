@@ -26,17 +26,21 @@ import static com.google.scp.operator.cpio.distributedprivacybudgetclient.Transa
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.shared.api.util.HttpClientResponse;
 import com.google.scp.shared.api.util.HttpClientWithInterceptor;
 import com.google.scp.shared.mapper.TimeObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hc.core5.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -172,7 +176,7 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
         new ImmutableMap.Builder<String, String>()
             .put(TRANSACTION_ID_HEADER_KEY, transaction.getId().toString().toUpperCase())
             .put(TRANSACTION_SECRET_HEADER_KEY, transaction.getRequest().transactionSecret())
-            .put(CLAIMED_IDENTITY_HEADER_KEY, transaction.getRequest().attributionReportTo())
+            .put(CLAIMED_IDENTITY_HEADER_KEY, transaction.getRequest().claimedIdentity())
             .build();
     logger.info(
         "[{}] Making GET request to {}",
@@ -187,7 +191,7 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
     ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
     mapBuilder.put(TRANSACTION_ID_HEADER_KEY, transaction.getId().toString().toUpperCase());
     mapBuilder.put(TRANSACTION_SECRET_HEADER_KEY, transaction.getRequest().transactionSecret());
-    mapBuilder.put(CLAIMED_IDENTITY_HEADER_KEY, transaction.getRequest().attributionReportTo());
+    mapBuilder.put(CLAIMED_IDENTITY_HEADER_KEY, transaction.getRequest().claimedIdentity());
     if (!transaction.getCurrentPhase().equals(BEGIN)) {
       String lastExecTimestamp = transaction.getLastExecutionTimestamp(baseUrl);
       mapBuilder.put(TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY, lastExecTimestamp);
@@ -195,20 +199,54 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
     return mapBuilder.build();
   }
 
+  /**
+   * Generates Payload for PBS ConsumeBudget request in V2 request schema
+   *
+   * <pre>
+   * V2 Request Schema:
+   * {
+   *   "v": "2.0",
+   *   "data": [
+   *     {
+   *       "reporting_origin": <reporting_origin_string>,
+   *       keys": [
+   *         {
+   *           "key": "<string>",
+   *           "token": <uint8_t>,
+   *           "reporting_time": "<string>"
+   *         }
+   *       ]
+   *     }
+   *   ]
+   * }
+   * </pre>
+   */
   private String generatePayload(Transaction transaction) throws JsonProcessingException {
-    Map<String, Object> transactionData = new HashMap<>();
-    transactionData.put("v", "1.0");
+    Map<String, Object> transactionPayload = new HashMap<>();
+    transactionPayload.put("v", "2.0");
     TransactionRequest transactionRequest = transaction.getRequest();
-    List<Map<String, Object>> budgets = new ArrayList<>();
-    for (PrivacyBudgetUnit budgetUnit : transactionRequest.privacyBudgetUnits()) {
-      Map<String, Object> budgetMap = new HashMap<>();
-      budgetMap.put("key", budgetUnit.privacyBudgetKey());
-      budgetMap.put("token", transactionRequest.privacyBudgetLimit());
-      budgetMap.put("reporting_time", budgetUnit.reportingWindow().toString());
-      budgets.add(budgetMap);
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> reportingOriginToBudgetUnitsList =
+        transactionRequest.reportingOriginToPrivacyBudgetUnitsList();
+    List<Map<String, Object>> data = new ArrayList<>(reportingOriginToBudgetUnitsList.size());
+
+    for (ReportingOriginToPrivacyBudgetUnits reportingOriginToBudgetUnits :
+        reportingOriginToBudgetUnitsList) {
+      Map<String, Object> requestDataForReportingOrigin = new HashMap<>();
+      List<Map<String, Object>> keys = new ArrayList<>();
+      for (PrivacyBudgetUnit budgetUnit : reportingOriginToBudgetUnits.privacyBudgetUnits()) {
+        Map<String, Object> privacyBudgetKeyDetails = new HashMap<>();
+        privacyBudgetKeyDetails.put("key", budgetUnit.privacyBudgetKey());
+        privacyBudgetKeyDetails.put("token", transactionRequest.privacyBudgetLimit());
+        privacyBudgetKeyDetails.put("reporting_time", budgetUnit.reportingWindow().toString());
+        keys.add(privacyBudgetKeyDetails);
+      }
+      requestDataForReportingOrigin.put("keys", keys);
+      requestDataForReportingOrigin.put(
+          "reporting_origin", reportingOriginToBudgetUnits.reportingOrigin());
+      data.add(requestDataForReportingOrigin);
     }
-    transactionData.put("t", budgets);
-    return mapper.writeValueAsString(transactionData);
+    transactionPayload.put("data", data);
+    return mapper.writeValueAsString(transactionPayload);
   }
 
   private ExecutionResult generateExecutionResult(
@@ -253,13 +291,67 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
       throws JsonProcessingException {
     BudgetExhaustedResponse budgetExhaustedResponse =
         mapper.readValue(response.responseBody(), BudgetExhaustedResponse.class);
-    ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits =
-        transaction.getRequest().privacyBudgetUnits();
-    ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits =
-        budgetExhaustedResponse.budgetExhaustedIndices().stream()
-            .map(index -> privacyBudgetUnits.get(index))
-            .collect(toImmutableList());
-    transaction.setExhaustedPrivacyBudgetUnits(exhaustedPrivacyBudgetUnits);
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> requestBudgetUnitByOrigin =
+        transaction.getRequest().reportingOriginToPrivacyBudgetUnitsList();
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedPrivacyBudgetUnitsByOrigin =
+        getExhaustedPrivacyBudgetUnitsByOrigin(
+            requestBudgetUnitByOrigin, budgetExhaustedResponse.budgetExhaustedIndices());
+
+    transaction.setExhaustedPrivacyBudgetUnits(exhaustedPrivacyBudgetUnitsByOrigin);
+  }
+
+  /**
+   * @brief Generates a list of budgets exhausted per origin, using origin agnostic global indices
+   *     of exhausted budget units.
+   *     <p>List of ReportingOriginToPrivacyBudgetUnits objects can be visualised as below
+   *     <pre>
+   *     [
+   *       <origin1, [BudgetUnit1, BudgetUnit2, BudgetUnit5]>,
+   *       <origin2, [BudgetUnit3, BudgetUnit4]>,
+   *       <origin3, [BudgetUnit6, BudgetUnit8, BudgetUnit9]>
+   *     ]
+   *     </pre>
+   *     Every row can be imagined to be one object in the list and every column to be the budget
+   *     units inside that object. Every row can have a different column size. Index for BudgetUnit3
+   *     in pertaining to origin2 would be 4. Similarly index for BudgetUnit4 pertaining to origin3
+   *     would be 6.
+   * @param requestBudgetUnitsByOrigin List of ReportingOriginToPrivacyBudgetUnits objects from
+   *     which exhausted budget units are to be retrieved.
+   * @param budgetExhaustedIndices List of global indices of exhausted budget units. These indices
+   *     are global in the sense that, they refer to indices in a flat array created by
+   *     concatenating the budget units lists from ReportingOriginToPrivacyBudgetUnits objects. Such
+   *     an array for the above example would be as shown below:
+   *     <pre>
+   *     [BudgetUnit1, BudgetUnit2, BudgetUnit5, BudgetUnit3, BudgetUnit4, BudgetUnit6, BudgetUnit8, BudgetUnit9]
+   *     </pre>
+   */
+  @VisibleForTesting
+  ImmutableList<ReportingOriginToPrivacyBudgetUnits> getExhaustedPrivacyBudgetUnitsByOrigin(
+      ImmutableList<ReportingOriginToPrivacyBudgetUnits> requestBudgetUnitsByOrigin,
+      ImmutableList<Integer> budgetExhaustedIndices) {
+    Set<Integer> exhaustedGlobalIndices = new HashSet<>(budgetExhaustedIndices);
+    int currentIndex = 0;
+    Map<String, List<PrivacyBudgetUnit>> exhaustedBudgetsByOrigin = new HashMap<>();
+    for (ReportingOriginToPrivacyBudgetUnits entry : requestBudgetUnitsByOrigin) {
+      String reportingOrigin = entry.reportingOrigin();
+      for (PrivacyBudgetUnit unit : entry.privacyBudgetUnits()) {
+        if (!exhaustedGlobalIndices.contains(currentIndex++)) {
+          continue;
+        }
+        List<PrivacyBudgetUnit> exhaustedBudgetUnits =
+            exhaustedBudgetsByOrigin.getOrDefault(reportingOrigin, new ArrayList<>());
+        exhaustedBudgetUnits.add(unit);
+        exhaustedBudgetsByOrigin.put(reportingOrigin, exhaustedBudgetUnits);
+      }
+    }
+    return exhaustedBudgetsByOrigin.entrySet().stream()
+        .map(
+            entry ->
+                ReportingOriginToPrivacyBudgetUnits.builder()
+                    .setReportingOrigin(entry.getKey())
+                    .setPrivacyBudgetUnits(ImmutableList.copyOf(entry.getValue()))
+                    .build())
+        .collect(toImmutableList());
   }
 
   /**
@@ -293,12 +385,12 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
       // HTTP code is one of the codes which is not expected to be resolved using status API
       return ExecutionResult.create(ExecutionStatus.FAILURE, StatusCode.UNKNOWN);
     }
-    TransactionStatusResponse transactionStatusResponse = null;
+    TransactionStatusResponse transactionStatusResponse;
     try {
       transactionStatusResponse = fetchTransactionStatus(transaction);
     } catch (Exception e) {
       logger.error(
-          "[{}] Failed to fetch transaction status. Error is: ",
+          "[{}] Failed to fetch transaction status. Error is: {}",
           transaction.getId(),
           e.getMessage());
       return ExecutionResult.create(ExecutionStatus.FAILURE, StatusCode.UNKNOWN);

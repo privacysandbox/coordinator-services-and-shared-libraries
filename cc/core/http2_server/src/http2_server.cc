@@ -177,15 +177,6 @@ ExecutionResult Http2Server::Init() noexcept {
     request_routing_enabled_ = request_routing_enabled;
   }
 
-  bool site_based_auth_enabled = false;
-  if (config_provider_ &&
-      config_provider_
-          ->Get(kPBSAuthorizationEnableSiteBasedAuthorization,
-                site_based_auth_enabled)
-          .Successful()) {
-    site_based_auth_enabled_ = site_based_auth_enabled;
-  }
-
   return SuccessExecutionResult();
 }
 
@@ -527,14 +518,9 @@ void Http2Server::OnAuthorizationCallback(
     SCP_DEBUG_CONTEXT(kHttp2Server, authorization_context,
                       "Authorization failed.");
   } else {
-    if (site_based_auth_enabled_) {
-      sync_context->http2_context.request->auth_context.authorized_domain =
-          make_shared<string>(authorization_context.request
-                                  ->authorization_metadata.claimed_identity);
-    } else {
-      sync_context->http2_context.request->auth_context.authorized_domain =
-          authorization_context.response->authorized_metadata.authorized_domain;
-    }
+    sync_context->http2_context.request->auth_context.authorized_domain =
+        make_shared<string>(authorization_context.request
+                                ->authorization_metadata.claimed_identity);
   }
 
   OnHttp2PendingCallback(authorization_context.result, request_id);

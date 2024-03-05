@@ -19,6 +19,7 @@ package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import java.sql.Timestamp;
 import java.util.UUID;
 
@@ -36,10 +37,10 @@ public abstract class TransactionRequest {
   public abstract static class Builder {
     public abstract Builder setTransactionId(UUID transactionId);
 
-    public abstract Builder setAttributionReportTo(String attributionReportTo);
+    public abstract Builder setClaimedIdentity(String claimedIdentity);
 
-    public abstract Builder setPrivacyBudgetUnits(
-        ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits);
+    public abstract Builder setReportingOriginToPrivacyBudgetUnitsList(
+        ImmutableList<ReportingOriginToPrivacyBudgetUnits> reportingOriginToPrivacyBudgetUnitsList);
 
     public abstract Builder setTimeout(Timestamp timeout);
 
@@ -52,17 +53,21 @@ public abstract class TransactionRequest {
 
   // Id of the transaction.
   public abstract UUID transactionId();
-  // ad-tech origin where reports will be sent
-  public abstract String attributionReportTo();
-  // List of Privacy budgeting units
-  public abstract ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits();
+
+  public abstract String claimedIdentity();
+
+  public abstract ImmutableList<ReportingOriginToPrivacyBudgetUnits>
+      reportingOriginToPrivacyBudgetUnitsList();
+
   // Timestamp of when the transaction expires.
   public abstract Timestamp timeout();
+
   // The secret of the transaction.
   public abstract String transactionSecret();
 
   // Number of privacy budget units to consume for each key in the transaction
   public abstract Integer privacyBudgetLimit();
+
   // List of privacy budget units whose budget has exhausted
   private ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits;
 }

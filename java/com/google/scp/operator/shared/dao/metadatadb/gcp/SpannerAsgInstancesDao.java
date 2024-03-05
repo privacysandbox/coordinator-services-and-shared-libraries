@@ -19,6 +19,7 @@ package com.google.scp.operator.shared.dao.metadatadb.gcp;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.INSTANCE_NAME;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.REQUEST_TIME;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.STATUS;
+import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.TERMINATION_REASON;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.TERMINATION_TIME;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.TTL;
 import static java.lang.annotation.ElementType.FIELD;
@@ -37,6 +38,7 @@ import com.google.inject.Inject;
 import com.google.protobuf.Timestamp;
 import com.google.scp.operator.protos.shared.backend.asginstance.AsgInstanceProto.AsgInstance;
 import com.google.scp.operator.protos.shared.backend.asginstance.InstanceStatusProto.InstanceStatus;
+import com.google.scp.operator.protos.shared.backend.asginstance.InstanceTerminationReasonProto.InstanceTerminationReason;
 import com.google.scp.operator.shared.dao.asginstancesdb.common.AsgInstancesDao;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataDbClient;
 import java.lang.annotation.Retention;
@@ -66,21 +68,25 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
   @Override
   public Optional<AsgInstance> getAsgInstance(String instanceName) throws AsgInstanceDaoException {
 
-    Statement statement =
-        Statement.newBuilder(
-                "SELECT * FROM "
-                    + TABLE_NAME
-                    + " WHERE "
-                    + INSTANCE_NAME.label
-                    + " = @instanceName")
-            .bind("instanceName")
-            .to(instanceName)
-            .build();
-    try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
-      // Expecting only one row to be returned since searching on primary key
-      return resultSet.next()
-          ? Optional.of(convertResultSetToAsgInstance(resultSet))
-          : Optional.empty();
+    try {
+      Statement statement =
+          Statement.newBuilder(
+                  "SELECT * FROM "
+                      + TABLE_NAME
+                      + " WHERE "
+                      + INSTANCE_NAME.label
+                      + " = @instanceName")
+              .bind("instanceName")
+              .to(instanceName)
+              .build();
+      Optional<AsgInstance> asgInstance = Optional.empty();
+      try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
+        // Expecting only one row to be returned since searching on primary key
+        if (resultSet.next()) {
+          asgInstance = Optional.of(convertResultSetToAsgInstance(resultSet));
+        }
+      }
+      return asgInstance;
     } catch (SpannerException e) {
       throw new AsgInstanceDaoException(e);
     }
@@ -129,6 +135,11 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
                           : null)
                   .set(TTL.label)
                   .to(ttl)
+                  .set(TERMINATION_REASON.label)
+                  .to(
+                      asgInstance.hasTerminationReason()
+                          ? asgInstance.getTerminationReason().toString()
+                          : null)
                   .build());
       dbClient.write(inserts);
       logger.info(
@@ -166,6 +177,11 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
                                     ? com.google.cloud.Timestamp.fromProto(
                                         asgInstance.getTerminationTime())
                                     : null)
+                            .set(TERMINATION_REASON.label)
+                            .to(
+                                asgInstance.hasTerminationReason()
+                                    ? asgInstance.getTerminationReason().toString()
+                                    : null)
                             .build());
                 logger.debug("Buffering spanner updates: " + updates);
                 transaction.buffer(updates);
@@ -197,6 +213,12 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
       asgInstanceBuilder.setTerminationTime(
           resultSet.getTimestamp(TERMINATION_TIME.label).toProto());
     }
+
+    if (!resultSet.isNull(TERMINATION_REASON.label)) {
+      asgInstanceBuilder.setTerminationReason(
+          InstanceTerminationReason.valueOf(resultSet.getString(TERMINATION_REASON.label)));
+    }
+
     return asgInstanceBuilder.build();
   }
 
@@ -206,7 +228,8 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
     STATUS("Status"),
     REQUEST_TIME("RequestTime"),
     TERMINATION_TIME("TerminationTime"),
-    TTL("Ttl");
+    TTL("Ttl"),
+    TERMINATION_REASON("TerminationReason");
 
     /** Value of a {@code SpannerAsgInstancesTableColumn} constant. */
     public final String label;

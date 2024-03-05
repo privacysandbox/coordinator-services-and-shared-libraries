@@ -68,6 +68,9 @@ public interface KeyDb {
   /** Create key with overwrite option */
   void createKey(EncryptionKey key, boolean overwrite) throws ServiceException;
 
+  /** Delete key with given key Id. */
+  void deleteKey(String keyId) throws ServiceException;
+
   /**
    * Thrown when the KeyDB record contains a Status field that does not match a value of
    * EncryptionKeyStatus enum.

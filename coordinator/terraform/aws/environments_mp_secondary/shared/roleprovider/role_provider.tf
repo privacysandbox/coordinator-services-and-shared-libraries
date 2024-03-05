@@ -35,7 +35,6 @@ module "roleprovider" {
   private_key_encryptor_arn         = var.private_key_encryptor_arn
   private_key_api_gateway_arn       = var.private_key_api_gateway_arn
   privacy_budget_api_gateway_arn    = var.privacy_budget_api_gateway_arn
-  privacy_budget_auth_table_name    = var.privacy_budget_auth_table_name
   attestation_condition_keys        = var.attestation_condition_keys
   allowed_principals_map_v2         = var.allowed_principals_map_v2
   privacy_budget_auth_table_v2_name = local.privacy_budget_auth_table_v2_name

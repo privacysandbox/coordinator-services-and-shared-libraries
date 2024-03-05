@@ -17,7 +17,7 @@
 package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
 import com.google.common.collect.ImmutableList;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -52,7 +52,7 @@ public class Transaction {
   // Number of retries before returning failure.
   private int retries;
   // List of privacy budget units whose budget has exhausted
-  private ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits;
+  private ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedPrivacyBudgetUnitsByOrigin;
 
   Transaction() {
     id = new UUID(0L, 0L);
@@ -67,7 +67,7 @@ public class Transaction {
     lastExecutionTimeNanosForBaseUrl = new HashMap<>();
     lastCompletedTransactionPhaseOnPrivacyBudgetServer = new HashMap<>();
     retries = DEFAULT_RETRIES;
-    exhaustedPrivacyBudgetUnits = ImmutableList.of();
+    exhaustedPrivacyBudgetUnitsByOrigin = ImmutableList.of();
   }
 
   public UUID getId() {
@@ -164,12 +164,12 @@ public class Transaction {
     this.retries = DEFAULT_RETRIES;
   }
 
-  public ImmutableList<PrivacyBudgetUnit> getExhaustedPrivacyBudgetUnits() {
-    return exhaustedPrivacyBudgetUnits;
+  public ImmutableList<ReportingOriginToPrivacyBudgetUnits> getExhaustedPrivacyBudgetUnits() {
+    return exhaustedPrivacyBudgetUnitsByOrigin;
   }
 
   public void setExhaustedPrivacyBudgetUnits(
-      ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits) {
-    this.exhaustedPrivacyBudgetUnits = exhaustedPrivacyBudgetUnits;
+      ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedPrivacyBudgetUnits) {
+    this.exhaustedPrivacyBudgetUnitsByOrigin = exhaustedPrivacyBudgetUnits;
   }
 }

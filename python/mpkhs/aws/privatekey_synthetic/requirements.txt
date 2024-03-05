@@ -1,0 +1,11 @@
+aws_requests_auth==0.4.3
+certifi==2022.12.7
+requests==2.28.2
+urllib3==1.26.14
+awscrt==0.16.16
+hyper==0.7.0
+hyperframe==3.2.0
+hpack==3.0.0
+h2==2.6.2
+idna==3.6
+charset-normalizer==3.0.1

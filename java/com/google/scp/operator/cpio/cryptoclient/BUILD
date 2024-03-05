@@ -124,6 +124,7 @@ java_library(
         "//java/external:autovalue_annotations",
         "//java/external:google_api_client",
         "//java/external:google_auth_library_oauth2_http",
+        "//java/external:google_oauth_client",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_annotations",

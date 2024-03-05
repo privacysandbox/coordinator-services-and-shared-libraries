@@ -1,4 +1,4 @@
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 ################################################################################
 # Rules JVM External: Begin
@@ -79,15 +79,14 @@ grpc_java_repositories()
 ################################################################################
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 load("//build_defs/shared:java_grpc.bzl", "GAPIC_GENERATOR_JAVA_VERSION")
-load("//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
 
 JACKSON_VERSION = "2.15.2"
 
 AUTO_VALUE_VERSION = "1.7.4"
 
-AWS_SDK_VERSION = "2.17.239"
+AWS_SDK_VERSION = "2.21.17"
 
-GOOGLE_GAX_VERSION = "2.4.0"
+GOOGLE_GAX_VERSION = "2.20.1"
 
 AUTO_SERVICE_VERSION = "1.0"
 
@@ -116,13 +115,13 @@ maven_install(
         "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.code.gson:gson:2.8.9",
-        "com.google.cloud:google-cloud-kms:2.1.2",
-        "com.google.cloud:google-cloud-pubsub:1.114.4",
-        "com.google.cloud:google-cloud-storage:1.118.0",
-        "com.google.cloud:google-cloud-spanner:6.12.2",
-        "com.google.cloud:google-cloud-secretmanager:2.2.0",
-        "com.google.cloud:google-cloud-compute:1.12.1",
-        "com.google.api.grpc:proto-google-cloud-compute-v1:1.12.1",
+        "com.google.cloud:google-cloud-kms:2.10.0",
+        "com.google.cloud:google-cloud-pubsub:1.122.2",
+        "com.google.cloud:google-cloud-storage:2.13.1",
+        "com.google.cloud:google-cloud-spanner:6.34.1",
+        "com.google.cloud:google-cloud-secretmanager:2.7.0",
+        "com.google.cloud:google-cloud-compute:1.17.0",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.17.0",
         "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
         "com.google.auth:google-auth-library-oauth2-http:1.11.0",
         "com.google.cloud.functions:functions-framework-api:1.0.4",
@@ -131,12 +130,12 @@ maven_install(
         "com.google.http-client:google-http-client-jackson2:1.40.0",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
-        "com.google.cloud:google-cloud-monitoring:3.4.1",
-        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.4.1",
+        "com.google.cloud:google-cloud-monitoring:3.8.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.8.0",
         "com.google.api.grpc:proto-google-common-protos:2.9.2",
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
-        "com.google.guava:guava:32.0.1-jre",
-        "com.google.guava:guava-testlib:32.0.1-jre",
+        "com.google.guava:guava:32.1.3-jre",
+        "com.google.guava:guava-testlib:32.1.3-jre",
         "com.google.inject:guice:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.google.jimfs:jimfs:1.2",
@@ -195,7 +194,10 @@ maven_install(
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
         "com.google.api:gapic-generator-java:" + GAPIC_GENERATOR_JAVA_VERSION,  # To use generated gRpc Java interface
         "io.grpc:grpc-netty:1.54.0",
-    ] + TINK_MAVEN_ARTIFACTS,
+        "com.google.crypto.tink:tink:1.11.0",
+        "com.google.crypto.tink:tink-gcpkms:1.9.0",
+        "com.google.oauth-client:google-oauth-client:1.34.1",
+    ],
     repositories = [
         "https://repo1.maven.org/maven2",
     ],
@@ -235,6 +237,7 @@ differential_privacy_deps()
 #############
 # PKG Rules #
 #############
+
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
@@ -289,6 +292,16 @@ boost_deps()
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
 rules_foreign_cc_dependencies()
+
+# OpenTelemetry CPP
+# https://github.com/open-telemetry/opentelemetry-cpp/blob/main/INSTALL.md#incorporating-into-an-existing-bazel-project
+load("@io_opentelemetry_cpp//bazel:repository.bzl", "opentelemetry_cpp_deps")
+
+opentelemetry_cpp_deps()
+
+load("@io_opentelemetry_cpp//bazel:extra_deps.bzl", "opentelemetry_extra_deps")
+
+opentelemetry_extra_deps()
 
 ##########
 # GRPC C #
@@ -492,8 +505,35 @@ pip_install(
 )
 
 pip_install(
+    name = "py3_privacybudget_gcp_operator_onboarding_deps",
+    requirements = "//:python/privacybudget/gcp/operator_onboarding/requirements.txt",
+)
+
+pip_install(
     name = "py3_privacybudget_aws_pbs_auth_handler_deps",
     requirements = "//:python/privacybudget/aws/pbs_auth_handler/requirements.txt",
+)
+
+pip_install(
+    name = "py3_privacybudget_aws_pbs_synthetic_deps",
+    requirements = "//:python/privacybudget/aws/pbs_synthetic/requirements.txt",
+)
+
+pip_install(
+    name = "py3_mpkhs_aws_privatekey_synthetic_deps",
+    requirements = "//:python/mpkhs/aws/privatekey_synthetic/requirements.txt",
+)
+
+http_file(
+    name = "py3_certifi_cert",
+    sha256 = "2c11c3ce08ffc40d390319c72bc10d4f908e9c634494d65ed2cbc550731fd524",
+    urls = ["https://github.com/certifi/python-certifi/raw/2022.12.07/certifi/cacert.pem"],
+)
+
+http_file(
+    name = "py3_hyper_cert",
+    sha256 = "dc0922831d4111ed86013741b03325332147bc38723fbef7b23e55ee4b70761f",
+    urls = ["https://github.com/python-hyper/hyper/raw/v0.7.0/hyper/certs.pem"],
 )
 
 #######################

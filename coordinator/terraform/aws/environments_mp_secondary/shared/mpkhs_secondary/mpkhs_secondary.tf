@@ -61,14 +61,47 @@ module "multipartykeyhosting_secondary" {
   sqs_queue_arn                     = var.sqs_queue_arn
   cloudwatch_logging_retention_days = var.cloudwatch_logging_retention_days
 
-  mpkhs_alarm_eval_period_sec            = var.mpkhs_alarm_eval_period_sec
-  mpkhs_lambda_error_threshold           = var.mpkhs_lambda_error_threshold
-  mpkhs_lambda_error_log_threshold       = var.mpkhs_lambda_error_log_threshold
-  mpkhs_lambda_max_duration_threshold    = var.mpkhs_lambda_max_duration_threshold
-  mpkhs_api_gw_max_latency_ms            = var.mpkhs_api_gw_max_latency_ms
-  mpkhs_api_gw_5xx_threshold             = var.mpkhs_api_gw_5xx_threshold
-  mpkhs_api_gw_error_ratio_4xx_threshold = var.mpkhs_api_gw_error_ratio_4xx_threshold
-  mpkhs_api_gw_error_ratio_5xx_threshold = var.mpkhs_api_gw_error_ratio_5xx_threshold
+  ukh_api_gw_max_latency_eval_periods  = var.ukh_api_gw_max_latency_eval_periods
+  ukh_api_gw_max_latency_ms_threshold  = var.ukh_api_gw_max_latency_ms_threshold
+  ukh_api_gw_4xx_eval_periods          = var.ukh_api_gw_4xx_eval_periods
+  ukh_api_gw_error_ratio_4xx_threshold = var.ukh_api_gw_error_ratio_4xx_threshold
+  ukh_api_gw_5xx_eval_periods          = var.ukh_api_gw_5xx_eval_periods
+  ukh_api_gw_error_ratio_5xx_threshold = var.ukh_api_gw_error_ratio_5xx_threshold
+
+  gek_lambda_execution_error_eval_periods = var.gek_lambda_execution_error_eval_periods
+  gek_lambda_execution_error_threshold    = var.gek_lambda_execution_error_threshold
+  gek_lambda_error_log_eval_periods       = var.gek_lambda_error_log_eval_periods
+  gek_lambda_error_log_threshold          = var.gek_lambda_error_log_threshold
+  gek_lambda_max_duration_eval_periods    = var.gek_lambda_max_duration_eval_periods
+  gek_lambda_max_duration_threshold_ms    = var.gek_lambda_max_duration_threshold_ms
+
+  lrek_lambda_execution_error_eval_periods = var.lrek_lambda_execution_error_eval_periods
+  lrek_lambda_execution_error_threshold    = var.lrek_lambda_execution_error_threshold
+  lrek_lambda_error_log_eval_periods       = var.lrek_lambda_error_log_eval_periods
+  lrek_lambda_error_log_threshold          = var.lrek_lambda_error_log_threshold
+  lrek_lambda_max_duration_eval_periods    = var.lrek_lambda_max_duration_eval_periods
+  lrek_lambda_max_duration_threshold_ms    = var.lrek_lambda_max_duration_threshold_ms
+
+  ks_api_gw_max_latency_eval_periods  = var.ks_api_gw_max_latency_eval_periods
+  ks_api_gw_max_latency_ms_threshold  = var.ks_api_gw_max_latency_ms_threshold
+  ks_api_gw_4xx_eval_periods          = var.ks_api_gw_4xx_eval_periods
+  ks_api_gw_error_ratio_4xx_threshold = var.ks_api_gw_error_ratio_4xx_threshold
+  ks_api_gw_5xx_eval_periods          = var.ks_api_gw_5xx_eval_periods
+  ks_api_gw_error_ratio_5xx_threshold = var.ks_api_gw_error_ratio_5xx_threshold
+
+  ck_lambda_execution_error_eval_periods = var.ck_lambda_execution_error_eval_periods
+  ck_lambda_execution_error_threshold    = var.ck_lambda_execution_error_threshold
+  ck_lambda_error_log_eval_periods       = var.ck_lambda_error_log_eval_periods
+  ck_lambda_error_log_threshold          = var.ck_lambda_error_log_threshold
+  ck_lambda_max_duration_eval_periods    = var.ck_lambda_max_duration_eval_periods
+  ck_lambda_max_duration_threshold_ms    = var.ck_lambda_max_duration_threshold_ms
+
+  gdk_lambda_execution_error_eval_periods = var.gdk_lambda_execution_error_eval_periods
+  gdk_lambda_execution_error_threshold    = var.gdk_lambda_execution_error_threshold
+  gdk_lambda_error_log_eval_periods       = var.gdk_lambda_error_log_eval_periods
+  gdk_lambda_error_log_threshold          = var.gdk_lambda_error_log_threshold
+  gdk_lambda_max_duration_eval_periods    = var.gdk_lambda_max_duration_eval_periods
+  gdk_lambda_max_duration_threshold_ms    = var.gdk_lambda_max_duration_threshold_ms
 
   get_encryption_key_lambda_ps_client_shim_enabled = var.get_encryption_key_lambda_ps_client_shim_enabled
 

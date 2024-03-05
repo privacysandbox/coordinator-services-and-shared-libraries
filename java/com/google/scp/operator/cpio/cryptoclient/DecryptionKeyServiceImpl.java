@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 public final class DecryptionKeyServiceImpl implements DecryptionKeyService {
 
   private static final int MAX_CACHE_SIZE = 100;
-  private static final long CACHE_ENTRY_TTL_SEC = 3600;
+  private static final long CACHE_ENTRY_TTL_SEC = 28800; // 8 hours.
   private static final int CONCURRENCY_LEVEL = Runtime.getRuntime().availableProcessors();
   // TODO: Once the key ARNs are returned from the private key vending service,
   //   we would probably want to switch to cached AEAD supplier instead

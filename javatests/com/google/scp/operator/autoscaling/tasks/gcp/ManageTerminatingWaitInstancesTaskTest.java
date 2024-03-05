@@ -60,19 +60,27 @@ public final class ManageTerminatingWaitInstancesTaskTest {
   private ManageTerminatingWaitInstancesTask manageTerminatingWaitInstancesTask;
 
   private String instanceName;
-  private List<String> instanceNameList;
+  private String instanceTemplate;
+  private GcpComputeInstance instance;
+  private List<GcpComputeInstance> instanceList;
 
   @Before
   public void setup() {
     instanceName =
         "https://www.googleapis.com/compute/v1/projects/test/zones/us-central1-b/instances/test-"
             + UUID.randomUUID();
-    instanceNameList = new ArrayList<>();
+    instanceTemplate = "test-template123456789";
+    instance =
+        GcpComputeInstance.builder()
+            .setInstanceId(instanceName)
+            .setInstanceTemplate(instanceTemplate)
+            .build();
+    instanceList = new ArrayList<>();
   }
 
   @Test
   public void testManageInstances_nothingToDelete() throws Exception {
-    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceNameList);
+    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
     manageTerminatingWaitInstancesTask =
         new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
 
@@ -90,8 +98,8 @@ public final class ManageTerminatingWaitInstancesTaskTest {
             .setStatus(InstanceStatus.TERMINATING_WAIT)
             .build();
     fakeAsgInstancesDao.setAsgInstanceToReturn(Optional.of(asgInstance));
-    instanceNameList.add(instanceName);
-    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceNameList);
+    instanceList.add(instance);
+    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
     doNothing().when(instanceManagementClient).deleteInstances(anySet());
     manageTerminatingWaitInstancesTask =
         new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
@@ -110,7 +118,7 @@ public final class ManageTerminatingWaitInstancesTaskTest {
             .setStatus(InstanceStatus.TERMINATING_WAIT)
             .build();
     fakeAsgInstancesDao.setAsgInstanceToReturn(Optional.of(asgInstance));
-    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceNameList);
+    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
     manageTerminatingWaitInstancesTask =
         new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
 
@@ -121,16 +129,16 @@ public final class ManageTerminatingWaitInstancesTaskTest {
 
   @Test
   public void testManageInstances_nothingToDeleteActiveInstance() throws Exception {
-    instanceNameList.add(instanceName);
-    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceNameList);
+    instanceList.add(instance);
+    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
     manageTerminatingWaitInstancesTask =
         new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
 
-    Map<String, List<String>> remainingInstanceMap =
+    Map<String, List<GcpComputeInstance>> remainingInstanceMap =
         manageTerminatingWaitInstancesTask.manageInstances();
     verify(instanceManagementClient, never()).deleteInstances(anySet());
     assertThat(fakeAsgInstancesDao.getAsgInstancesByStatus(TERMINATING_WAIT.name())).isEmpty();
-    assertThat(remainingInstanceMap.get("us-central1-b").get(0)).isEqualTo(instanceName);
+    assertThat(remainingInstanceMap.get("us-central1-b").get(0)).isEqualTo(instance);
   }
 
   static class TestEnv extends AbstractModule {

@@ -27,8 +27,8 @@ resource "aws_cloudwatch_metric_alarm" "total_queue_messages_high_alarm" {
   alarm_name          = "Critical${var.alarm_label_sqs_queue}TotalQueueMessagesHigh${var.custom_alarm_label}"
   alarm_description   = "Total Queue Messages over ${var.total_queue_messages_high_threshold}"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  #Unit for threshold
+  evaluation_periods  = var.total_queue_messages_high_eval_periods
+  # Unit for threshold
   threshold     = var.total_queue_messages_high_threshold
   alarm_actions = [var.sns_topic_arn]
   ok_actions    = [var.sns_topic_arn]
@@ -50,7 +50,7 @@ resource "aws_cloudwatch_metric_alarm" "total_queue_messages_high_alarm" {
     metric {
       metric_name = "ApproximateNumberOfMessagesNotVisible"
       namespace   = "AWS/SQS"
-      period      = var.eval_period_sec
+      period      = "60"
       stat        = "Maximum"
       unit        = "Count"
       dimensions = {
@@ -65,7 +65,7 @@ resource "aws_cloudwatch_metric_alarm" "total_queue_messages_high_alarm" {
     metric {
       metric_name = "ApproximateNumberOfMessagesVisible"
       namespace   = "AWS/SQS"
-      period      = var.eval_period_sec
+      period      = "60"
       stat        = "Maximum"
       unit        = "Count"
       dimensions = {

@@ -16,7 +16,8 @@
 # This script builds the container image for SDK and PBS within a container to
 # guarantee a reproducible build.
 
-set -euo pipefail
+set -eux
+set -o pipefail
 
 output_tar=$1
 source_code_tar=$2
@@ -55,13 +56,9 @@ run_on_exit() {
 # Make sure run_on_exit runs even when we encounter errors
 trap "run_on_exit 1" ERR
 
-# Set the output directory for the container build
-docker_bazel_output_dir=/tmp/reproducible_build/$container_name
-
 docker -D run -d -i \
 --privileged \
 -v /var/run/docker.sock:/var/run/docker.sock \
--v $docker_bazel_output_dir:/tmp/bazel_build_output \
 --name $container_name \
 $build_container_image_name
 
@@ -79,13 +76,13 @@ bash -c "echo 'startup --output_user_root=/tmp/bazel_build_output' >> /scp/.baze
 # Build the container image
 docker exec -w /scp $container_name \
 bash -c "bazel build $build_flags --action_env=BAZEL_CXXOPTS=\"-std=c++17\" $args $container_tar_target_path"
+container_output_tar=$(docker exec $container_name find /tmp/bazel_build_output -name ${container_name_to_build}.tar)
 
 # Change the build output directory permissions to the user running this script
 user_id="$(id -u)"
 docker exec $container_name chown -R $user_id:$user_id /tmp/bazel_build_output
 
-echo $docker_bazel_output_dir
-
 # Copy the container image to the output
-cp $(find $docker_bazel_output_dir -name "${container_name_to_build}.tar") $output_tar
+mkdir -p $(dirname $output_tar)
+docker cp $container_name:$container_output_tar $output_tar
 run_on_exit 0

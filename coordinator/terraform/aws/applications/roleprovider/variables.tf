@@ -37,11 +37,6 @@ variable "privacy_budget_api_gateway_arn" {
   description = "API Gateway used to access the privacy budget service. If unspecified the generated role will not be granted access."
 }
 
-variable "privacy_budget_auth_table_name" {
-  description = "DynamoDB table name of distributed pbs auth table"
-  type        = string
-}
-
 variable "privacy_budget_auth_table_v2_name" {
   description = "DynamoDB table name of distributed pbs auth table V2"
   type        = string

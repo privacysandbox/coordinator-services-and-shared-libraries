@@ -66,7 +66,7 @@ public class ManageTerminatingWaitInstancesTask {
    * @return the remaining instances in the instance group mapped by zone
    * @throws ServiceException
    */
-  public Map<String, List<String>> manageInstances() throws ServiceException {
+  public Map<String, List<GcpComputeInstance>> manageInstances() throws ServiceException {
 
     try {
       // Get all compute instances in TERMINATING_WAIT STATE
@@ -75,7 +75,8 @@ public class ManageTerminatingWaitInstancesTask {
       logger.info(
           "Number of instances in TERMINATING_WAIT state: " + terminatingWaitInstances.size());
 
-      List<String> instanceIds = instanceManagementClient.listActiveInstanceGroupInstances();
+      List<GcpComputeInstance> activeInstances =
+          instanceManagementClient.listActiveInstanceGroupInstances();
 
       // Terminate overdue instances
       Set<String> overdueInstanceTerminations =
@@ -87,7 +88,11 @@ public class ManageTerminatingWaitInstancesTask {
                               Instant.now().minus(terminationWaitTimeout, ChronoUnit.SECONDS)))
               .map(AsgInstance::getInstanceName)
               .collect(Collectors.toSet());
-      overdueInstanceTerminations.retainAll(instanceIds);
+      Set<String> activeInstanceNames =
+          activeInstances.stream()
+              .map(GcpComputeInstance::getInstanceId)
+              .collect(Collectors.toSet());
+      overdueInstanceTerminations.retainAll(activeInstanceNames);
 
       logger.info("Deleting instances: " + overdueInstanceTerminations);
       if (!overdueInstanceTerminations.isEmpty()) {
@@ -100,7 +105,7 @@ public class ManageTerminatingWaitInstancesTask {
               .filter(
                   instance ->
                       overdueInstanceTerminations.contains(instance.getInstanceName())
-                          || !instanceIds.contains(instance.getInstanceName()))
+                          || !activeInstanceNames.contains(instance.getInstanceName()))
               .collect(Collectors.toList());
       logger.info("Completing termination requests in db: " + asgInstancesThatCompleted);
       for (AsgInstance asgWaitInstance : asgInstancesThatCompleted) {
@@ -113,15 +118,16 @@ public class ManageTerminatingWaitInstancesTask {
       }
       logger.info("Done completing termination request in db");
 
+      // Filter and return remaining active instances
       Set<String> terminatingWaitInstanceIds =
           terminatingWaitInstances.stream()
               .map(AsgInstance::getInstanceName)
               .collect(Collectors.toSet());
-      instanceIds.removeAll(terminatingWaitInstanceIds);
-      return instanceIds.stream()
+      return activeInstances.stream()
+          .filter(instance -> !terminatingWaitInstanceIds.contains(instance.getInstanceId()))
           .collect(
               Collectors.groupingBy(
-                  instance -> getZone(instance),
+                  instance -> getZone(instance.getInstanceId()),
                   Collectors.mapping(instance -> instance, Collectors.toList())));
     } catch (AsgInstanceDaoException | ExecutionException | InterruptedException e) {
       throw new ServiceException(Code.INTERNAL, "InstanceTerminationFailure", e);

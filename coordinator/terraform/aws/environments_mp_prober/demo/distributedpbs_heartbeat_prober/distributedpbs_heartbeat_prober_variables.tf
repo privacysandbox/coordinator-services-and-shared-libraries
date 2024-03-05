@@ -1,0 +1,1 @@
+../../shared/distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober_variables.tf

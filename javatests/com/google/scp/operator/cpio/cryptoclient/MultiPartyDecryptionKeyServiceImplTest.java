@@ -68,6 +68,8 @@ public class MultiPartyDecryptionKeyServiceImplTest {
   private MockTinkUtils mockTinkUtils;
   private MultiPartyDecryptionKeyServiceImpl multiPartyDecryptionKeyServiceImpl;
 
+  private long decrypterCacheEntryTtlSec = 28800;
+
   @Before
   public void setup() throws Exception {
     mockTinkUtils = new MockTinkUtils();
@@ -76,7 +78,8 @@ public class MultiPartyDecryptionKeyServiceImplTest {
             coordinatorAKeyFetchingService,
             coordinatorBKeyFetchingService,
             aeadServicePrimary,
-            aeadServiceSecondary);
+            aeadServiceSecondary,
+            decrypterCacheEntryTtlSec);
   }
 
   @Test

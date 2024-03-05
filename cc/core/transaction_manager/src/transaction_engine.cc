@@ -33,6 +33,7 @@
 #include "core/interface/configuration_keys.h"
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "core/transaction_manager/src/proto/transaction_engine.pb.h"
+#include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 #include "transaction_phase_manager.h"
@@ -168,6 +169,13 @@ ExecutionResult TransactionEngine::Init() noexcept {
       kTransactionManagerSkipFailedLogsInRecovery, skip_log_recovery_failures_);
   if (!execution_result.Successful()) {
     skip_log_recovery_failures_ = false;
+  }
+
+  execution_result = config_provider_->Get(
+      kTransactionManagerSkipDuplicateTransactionInRecovery,
+      skip_duplicate_transaction_in_recovery_);
+  if (!execution_result.Successful()) {
+    skip_duplicate_transaction_in_recovery_ = false;
   }
 
   execution_result = config_provider_->Get(
@@ -815,6 +823,7 @@ ExecutionResult TransactionEngine::OnJournalServiceRecoverCallback(
         is_coordinated_remotely;
     transaction_context.request->transaction_secret = transaction_secret;
     transaction_context.request->transaction_origin = transaction_origin;
+    transaction_context.request->is_journal_recovery = true;
 
     for (int command_index = 0;
          command_index < transaction_log_1_0.commands_size(); ++command_index) {
@@ -980,8 +989,18 @@ ExecutionResult TransactionEngine::InitializeTransaction(
                       transaction_id_string.c_str());
     if (execution_result.status_code ==
         core::errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS) {
-      execution_result = FailureExecutionResult(
-          core::errors::SC_TRANSACTION_MANAGER_TRANSACTION_ALREADY_EXISTS);
+      // During journal recovery, it is possible for duplicate transaction to
+      // exist in journal logs due to retry when writing journal logs to
+      // persistent storage. In this case, just ignore the duplication (instead
+      // of returning error codes, which will crash PBS server and cause crash
+      // looping.
+      execution_result =
+          skip_duplicate_transaction_in_recovery_ &&
+                  transaction_context.request->is_journal_recovery
+              ? SuccessExecutionResult()
+              : FailureExecutionResult(
+                    core::errors::
+                        SC_TRANSACTION_MANAGER_TRANSACTION_ALREADY_EXISTS);
     }
   }
   return execution_result;

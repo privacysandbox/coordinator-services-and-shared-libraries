@@ -20,7 +20,6 @@ module "singlepartyroleprovider" {
   private_key_encryptor_arn      = var.private_key_encryptor_arn
   private_key_api_gateway_arn    = var.private_key_api_gateway_arn
   privacy_budget_api_gateway_arn = var.privacy_budget_api_gateway_arn
-  privacy_budget_auth_table_name = var.privacy_budget_auth_table_name
   attestation_condition_keys     = var.attestation_condition_keys
 }
 

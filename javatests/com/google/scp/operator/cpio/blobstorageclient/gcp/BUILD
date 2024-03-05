@@ -15,8 +15,8 @@
 load("@rules_java//java:defs.bzl", "java_test")
 
 java_test(
-    name = "GcsBlobStorageClientIntegrationTest",
-    srcs = ["GcsBlobStorageClientIntegrationTest.java"],
+    name = "GcsBlobStorageClientTest",
+    srcs = ["GcsBlobStorageClientTest.java"],
     deps = [
         "//java/com/google/scp/operator/cpio/blobstorageclient",
         "//java/com/google/scp/operator/cpio/blobstorageclient:gcp",

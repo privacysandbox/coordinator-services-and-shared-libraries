@@ -21,8 +21,10 @@ import com.google.cloud.functions.HttpResponse;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.scp.operator.autoscaling.tasks.gcp.GcpComputeInstance;
 import com.google.scp.operator.autoscaling.tasks.gcp.ManageTerminatingWaitInstancesTask;
 import com.google.scp.operator.autoscaling.tasks.gcp.RequestScaleInTask;
+import com.google.scp.operator.autoscaling.tasks.gcp.RequestUpdateTask;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.gcp.util.CloudFunctionRequestHandlerBase;
 import java.util.List;
@@ -33,6 +35,7 @@ public class WorkerScaleInRequestHandler extends CloudFunctionRequestHandlerBase
 
   private final ManageTerminatingWaitInstancesTask manageTerminatingWaitInstancesTask;
   private final RequestScaleInTask requestScaleInTask;
+  private final RequestUpdateTask requestUpdateTask;
 
   /** Creates a new instance of the {@code WorkerScaleInHandler} class. */
   @Inject
@@ -41,14 +44,17 @@ public class WorkerScaleInRequestHandler extends CloudFunctionRequestHandlerBase
     this.manageTerminatingWaitInstancesTask =
         injector.getInstance(ManageTerminatingWaitInstancesTask.class);
     this.requestScaleInTask = injector.getInstance(RequestScaleInTask.class);
+    this.requestUpdateTask = injector.getInstance(RequestUpdateTask.class);
   }
 
   /** Constructor for testing. */
   public WorkerScaleInRequestHandler(
       ManageTerminatingWaitInstancesTask manageTerminatedInstanceTask,
-      RequestScaleInTask requestScaleInTask) {
+      RequestScaleInTask requestScaleInTask,
+      RequestUpdateTask requestUpdateTask) {
     this.manageTerminatingWaitInstancesTask = manageTerminatedInstanceTask;
     this.requestScaleInTask = requestScaleInTask;
+    this.requestUpdateTask = requestUpdateTask;
   }
 
   @Override
@@ -58,8 +64,9 @@ public class WorkerScaleInRequestHandler extends CloudFunctionRequestHandlerBase
 
   @Override
   protected String processRequest(String request) throws ServiceException {
-    Map<String, List<String>> remainingInstances =
+    Map<String, List<GcpComputeInstance>> remainingInstances =
         manageTerminatingWaitInstancesTask.manageInstances();
+    remainingInstances = requestUpdateTask.requestUpdate(remainingInstances);
     requestScaleInTask.requestScaleIn(remainingInstances);
     return "";
   }

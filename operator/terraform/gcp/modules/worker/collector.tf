@@ -45,9 +45,21 @@ resource "google_compute_forwarding_rule" "collector" {
 }
 
 # Collector
+locals {
+  metrics_map = {
+    cpu_usage = "process.runtime.jvm.CPU.utilization"
+    memory    = "process.runtime.jvm.memory.utilization_ratio"
+  }
+  // Replace the metric name to match the real name in OTel
+  all_otel_metrics = [
+    for metric in var.allowed_otel_metrics : try(local.metrics_map[metric], metric)
+  ]
+  otel_metrics = join(",", [for metric in local.all_otel_metrics : metric if contains(values(local.metrics_map), metric)])
+  otel_spans   = join(",", [for span in local.all_otel_metrics : span if !contains(values(local.metrics_map), span)])
+}
 
 resource "google_compute_instance_template" "collector" {
-  name        = "${var.environment}-${var.collector_service_name}"
+  name_prefix = "${var.environment}-${var.collector_service_name}-"
   description = "This template is used to create an opentelemetry collector."
   project     = var.project_id
   tags        = ["allow-otlp", "allow-hc", "allow-all-egress", var.egress_internet_tag]
@@ -74,7 +86,10 @@ resource "google_compute_instance_template" "collector" {
   }
   metadata = {
     startup-script = templatefile("${var.collector_startup_script}", {
-      collector_port = var.collector_service_port,
+      collector_port   = var.collector_service_port,
+      environment_name = var.environment,
+      otel_metrics     = local.otel_metrics,
+      otel_spans       = local.otel_spans,
     })
   }
   lifecycle {
@@ -96,6 +111,11 @@ resource "google_compute_region_instance_group_manager" "collector" {
   auto_healing_policies {
     health_check      = google_compute_health_check.collector.id
     initial_delay_sec = var.vm_startup_delay_seconds
+  }
+  update_policy {
+    minimal_action        = "REPLACE"
+    type                  = "PROACTIVE"
+    max_unavailable_fixed = 5
   }
 }
 

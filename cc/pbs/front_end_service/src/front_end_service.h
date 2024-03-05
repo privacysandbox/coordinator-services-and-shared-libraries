@@ -332,8 +332,6 @@ class FrontEndService : public FrontEndServiceInterface {
   /// present in the requests coming from the remote coordinator and can be
   /// used to identify such requests.
   std::string remote_coordinator_claimed_identity_;
-
-  bool enable_site_based_authorization_;
 };
 
 }  // namespace google::scp::pbs

@@ -62,7 +62,8 @@ resource "google_spanner_database" "metadatadb" {
     "CREATE INDEX AsgInstanceStatusIdx ON AsgInstances(Status)",
     "ALTER TABLE JobMetadata ALTER COLUMN RequestReceivedAt set OPTIONS (allow_commit_timestamp = false)",
     "ALTER TABLE JobMetadata ALTER COLUMN RequestUpdatedAt set OPTIONS (allow_commit_timestamp = false)",
-    "ALTER TABLE JobMetadata ALTER COLUMN RequestProcessingStartedAt set OPTIONS (allow_commit_timestamp = false)"
+    "ALTER TABLE JobMetadata ALTER COLUMN RequestProcessingStartedAt set OPTIONS (allow_commit_timestamp = false)",
+    "ALTER TABLE AsgInstances ADD COLUMN TerminationReason STRING(64)"
   ]
 
   deletion_protection = var.spanner_database_deletion_protection

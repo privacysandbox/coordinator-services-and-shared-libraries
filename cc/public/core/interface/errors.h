@@ -17,6 +17,7 @@
 #ifndef SCP_CORE_INTERFACE_ERRORS_H_
 #define SCP_CORE_INTERFACE_ERRORS_H_
 
+#include <cstdint>
 #include <string>
 
 namespace google::scp::core {

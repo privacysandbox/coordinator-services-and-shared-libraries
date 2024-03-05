@@ -41,8 +41,8 @@ variable "custom_alarm_label" {
 # Alarm Variables.
 ################################################################################
 
-variable "eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
+variable "execution_error_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -51,8 +51,18 @@ variable "execution_error_threshold" {
   type        = string
 }
 
+variable "error_log_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "error_log_threshold" {
   description = "Alarming threshold for the the count of logs containing ERROR found in the provided cloudwatch_log_group_name. Example: '0'."
+  type        = string
+}
+
+variable "max_duration_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -60,6 +70,7 @@ variable "max_duration_threshold_ms" {
   description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
   type        = string
 }
+
 variable "lambda_function_name_alarm" {
   description = "full function_name of the lambda to create alarm name"
   type        = string

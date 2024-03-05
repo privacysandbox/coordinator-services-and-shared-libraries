@@ -40,6 +40,7 @@
 #include "core/test/utils/conditional_wait.h"
 #include "pbs/front_end_service/mock/mock_front_end_service_with_overrides.h"
 #include "pbs/front_end_service/src/error_codes.h"
+#include "pbs/front_end_service/src/front_end_utils.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/partition_request_router/mock/mock_transaction_request_router.h"
 #include "pbs/transactions/mock/mock_consume_budget_command_factory.h"
@@ -312,31 +313,7 @@ class FrontEndServiceTest : public testing::Test {
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context_;
 };
 
-struct TestCase {
-  std::string test_name;
-  bool enable_per_site_enrollment;
-};
-
-class FrontEndServiceTestWithParam
-    : public FrontEndServiceTest,
-      public testing::WithParamInterface<TestCase> {
-  void SetUp() override {
-    setenv(core::kPBSAuthorizationEnableSiteBasedAuthorization,
-           GetParam().enable_per_site_enrollment ? "true" : "false",
-           /*replace=*/1);
-    FrontEndServiceTest::SetUp();
-  }
-};
-
-INSTANTIATE_TEST_SUITE_P(
-    FrontEndServiceTestWithParam, FrontEndServiceTestWithParam,
-    testing::Values(TestCase{"EnablePerSiteEnrollment", true},
-                    TestCase{"DisablePerSiteEnrollment", false}),
-    [](const testing::TestParamInfo<FrontEndServiceTestWithParam::ParamType>&
-           info) { return info.param.test_name; });
-
-TEST_P(FrontEndServiceTestWithParam,
-       ExecuteConsumeBudgetOperationInvalidRequest) {
+TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -376,7 +353,7 @@ TEST_P(FrontEndServiceTestWithParam,
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        ExecuteConsumeBudgetOperationTransactionManagerFailure) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
@@ -433,8 +410,7 @@ TEST_P(FrontEndServiceTestWithParam,
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam,
-       ExecuteConsumeBudgetOperationCommandConstruction) {
+TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -496,8 +472,7 @@ TEST_P(FrontEndServiceTestWithParam,
       consume_budget_transaction_context));
 }
 
-TEST_P(FrontEndServiceTestWithParam,
-       ExecuteConsumeBudgetOperationTransactionResults) {
+TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationTransactionResults) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -563,7 +538,7 @@ TEST_P(FrontEndServiceTestWithParam,
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        BeginTransactionFailsIfNewTransactionsAreDisallowed) {
   auto begin_transaction_context =
       GetBeginTransactionHttpRequestContext_Sample();
@@ -588,7 +563,7 @@ TEST_P(FrontEndServiceTestWithParam,
               ResultIs(FailureExecutionResult(12345)));
 }
 
-TEST_P(FrontEndServiceTestWithParam, BeginTransactionInvalidBody) {
+TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -653,7 +628,7 @@ TEST_P(FrontEndServiceTestWithParam, BeginTransactionInvalidBody) {
       client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 3);
 }
 
-TEST_P(FrontEndServiceTestWithParam, BeginTransactionValidBody) {
+TEST_F(FrontEndServiceTest, BeginTransactionValidBody) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -750,7 +725,7 @@ TEST_P(FrontEndServiceTestWithParam, BeginTransactionValidBody) {
   WaitUntil([&]() { return condition.load(); });
 }
 
-TEST_P(FrontEndServiceTestWithParam, OnTransactionCallbackFailed) {
+TEST_F(FrontEndServiceTest, OnTransactionCallbackFailed) {
   atomic<bool> condition = false;
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
@@ -775,7 +750,7 @@ TEST_P(FrontEndServiceTestWithParam, OnTransactionCallbackFailed) {
             0);
 }
 
-TEST_P(FrontEndServiceTestWithParam, OnTransactionCallback) {
+TEST_F(FrontEndServiceTest, OnTransactionCallback) {
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
   transaction_context.request = make_shared<TransactionRequest>();
   transaction_context.request->transaction_id = Uuid::GenerateUuid();
@@ -854,7 +829,7 @@ TEST_P(FrontEndServiceTestWithParam, OnTransactionCallback) {
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam, OnTransactionCallbackWithBatchCommands) {
+TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
   // Create Batch
   auto batch_budgets1 = GetBatchBudgetConsumptions_Sample1();
   auto batch_command1 = GetBatchConsumeBudgetCommandOverride(
@@ -954,8 +929,7 @@ TEST_P(FrontEndServiceTestWithParam, OnTransactionCallbackWithBatchCommands) {
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam,
-       ObtainTransactionOriginReturnsAuthorizedDomain) {
+TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsAuthorizedDomain) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -967,8 +941,7 @@ TEST_P(FrontEndServiceTestWithParam,
             "origin");
 }
 
-TEST_P(FrontEndServiceTestWithParam,
-       ObtainTransactionOriginReturnsHeaderValue) {
+TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsHeaderValue) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -983,7 +956,7 @@ TEST_P(FrontEndServiceTestWithParam,
             "origin from header");
 }
 
-TEST_P(FrontEndServiceTestWithParam, InvalidTransactionId) {
+TEST_F(FrontEndServiceTest, InvalidTransactionId) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1074,7 +1047,7 @@ TEST_P(FrontEndServiceTestWithParam, InvalidTransactionId) {
       client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 }
 
-TEST_P(FrontEndServiceTestWithParam, ValidTransactionNotValidPhase) {
+TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1128,7 +1101,7 @@ TEST_P(FrontEndServiceTestWithParam, ValidTransactionNotValidPhase) {
               ResultIs(FailureExecutionResult(123)));
 }
 
-TEST_P(FrontEndServiceTestWithParam, ValidTransactionValidPhase) {
+TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1247,7 +1220,7 @@ TEST_P(FrontEndServiceTestWithParam, ValidTransactionValidPhase) {
             SuccessExecutionResult());
 }
 
-TEST_P(FrontEndServiceTestWithParam, OnExecuteTransactionPhaseCallback) {
+TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1311,8 +1284,7 @@ TEST_P(FrontEndServiceTestWithParam, OnExecuteTransactionPhaseCallback) {
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam,
-       OnExecuteTransactionPhaseCallbackFailureWithKeys) {
+TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallbackFailureWithKeys) {
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
@@ -1366,7 +1338,7 @@ TEST_P(FrontEndServiceTestWithParam,
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        OnExecuteTransactionPhaseCallbackFailureWithBatchCommands) {
   // Create Batch
   auto batch_budgets1 = GetBatchBudgetConsumptions_Sample1();
@@ -1447,7 +1419,7 @@ TEST_P(FrontEndServiceTestWithParam,
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam, GetServiceStatus) {
+TEST_F(FrontEndServiceTest, GetServiceStatus) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -1483,7 +1455,7 @@ TEST_P(FrontEndServiceTestWithParam, GetServiceStatus) {
   WaitUntil([&]() { return callback_invoked.load(); });
 }
 
-TEST_P(FrontEndServiceTestWithParam, GetServiceStatusFailure) {
+TEST_F(FrontEndServiceTest, GetServiceStatusFailure) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.response = make_shared<HttpResponse>();
   http_context.request = make_shared<HttpRequest>();
@@ -1512,7 +1484,7 @@ TEST_P(FrontEndServiceTestWithParam, GetServiceStatusFailure) {
   EXPECT_EQ(callback_invoked, false);
 }
 
-TEST_P(FrontEndServiceTestWithParam, GetTransactionStatus) {
+TEST_F(FrontEndServiceTest, GetTransactionStatus) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1622,7 +1594,7 @@ TEST_P(FrontEndServiceTestWithParam, GetTransactionStatus) {
   WaitUntil([&]() { return condition.load(); });
 }
 
-TEST_P(FrontEndServiceTestWithParam, OnGetTransactionStatusCallback) {
+TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
@@ -1714,7 +1686,7 @@ TEST_P(FrontEndServiceTestWithParam, OnGetTransactionStatusCallback) {
   WaitUntil([&]() { return called.load(); });
 }
 
-TEST_P(FrontEndServiceTestWithParam, GenerateConsumeBudgetCommands) {
+TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommands) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
@@ -1745,8 +1717,7 @@ TEST_P(FrontEndServiceTestWithParam, GenerateConsumeBudgetCommands) {
 
   auto consume_budget_command1 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command1->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command1->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1759,8 +1730,7 @@ TEST_P(FrontEndServiceTestWithParam, GenerateConsumeBudgetCommands) {
 
   auto consume_budget_command2 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[1]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command2->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command2->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1773,8 +1743,7 @@ TEST_P(FrontEndServiceTestWithParam, GenerateConsumeBudgetCommands) {
 
   auto consume_budget_command3 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[2]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command3->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command3->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1784,8 +1753,7 @@ TEST_P(FrontEndServiceTestWithParam, GenerateConsumeBudgetCommands) {
   EXPECT_EQ(consume_budget_command3->GetBudgetConsumption().request_index, 2);
 }
 
-TEST_P(FrontEndServiceTestWithParam,
-       GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
+TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
@@ -1820,8 +1788,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command1 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command1->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command1->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1834,8 +1801,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command2 =
       dynamic_pointer_cast<BatchConsumeBudgetCommand>(generated_commands[1]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command2->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command2->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1855,7 +1821,7 @@ TEST_P(FrontEndServiceTestWithParam,
             2);
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayDifferentKeys) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -1891,8 +1857,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command1 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command1->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command1->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1906,8 +1871,7 @@ TEST_P(FrontEndServiceTestWithParam,
   auto consume_budget_command2 =
       dynamic_pointer_cast<BatchConsumeBudgetCommand>(generated_commands[1]);
   EXPECT_EQ(consume_budget_command2->GetBudgetConsumptions().size(), 2);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command2->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command2->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1927,7 +1891,7 @@ TEST_P(FrontEndServiceTestWithParam,
             2);
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayDifferentDaysSameKey) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -1963,8 +1927,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command1 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command1->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command1->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1977,8 +1940,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command2 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[1]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command2->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command2->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -1991,8 +1953,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command3 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[2]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command3->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command3->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -2002,7 +1963,7 @@ TEST_P(FrontEndServiceTestWithParam,
   EXPECT_EQ(consume_budget_command3->GetBudgetConsumption().request_index, 2);
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayCommonDay) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -2038,8 +1999,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command1 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command1->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command1->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -2052,8 +2012,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command2 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[1]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command2->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command2->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -2066,8 +2025,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto consume_budget_command3 =
       dynamic_pointer_cast<ConsumeBudgetCommand>(generated_commands[2]);
-  EXPECT_EQ(auth_domain + std::string("/") +
-                *consume_budget_metadata_it->budget_key_name,
+  EXPECT_EQ(*consume_budget_metadata_it->budget_key_name,
             *consume_budget_command3->GetBudgetKeyName());
   EXPECT_EQ(consume_budget_command3->GetTransactionId(), transaction_id);
   EXPECT_EQ(consume_budget_metadata_it->time_bucket,
@@ -2120,7 +2078,7 @@ TEST_F(
 
   auto batch_consume_budget_command =
       dynamic_pointer_cast<BatchConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/key1"),
+  EXPECT_EQ(std::string("key1"),
             *batch_consume_budget_command->GetBudgetKeyName());
   EXPECT_EQ(batch_consume_budget_command->GetTransactionId(), transaction_id);
   EXPECT_EQ(batch_consume_budget_command->GetBudgetConsumptions().size(), 4);
@@ -2133,7 +2091,7 @@ TEST_F(
   }
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayMultipleBatches) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -2182,7 +2140,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto batch_consume_budget_command1 =
       dynamic_pointer_cast<BatchConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/key1"),
+  EXPECT_EQ(std::string("key1"),
             *batch_consume_budget_command1->GetBudgetKeyName());
   EXPECT_EQ(batch_consume_budget_command1->GetTransactionId(), transaction_id);
   EXPECT_EQ(batch_consume_budget_command1->GetBudgetConsumptions().size(), 2);
@@ -2205,7 +2163,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto batch_consume_budget_command2 =
       dynamic_pointer_cast<BatchConsumeBudgetCommand>(generated_commands[1]);
-  EXPECT_EQ(auth_domain + std::string("/key1"),
+  EXPECT_EQ(std::string("key1"),
             *batch_consume_budget_command2->GetBudgetKeyName());
   EXPECT_EQ(batch_consume_budget_command2->GetTransactionId(), transaction_id);
   EXPECT_EQ(batch_consume_budget_command2->GetBudgetConsumptions().size(), 3);
@@ -2235,7 +2193,7 @@ TEST_P(FrontEndServiceTestWithParam,
       3);
 }
 
-TEST_P(FrontEndServiceTestWithParam,
+TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayMultipleBatchesDiffKeys) {
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
@@ -2284,7 +2242,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto batch_consume_budget_command1 =
       dynamic_pointer_cast<BatchConsumeBudgetCommand>(generated_commands[0]);
-  EXPECT_EQ(auth_domain + std::string("/key1"),
+  EXPECT_EQ(std::string("key1"),
             *batch_consume_budget_command1->GetBudgetKeyName());
   EXPECT_EQ(batch_consume_budget_command1->GetTransactionId(), transaction_id);
   EXPECT_EQ(batch_consume_budget_command1->GetBudgetConsumptions().size(), 2);
@@ -2307,7 +2265,7 @@ TEST_P(FrontEndServiceTestWithParam,
 
   auto batch_consume_budget_command2 =
       dynamic_pointer_cast<BatchConsumeBudgetCommand>(generated_commands[1]);
-  EXPECT_EQ(auth_domain + std::string("/key2"),
+  EXPECT_EQ(std::string("key2"),
             *batch_consume_budget_command2->GetBudgetKeyName());
   EXPECT_EQ(batch_consume_budget_command2->GetTransactionId(), transaction_id);
   EXPECT_EQ(batch_consume_budget_command2->GetBudgetConsumptions().size(), 3);

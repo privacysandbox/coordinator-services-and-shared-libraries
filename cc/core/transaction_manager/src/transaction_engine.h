@@ -760,6 +760,9 @@ class TransactionEngine
   /// this component.
   bool skip_log_recovery_failures_;
 
+  /// Whether to skip duplicate transaction during recovery.
+  bool skip_duplicate_transaction_in_recovery_;
+
   /// Transaction lifetime in seconds
   size_t transaction_timeout_in_seconds_;
 

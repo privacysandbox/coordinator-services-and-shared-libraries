@@ -236,6 +236,9 @@ module "worker" {
   max_collectors_per_region = var.max_collectors_per_region
   target_cpu_utilization    = var.target_cpu_utilization
   collector_startup_script  = var.collector_startup_script
+
+  # OTel Metrics
+  allowed_otel_metrics = var.allowed_otel_metrics
 }
 
 module "autoscaling" {

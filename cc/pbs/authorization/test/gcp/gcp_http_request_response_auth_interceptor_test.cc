@@ -25,12 +25,11 @@
 #include <initializer_list>
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
 #include "core/authorization_service/src/error_codes.h"
@@ -118,7 +117,6 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest, PrepareRequest) {
   EXPECT_EQ(
       headers.find(kAuthorizationHeader)->second,
       absl::StrCat("Bearer ", authorization_metadata_.authorization_token));
-  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
 }
 
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
@@ -137,29 +135,6 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
   EXPECT_EQ(
       headers.find(kAuthorizationHeader)->second,
       absl::StrCat("Bearer ", authorization_metadata_.authorization_token));
-  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
-}
-
-TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
-       PrepareRequestEnablePerSiteEnrollment) {
-  auto mock_config_provider = std::make_shared<MockConfigProvider>();
-  mock_config_provider->SetBool(
-      core::kPBSAuthorizationEnableSiteBasedAuthorization, true);
-  subject_ = GcpHttpRequestResponseAuthInterceptor(mock_config_provider);
-  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
-              IsSuccessful());
-
-  const auto& headers = *http_request_.headers;
-
-  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
-  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
-
-  ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
-  EXPECT_EQ(
-      headers.find(kAuthorizationHeader)->second,
-      absl::StrCat("Bearer ", authorization_metadata_.authorization_token));
-  ASSERT_NE(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
-  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader)->second, "true");
 }
 
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest,

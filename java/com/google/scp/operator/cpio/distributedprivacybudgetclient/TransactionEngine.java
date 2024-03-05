@@ -17,7 +17,7 @@
 package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
 import com.google.common.collect.ImmutableList;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 
 /** Interface for the transaction engine which is responsible to execute the transactions. */
 public interface TransactionEngine {
@@ -27,7 +27,7 @@ public interface TransactionEngine {
    *
    * @param request Transaction request metadata.
    */
-  ImmutableList<PrivacyBudgetUnit> execute(TransactionRequest request)
+  ImmutableList<ReportingOriginToPrivacyBudgetUnits> execute(TransactionRequest request)
       throws TransactionEngineException;
 
   /**

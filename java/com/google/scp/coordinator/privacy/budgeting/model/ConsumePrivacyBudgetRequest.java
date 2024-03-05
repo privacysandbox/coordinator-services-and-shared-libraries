@@ -40,8 +40,8 @@ public abstract class ConsumePrivacyBudgetRequest {
   public abstract ConsumePrivacyBudgetRequest.Builder toBuilder();
 
   /** ad-tech origin where reports will be sent */
-  @JsonProperty("attribution_report_to")
-  public abstract String attributionReportTo();
+  @JsonProperty("claimed_identity")
+  public abstract String claimedIdentity();
 
   /**
    * Optional field for advertisers to set a higher limit for privacy budgets. When this field is
@@ -53,8 +53,9 @@ public abstract class ConsumePrivacyBudgetRequest {
   public abstract Optional<Integer> privacyBudgetLimit();
 
   /** List of Privacy budgeting units */
-  @JsonProperty("privacy_budget_units")
-  public abstract ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits();
+  @JsonProperty("reporting_origin_to_privacy_budget_units_list")
+  public abstract ImmutableList<ReportingOriginToPrivacyBudgetUnits>
+      reportingOriginToPrivacyBudgetUnitsList();
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   @AutoValue.Builder
@@ -65,11 +66,12 @@ public abstract class ConsumePrivacyBudgetRequest {
       return new AutoValue_ConsumePrivacyBudgetRequest.Builder();
     }
 
-    @JsonProperty("attribution_report_to")
-    public abstract Builder attributionReportTo(String attributionReportTo);
+    @JsonProperty("claimed_identity")
+    public abstract Builder claimedIdentity(String claimedIdentity);
 
-    @JsonProperty("privacy_budget_units")
-    public abstract Builder privacyBudgetUnits(ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits);
+    @JsonProperty("reporting_origin_to_privacy_budget_unit_list")
+    public abstract Builder reportingOriginToPrivacyBudgetUnitsList(
+        ImmutableList<ReportingOriginToPrivacyBudgetUnits> reportingOriginToPrivacyBudgetUnitsList);
 
     @JsonProperty("privacy_budget_limit")
     public abstract Builder privacyBudgetLimit(Integer privacyBudgetLimit);

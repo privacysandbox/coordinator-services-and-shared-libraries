@@ -32,6 +32,8 @@
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/configuration_keys.h"
 #include "core/interface/http_types.h"
+#include "error_codes.h"
+#include "front_end_utils.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/front_end_service_interface.h"
@@ -42,9 +44,6 @@
 #include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/type_def.h"
 #include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
-
-#include "error_codes.h"
-#include "front_end_utils.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::Byte;
@@ -122,15 +121,7 @@ FrontEndService::FrontEndService(
       metric_client_(metric_client),
       config_provider_(config_provider),
       aggregated_metric_interval_ms_(core::kDefaultAggregatedMetricIntervalMs),
-      generate_batch_budget_consume_commands_per_day_(false),
-      enable_site_based_authorization_(false) {
-  if (config_provider_ &&
-      !config_provider_->Get(
-          core::kPBSAuthorizationEnableSiteBasedAuthorization,
-          enable_site_based_authorization_)) {
-    enable_site_based_authorization_ = false;
-  }
-}
+      generate_batch_budget_consume_commands_per_day_(false) {}
 
 core::ExecutionResultOr<std::shared_ptr<cpio::AggregateMetricInterface>>
 FrontEndService::RegisterAggregateMetric(const string& name,
@@ -301,12 +292,7 @@ FrontEndService::GenerateConsumeBudgetCommands(
   size_t index = 0;
   for (auto& budget : consume_budget_metadata_list) {
     std::shared_ptr<std::string> budget_key_name;
-    if (enable_site_based_authorization_) {
-      budget_key_name = budget.budget_key_name;
-    } else {
-      budget_key_name = std::make_shared<std::string>(absl::StrCat(
-          authorized_domain, string("/"), *budget.budget_key_name));
-    }
+    budget_key_name = budget.budget_key_name;
     ConsumeBudgetCommandRequestInfo budget_info(budget.time_bucket,
                                                 budget.token_count, index);
     commands.push_back(consume_budget_command_factory_->ConstructCommand(
@@ -361,10 +347,8 @@ FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
   for (auto& budget_key_time_groups : budget_key_time_groups_map) {
     auto budget_key_name = std::make_shared<std::string>(absl::StrCat(
         authorized_domain, string("/"), budget_key_time_groups.first));
-    if (enable_site_based_authorization_) {
-      budget_key_name =
-          std::make_shared<std::string>(budget_key_time_groups.first);
-    }
+    budget_key_name =
+        std::make_shared<std::string>(budget_key_time_groups.first);
     for (auto& time_groups : budget_key_time_groups.second) {
       if (time_groups.second.size() > 1) {
         vector<ConsumeBudgetCommandRequestInfo> budgets;
@@ -433,8 +417,7 @@ ExecutionResult FrontEndService::BeginTransaction(
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   execution_result = ParseBeginTransactionRequestBody(
       *http_context.request->auth_context.authorized_domain,
-      http_context.request->body, consume_budget_metadata_list,
-      enable_site_based_authorization_);
+      http_context.request->body, consume_budget_metadata_list);
 
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
@@ -464,12 +447,7 @@ ExecutionResult FrontEndService::BeginTransaction(
 
   // Log the request's budget info
   for (const auto& consume_budget_metadata : consume_budget_metadata_list) {
-    std::string budget_key =
-        enable_site_based_authorization_
-            ? *consume_budget_metadata.budget_key_name
-            : absl::StrCat(
-                  *http_context.request->auth_context.authorized_domain, "/",
-                  *consume_budget_metadata.budget_key_name);
+    std::string budget_key = *consume_budget_metadata.budget_key_name;
     SCP_DEBUG_CONTEXT(
         kFrontEndService, http_context,
         "Transaction: %s Budget Key: %s Reporting Time Bucket: %llu Token "

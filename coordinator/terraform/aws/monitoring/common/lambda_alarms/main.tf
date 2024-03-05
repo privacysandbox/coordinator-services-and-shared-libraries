@@ -55,13 +55,13 @@ resource "aws_cloudwatch_metric_alarm" "lambda_invocation_error_alarm" {
   alarm_name          = "Warning${var.lambda_function_name_alarm}LambdaError${var.custom_alarm_label}"
   alarm_description   = "Lambda errors over ${var.execution_error_threshold}%"
   comparison_operator = "GreaterThanThreshold"
-  #Number of 'period' to evaluate for the alarm
-  evaluation_periods        = 1
+  # Number of 'period' to evaluate for the alarm
+  evaluation_periods        = var.execution_error_eval_periods
   threshold                 = var.execution_error_threshold
   insufficient_data_actions = []
   metric_name               = "Errors"
   namespace                 = "AWS/Lambda"
-  period                    = var.eval_period_sec
+  period                    = "60"
   statistic                 = "Sum"
 
   treat_missing_data = "notBreaching"
@@ -82,12 +82,12 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_log_alarm" {
   alarm_name                = "Warning${var.lambda_function_name_alarm}ErrorLog${var.custom_alarm_label}"
   alarm_description         = "Lambda error logs more than ${var.error_log_threshold}"
   comparison_operator       = "GreaterThanThreshold"
-  evaluation_periods        = 1
+  evaluation_periods        = var.error_log_eval_periods
   threshold                 = var.error_log_threshold
   insufficient_data_actions = []
   metric_name               = local.error_log_metric_name
   namespace                 = local.custom_metric_namespace
-  period                    = var.eval_period_sec
+  period                    = "60"
   statistic                 = "Sum"
 
   treat_missing_data = "notBreaching"
@@ -105,12 +105,12 @@ resource "aws_cloudwatch_metric_alarm" "lambda_max_duration_alarm" {
   alarm_name                = "Warning${var.lambda_function_name_alarm}MaxDuration${var.custom_alarm_label}"
   alarm_description         = "Lambda duration over ${var.max_duration_threshold_ms}ms"
   comparison_operator       = "GreaterThanThreshold"
-  evaluation_periods        = 1
+  evaluation_periods        = var.max_duration_eval_periods
   threshold                 = var.max_duration_threshold_ms
   insufficient_data_actions = []
   metric_name               = "Duration"
   namespace                 = "AWS/Lambda"
-  period                    = var.eval_period_sec
+  period                    = "60"
   statistic                 = "Maximum"
 
   treat_missing_data = "notBreaching"

@@ -19,10 +19,8 @@ package com.google.scp.operator.cpio.distributedprivacybudgetclient.testing;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode;
-import java.time.Instant;
 
 /**
  * Fake distributed privacy budgeting bridge to be used strictly in tests
@@ -63,16 +61,12 @@ public final class FakeDistributedPrivacyBudgetClient implements DistributedPriv
     lastRequest = privacyBudgetRequest;
     if (shouldReturnExhausted) {
       return ConsumePrivacyBudgetResponse.builder()
-          .exhaustedPrivacyBudgetUnits(
-              ImmutableList.of(
-                  PrivacyBudgetUnit.builder()
-                      .privacyBudgetKey("key")
-                      .reportingWindow(Instant.EPOCH)
-                      .build()))
+          .exhaustedPrivacyBudgetUnitsByOrigin(
+              privacyBudgetRequest.reportingOriginToPrivacyBudgetUnitsList())
           .build();
     }
     return ConsumePrivacyBudgetResponse.builder()
-        .exhaustedPrivacyBudgetUnits(ImmutableList.of())
+        .exhaustedPrivacyBudgetUnitsByOrigin(ImmutableList.of())
         .build();
   }
 

@@ -26,11 +26,10 @@
 #include <initializer_list>
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
 #include <utility>
-
-#include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
@@ -123,7 +122,6 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest, PrepareRequest) {
               ContainsRegex(absl::StrCat(
                   "SignedHeaders=", absl::StrJoin(kSignedHeaders, ";"), ".*",
                   "signature")));
-  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
@@ -144,31 +142,6 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
               ContainsRegex(absl::StrCat(
                   "SignedHeaders=", absl::StrJoin(kSignedHeaders, ";"), ".*",
                   "signature")));
-  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
-}
-
-TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
-       PrepareRequestEnablePerSiteEnrollment) {
-  auto mock_config_provider = std::make_shared<MockConfigProvider>();
-  mock_config_provider->SetBool(
-      core::kPBSAuthorizationEnableSiteBasedAuthorization, true);
-  subject_ =
-      AwsHttpRequestResponseAuthInterceptor(kRegion, mock_config_provider);
-  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
-              IsSuccessful());
-
-  const auto& headers = *http_request_.headers;
-
-  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
-  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
-
-  ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
-  EXPECT_THAT(headers.find(kAuthorizationHeader)->second,
-              ContainsRegex(absl::StrCat(
-                  "SignedHeaders=", absl::StrJoin(kSignedHeaders, ";"), ".*",
-                  "signature")));
-  ASSERT_NE(headers.find(core::kEnablePerSiteEnrollmentHeader), headers.end());
-  EXPECT_EQ(headers.find(core::kEnablePerSiteEnrollmentHeader)->second, "true");
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest,

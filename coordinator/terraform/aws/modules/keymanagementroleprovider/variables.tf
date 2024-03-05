@@ -37,11 +37,6 @@ variable "privacy_budget_api_gateway_arn" {
   type        = string
 }
 
-variable "privacy_budget_auth_table_name" {
-  description = "DynamoDB table name of distributed pbs auth table"
-  type        = string
-}
-
 variable "attestation_condition_keys" {
   description = "AWS Condition Keys for Nitro Enclaves. Map key defines Condition key type, while list defines acceptable hashes."
   type        = map(list(string))

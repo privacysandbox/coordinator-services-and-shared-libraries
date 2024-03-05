@@ -83,8 +83,6 @@ application_environment_variables = {
   google_scp_pbs_remote_host_address = "<secondary-url>"
   # AWS Region of the secondary environment
   google_scp_pbs_remote_cloud_region = "<secondary-deployment-region>"
-  # Enable site-based authorization in PBS
-  google_scp_pbs_authorization_enable_site_based_authorization = "true"
 
   ## Uncomment one of the configuration blocks below depending on your type of deployment
 

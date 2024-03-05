@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClient.PrivacyBudgetClientException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionEngine.TransactionEngineException;
 import com.google.testing.junit.testparameterinjector.TestParameterInjector;
@@ -327,7 +328,7 @@ public final class TransactionEngineTest {
     transactionEngine.execute(getTestRequest());
 
     verify(transactionPhaseManager, times(4)).proceedToNextPhase(any(), any());
-    verify(privacyBudgetClient1, times(2)).performActionBegin(any(Transaction.class));
+    verify(privacyBudgetClient1, times(1)).performActionBegin(any(Transaction.class));
     verify(privacyBudgetClient1, times(1)).performActionEnd(any(Transaction.class));
     verify(privacyBudgetClient2, times(2)).performActionBegin(any(Transaction.class));
     verify(privacyBudgetClient2, times(1)).performActionEnd(any(Transaction.class));
@@ -473,7 +474,7 @@ public final class TransactionEngineTest {
     verify(privacyBudgetClient2, times(1)).performActionBegin(any(Transaction.class));
     verify(privacyBudgetClient2, times(1)).performActionPrepare(any(Transaction.class));
     verify(privacyBudgetClient2, times(1)).performActionCommit(any(Transaction.class));
-    verify(privacyBudgetClient2, times(5)).performActionNotify(any(Transaction.class));
+    verify(privacyBudgetClient2, times(1)).performActionNotify(any(Transaction.class));
     verify(privacyBudgetClient2, never()).performActionEnd(any(Transaction.class));
   }
 
@@ -653,7 +654,7 @@ public final class TransactionEngineTest {
     verify(privacyBudgetClient1, times(1)).performActionBegin(any(Transaction.class));
     verify(privacyBudgetClient1, times(1)).performActionPrepare(any(Transaction.class));
     verify(privacyBudgetClient1, times(1)).performActionCommit(any(Transaction.class));
-    verify(privacyBudgetClient1, times(5)).performActionNotify(any(Transaction.class));
+    verify(privacyBudgetClient1, times(1)).performActionNotify(any(Transaction.class));
     verify(privacyBudgetClient1, never()).performActionEnd(any(Transaction.class));
 
     verify(privacyBudgetClient2, times(1)).performActionBegin(any(Transaction.class));
@@ -940,8 +941,13 @@ public final class TransactionEngineTest {
   private TransactionRequest getTestRequest() {
     return TransactionRequest.builder()
         .setTransactionId(new UUID(0L, 0L))
-        .setAttributionReportTo("random_adtech")
-        .setPrivacyBudgetUnits(ImmutableList.of())
+        .setClaimedIdentity("random_adtech")
+        .setReportingOriginToPrivacyBudgetUnitsList(
+            ImmutableList.of(
+                ReportingOriginToPrivacyBudgetUnits.builder()
+                    .setReportingOrigin("random_adtech")
+                    .setPrivacyBudgetUnits(ImmutableList.of())
+                    .build()))
         .setTimeout(Timestamp.from(Instant.now()))
         .setTransactionSecret("random secret")
         .build();

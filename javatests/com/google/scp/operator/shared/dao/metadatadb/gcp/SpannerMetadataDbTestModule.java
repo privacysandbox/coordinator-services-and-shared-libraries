@@ -66,7 +66,10 @@ public final class SpannerMetadataDbTestModule extends AbstractModule {
           "ALTER TABLE JobMetadata ALTER COLUMN RequestUpdatedAt set OPTIONS"
               + " (allow_commit_timestamp = false)",
           "ALTER TABLE JobMetadata ALTER COLUMN RequestProcessingStartedAt set OPTIONS"
-              + " (allow_commit_timestamp = false)");
+              + " (allow_commit_timestamp = false)",
+          "ALTER TABLE "
+              + SpannerAsgInstancesDao.TABLE_NAME
+              + " ADD COLUMN TerminationReason STRING(64)");
 
   @Provides
   @Singleton

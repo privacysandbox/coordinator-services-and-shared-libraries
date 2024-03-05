@@ -21,7 +21,7 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionManager.TransactionManagerException;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -51,7 +51,7 @@ public final class DistributedPrivacyBudgetClientImpl implements DistributedPriv
   @Override
   public ConsumePrivacyBudgetResponse consumePrivacyBudget(ConsumePrivacyBudgetRequest request)
       throws DistributedPrivacyBudgetClientException, DistributedPrivacyBudgetServiceException {
-    var size = request.privacyBudgetUnits().size();
+    var size = getTotalCountOfPrivacyBudgetUnits(request);
     if (size > PRIVACY_BUDGET_MAX_ITEM) {
       throw new DistributedPrivacyBudgetClientException(
           String.format("Too many items. Current: %d; Max: %d", size, PRIVACY_BUDGET_MAX_ITEM));
@@ -60,16 +60,23 @@ public final class DistributedPrivacyBudgetClientImpl implements DistributedPriv
     TransactionRequest transactionRequest = buildTransactionRequest(request);
     try {
       logger.info("Starting distributed privacy budget service for the request: " + request);
-      ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits =
+      ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudgetUnitsByOrigin =
           transactionManager.execute(transactionRequest);
 
       logger.info("Successfully ran distributed privacy budget service.");
       return ConsumePrivacyBudgetResponse.builder()
-          .exhaustedPrivacyBudgetUnits(exhaustedPrivacyBudgetUnits)
+          .exhaustedPrivacyBudgetUnitsByOrigin(exhaustedBudgetUnitsByOrigin)
           .build();
     } catch (TransactionManagerException e) {
       throw new DistributedPrivacyBudgetServiceException(e.getStatusCode(), e);
     }
+  }
+
+  private static long getTotalCountOfPrivacyBudgetUnits(ConsumePrivacyBudgetRequest request) {
+    return request.reportingOriginToPrivacyBudgetUnitsList().stream()
+        .map(ReportingOriginToPrivacyBudgetUnits::privacyBudgetUnits)
+        .flatMap(ImmutableList::stream)
+        .count();
   }
 
   private TransactionRequest buildTransactionRequest(ConsumePrivacyBudgetRequest request) {
@@ -78,8 +85,9 @@ public final class DistributedPrivacyBudgetClientImpl implements DistributedPriv
     TransactionRequest.Builder transactionRequestBuilder =
         TransactionRequest.builder()
             .setTransactionId(UUID.randomUUID())
-            .setAttributionReportTo(request.attributionReportTo())
-            .setPrivacyBudgetUnits(request.privacyBudgetUnits())
+            .setClaimedIdentity(request.claimedIdentity())
+            .setReportingOriginToPrivacyBudgetUnitsList(
+                request.reportingOriginToPrivacyBudgetUnitsList())
             .setTimeout(Timestamp.from(expiryTime))
             .setTransactionSecret(generateSecret());
 

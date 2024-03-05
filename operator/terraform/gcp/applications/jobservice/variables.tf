@@ -407,3 +407,13 @@ variable "collector_startup_script" {
   description = "Script thats starts the OTel collector."
   type        = string
 }
+
+################################################################################
+# OTel metrics Variables
+################################################################################
+
+variable "allowed_otel_metrics" {
+  description = "Set of otel metrics to be exported."
+  type        = set(string)
+  default     = []
+}

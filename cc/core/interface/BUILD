@@ -29,7 +29,6 @@ cc_library(
             "async_context.h",
             "streaming_context.h",
             "type_def.h",
-            "type_def.cc",
             "logger_interface.h",
             "service_interface.h",
         ],
@@ -116,7 +115,6 @@ cc_library(
     name = "type_def_lib",
     srcs =
         [
-            "type_def.cc",
             "type_def.h",
         ],
     copts = [

@@ -13,8 +13,19 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "configure_make")
 
 package(default_visibility = ["//visibility:public"])
+
+configure_make(
+    name = "libpsl",
+    configure_in_place = True,
+    lib_source = "@libpsl//:all_srcs",
+    out_shared_libs = [
+        "libpsl.so",
+        "libpsl.so.5",
+    ],
+)
 
 cc_library(
     name = "pbs_front_end_service_lib",
@@ -31,6 +42,7 @@ cc_library(
         "-latomic",
     ],
     deps = [
+        ":libpsl",
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",

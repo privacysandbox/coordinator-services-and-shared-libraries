@@ -40,6 +40,7 @@ java_library(
         "//java/external:gcp_cloud_function",
         "//java/external:google_api_client",
         "//java/external:google_http_client_gson",
+        "//java/external:google_oauth_client",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_core",

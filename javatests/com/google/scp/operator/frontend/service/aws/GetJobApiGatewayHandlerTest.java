@@ -175,4 +175,52 @@ public final class GetJobApiGatewayHandlerTest {
     assertThatResponseBodyContains(responseEvent, errorResponse);
     assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
   }
+
+  @Test
+  public void emptyParamValueSpecified_ReturnsInvalidArgument()
+      throws InvalidProtocolBufferException {
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromGet(
+                ImmutableMap.of("job_request_id", "")),
+            null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage("Required query parameter 'job_request_id' must not be empty")
+            .addAllDetails(
+                List.of(
+                    Details.newBuilder()
+                        .setReason(ErrorReasons.VALIDATION_FAILED.toString())
+                        .build()))
+            .build();
+
+    assertThatResponseBodyContains(responseEvent, errorResponse);
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void whiteSpaceOnlyParamValueSpecified_ReturnsInvalidArgument()
+      throws InvalidProtocolBufferException {
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromGet(
+                ImmutableMap.of("job_request_id", "     ")),
+            null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage("Required query parameter 'job_request_id' must not be empty")
+            .addAllDetails(
+                List.of(
+                    Details.newBuilder()
+                        .setReason(ErrorReasons.VALIDATION_FAILED.toString())
+                        .build()))
+            .build();
+
+    assertThatResponseBodyContains(responseEvent, errorResponse);
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
 }

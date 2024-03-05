@@ -277,8 +277,12 @@ variable "pbs_cloudwatch_log_group_name" {
   type        = string
 }
 
-variable "pbs_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
+################################################################################
+# Log based Alarm Variables.
+################################################################################
+
+variable "pbs_error_log_log_corrupted_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -287,8 +291,18 @@ variable "pbs_error_log_log_corrupted_threshold" {
   type        = string
 }
 
+variable "pbs_error_log_missing_transaction_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "pbs_error_log_missing_transaction_threshold" {
   description = "Alarming threshold for the count of logs containing ERROR - metric_filter_missing_transaction. Example: '0'."
+  type        = string
+}
+
+variable "pbs_error_log_checkpointing_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -297,13 +311,27 @@ variable "pbs_error_log_checkpointing_threshold" {
   type        = string
 }
 
+variable "pbs_error_log_database_read_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "pbs_error_log_database_read_threshold" {
   description = "Alarming threshold for the count of logs containing ERROR - metric_filter_database_read. Example: '0'."
   type        = string
 }
 
+variable "pbs_error_log_database_update_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
 variable "pbs_error_log_database_update_threshold" {
   description = "Alarming threshold for the count of logs containing ERROR - metric_filter_database_update. Example: '0'."
+  type        = string
+}
+
+variable "pbs_error_log_missing_component_id_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -312,8 +340,22 @@ variable "pbs_error_log_missing_component_id_threshold" {
   type        = string
 }
 
+variable "pbs_error_log_handle_journal_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "pbs_error_log_handle_journal_threshold" {
   description = "Alarming threshold for the count of logs containing ERROR - metric_filter_handle_journal. Example: '0'."
+  type        = string
+}
+
+################################################################################
+# ELB based Alarm Variables.
+################################################################################
+
+variable "pbs_elb_error_ratio_4xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -322,8 +364,22 @@ variable "pbs_elb_error_ratio_4xx_threshold" {
   type        = string
 }
 
+variable "pbs_elb_error_ratio_5xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "pbs_elb_error_ratio_5xx_threshold" {
   description = "ELB 5xx error ratio rate greater than this to send alarm. Value should be a percentage. Example: 10% is '10.0'."
+  type        = string
+}
+
+################################################################################
+# Dynamo Alarm Variables.
+################################################################################
+
+variable "budget_key_table_read_capacity_alarm_ratio_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -332,18 +388,18 @@ variable "budget_key_table_read_capacity_alarm_ratio_threshold" {
   type        = string
 }
 
+variable "budget_key_table_write_capacity_alarm_ratio_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "budget_key_table_write_capacity_alarm_ratio_threshold" {
   description = "The capacity limit of budget key table write processing unit"
   type        = string
 }
 
-variable "reporting_origin_table_read_capacity_alarm_ratio_threshold" {
-  description = "The capacity limit of reporting origin table read processing unit"
-  type        = string
-}
-
-variable "reporting_origin_table_write_capacity_alarm_ratio_threshold" {
-  description = "The capacity limit of reporting origin table write processing unit"
+variable "pbs_authorization_v2_table_read_capacity_alarm_ratio_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
@@ -352,13 +408,28 @@ variable "pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold" {
   type        = string
 }
 
+variable "pbs_authorization_v2_table_write_capacity_alarm_ratio_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold" {
   description = "The capacity limit of PBS authorization V2 table write processing unit"
   type        = string
 }
 
+variable "partition_lock_table_read_capacity_alarm_ratio_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
 variable "partition_lock_table_read_capacity_alarm_ratio_threshold" {
-  description = "The capacity limit of partition lock table read processing unit"
+  description = "The capacity limit of partition lock key table read processing unit"
+  type        = string
+}
+
+variable "partition_lock_table_write_capacity_alarm_ratio_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 

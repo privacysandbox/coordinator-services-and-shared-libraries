@@ -21,6 +21,7 @@ import com.google.scp.coordinator.pbsprober.Annotations.ReportingOrigin;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
 import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetClientException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetServiceException;
@@ -54,10 +55,15 @@ public final class RandomPrivacyBudgetConsumer {
             .privacyBudgetKey(String.valueOf(UUID.randomUUID()))
             .reportingWindow(Instant.now())
             .build();
+    ReportingOriginToPrivacyBudgetUnits mapping =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setPrivacyBudgetUnits(ImmutableList.of(privacyBudgetUnit))
+            .setReportingOrigin(reportingOrigin)
+            .build();
     ConsumePrivacyBudgetRequest consumeRequest =
         ConsumePrivacyBudgetRequest.builder()
-            .attributionReportTo(reportingOrigin)
-            .privacyBudgetUnits(ImmutableList.of(privacyBudgetUnit))
+            .claimedIdentity(reportingOrigin)
+            .reportingOriginToPrivacyBudgetUnitsList(ImmutableList.of(mapping))
             .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
             .build();
     return client.consumePrivacyBudget(consumeRequest);

@@ -33,7 +33,7 @@ public abstract class ConsumePrivacyBudgetResponse {
 
   public static final ConsumePrivacyBudgetResponse BUDGET_AVAILABLE_FOR_ALL =
       ConsumePrivacyBudgetResponse.builder()
-          .exhaustedPrivacyBudgetUnits(ImmutableList.of())
+          .exhaustedPrivacyBudgetUnitsByOrigin(ImmutableList.of())
           .build();
 
   public static ConsumePrivacyBudgetResponse.Builder builder() {
@@ -44,8 +44,9 @@ public abstract class ConsumePrivacyBudgetResponse {
   public abstract ConsumePrivacyBudgetResponse.Builder toBuilder();
 
   /** Exhausted privacy budget units */
-  @JsonProperty("exhausted_privacy_budget_units")
-  public abstract ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits();
+  @JsonProperty("exhausted_privacy_budget_units_by_origin")
+  public abstract ImmutableList<ReportingOriginToPrivacyBudgetUnits>
+      exhaustedPrivacyBudgetUnitsByOrigin();
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   @AutoValue.Builder
@@ -56,9 +57,9 @@ public abstract class ConsumePrivacyBudgetResponse {
       return new AutoValue_ConsumePrivacyBudgetResponse.Builder();
     }
 
-    @JsonProperty("exhausted_privacy_budget_units")
-    public abstract Builder exhaustedPrivacyBudgetUnits(
-        ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits);
+    @JsonProperty("exhausted_privacy_budget_units_by_origin")
+    public abstract Builder exhaustedPrivacyBudgetUnitsByOrigin(
+        ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedPrivacyBudgetUnitsByOrigin);
 
     public abstract ConsumePrivacyBudgetResponse build();
   }

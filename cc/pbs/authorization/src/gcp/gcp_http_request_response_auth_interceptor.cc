@@ -22,11 +22,10 @@
 #include <initializer_list>
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <nlohmann/json.hpp>
 
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
@@ -131,11 +130,6 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
        absl::StrFormat(kAuthHeaderFormat,
                        authorization_metadata.authorization_token)});
 
-  if (enable_site_based_authorization_) {
-    http_request.headers->insert(
-        {std::string(core::kEnablePerSiteEnrollmentHeader), "true"});
-  }
-
   return SuccessExecutionResult();
 }
 
@@ -148,7 +142,8 @@ GcpHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
   try {
     body_json = json::parse(body_str);
     parse_fail = false;
-  } catch (...) {}
+  } catch (...) {
+  }
   if (parse_fail || !body_json.contains(kAuthorizedDomain)) {
     return FailureExecutionResult(
         core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);

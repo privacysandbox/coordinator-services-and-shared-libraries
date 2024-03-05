@@ -30,20 +30,11 @@ namespace google::scp::pbs {
 class GcpHttpRequestResponseAuthInterceptor
     : public core::HttpRequestResponseAuthInterceptorInterface {
  public:
-  GcpHttpRequestResponseAuthInterceptor()
-      : config_provider_(nullptr), enable_site_based_authorization_(false) {}
+  GcpHttpRequestResponseAuthInterceptor() : config_provider_(nullptr) {}
 
   explicit GcpHttpRequestResponseAuthInterceptor(
       std::shared_ptr<core::ConfigProviderInterface> config_provider)
-      : config_provider_(config_provider),
-        enable_site_based_authorization_(false) {
-    if (config_provider_ &&
-        !config_provider_->Get(
-            core::kPBSAuthorizationEnableSiteBasedAuthorization,
-            enable_site_based_authorization_)) {
-      enable_site_based_authorization_ = false;
-    }
-  }
+      : config_provider_(config_provider) {}
 
   core::ExecutionResult PrepareRequest(
       const core::AuthorizationMetadata& authorization_metadata,
@@ -56,7 +47,6 @@ class GcpHttpRequestResponseAuthInterceptor
 
  private:
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
-  bool enable_site_based_authorization_;
 };
 
 }  // namespace google::scp::pbs

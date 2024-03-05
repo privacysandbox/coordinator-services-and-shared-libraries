@@ -18,7 +18,7 @@ package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionEngine.TransactionEngineException;
 
 /**
@@ -38,7 +38,7 @@ public class TransactionManagerImpl implements TransactionManager {
    * @param request Transaction request metadata.
    */
   @Override
-  public ImmutableList<PrivacyBudgetUnit> execute(TransactionRequest request)
+  public ImmutableList<ReportingOriginToPrivacyBudgetUnits> execute(TransactionRequest request)
       throws TransactionManagerException {
     try {
       return transactionEngine.execute(request);

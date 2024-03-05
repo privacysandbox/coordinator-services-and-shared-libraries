@@ -16,7 +16,11 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,5 +43,13 @@ public final class KeyGenerationUtil {
         keyDb.getActiveKeys(maxKeys).stream()
             .filter(key -> key.getExpirationTime() > refreshIfBefore.toEpochMilli())
             .count();
+  }
+
+  /** Returns a list of temporary encryptionKeys in keyDb. */
+  public static ImmutableList<EncryptionKey> findTemporaryKeys(KeyDb keyDb)
+      throws ServiceException {
+    return keyDb.getAllKeys().stream()
+        .filter(key -> key.getActivationTime() == key.getExpirationTime())
+        .collect(toImmutableList());
   }
 }

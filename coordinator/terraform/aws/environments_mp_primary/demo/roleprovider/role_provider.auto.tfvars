@@ -21,8 +21,6 @@ private_key_encryptor_arn      = "<from mpkhs_primary output>"
 private_key_api_gateway_arn    = "<from mpkhs_primary output>"
 privacy_budget_api_gateway_arn = "<from distributedpbs_application output>"
 
-privacy_budget_auth_table_name = "<from distributedpbs_application output>"
-
 # AWS Condition Key for Nitro Enclaves. Types defined in:
 # https://docs.aws.amazon.com/kms/latest/developerguide/policy-conditions.html#conditions-nitro-enclaves
 # For multiple keys, PCR0 or ImageSha384 should be sufficient. These correspond to the enclave image hash

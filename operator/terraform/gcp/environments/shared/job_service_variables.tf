@@ -469,3 +469,13 @@ variable "collector_startup_script" {
   type        = string
   default     = "../../modules/worker/collector_startup.sh"
 }
+
+################################################################################
+# OTel metrics Variables
+################################################################################
+
+variable "allowed_otel_metrics" {
+  description = "Set of otel metrics to be exported."
+  type        = set(string)
+  default     = []
+}

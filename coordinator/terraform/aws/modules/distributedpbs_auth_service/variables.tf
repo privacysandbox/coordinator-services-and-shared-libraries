@@ -33,17 +33,7 @@ variable "auth_lambda_handler_path" {
   nullable    = false
 }
 
-variable "auth_dynamo_db_table_name" {
-  type     = string
-  nullable = false
-}
-
 variable "pbs_authorization_v2_table_name" {
-  type     = string
-  nullable = false
-}
-
-variable "auth_dynamo_db_table_arn" {
   type     = string
   nullable = false
 }

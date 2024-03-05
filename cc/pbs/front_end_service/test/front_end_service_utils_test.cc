@@ -45,30 +45,77 @@ using ::std::shared_ptr;
 using ::std::string;
 using ::std::vector;
 
-static constexpr char kAuthorizedDomain[] = "http://fake-reporting-origin.com";
+static constexpr char kAuthorizedDomain[] = "https://fake.com";
 
 struct ParseBeginTransactionTestCase {
   std::string test_name;
-  bool enable_per_site_enrollment;
 };
 
 class ParseBeginTransactionTest
     : public testing::TestWithParam<ParseBeginTransactionTestCase> {};
 
-INSTANTIATE_TEST_SUITE_P(
-    ParseBeginTransactionTest, ParseBeginTransactionTest,
-    testing::Values(
-        ParseBeginTransactionTestCase{"EnablePerSiteEnrollment", true},
-        ParseBeginTransactionTestCase{"DisablePerSiteEnrollment", false}),
-    [](const testing::TestParamInfo<ParseBeginTransactionTest::ParamType>&
-           info) { return info.param.test_name; });
-
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSucess) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSuccess) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
+        "keys": [{
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        },
+        {
+          "key": "124",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+        ]
+      },
+      {
+        "reporting_origin": "http://b.fake.com",
+        "keys": [{
+          "key": "456",
+          "token": 2,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        },
+        {
+          "key": "456",
+          "token": 2,
+          "reporting_time": "2019-12-12T08:20:50.52Z"
+        }]
+      }
+    ]
+  })";
+
+  BytesBuffer bytes_buffer(begin_transaction_body);
+
+  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  auto execution_result = ParseBeginTransactionRequestBody(
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+  EXPECT_SUCCESS(execution_result);
+  EXPECT_EQ(consume_budget_metadata_list.size(), 4);
+
+  auto it = consume_budget_metadata_list.begin();
+  EXPECT_EQ(*it->budget_key_name, "http://a.fake.com/123");
+  EXPECT_EQ(it->token_count, 1);
+  EXPECT_EQ(it->time_bucket, 1576048850000000000);
+  ++it;
+  EXPECT_EQ(*it->budget_key_name, "http://a.fake.com/124");
+  EXPECT_EQ(it->token_count, 1);
+  EXPECT_EQ(it->time_bucket, 1576048850000000000);
+  ++it;
+  EXPECT_EQ(*it->budget_key_name, "http://b.fake.com/456");
+  EXPECT_EQ(it->token_count, 2);
+  EXPECT_EQ(it->time_bucket, 1576135250000000000);
+}
+
+TEST(ParseBeginTransactionTest, V2RequestWithUnauthorizedReportingOrigin) {
+  std::string begin_transaction_body = R"({
+    "v": "2.0",
+    "data": [
+      {
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -76,7 +123,7 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSucess) {
         }]
       },
       {
-        "reporting_origin": "http://b.com",
+        "reporting_origin": "http://b.shoe.com",
         "keys": [{
           "key": "456",
           "token": 2,
@@ -90,30 +137,16 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSucess) {
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_SUCCESS(execution_result);
-    EXPECT_EQ(consume_budget_metadata_list.size(), 2);
-
-    auto it = consume_budget_metadata_list.begin();
-    EXPECT_EQ(*it->budget_key_name, "http://a.com/123");
-    EXPECT_EQ(it->token_count, 1);
-    EXPECT_EQ(it->time_bucket, 1576048850000000000);
-
-    ++it;
-    EXPECT_EQ(*it->budget_key_name, "http://b.com/456");
-    EXPECT_EQ(it->token_count, 2);
-    EXPECT_EQ(it->time_bucket, 1576135250000000000);
-  } else {
-    EXPECT_THAT(
-        execution_result,
-        ResultIs(FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
-  }
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+  EXPECT_THAT(
+      execution_result,
+      ResultIs(FailureExecutionResult(
+          core::errors::
+              SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
+  EXPECT_EQ(consume_budget_metadata_list.size(), 0);
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutData) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutData) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
   })";
@@ -122,15 +155,14 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutData) {
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
   std::string begin_transaction_body = R"({
     "invalid"
   })";
@@ -139,21 +171,20 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionV2RequestWithoutReportingOrigin) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionV2RequestWithoutReportingOrigin) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -174,20 +205,19 @@ TEST_P(ParseBeginTransactionTest,
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -195,7 +225,7 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
         }]
       },
       {
-        "reporting_origin": "http://b.com",
+        "reporting_origin": "http://b.fake.com",
       }
     ]
   })";
@@ -204,21 +234,20 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionV2RequestWithTwoEqualsReportingOrigin) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionV2RequestWithTwoEqualsReportingOrigin) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -226,7 +255,7 @@ TEST_P(ParseBeginTransactionTest,
         }]
       },
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "456",
           "token": 2,
@@ -240,26 +269,18 @@ TEST_P(ParseBeginTransactionTest,
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_THAT(execution_result,
-                ResultIs(FailureExecutionResult(
-                    core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
-  } else {
-    EXPECT_THAT(
-        execution_result,
-        ResultIs(FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
-  }
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -267,7 +288,7 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
         }]
       },
       {
-        "reporting_origin": "http://b.com",
+        "reporting_origin": "http://b.fake.com",
         "keys": [{
           "token": 2,
           "reporting_time": "2019-12-12T07:20:50.52Z"
@@ -280,20 +301,19 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -301,7 +321,7 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
         }]
       },
       {
-        "reporting_origin": "http://b.com",
+        "reporting_origin": "http://b.fake.com",
         "keys": [{
           "key": "456",
           "reporting_time": "2019-12-12T07:20:50.52Z"
@@ -314,21 +334,20 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionV2RequestWithoutReportingTime) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionV2RequestWithoutReportingTime) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -336,7 +355,7 @@ TEST_P(ParseBeginTransactionTest,
         }]
       },
       {
-        "reporting_origin": "http://b.com",
+        "reporting_origin": "http://b.fake.com",
         "keys": [{
           "key": "456",
           "token": 2,
@@ -349,21 +368,20 @@ TEST_P(ParseBeginTransactionTest,
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionV2RequestWithInvalidReportingTime) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionV2RequestWithInvalidReportingTime) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [{
           "key": "123",
           "token": 1,
@@ -371,7 +389,7 @@ TEST_P(ParseBeginTransactionTest,
         }]
       },
       {
-        "reporting_origin": "http://b.com",
+        "reporting_origin": "http://b.fake.com",
         "keys": [{
           "key": "456",
           "token": 2,
@@ -385,27 +403,19 @@ TEST_P(ParseBeginTransactionTest,
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_THAT(execution_result,
-                ResultIs(FailureExecutionResult(
-                    core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
-  } else {
-    EXPECT_THAT(
-        execution_result,
-        ResultIs(FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
-  }
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionV2RequestWithEqualsBudgetKey) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionV2RequestWithEqualsBudgetKey) {
   std::string begin_transaction_body = R"({
     "v": "2.0",
     "data": [
       {
-        "reporting_origin": "http://a.com",
+        "reporting_origin": "http://a.fake.com",
         "keys": [
           {
             "key": "123",
@@ -426,43 +436,33 @@ TEST_P(ParseBeginTransactionTest,
 
   std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-      GetParam().enable_per_site_enrollment);
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_THAT(execution_result,
-                ResultIs(FailureExecutionResult(
-                    core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
-  } else {
-    EXPECT_THAT(
-        execution_result,
-        ResultIs(FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
-  }
+      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
   BytesBuffer bytes_buffer;
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer1) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer1) {
   BytesBuffer bytes_buffer(120);
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
   string begin_transaction_body("{}");
   BytesBuffer bytes_buffer;
   bytes_buffer.bytes = make_shared<vector<Byte>>(begin_transaction_body.begin(),
@@ -472,14 +472,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
   string begin_transaction_body("{ \"v\": \"\" }");
   BytesBuffer bytes_buffer;
   bytes_buffer.bytes = make_shared<vector<Byte>>(begin_transaction_body.begin(),
@@ -489,14 +488,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
   string begin_transaction_body("{ \"v\": \"\", \"t\": \"\" }");
   BytesBuffer bytes_buffer;
   bytes_buffer.bytes = make_shared<vector<Byte>>(begin_transaction_body.begin(),
@@ -506,14 +504,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
   string begin_transaction_body("{ \"v\": \"1.2\", \"t\": \"\" }");
   BytesBuffer bytes_buffer;
   bytes_buffer.bytes = make_shared<vector<Byte>>(begin_transaction_body.begin(),
@@ -523,14 +520,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
   string begin_transaction_body("{ \"v\": \"1.0\", \"t\": \"\" }");
   BytesBuffer bytes_buffer;
   bytes_buffer.bytes = make_shared<vector<Byte>>(begin_transaction_body.begin(),
@@ -540,14 +536,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
   string begin_transaction_body("{ \"v\": \"1.0\", \"t\": [] }");
   BytesBuffer bytes_buffer;
   bytes_buffer.bytes = make_shared<vector<Byte>>(begin_transaction_body.begin(),
@@ -557,13 +552,12 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             SuccessExecutionResult());
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer8) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer8) {
   string begin_transaction_body(
       "{ \"v\": \"1.0\", \"t\": [{ \"blah\": \"12\" }] }");
   BytesBuffer bytes_buffer;
@@ -574,14 +568,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer8) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
   string begin_transaction_body(
       "{ \"v\": \"1.0\", \"t\": [{ \"key\": \"3d4sd\", \"token\": \"ds1\", "
       "\"reporting_time\": \"ffjddjsd123\" }] }");
@@ -593,14 +586,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
   string begin_transaction_body(
       "{ \"v\": \"1.0\", \"t\": [{ \"key\": \"test_key\", \"token\": \"10\" }] "
       "}");
@@ -612,14 +604,13 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
-TEST_P(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
+TEST(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
   string begin_transaction_body(
       "{ \"v\": \"1.0\", \"t\": [{ \"key\": \"test_key\", \"token\": 10, "
       "\"reporting_time\": \"2021-12-12T17:20:50.52Z\" }, { \"key\": "
@@ -633,34 +624,24 @@ TEST_P(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             SuccessExecutionResult());
 
   EXPECT_EQ(consume_budget_metadata_list.size(), 2);
   auto it = consume_budget_metadata_list.begin();
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_EQ(*it->budget_key_name,
-              absl::StrCat(kAuthorizedDomain, "/test_key"));
-  } else {
-    EXPECT_EQ(*it->budget_key_name, "test_key");
-  }
+  EXPECT_EQ(*it->budget_key_name, absl::StrCat(kAuthorizedDomain, "/test_key"));
   EXPECT_EQ(it->token_count, 10);
   EXPECT_EQ(it->time_bucket, 1639329650000000000);
   ++it;
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_EQ(*it->budget_key_name,
-              absl::StrCat(kAuthorizedDomain, "/test_key_2"));
-  } else {
-    EXPECT_EQ(*it->budget_key_name, "test_key_2");
-  }
+  EXPECT_EQ(*it->budget_key_name,
+            absl::StrCat(kAuthorizedDomain, "/test_key_2"));
   EXPECT_EQ(it->token_count, 23);
   EXPECT_EQ(it->time_bucket, 1576135250000000000);
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionValidBufferButRepeatedKeysWithinDifferentHours) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionValidBufferButRepeatedKeysWithinDifferentHours) {
   string begin_transaction_body(
       "{ \"v\": \"1.0\", \"t\": [{ \"key\": \"test_key\", \"token\": 10, "
       "\"reporting_time\": \"2021-12-12T17:20:50.52Z\" }, { \"key\": "
@@ -674,34 +655,23 @@ TEST_P(ParseBeginTransactionTest,
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             SuccessExecutionResult());
 
   EXPECT_EQ(consume_budget_metadata_list.size(), 2);
   auto it = consume_budget_metadata_list.begin();
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_EQ(*it->budget_key_name,
-              absl::StrCat(kAuthorizedDomain, "/test_key"));
-  } else {
-    EXPECT_EQ(*it->budget_key_name, "test_key");
-  }
+  EXPECT_EQ(*it->budget_key_name, absl::StrCat(kAuthorizedDomain, "/test_key"));
   EXPECT_EQ(it->token_count, 10);
   EXPECT_EQ(it->time_bucket, 1639329650000000000);
   ++it;
-  if (GetParam().enable_per_site_enrollment) {
-    EXPECT_EQ(*it->budget_key_name,
-              absl::StrCat(kAuthorizedDomain, "/test_key"));
-  } else {
-    EXPECT_EQ(*it->budget_key_name, "test_key");
-  }
+  EXPECT_EQ(*it->budget_key_name, absl::StrCat(kAuthorizedDomain, "/test_key"));
   EXPECT_EQ(it->token_count, 23);
   EXPECT_EQ(it->time_bucket, 1639332000000000000);
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionValidBufferButRepeatedKeys) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionValidBufferButRepeatedKeys) {
   string begin_transaction_body(
       "{ \"v\": \"1.0\", \"t\": [{ \"key\": \"test_key\", \"token\": 10, "
       "\"reporting_time\": \"2021-12-12T17:20:50.52Z\" }, { \"key\": "
@@ -715,15 +685,14 @@ TEST_P(ParseBeginTransactionTest,
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
-TEST_P(ParseBeginTransactionTest,
-       ParseBeginTransactionValidBufferButRepeatedKeysWithinSameHour) {
+TEST(ParseBeginTransactionTest,
+     ParseBeginTransactionValidBufferButRepeatedKeysWithinSameHour) {
   string begin_transaction_body(
       "{ \"v\": \"1.0\", \"t\": [{ \"key\": \"test_key\", \"token\": 10, "
       "\"reporting_time\": \"2021-12-12T17:20:50.52Z\" }, { \"key\": "
@@ -737,9 +706,8 @@ TEST_P(ParseBeginTransactionTest,
 
   list<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list,
-                GetParam().enable_per_site_enrollment),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
+                                             consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
@@ -1190,6 +1158,44 @@ TEST(FrontEndUtilsTest, SerializePendingTransactionCount) {
             "{\"pending_transactions_count\":123,\"v\":\"1.0\"}");
   EXPECT_EQ(bytes_buffer.capacity, bytes_buffer.bytes->size());
   EXPECT_EQ(bytes_buffer.length, bytes_buffer.bytes->size());
+}
+
+TEST(TransformReportingOriginToSite, Success) {
+  auto site = TransformReportingOriginToSite("https://analytics.google.com");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, HttpReportingOriginSuccess) {
+  auto site = TransformReportingOriginToSite("http://analytics.google.com");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, WithoutHttpsSuccess) {
+  auto site = TransformReportingOriginToSite("analytics.google.com");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, SiteToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("https://google.com");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, HttpSiteToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("http://google.com");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, InvalidSite) {
+  auto site = TransformReportingOriginToSite("******");
+  EXPECT_THAT(
+      site.result(),
+      ResultIs(FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN)));
 }
 
 }  // namespace google::scp::pbs::test

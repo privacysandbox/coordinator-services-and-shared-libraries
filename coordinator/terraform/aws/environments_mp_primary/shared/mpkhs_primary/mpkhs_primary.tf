@@ -79,19 +79,50 @@ module "multipartykeyhosting_primary" {
   secondary_region_sqs_queue_arn    = var.secondary_region_sqs_queue_arn
   cloudwatch_logging_retention_days = var.cloudwatch_logging_retention_days
 
-  mpkhs_alarm_eval_period_sec               = var.mpkhs_alarm_eval_period_sec
-  mpkhs_lambda_error_threshold              = var.mpkhs_lambda_error_threshold
-  mpkhs_lambda_error_log_threshold          = var.mpkhs_lambda_error_log_threshold
-  mpkhs_lambda_max_duration_threshold       = var.mpkhs_lambda_max_duration_threshold
-  mpkhs_api_gw_max_latency_ms               = var.mpkhs_api_gw_max_latency_ms
-  mpkhs_api_gw_5xx_threshold                = var.mpkhs_api_gw_5xx_threshold
-  mpkhs_api_gw_error_ratio_4xx_threshold    = var.mpkhs_api_gw_error_ratio_4xx_threshold
-  mpkhs_api_gw_error_ratio_5xx_threshold    = var.mpkhs_api_gw_error_ratio_5xx_threshold
-  mpkhs_total_queue_messages_high_threshold = var.mpkhs_total_queue_messages_high_threshold
+  ukh_api_gw_max_latency_eval_periods  = var.ukh_api_gw_max_latency_eval_periods
+  ukh_api_gw_max_latency_ms_threshold  = var.ukh_api_gw_max_latency_ms_threshold
+  ukh_api_gw_4xx_eval_periods          = var.ukh_api_gw_4xx_eval_periods
+  ukh_api_gw_error_ratio_4xx_threshold = var.ukh_api_gw_error_ratio_4xx_threshold
+  ukh_api_gw_5xx_eval_periods          = var.ukh_api_gw_5xx_eval_periods
+  ukh_api_gw_error_ratio_5xx_threshold = var.ukh_api_gw_error_ratio_5xx_threshold
 
-  get_public_key_cloudfront_5xx_threshold            = var.get_public_key_cloudfront_5xx_threshold
-  get_public_key_cloudfront_cache_hit_threshold      = var.get_public_key_cloudfront_cache_hit_threshold
-  get_public_key_cloudfront_origin_latency_threshold = var.get_public_key_cloudfront_origin_latency_threshold
+  gek_lambda_execution_error_eval_periods = var.gek_lambda_execution_error_eval_periods
+  gek_lambda_execution_error_threshold    = var.gek_lambda_execution_error_threshold
+  gek_lambda_error_log_eval_periods       = var.gek_lambda_error_log_eval_periods
+  gek_lambda_error_log_threshold          = var.gek_lambda_error_log_threshold
+  gek_lambda_max_duration_eval_periods    = var.gek_lambda_max_duration_eval_periods
+  gek_lambda_max_duration_threshold_ms    = var.gek_lambda_max_duration_threshold_ms
+
+  lrek_lambda_execution_error_eval_periods = var.lrek_lambda_execution_error_eval_periods
+  lrek_lambda_execution_error_threshold    = var.lrek_lambda_execution_error_threshold
+  lrek_lambda_error_log_eval_periods       = var.lrek_lambda_error_log_eval_periods
+  lrek_lambda_error_log_threshold          = var.lrek_lambda_error_log_threshold
+  lrek_lambda_max_duration_eval_periods    = var.lrek_lambda_max_duration_eval_periods
+  lrek_lambda_max_duration_threshold_ms    = var.lrek_lambda_max_duration_threshold_ms
+
+  gpk_api_gw_max_latency_eval_periods  = var.gpk_api_gw_max_latency_eval_periods
+  gpk_api_gw_max_latency_ms_threshold  = var.gpk_api_gw_max_latency_ms_threshold
+  gpk_api_gw_4xx_eval_periods          = var.gpk_api_gw_4xx_eval_periods
+  gpk_api_gw_error_ratio_4xx_threshold = var.gpk_api_gw_error_ratio_4xx_threshold
+  gpk_api_gw_5xx_eval_periods          = var.gpk_api_gw_5xx_eval_periods
+  gpk_api_gw_error_ratio_5xx_threshold = var.gpk_api_gw_error_ratio_5xx_threshold
+
+  gpk_lambda_execution_error_eval_periods = var.gpk_lambda_execution_error_eval_periods
+  gpk_lambda_execution_error_threshold    = var.gpk_lambda_execution_error_threshold
+  gpk_lambda_error_log_eval_periods       = var.gpk_lambda_error_log_eval_periods
+  gpk_lambda_error_log_threshold          = var.gpk_lambda_error_log_threshold
+  gpk_lambda_max_duration_eval_periods    = var.gpk_lambda_max_duration_eval_periods
+  gpk_lambda_max_duration_threshold_ms    = var.gpk_lambda_max_duration_threshold_ms
+
+  mpkhs_total_queue_messages_high_eval_periods = var.mpkhs_total_queue_messages_high_eval_periods
+  mpkhs_total_queue_messages_high_threshold    = var.mpkhs_total_queue_messages_high_threshold
+
+  get_public_key_cloudfront_5xx_eval_periods            = var.get_public_key_cloudfront_5xx_eval_periods
+  get_public_key_cloudfront_5xx_threshold               = var.get_public_key_cloudfront_5xx_threshold
+  get_public_key_cloudfront_cache_hit_eval_periods      = var.get_public_key_cloudfront_cache_hit_eval_periods
+  get_public_key_cloudfront_cache_hit_threshold         = var.get_public_key_cloudfront_cache_hit_threshold
+  get_public_key_cloudfront_origin_latency_eval_periods = var.get_public_key_cloudfront_origin_latency_eval_periods
+  get_public_key_cloudfront_origin_latency_threshold    = var.get_public_key_cloudfront_origin_latency_threshold
 
   availability_zone_replicas      = var.availability_zone_replicas
   enable_vpc                      = var.enable_vpc

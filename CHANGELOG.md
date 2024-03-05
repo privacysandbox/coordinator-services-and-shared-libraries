@@ -1,17 +1,45 @@
 # Changelog
 
-## [1.5.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.5.0...v1.5.1) (2023-12-12)
+## [1.6.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.5.1...v1.6.0) (2024-02-29)
 
 * **Important note**
   * SSH access to PBS EC2 instances restricted to localhost only
+  * Starting with this patch, terraform variables allowed_principals_map and allowed_principals are no longer supported and need to be removed from the tfvars file in roleprovider environment.
+  * **[AWS only]** Possible Action Required in primary coordinator: \
+  This release includes terraform change for adding dynamodb:DeleteItem permission in the multiparty key generation service.
+  It possibly requires more permission in terraform deployment role.
+
+### Changes
+  * Added dynamodb:DeleteItem permission to key generation service instance
+  * Added exception handlers in GcsBlobStorageClient
+  * Added logic to clean up temp key and retry when key generation fails
+  * Added probers for coordinator services
+  * Added validation around 'job_request_id' parameter of the GetJob API
+  * Changed attribute mapping in WIPP to remove token creation limitation
+  * Created an autoscaling hook so worker instances can be updated without interrupting current running jobs
+  * Disallowed unencrypted S3 data transports
+  * Enabled flexibility in tuning individual MPKHS and PBS alarms independently
+  * [Java CPIO library] Increased private key cache TTL to 8 hours for Java client
+  * Made MPKHS prober alarm service label more descriptive
+  * Migrated operator IAM roles to be created using allowed_principals_map_v2 and removed the now deprecated allowed_principals_map
+  * Removed single coordinator PBS code and associated tests
+  * Set prod confidential space image as the default
+  * Updated container dependencies
+  * Updated PBS client to support the PBS APIv2 schema
+  * Upgraded PBS Client library to support PBS API changes for supporting budget consumption of budget keys belonging to multiple reporting origins
+
+## [1.5.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.5.0...v1.5.1) (2023-12-12)
+
+* **Important note**
+  * SSH access to PBS EC2 instances now restricted to localhost only
   * Starting with this patch, terraform variables allowed_principals_map and allowed_principals are no longer supported and need to be removed from the tfvars file in roleprovider environment
 
 ### Changes
-  * Limited SSH access to PBS EC2 instances from localhost only.
-  * Changed to generate operator IAM roles based on new allowed_principals_map_v2 map.
-  * Added python3-venv and zip utilities while building container and updated
-    container dependencies.
-  * Fixed GCP alarm window functions.
+  * Limited SSH access to PBS EC2 instances from localhost only
+  * Changed to generate operator IAM roles based on new allowed_principals_map_v2 map
+  * Added necessary tools (python3-venv & zip) to install during the build container Docker build process
+  * Updated container dependencies
+  * Fixed GCP alarm window functions
 
 ## [1.5.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.4.0...v1.5.0) (2023-11-14)
 

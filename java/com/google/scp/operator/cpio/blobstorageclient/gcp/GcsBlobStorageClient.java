@@ -24,6 +24,7 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.Storage.BlobListOption;
+import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -33,7 +34,6 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobSto
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
@@ -64,8 +64,17 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
       throws BlobStorageClientException {
     Storage storageClient = createGcsClient(accountIdentity, Scope.READ_ONLY);
     BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
-    return Channels.newInputStream(
-        storageClient.get(BlobId.of(blobLocation.bucket(), blobLocation.key())).reader());
+    Blob blob;
+    try {
+      blob = storageClient.get(BlobId.of(blobLocation.bucket(), blobLocation.key()));
+    } catch (StorageException e) {
+      throw new BlobStorageClientException(e);
+    }
+    if (blob != null && blob.exists()) {
+      return Channels.newInputStream(storageClient.get(blob.getBlobId()).reader());
+    } else {
+      throw new BlobStorageClientException("Can't find the GCS object.");
+    }
   }
 
   @Override
@@ -79,9 +88,11 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
     Storage storageClient = createGcsClient(accountIdentity, Scope.READ_AND_WRITE);
     BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
     try {
-      storageClient.create(
+      storageClient.createFrom(
           BlobInfo.newBuilder(BlobId.of(blobLocation.bucket(), blobLocation.key())).build(),
-          Files.readAllBytes(filePath));
+          filePath);
+    } catch (StorageException exception) {
+      throw new BlobStorageClientException(exception);
     } catch (IOException exception) {
       throw new BlobStorageClientException(exception);
     }
@@ -108,14 +119,18 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
   @Override
   public ImmutableList<String> listBlobs(DataLocation location, Optional<String> accountIdentity)
       throws BlobStorageClientException {
-    Storage storageClient = createGcsClient(accountIdentity, Scope.READ_ONLY);
-    BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
-    Page<Blob> blobs =
-        storageClient.list(blobLocation.bucket(), BlobListOption.prefix(blobLocation.key()));
-    return StreamSupport.stream(blobs.iterateAll().spliterator(), /* parallel= */ false)
-        .map(Blob::getBlobId)
-        .map(BlobId::getName)
-        .collect(ImmutableList.toImmutableList());
+    try {
+      Storage storageClient = createGcsClient(accountIdentity, Scope.READ_ONLY);
+      BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+      Page<Blob> blobs =
+          storageClient.list(blobLocation.bucket(), BlobListOption.prefix(blobLocation.key()));
+      return StreamSupport.stream(blobs.iterateAll().spliterator(), /* parallel= */ false)
+          .map(Blob::getBlobId)
+          .map(BlobId::getName)
+          .collect(ImmutableList.toImmutableList());
+    } catch (StorageException e) {
+      throw new BlobStorageClientException(e);
+    }
   }
 
   private Storage createGcsClient(Optional<String> accountIdentity, Scope scope)

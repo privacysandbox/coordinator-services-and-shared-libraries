@@ -575,6 +575,7 @@ ExecutionResult PBSInstance::Run() noexcept {
     return FailureExecutionResult(core::errors::SC_PBS_SERVICE_RECOVERY_FAILED);
   }
 
+  SCP_INFO(kPBSInstance, kZeroUuid, "Log recovery completed");
   is_running_ = true;
 
   RUN_PBS_COMPONENT(nosql_database_provider_);

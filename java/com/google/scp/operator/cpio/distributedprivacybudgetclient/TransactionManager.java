@@ -17,7 +17,7 @@
 package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
 import com.google.common.collect.ImmutableList;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 
 /**
  * Interface for transaction manager which is responsible for coordinating with 1 or more
@@ -29,7 +29,7 @@ public interface TransactionManager {
    *
    * @param request Transaction request metadata.
    */
-  ImmutableList<PrivacyBudgetUnit> execute(TransactionRequest request)
+  ImmutableList<ReportingOriginToPrivacyBudgetUnits> execute(TransactionRequest request)
       throws TransactionManagerException;
 
   /**

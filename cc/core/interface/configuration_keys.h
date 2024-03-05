@@ -43,6 +43,6 @@ static constexpr char kPBSJournalInputStreamNumberOfJournalsPerBatch[] =
     "google_scp_pbs_journal_input_stream_number_of_journals_per_batch";
 static constexpr char kPBSJournalInputStreamNumberOfJournalLogsToReturn[] =
     "google_scp_pbs_journal_input_stream_number_of_journal_logs_to_return";
-static constexpr char kPBSAuthorizationEnableSiteBasedAuthorization[] =
-    "google_scp_pbs_authorization_enable_site_based_authorization";
+static constexpr char kTransactionManagerSkipDuplicateTransactionInRecovery[] =
+    "google_scp_transaction_manager_skip_duplicate_transaction_in_recovery";
 }  // namespace google::scp::core

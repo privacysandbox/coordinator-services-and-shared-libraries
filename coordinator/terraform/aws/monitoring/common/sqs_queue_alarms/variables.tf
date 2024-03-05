@@ -41,8 +41,8 @@ variable "custom_alarm_label" {
 # Alarm Variables.
 ################################################################################
 
-variable "eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
+variable "total_queue_messages_high_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 

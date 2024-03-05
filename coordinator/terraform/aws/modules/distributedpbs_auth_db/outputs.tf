@@ -12,14 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "auth_dynamo_db_table_name" {
-  value = aws_dynamodb_table.auth_table.name
-}
-
-output "auth_dynamo_db_table_arn" {
-  value = aws_dynamodb_table.auth_table.arn
-}
-
 # The below outputs are for new DynamoDB table we create for hosting site based auth data.
 # We will eventually move to using the name `auth_dynamo_db_table_name` and `auth_dynamo_db_table_arn` once the old tables have been deprecated.
 output "authorization_dynamo_db_table_v2_name" {

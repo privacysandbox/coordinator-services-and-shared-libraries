@@ -36,6 +36,7 @@ import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionK
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.KeyDataProto.KeyData;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAAead;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBAead;
+import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.EncryptionKeyFetchingService.EncryptionKeyFetchingServiceException;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -56,24 +57,13 @@ import java.util.concurrent.TimeUnit;
 public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeyService {
 
   private static final int MAX_CACHE_SIZE = 100;
-  private static final long CACHE_ENTRY_TTL_SEC = 3600;
+  private final long decrypterCacheEntryTtlSec;
   private static final int CONCURRENCY_LEVEL = Runtime.getRuntime().availableProcessors();
   private final CloudAeadSelector coordinatorAAeadService;
   private final CloudAeadSelector coordinatorBAeadService;
   private final EncryptionKeyFetchingService coordinatorAEncryptionKeyFetchingService;
   private final EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService;
-  private final LoadingCache<String, HybridDecrypt> decypterCache =
-      CacheBuilder.newBuilder()
-          .maximumSize(MAX_CACHE_SIZE)
-          .expireAfterWrite(CACHE_ENTRY_TTL_SEC, TimeUnit.SECONDS)
-          .concurrencyLevel(CONCURRENCY_LEVEL)
-          .build(
-              new CacheLoader<String, HybridDecrypt>() {
-                @Override
-                public HybridDecrypt load(final String keyId) throws KeyFetchException {
-                  return createDecrypter(keyId);
-                }
-              });
+  private final LoadingCache<String, HybridDecrypt> decrypterCache;
 
   /** Creates a new instance of the {@code MultiPartyDecryptionKeyServiceImpl} class. */
   @Inject
@@ -83,18 +73,32 @@ public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeySe
       @CoordinatorBEncryptionKeyFetchingService
           EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService,
       @CoordinatorAAead CloudAeadSelector coordinatorAAeadService,
-      @CoordinatorBAead CloudAeadSelector coordinatorBAeadService) {
+      @CoordinatorBAead CloudAeadSelector coordinatorBAeadService,
+      @DecrypterCacheEntryTtlSec long decrypterCacheEntryTtlSec) {
     this.coordinatorAEncryptionKeyFetchingService = coordinatorAEncryptionKeyFetchingService;
     this.coordinatorBEncryptionKeyFetchingService = coordinatorBEncryptionKeyFetchingService;
     this.coordinatorAAeadService = coordinatorAAeadService;
     this.coordinatorBAeadService = coordinatorBAeadService;
+    this.decrypterCacheEntryTtlSec = decrypterCacheEntryTtlSec;
+    this.decrypterCache =
+        CacheBuilder.newBuilder()
+            .maximumSize(MAX_CACHE_SIZE)
+            .expireAfterWrite(this.decrypterCacheEntryTtlSec, TimeUnit.SECONDS)
+            .concurrencyLevel(CONCURRENCY_LEVEL)
+            .build(
+                new CacheLoader<String, HybridDecrypt>() {
+                  @Override
+                  public HybridDecrypt load(final String keyId) throws KeyFetchException {
+                    return createDecrypter(keyId);
+                  }
+                });
   }
 
   /** Returns the decrypter for the provided key. */
   @Override
   public HybridDecrypt getDecrypter(String keyId) throws KeyFetchException {
     try {
-      return decypterCache.get(keyId);
+      return decrypterCache.get(keyId);
     } catch (ExecutionException | UncheckedExecutionException e) {
       ErrorReason reason = ErrorReason.UNKNOWN_ERROR;
       if (e.getCause() instanceof KeyFetchException) {

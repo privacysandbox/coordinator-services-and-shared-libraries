@@ -17,7 +17,30 @@
 wget https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.81.0/otelcol-contrib_0.81.0_linux_amd64.deb
 sudo dpkg -i otelcol-contrib_0.81.0_linux_amd64.deb
 systemctl stop otelcol-contrib.service
-# Configure OpenTelemetry collector for GCP monitory
+
+# Generate otel filter yaml file.
+generate_filter_yaml_file(){
+  allowed_values=$1
+  output_yaml_file=$2
+  # allowed_values can be empty due to the tag not set in terraform or it's empty.
+  if [ -z "$${allowed_values}" ];
+  then
+     values_list="- \n"
+  else
+    IFS=',' read -r -a allowed_values_array <<< "$${allowed_values}"
+    values_list=""
+    for value in $${allowed_values_array[@]}
+    do
+        values_list+="- $value \n"
+    done
+  fi
+  echo -e "$${values_list}" > "$${output_yaml_file}"
+}
+
+generate_filter_yaml_file "${otel_metrics}" /etc/otelcol-contrib/metrics.yaml
+generate_filter_yaml_file "${otel_spans}" /etc/otelcol-contrib/spans.yaml
+
+# Configure OpenTelemetry collector for GCP monitoring
 cat > /etc/otelcol-contrib/config.yaml << COLLECTOR_CONFIG
 receivers:
   otlp:
@@ -25,7 +48,26 @@ receivers:
       grpc:
         endpoint: :${collector_port}
 processors:
-  batch:
+  batch/traces:
+    timeout: 1s
+    send_batch_size: 1
+  batch/metrics:
+    timeout: 60s
+  resource:
+    attributes:
+    - key: "custom_namespace"
+      value: ${environment_name}
+      action: upsert
+  filter/spans:
+    spans:
+      include:
+        match_type: strict
+        span_names: \$${file:/etc/otelcol-contrib/spans.yaml}
+  filter/metrics:
+    metrics:
+      include:
+        match_type: strict
+        metric_names: \$${file:/etc/otelcol-contrib/metrics.yaml}
 exporters:
   googlecloud:
     metric:
@@ -33,21 +75,15 @@ exporters:
         # configures all resources to be passed on to GCP
         # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/googlecloudexporter/README.md
         - regex: .*
-    log:
-      default_log_name: aggregation-service
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [resource, batch/traces, filter/spans]
       exporters: [googlecloud]
     metrics:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [googlecloud]
-    logs:
-      receivers: [otlp]
-      processors: [batch]
+      processors: [resource, batch/metrics, filter/metrics]
       exporters: [googlecloud]
 COLLECTOR_CONFIG
 systemctl start otelcol-contrib.service

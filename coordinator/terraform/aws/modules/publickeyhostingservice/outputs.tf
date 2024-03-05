@@ -42,3 +42,11 @@ output "get_public_key_lambda_principal_role_arn" {
 output "get_public_key_lambda_principal_role_id" {
   value = module.lambda_roles.trustedparty_lambda_role_id
 }
+
+output "get_public_key_lambda_function_name" {
+  value = aws_lambda_function.get_public_key_lambda.function_name
+}
+
+output "get_public_key_lambda_cloudwatch_log_group_name" {
+  value = aws_cloudwatch_log_group.get_public_key_lambda_cloudwatch.name
+}

@@ -23,3 +23,19 @@ output "lambda_execution_role_id" {
 output "lambda_version" {
   value = aws_lambda_function.get_encryption_key_lambda.version
 }
+
+output "get_encryption_key_lambda_function_name" {
+  value = aws_lambda_function.get_encryption_key_lambda.function_name
+}
+
+output "list_recent_encryption_keys_lambda_function_name" {
+  value = aws_lambda_function.list_recent_encryption_keys_lambda.function_name
+}
+
+output "get_encryption_key_lambda_cloudwatch_log_group_name" {
+  value = aws_cloudwatch_log_group.get_encryption_key_lambda_cloudwatch.name
+}
+
+output "list_recent_encryption_keys_lambda_cloudwatch_log_group_name" {
+  value = aws_cloudwatch_log_group.list_recent_encryption_keys_lambda_cloudwatch.name
+}

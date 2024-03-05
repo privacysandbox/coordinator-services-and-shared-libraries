@@ -41,17 +41,32 @@ variable "custom_alarm_label" {
 # Alarm Variables.
 ################################################################################
 
-variable "eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
+variable "max_latency_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string
 }
 
-variable "error_5xx_threshold" {
-  description = "API Gateway 5xx error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-}
-
-variable "max_latency_ms" {
+variable "max_latency_ms_threshold" {
   description = "API Gateway max latency to send alarm. Measured in milliseconds. Example: '5000'."
+  type        = string
+}
+
+variable "error_ratio_4xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "error_ratio_4xx_threshold" {
+  description = "API Gateway 4xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+}
+
+variable "error_ratio_5xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "error_ratio_5xx_threshold" {
+  description = "API Gateway 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }

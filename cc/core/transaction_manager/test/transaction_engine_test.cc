@@ -46,75 +46,85 @@
 #include "core/transaction_manager/mock/mock_remote_transaction_manager.h"
 #include "core/transaction_manager/mock/mock_transaction_command_serializer.h"
 #include "core/transaction_manager/mock/mock_transaction_engine.h"
+#include "core/transaction_manager/src/error_codes.h"
 #include "core/transaction_manager/src/proto/transaction_engine.pb.h"
 #include "core/transaction_manager/src/transaction_phase_manager.h"
+#include "google/protobuf/text_format.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/mock/metric_client/mock_metric_client.h"
 
-using google::scp::core::AsyncContext;
-using google::scp::core::CheckpointLog;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::LoggerInterface;
-using google::scp::core::RemoteTransactionManagerInterface;
-using google::scp::core::RetryExecutionResult;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::Transaction;
-using google::scp::core::TransactionCommand;
-using google::scp::core::TransactionEngine;
-using google::scp::core::TransactionExecutionPhase;
-using google::scp::core::TransactionRequest;
-using google::scp::core::TransactionResponse;
-using google::scp::core::async_executor::mock::MockAsyncExecutor;
-using google::scp::core::async_executor::mock::MockAsyncExecutorWithInternals;
-using google::scp::core::blob_storage_provider::mock::MockBlobStorageProvider;
-using google::scp::core::common::GlobalLogger;
-using google::scp::core::common::Serialization;
-using google::scp::core::common::Uuid;
-using google::scp::core::config_provider::mock::MockConfigProvider;
-using google::scp::core::journal_service::mock::MockJournalService;
-using google::scp::core::journal_service::mock::MockJournalServiceWithOverrides;
-using google::scp::core::logger::ConsoleLogProvider;
-using google::scp::core::logger::Logger;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::WaitUntil;
-using google::scp::core::transaction_manager::TransactionPhase;
-using google::scp::core::transaction_manager::TransactionPhaseManagerInterface;
-using google::scp::core::transaction_manager::mock::
+namespace google::scp::core {
+namespace {
+
+using ::google::protobuf::TextFormat;
+using ::google::scp::core::AsyncContext;
+using ::google::scp::core::CheckpointLog;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::LoggerInterface;
+using ::google::scp::core::RemoteTransactionManagerInterface;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::Transaction;
+using ::google::scp::core::TransactionCommand;
+using ::google::scp::core::TransactionEngine;
+using ::google::scp::core::TransactionExecutionPhase;
+using ::google::scp::core::TransactionRequest;
+using ::google::scp::core::TransactionResponse;
+using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
+using ::google::scp::core::async_executor::mock::MockAsyncExecutorWithInternals;
+using ::google::scp::core::blob_storage_provider::mock::MockBlobStorageProvider;
+using ::google::scp::core::common::GlobalLogger;
+using ::google::scp::core::common::Serialization;
+using ::google::scp::core::common::Uuid;
+using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::google::scp::core::journal_service::mock::MockJournalService;
+using ::google::scp::core::journal_service::mock::
+    MockJournalServiceWithOverrides;
+using ::google::scp::core::logger::ConsoleLogProvider;
+using ::google::scp::core::logger::Logger;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::TestTimeoutException;
+using ::google::scp::core::test::WaitUntil;
+using ::google::scp::core::transaction_manager::TransactionPhase;
+using ::google::scp::core::transaction_manager::
+    TransactionPhaseManagerInterface;
+using ::google::scp::core::transaction_manager::mock::
     MockRemoteTransactionManager;
-using google::scp::core::transaction_manager::mock::
+using ::google::scp::core::transaction_manager::mock::
     MockTransactionCommandSerializer;
-using google::scp::core::transaction_manager::mock::MockTransactionEngine;
-using google::scp::core::transaction_manager::proto::TransactionCommandLog_1_0;
-using google::scp::core::transaction_manager::proto::TransactionEngineLog;
-using google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
-using google::scp::core::transaction_manager::proto::TransactionLog_1_0;
-using google::scp::core::transaction_manager::proto::TransactionLogType;
-using google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
-using google::scp::cpio::MockMetricClient;
-using std::atomic;
-using std::dynamic_pointer_cast;
-using std::function;
-using std::list;
-using std::make_pair;
-using std::make_shared;
-using std::map;
-using std::set;
-using std::shared_ptr;
-using std::static_pointer_cast;
-using std::string;
-using std::thread;
-using std::vector;
-using std::chrono::milliseconds;
-using std::this_thread::sleep_for;
+using ::google::scp::core::transaction_manager::mock::MockTransactionEngine;
+using ::google::scp::core::transaction_manager::proto::
+    TransactionCommandLog_1_0;
+using ::google::scp::core::transaction_manager::proto::TransactionEngineLog;
+using ::google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
+using ::google::scp::core::transaction_manager::proto::TransactionLog_1_0;
+using ::google::scp::core::transaction_manager::proto::TransactionLogType;
+using ::google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
+using ::google::scp::cpio::MockMetricClient;
+using ::std::atomic;
+using ::std::dynamic_pointer_cast;
+using ::std::function;
+using ::std::list;
+using ::std::make_pair;
+using ::std::make_shared;
+using ::std::map;
+using ::std::set;
+using ::std::shared_ptr;
+using ::std::static_pointer_cast;
+using ::std::string;
+using ::std::thread;
+using ::std::vector;
+using ::std::chrono::milliseconds;
+using ::std::this_thread::sleep_for;
 
 static constexpr Uuid kDefaultUuid = {0, 0};
 
-namespace google::scp::core::test {
-
 class TransactionEngineTest : public testing::Test {
  protected:
-  static void SetUpTestSuite() { TestLoggingUtils::EnableLogOutputToConsole(); }
+  static void SetUpTestSuite() {
+    test::TestLoggingUtils::EnableLogOutputToConsole();
+  }
 
   void CreateComponents() {
     mock_journal_service_ = static_pointer_cast<JournalServiceInterface>(
@@ -2016,6 +2026,150 @@ TEST_F(TransactionEngineTest, OnJournalServiceRecoverCallbackValidCommand) {
         return SuccessExecutionResult();
       };
 
+  EXPECT_SUCCESS(mock_transaction_engine.OnJournalServiceRecoverCallback(
+      bytes_buffer, kDefaultUuid));
+}
+
+template <class ProtoT>
+BytesBuffer ProtoToBytesBuffer(const ProtoT& proto) {
+  BytesBuffer bytes_buffer(proto.ByteSizeLong());
+  proto.SerializeToArray(bytes_buffer.bytes->data(), bytes_buffer.capacity);
+  bytes_buffer.length = proto.ByteSizeLong();
+  return bytes_buffer;
+}
+
+TEST_F(TransactionEngineTest,
+       OnJournalServiceRecoverCallbackWithDuplicateTransactionFailed) {
+  std::shared_ptr<JournalServiceInterface> mock_journal_service =
+      std::make_shared<MockJournalService>();
+  std::shared_ptr<AsyncExecutorInterface> async_executor =
+      std::make_shared<MockAsyncExecutorWithInternals>(2, 100);
+  std::shared_ptr<TransactionCommandSerializerInterface>
+      mock_transaction_command_serializer =
+          std::make_shared<MockTransactionCommandSerializer>();
+  auto mock_metric_client = std::make_shared<MockMetricClient>();
+  std::shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
+  MockTransactionEngine mock_transaction_engine(
+      async_executor, mock_transaction_command_serializer, mock_journal_service,
+      remote_transaction_manager, mock_metric_client);
+
+  TransactionLog_1_0 transaction_log_1_0;
+  TextFormat::ParseFromString(
+      R"pb(
+        timeout: 10000
+        id { high: 123 low: 456 }
+        is_coordinated_remotely: true
+        transaction_secret: "This is the transaction secret"
+        transaction_origin: "origin.com"
+      )pb",
+      &transaction_log_1_0);
+
+  BytesBuffer command_body(10);
+  transaction_log_1_0.add_commands()->set_command_body(
+      command_body.bytes->data(), command_body.length);
+  transaction_log_1_0.add_commands()->set_command_body(
+      command_body.bytes->data(), command_body.length);
+  BytesBuffer transaction_log_1_bytes_buffer =
+      ProtoToBytesBuffer(transaction_log_1_0);
+
+  TransactionEngineLog_1_0 transaction_engine_log_1_0;
+  transaction_engine_log_1_0.set_type(TransactionLogType::TRANSACTION_LOG);
+  transaction_engine_log_1_0.set_log_body(
+      transaction_log_1_bytes_buffer.bytes->data(),
+      transaction_log_1_bytes_buffer.length);
+  BytesBuffer transaction_engine_log_1_0_bytes_buffer =
+      ProtoToBytesBuffer(transaction_engine_log_1_0);
+
+  TransactionEngineLog transaction_engine_log;
+  TextFormat::ParseFromString(R"pb(
+                                version { major: 1 minor: 0 }
+                              )pb",
+                              &transaction_engine_log);
+  transaction_engine_log.set_log_body(
+      transaction_engine_log_1_0_bytes_buffer.bytes->data(),
+      transaction_engine_log_1_0_bytes_buffer.length);
+
+  size_t bytes_serialized = 0;
+  auto bytes_buffer =
+      std::make_shared<BytesBuffer>(transaction_engine_log.ByteSizeLong());
+  Serialization::SerializeProtoMessage<TransactionEngineLog>(
+      *bytes_buffer, 0, transaction_engine_log, bytes_serialized);
+  bytes_buffer->length = bytes_serialized;
+
+  EXPECT_SUCCESS(mock_transaction_engine.Init());
+  EXPECT_SUCCESS(mock_transaction_engine.OnJournalServiceRecoverCallback(
+      bytes_buffer, kDefaultUuid));
+  EXPECT_THAT(mock_transaction_engine.OnJournalServiceRecoverCallback(
+                  bytes_buffer, kDefaultUuid),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_TRANSACTION_MANAGER_TRANSACTION_ALREADY_EXISTS)));
+}
+
+TEST_F(TransactionEngineTest,
+       OnJournalServiceRecoverCallbackWithDuplicateTransactionIgnored) {
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  mock_config_provider->SetBool(
+      kTransactionManagerSkipDuplicateTransactionInRecovery, true);
+
+  std::shared_ptr<JournalServiceInterface> mock_journal_service =
+      std::make_shared<MockJournalService>();
+  std::shared_ptr<AsyncExecutorInterface> async_executor =
+      std::make_shared<MockAsyncExecutorWithInternals>(2, 100);
+  std::shared_ptr<TransactionCommandSerializerInterface>
+      mock_transaction_command_serializer =
+          std::make_shared<MockTransactionCommandSerializer>();
+  auto mock_metric_client = std::make_shared<MockMetricClient>();
+  std::shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
+  MockTransactionEngine mock_transaction_engine(
+      async_executor, mock_transaction_command_serializer, mock_journal_service,
+      remote_transaction_manager, mock_metric_client, mock_config_provider);
+
+  TransactionLog_1_0 transaction_log_1_0;
+  TextFormat::ParseFromString(
+      R"pb(
+        timeout: 10000
+        id { high: 123 low: 456 }
+        is_coordinated_remotely: true
+        transaction_secret: "This is the transaction secret"
+        transaction_origin: "origin.com"
+      )pb",
+      &transaction_log_1_0);
+
+  BytesBuffer command_body(10);
+  transaction_log_1_0.add_commands()->set_command_body(
+      command_body.bytes->data(), command_body.length);
+  transaction_log_1_0.add_commands()->set_command_body(
+      command_body.bytes->data(), command_body.length);
+  BytesBuffer transaction_log_1_bytes_buffer =
+      ProtoToBytesBuffer(transaction_log_1_0);
+
+  TransactionEngineLog_1_0 transaction_engine_log_1_0;
+  transaction_engine_log_1_0.set_type(TransactionLogType::TRANSACTION_LOG);
+  transaction_engine_log_1_0.set_log_body(
+      transaction_log_1_bytes_buffer.bytes->data(),
+      transaction_log_1_bytes_buffer.length);
+  BytesBuffer transaction_engine_log_1_0_bytes_buffer =
+      ProtoToBytesBuffer(transaction_engine_log_1_0);
+
+  TransactionEngineLog transaction_engine_log;
+  TextFormat::ParseFromString(R"pb(
+                                version { major: 1 minor: 0 }
+                              )pb",
+                              &transaction_engine_log);
+  transaction_engine_log.set_log_body(
+      transaction_engine_log_1_0_bytes_buffer.bytes->data(),
+      transaction_engine_log_1_0_bytes_buffer.length);
+
+  size_t bytes_serialized = 0;
+  auto bytes_buffer =
+      std::make_shared<BytesBuffer>(transaction_engine_log.ByteSizeLong());
+  Serialization::SerializeProtoMessage<TransactionEngineLog>(
+      *bytes_buffer, 0, transaction_engine_log, bytes_serialized);
+  bytes_buffer->length = bytes_serialized;
+
+  EXPECT_SUCCESS(mock_transaction_engine.Init());
+  EXPECT_SUCCESS(mock_transaction_engine.OnJournalServiceRecoverCallback(
+      bytes_buffer, kDefaultUuid));
   EXPECT_SUCCESS(mock_transaction_engine.OnJournalServiceRecoverCallback(
       bytes_buffer, kDefaultUuid));
 }
@@ -5000,4 +5154,5 @@ TEST_F(TransactionEngineTest,
   EXPECT_SUCCESS(transaction_engine.ResolveTransaction(transaction));
 }
 
-}  // namespace google::scp::core::test
+}  // namespace
+}  // namespace google::scp::core

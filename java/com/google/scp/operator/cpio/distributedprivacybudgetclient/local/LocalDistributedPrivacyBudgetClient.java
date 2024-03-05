@@ -29,7 +29,7 @@ public class LocalDistributedPrivacyBudgetClient implements DistributedPrivacyBu
       ConsumePrivacyBudgetRequest privacyBudget)
       throws DistributedPrivacyBudgetServiceException, DistributedPrivacyBudgetClientException {
     return ConsumePrivacyBudgetResponse.builder()
-        .exhaustedPrivacyBudgetUnits(ImmutableList.of())
+        .exhaustedPrivacyBudgetUnitsByOrigin(ImmutableList.of())
         .build();
   }
 }

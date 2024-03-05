@@ -36,6 +36,7 @@ locals {
   use_sns_to_sqs                    = var.alarms_enabled && var.sns_topic_arn != "" && var.sqs_queue_arn != ""
   remote_coordinator_aws_account_id = (var.remote_coordinator_aws_account_id == "" ? data.aws_caller_identity.current.account_id : var.remote_coordinator_aws_account_id)
   account_id                        = data.aws_caller_identity.current.account_id
+  elb_regex                         = var.enable_domain_management == true ? "app/.*" : "net/.*"
 }
 
 data "aws_caller_identity" "current" {}
@@ -97,8 +98,6 @@ module "auth_service" {
 
   environment_prefix              = var.environment
   auth_lambda_handler_path        = local.auth_lambda_handler_path
-  auth_dynamo_db_table_name       = module.auth_db.auth_dynamo_db_table_name
-  auth_dynamo_db_table_arn        = module.auth_db.auth_dynamo_db_table_arn
   enable_domain_management        = var.enable_domain_management
   parent_domain_name              = var.parent_domain_name
   service_subdomain               = var.service_subdomain
@@ -112,7 +111,6 @@ module "access_policy" {
 
   remote_coordinator_aws_account_id = local.remote_coordinator_aws_account_id
   pbs_auth_api_gateway_arn          = module.auth_service.api_gateway_arn
-  pbs_auth_table_name               = module.auth_db.auth_dynamo_db_table_name
   pbs_auth_table_v2_name            = module.auth_db.authorization_dynamo_db_table_v2_name
   remote_environment                = var.remote_environment
 

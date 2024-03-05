@@ -20,6 +20,7 @@ import com.google.cloud.compute.v1.Autoscaler;
 import com.google.inject.Inject;
 import com.google.scp.operator.protos.shared.backend.asginstance.AsgInstanceProto.AsgInstance;
 import com.google.scp.operator.protos.shared.backend.asginstance.InstanceStatusProto.InstanceStatus;
+import com.google.scp.operator.protos.shared.backend.asginstance.InstanceTerminationReasonProto.InstanceTerminationReason;
 import com.google.scp.operator.shared.dao.asginstancesdb.common.AsgInstancesDao;
 import com.google.scp.operator.shared.dao.asginstancesdb.common.AsgInstancesDao.AsgInstanceDaoException;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.AsgInstancesDbSpannerTtlDays;
@@ -68,15 +69,15 @@ public class RequestScaleInTask {
    * instance group autoscaler recommended size. The instances to terminate will be chosen to
    * balance the number of instances per zone.
    */
-  public void requestScaleIn(Map<String, List<String>> zoneToRemainingInstances) {
+  public void requestScaleIn(Map<String, List<GcpComputeInstance>> zoneToRemainingInstances) {
     logger.info("Remaining instances map: " + zoneToRemainingInstances);
-    Map<String, Integer> zoneToInstanceCount =
-        zoneToRemainingInstances.keySet().stream()
-            .collect(Collectors.toMap(key -> key, key -> zoneToRemainingInstances.get(key).size()));
-    Integer numInstances = zoneToInstanceCount.values().stream().reduce(0, Integer::sum);
-
     Optional<Autoscaler> autoscaler = instanceManagementClient.getAutoscaler();
     if (autoscaler.isPresent() && autoscaler.get().hasRecommendedSize()) {
+      Map<String, Integer> zoneToInstanceCount =
+          zoneToRemainingInstances.keySet().stream()
+              .collect(
+                  Collectors.toMap(key -> key, key -> zoneToRemainingInstances.get(key).size()));
+      Integer numInstances = zoneToInstanceCount.values().stream().reduce(0, Integer::sum);
       Integer desiredNumInstances = autoscaler.get().getRecommendedSize();
       Integer numOfInstancesToDelete = Math.max(0, numInstances - desiredNumInstances);
       logger.info(
@@ -89,10 +90,10 @@ public class RequestScaleInTask {
 
       // Create an alternating list of instances based on zone.
       Integer maxNumZoneInstances = Collections.max(zoneToInstanceCount.values());
-      List<String> orderedZoneInstances = new ArrayList<>();
+      List<GcpComputeInstance> orderedZoneInstances = new ArrayList<>();
       for (int i = 0; i < maxNumZoneInstances; i++) {
-        Collection<List<String>> zoneInstancesList = zoneToRemainingInstances.values();
-        for (List<String> zoneInstances : zoneInstancesList) {
+        Collection<List<GcpComputeInstance>> zoneInstancesList = zoneToRemainingInstances.values();
+        for (List<GcpComputeInstance> zoneInstances : zoneInstancesList) {
           if (i < zoneInstances.size()) {
             orderedZoneInstances.add(zoneInstances.get(i));
           }
@@ -100,21 +101,22 @@ public class RequestScaleInTask {
       }
 
       // Create termination requests for number of instances over recommended capacity.
-      List<String> instancesToDelete =
+      List<GcpComputeInstance> instancesToDelete =
           orderedZoneInstances.subList(
               Math.max(orderedZoneInstances.size() - numOfInstancesToDelete, 0),
               orderedZoneInstances.size());
-      for (String instance : instancesToDelete) {
+      for (GcpComputeInstance instance : instancesToDelete) {
         try {
           Instant now = Instant.now();
           AsgInstance instanceToTerminate =
               AsgInstance.newBuilder()
-                  .setInstanceName(instance)
+                  .setInstanceName(instance.getInstanceId())
                   .setStatus(InstanceStatus.TERMINATING_WAIT)
                   .setRequestTime(ProtoUtil.toProtoTimestamp(Instant.now()))
                   .setTtl(now.plus(ttlDays, ChronoUnit.DAYS).getEpochSecond())
+                  .setTerminationReason(InstanceTerminationReason.SCALE_IN)
                   .build();
-          logger.info("Adding instance " + instance + " for termination.");
+          logger.info("Adding instance " + instance + " for termination due to a scale-in.");
           asgInstancesDao.upsertAsgInstance(instanceToTerminate);
         } catch (AsgInstanceDaoException e) {
           logger.info("Failed to mark instance for termination: " + instance, e);

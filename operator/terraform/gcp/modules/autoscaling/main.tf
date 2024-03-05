@@ -53,7 +53,7 @@ resource "google_compute_region_instance_group_manager" "worker_instance_group" 
   # TODO: Update with dynamic rolling update policy
   update_policy {
     minimal_action               = "REPLACE"
-    type                         = "PROACTIVE"
+    type                         = "OPPORTUNISTIC"
     instance_redistribution_type = "PROACTIVE"
     max_unavailable_fixed        = 5
   }

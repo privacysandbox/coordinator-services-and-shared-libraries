@@ -33,14 +33,13 @@ locals {
   use_sns_to_sqs_primary     = var.alarms_enabled && var.primary_region_sns_topic_arn != "" && var.primary_region_sqs_queue_arn != ""
   use_sns_to_sqs_secondary   = var.alarms_enabled && var.secondary_region_sns_topic_arn != "" && var.secondary_region_sqs_queue_arn != ""
   # Always must be us-east-1 -- either the primary or secondary is us-east-1
-  sns_cloudfront_arn                 = var.primary_region == "us-east-1" ? var.primary_region_sns_topic_arn : var.secondary_region_sns_topic_arn
-  sqs_cloudfront_arn                 = var.primary_region == "us-east-1" ? var.primary_region_sqs_queue_arn : var.secondary_region_sqs_queue_arn
-  use_cloudfront_arn                 = local.sns_cloudfront_arn != "" && local.sqs_cloudfront_arn != ""
-  keydb_table_name                   = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
-  keyhosting_api_gateway_name        = "unified_key_hosting"
-  keyhosting_api_gateway_alarm_label = "UnifiedKeyHosting"
-  key_rotation_job_queue_name        = "key-rotation-queue.fifo"
-  account_id                         = data.aws_caller_identity.current.account_id
+  sns_cloudfront_arn          = var.primary_region == "us-east-1" ? var.primary_region_sns_topic_arn : var.secondary_region_sns_topic_arn
+  sqs_cloudfront_arn          = var.primary_region == "us-east-1" ? var.primary_region_sqs_queue_arn : var.secondary_region_sqs_queue_arn
+  use_cloudfront_arn          = local.sns_cloudfront_arn != "" && local.sqs_cloudfront_arn != ""
+  keydb_table_name            = var.keydb_table_name != "" ? var.keydb_table_name : "${var.environment}_keydb"
+  keyhosting_api_gateway_name = "unified_key_hosting"
+  key_rotation_job_queue_name = "key-rotation-queue.fifo"
+  account_id                  = data.aws_caller_identity.current.account_id
 }
 
 # Needed for dashboard ARNs
@@ -242,7 +241,7 @@ resource "aws_sns_topic_subscription" "mpkhs_snstopic_useast1_email_subscription
 
   #Email requires confirmation
   protocol = local.use_cloudfront_arn ? "sqs" : "email"
-  endpoint = local.use_cloudfront_arn ? local.sqs_cloudfront_arn : aws_sns_topic.mpkhs_snstopic_useast1[0].arn
+  endpoint = local.use_cloudfront_arn ? local.sqs_cloudfront_arn : var.alarm_notification_email
 }
 
 module "keydb" {
@@ -280,13 +279,6 @@ module "encryptionkeyservice" {
   api_version                  = var.api_version
 
   logging_retention_days = var.cloudwatch_logging_retention_days
-  #Alarms
-  alarms_enabled                = var.alarms_enabled
-  sns_topic_arn                 = var.alarms_enabled ? (var.primary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.primary_region_sns_topic_arn) : null
-  alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
-  lambda_error_threshold        = var.mpkhs_lambda_error_threshold
-  lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
-  lambda_max_duration_threshold = var.mpkhs_lambda_max_duration_threshold
 
   get_encryption_key_lambda_ps_client_shim_enabled = var.get_encryption_key_lambda_ps_client_shim_enabled
 
@@ -298,7 +290,6 @@ module "encryptionkeyservice" {
   dynamodb_vpc_endpoint_id = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
   lambda_sg_ids            = var.enable_vpc ? [module.vpc[0].allow_egress_sg_id, module.vpc[0].allow_internal_ingress_sg_id] : null
   private_subnet_ids       = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
-  custom_alarm_label       = var.custom_alarm_label
 }
 
 module "privatekeydomainprovider" {
@@ -340,22 +331,12 @@ module "publickeyhostingservice_primary" {
   application_name   = var.application_name
 
   get_public_key_logging_retention_days = var.cloudwatch_logging_retention_days
-  #Alarms
-  public_key_service_alarms_enabled            = var.alarms_enabled
-  get_public_key_sns_topic_arn                 = var.alarms_enabled ? (var.primary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.primary_region_sns_topic_arn) : null
-  get_public_key_alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
-  get_public_key_lambda_error_threshold        = var.mpkhs_lambda_error_threshold
-  get_public_key_lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
-  get_public_key_lambda_max_duration_threshold = var.mpkhs_lambda_max_duration_threshold
-  get_public_key_api_max_latency_ms            = var.mpkhs_api_gw_max_latency_ms
-  get_public_key_5xx_threshold                 = var.mpkhs_api_gw_5xx_threshold
 
   # VPC vars
   enable_vpc                          = var.enable_vpc
   coordinator_vpc_security_groups_ids = var.enable_vpc ? [module.vpc[0].allow_internal_ingress_sg_id, module.vpc[0].allow_egress_sg_id] : null
   coordinator_vpc_subnet_ids          = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
   keydb_vpc_endpoint_id               = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
-  custom_alarm_label                  = var.custom_alarm_label
 }
 
 module "publickeyhostingservice_secondary" {
@@ -388,22 +369,12 @@ module "publickeyhostingservice_secondary" {
   application_name   = var.application_name
 
   get_public_key_logging_retention_days = var.cloudwatch_logging_retention_days
-  #Alarms
-  public_key_service_alarms_enabled            = var.alarms_enabled
-  get_public_key_sns_topic_arn                 = var.alarms_enabled ? (var.secondary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs_snstopic_secondary[0].arn : var.secondary_region_sns_topic_arn) : null
-  get_public_key_alarm_eval_period_sec         = var.mpkhs_alarm_eval_period_sec
-  get_public_key_lambda_error_threshold        = var.mpkhs_lambda_error_threshold
-  get_public_key_lambda_error_log_threshold    = var.mpkhs_lambda_error_log_threshold
-  get_public_key_lambda_max_duration_threshold = var.mpkhs_lambda_max_duration_threshold
-  get_public_key_api_max_latency_ms            = var.mpkhs_api_gw_max_latency_ms
-  get_public_key_5xx_threshold                 = var.mpkhs_api_gw_5xx_threshold
 
   # VPC vars
   enable_vpc                          = var.enable_vpc
   coordinator_vpc_security_groups_ids = var.enable_vpc ? [module.vpc_secondary[0].allow_internal_ingress_sg_id, module.vpc_secondary[0].allow_egress_sg_id] : null
   coordinator_vpc_subnet_ids          = var.enable_vpc ? module.vpc_secondary[0].private_subnet_ids : null
   keydb_vpc_endpoint_id               = var.enable_vpc ? module.vpc_secondary[0].dynamodb_vpc_endpoint_id : null
-  custom_alarm_label                  = var.custom_alarm_label
 }
 
 module "publickeyhostingcloudfront" {
@@ -425,34 +396,15 @@ module "publickeyhostingcloudfront" {
   domain_name_to_domain_hosted_zone_id = var.public_key_service_domain_name_to_domain_hosted_zone_id
   service_subdomain                    = var.public_key_service_subdomain
   service_alternate_domain_names       = var.public_key_service_alternate_domain_names
-
-  #Must be us-east-1
-  get_public_key_sns_topic_arn = var.alarms_enabled ? (local.sns_cloudfront_arn == "" ? aws_sns_topic.mpkhs_snstopic_useast1[0].arn : local.sns_cloudfront_arn) : null
-
-  #Alarms
-  public_key_service_alarms_enabled                  = var.alarms_enabled
-  get_public_key_alarm_eval_period_sec               = var.mpkhs_alarm_eval_period_sec
-  get_public_key_cloudfront_5xx_threshold            = var.get_public_key_cloudfront_5xx_threshold
-  get_public_key_cloudfront_cache_hit_threshold      = var.get_public_key_cloudfront_cache_hit_threshold
-  get_public_key_cloudfront_origin_latency_threshold = var.get_public_key_cloudfront_origin_latency_threshold
-  custom_alarm_label                                 = var.custom_alarm_label
 }
 
 module "apigateway" {
   source = "../../modules/apigateway"
 
-  api_env_stage_name = var.api_env_stage_name
-  environment        = var.environment
-  name               = local.keyhosting_api_gateway_alarm_label
-
+  api_env_stage_name                 = var.api_env_stage_name
+  environment                        = var.environment
+  name                               = local.keyhosting_api_gateway_name
   api_gateway_logging_retention_days = var.cloudwatch_logging_retention_days
-  #Alarms
-  api_gateway_alarms_enabled        = var.alarms_enabled
-  api_gateway_5xx_threshold         = var.mpkhs_api_gw_5xx_threshold
-  api_gateway_alarm_eval_period_sec = var.mpkhs_alarm_eval_period_sec
-  api_gateway_api_max_latency_ms    = var.mpkhs_api_gw_max_latency_ms
-  api_gateway_sns_topic_arn         = var.alarms_enabled ? (var.primary_region_sns_topic_arn == "" ? aws_sns_topic.mpkhs[0].arn : var.primary_region_sns_topic_arn) : null
-  custom_alarm_label                = var.custom_alarm_label
 }
 
 module "unifiedkeyhostingdashboard" {

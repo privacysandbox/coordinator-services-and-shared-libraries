@@ -30,6 +30,9 @@ spanner_instance_config = "regional-us-central1"
 # Monitor the spanner instance utilization to decide on scale out / scale in.
 # https://console.cloud.google.com/spanner/instances
 spanner_processing_units = 100
+# Uncomment the line below at your own risk to disable Spanner database protection.
+# This needs to be set to false and applied before destroying all resources is possible.
+#spanner_database_deletion_protection = false
 
 instance_type = "n2d-standard-8" # 8 cores, 32GiB
 

@@ -21,7 +21,7 @@ module "distributed_pbs_dashboards" {
   custom_alarm_label = var.custom_alarm_label
 
   privacy_budget_api_gateway_id                = module.auth_service.api_gateway_id
-  privacy_budget_load_balancer_id              = regex("app/.*", module.beanstalk_environment.elb_loadbalancers[0])
+  privacy_budget_load_balancer_id              = regex(local.elb_regex, module.beanstalk_environment.elb_loadbalancers[0])
   privacy_budget_dashboard_time_period_seconds = var.privacy_budget_dashboard_time_period_seconds
   privacy_budget_autoscaling_group_name        = module.beanstalk_environment.autoscaling_group_name[0]
 }

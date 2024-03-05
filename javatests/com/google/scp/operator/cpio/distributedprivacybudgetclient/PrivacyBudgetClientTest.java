@@ -16,6 +16,7 @@
 
 package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClient.PrivacyBudgetClientException;
 import com.google.scp.shared.api.util.HttpClientResponse;
 import com.google.scp.shared.api.util.HttpClientWithInterceptor;
@@ -38,6 +40,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -277,8 +280,19 @@ public final class PrivacyBudgetClientTest {
 
     assertThat(executionResult.executionStatus()).isEqualTo(ExecutionStatus.FAILURE);
     assertThat(executionResult.statusCode()).isEqualTo(StatusCode.UNKNOWN);
+    PrivacyBudgetUnit exhaustedBudgetUnit =
+        transactionRequest
+            .reportingOriginToPrivacyBudgetUnitsList()
+            .get(0)
+            .privacyBudgetUnits()
+            .get(0);
+    ReportingOriginToPrivacyBudgetUnits exhaustedBudgetUnitsByOrigin =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("dummy-reporting-origin")
+            .setPrivacyBudgetUnits(ImmutableList.of(exhaustedBudgetUnit))
+            .build();
     assertThat(transaction.getExhaustedPrivacyBudgetUnits())
-        .containsExactly(transactionRequest.privacyBudgetUnits().get(0));
+        .containsExactly(exhaustedBudgetUnitsByOrigin);
   }
 
   @Test
@@ -766,6 +780,261 @@ public final class PrivacyBudgetClientTest {
     assertThat(executionResult.statusCode()).isEqualTo(StatusCode.UNKNOWN);
   }
 
+  @Test
+  public void getExhaustedPrivacyBudgetUnitsByOrigin_lastUnitPerOrigin() {
+    ImmutableList<PrivacyBudgetUnit> budgetUnits = getPrivacyBudgetUnits(7);
+    ReportingOriginToPrivacyBudgetUnits origin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(budgetUnits.get(0), budgetUnits.get(1), budgetUnits.get(3)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin2ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin2")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(2), budgetUnits.get(5)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(4), budgetUnits.get(6)))
+            .build();
+
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(3)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin2ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin2")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(5)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(6)))
+            .build();
+
+    ImmutableList<Integer> budgetExhaustedIndices = ImmutableList.of(2, 4, 6);
+
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudgetUnitsByOrigin =
+        privacyBudgetClient.getExhaustedPrivacyBudgetUnitsByOrigin(
+            ImmutableList.of(origin1ToUnits, origin2ToUnits, origin3ToUnits),
+            budgetExhaustedIndices);
+    assertThat(exhaustedBudgetUnitsByOrigin)
+        .containsExactly(
+            expectedExhaustedOrigin1ToUnits,
+            expectedExhaustedOrigin2ToUnits,
+            expectedExhaustedOrigin3ToUnits);
+  }
+
+  @Test
+  public void getExhaustedPrivacyBudgetUnitsByOrigin_mixOfMidAndLastBudgetsForOrigins() {
+    ImmutableList<PrivacyBudgetUnit> budgetUnits = getPrivacyBudgetUnits(10);
+    ReportingOriginToPrivacyBudgetUnits origin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(
+                    budgetUnits.get(0), budgetUnits.get(1), budgetUnits.get(3), budgetUnits.get(4)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin2ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin2")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(budgetUnits.get(2), budgetUnits.get(5), budgetUnits.get(7)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(budgetUnits.get(6), budgetUnits.get(8), budgetUnits.get(9)))
+            .build();
+
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(3)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin2ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin2")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(5)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(9)))
+            .build();
+
+    ImmutableList<Integer> budgetExhaustedIndices = ImmutableList.of(2, 5, 9);
+
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudgetUnitsByOrigin =
+        privacyBudgetClient.getExhaustedPrivacyBudgetUnitsByOrigin(
+            ImmutableList.of(origin1ToUnits, origin2ToUnits, origin3ToUnits),
+            budgetExhaustedIndices);
+    assertThat(exhaustedBudgetUnitsByOrigin)
+        .containsExactly(
+            expectedExhaustedOrigin1ToUnits,
+            expectedExhaustedOrigin2ToUnits,
+            expectedExhaustedOrigin3ToUnits);
+  }
+
+  @Test
+  public void getExhaustedPrivacyBudgetUnitsByOrigin_mixOfFirstAndLastBudgetsForOrigins() {
+    ImmutableList<PrivacyBudgetUnit> budgetUnits = getPrivacyBudgetUnits(10);
+    ReportingOriginToPrivacyBudgetUnits origin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(
+                    budgetUnits.get(0), budgetUnits.get(1), budgetUnits.get(3), budgetUnits.get(4)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin2ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin2")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(budgetUnits.get(2), budgetUnits.get(5), budgetUnits.get(7)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(budgetUnits.get(6), budgetUnits.get(8), budgetUnits.get(9)))
+            .build();
+
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(0), budgetUnits.get(4)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin2ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin2")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(2)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(9)))
+            .build();
+
+    ImmutableList<Integer> budgetExhaustedIndices = ImmutableList.of(0, 3, 4, 9);
+
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudgetUnitsByOrigin =
+        privacyBudgetClient.getExhaustedPrivacyBudgetUnitsByOrigin(
+            ImmutableList.of(origin1ToUnits, origin2ToUnits, origin3ToUnits),
+            budgetExhaustedIndices);
+    assertThat(exhaustedBudgetUnitsByOrigin)
+        .containsExactly(
+            expectedExhaustedOrigin1ToUnits,
+            expectedExhaustedOrigin2ToUnits,
+            expectedExhaustedOrigin3ToUnits);
+  }
+
+  @Test
+  public void getExhaustedPrivacyBudgetUnitsByOrigin_mixOfFirstLastAndMidBudgetsForOrigins() {
+    ImmutableList<PrivacyBudgetUnit> budgetUnits = getPrivacyBudgetUnits(21);
+    ReportingOriginToPrivacyBudgetUnits origin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(
+                    budgetUnits.get(0),
+                    budgetUnits.get(3),
+                    budgetUnits.get(6),
+                    budgetUnits.get(7),
+                    budgetUnits.get(15)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin2ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin2")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(19), budgetUnits.get(20)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(
+                    budgetUnits.get(1),
+                    budgetUnits.get(4),
+                    budgetUnits.get(8),
+                    budgetUnits.get(11),
+                    budgetUnits.get(16)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin4ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin4")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(
+                    budgetUnits.get(2),
+                    budgetUnits.get(9),
+                    budgetUnits.get(12),
+                    budgetUnits.get(17)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits origin5ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin5")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(
+                    budgetUnits.get(5),
+                    budgetUnits.get(10),
+                    budgetUnits.get(13),
+                    budgetUnits.get(14),
+                    budgetUnits.get(18)))
+            .build();
+
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin1ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin1")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(0), budgetUnits.get(7)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin3ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin3")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(8), budgetUnits.get(16)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin4ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin4")
+            .setPrivacyBudgetUnits(ImmutableList.of(budgetUnits.get(2), budgetUnits.get(17)))
+            .build();
+    ReportingOriginToPrivacyBudgetUnits expectedExhaustedOrigin5ToUnits =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("origin5")
+            .setPrivacyBudgetUnits(
+                ImmutableList.of(budgetUnits.get(10), budgetUnits.get(13), budgetUnits.get(14)))
+            .build();
+
+    ImmutableList<Integer> budgetExhaustedIndices =
+        ImmutableList.of(0, 3, 9, 11, 12, 15, 17, 18, 19);
+
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudgetUnitsByOrigin =
+        privacyBudgetClient.getExhaustedPrivacyBudgetUnitsByOrigin(
+            ImmutableList.of(
+                origin1ToUnits, origin2ToUnits, origin3ToUnits, origin4ToUnits, origin5ToUnits),
+            budgetExhaustedIndices);
+    assertThat(exhaustedBudgetUnitsByOrigin)
+        .containsExactly(
+            expectedExhaustedOrigin1ToUnits,
+            expectedExhaustedOrigin3ToUnits,
+            expectedExhaustedOrigin4ToUnits,
+            expectedExhaustedOrigin5ToUnits);
+  }
+
+  private static ImmutableList<PrivacyBudgetUnit> getPrivacyBudgetUnits(int count) {
+    final Instant timeInstant = Instant.ofEpochMilli(1658960799);
+    return IntStream.range(0, count)
+        .mapToObj(
+            index ->
+                PrivacyBudgetUnit.builder()
+                    .privacyBudgetKey("budgetKey" + index)
+                    .reportingWindow(timeInstant)
+                    .build())
+        .collect(toImmutableList());
+  }
+
   private static Transaction generateTransaction(
       String endpoint,
       UUID transactionId,
@@ -796,22 +1065,29 @@ public final class PrivacyBudgetClientTest {
             .build();
     return TransactionRequest.builder()
         .setTransactionId(TRANSACTION_ID)
-        .setPrivacyBudgetUnits(ImmutableList.of(unit1, unit2))
+        .setReportingOriginToPrivacyBudgetUnitsList(
+            ImmutableList.of(
+                ReportingOriginToPrivacyBudgetUnits.builder()
+                    .setPrivacyBudgetUnits(ImmutableList.of(unit1, unit2))
+                    .setReportingOrigin("dummy-reporting-origin")
+                    .build()))
         .setTransactionSecret("transaction-secret")
         .setTimeout(Timestamp.from(Instant.now()))
-        .setAttributionReportTo("dummy-reporting-origin")
+        .setClaimedIdentity("dummy-reporting-site")
         .build();
   }
 
   private static String expectedPayload() {
-    return "{\"t\":[{\"reporting_time\":\"1970-01-20T04:49:20.799Z\",\"key\":\"budgetkey1\",\"token\":1},"
-               + "{\"reporting_time\":\"1970-01-20T04:49:20.845Z\",\"key\":\"budgetkey2\",\"token\":1}],\"v\":\"1.0\"}";
+    return "{\"data\":[{\"keys\":"
+        + "[{\"reporting_time\":\"1970-01-20T04:49:20.799Z\",\"key\":\"budgetkey1\",\"token\":1},"
+        + "{\"reporting_time\":\"1970-01-20T04:49:20.845Z\",\"key\":\"budgetkey2\",\"token\":1}],"
+        + "\"reporting_origin\":\"dummy-reporting-origin\"}],\"v\":\"2.0\"}";
   }
 
   private static Map<String, String> expectedHeadersMap(String endpoint, Transaction transaction) {
     Map<String, String> headers = new HashMap<>();
     headers.put("x-gscp-transaction-id", transaction.getId().toString().toUpperCase());
-    headers.put("x-gscp-claimed-identity", "dummy-reporting-origin");
+    headers.put("x-gscp-claimed-identity", "dummy-reporting-site");
     headers.put("x-gscp-transaction-secret", "transaction-secret");
     if (transaction.getCurrentPhase() != TransactionPhase.BEGIN) {
       headers.put(

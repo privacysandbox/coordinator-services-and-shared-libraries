@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.KeyGenerationUtil.countExistingValidKeys;
+import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.KeyGenerationUtil.findTemporaryKeys;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
 
 import com.google.common.collect.ImmutableList;
@@ -58,7 +59,7 @@ import org.slf4j.LoggerFactory;
 public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateSplitKeyTaskBase.class);
-  private static final int KEY_ID_CONFLICT_MAX_RETRY = 5;
+  private static final int KEY_SERVICE_MAX_RETRY = 5;
 
   protected final Aead keyEncryptionKeyAead;
   protected final String keyEncryptionKeyUri;
@@ -137,6 +138,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
     // Check if there are enough number of active keys, if not, create any missing keys.
     ImmutableList<EncryptionKey> activeKeys = keyDb.getActiveKeys(numDesiredKeys, now);
+    LOGGER.info("Number of active keys: " + activeKeys.size());
+
     if (activeKeys.size() < numDesiredKeys) {
       createSplitKey(numDesiredKeys - activeKeys.size(), validityInDays, ttlInDays, now);
     }
@@ -151,6 +154,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         activeKeys.stream()
             .map(EncryptionKey::getExpirationTime)
             .map(Instant::ofEpochMilli)
+            .distinct()
             .sorted()
             .collect(toImmutableList());
 
@@ -196,8 +200,24 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int ttlInDays,
       Instant activation,
       Optional<DataKey> dataKey,
-      int keyIdConflictRetryCount)
+      int keyServiceRetryCount)
       throws ServiceException {
+    try {
+      // Remove all placeholder keys in keyDb first before creating keys.
+      removePlaceholderKeys(keyDb);
+    } catch (ServiceException e) {
+      LOGGER.warn("Error when removing placeholder keys.\n" + e.getErrorReason());
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info(
+            "Retry removing placeholder keys. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyBase(
+            validityInDays, ttlInDays, activation, dataKey, keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when removing placeholder keys.");
+      throw e;
+    }
+
     Instant creationTime = Instant.now();
     EncryptionKey unsignedCoordinatorAKey;
     EncryptionKey unsignedCoordinatorBKey;
@@ -224,14 +244,23 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
       encryptedKeySplitB =
           encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
-    } catch (GeneralSecurityException | IOException e) {
+    } catch (GeneralSecurityException | IOException | ServiceException e) {
       String msg = "Error generating keys.";
+      LOGGER.warn(msg + "\n" + e.getMessage());
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry generating keys. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyBase(
+            validityInDays, ttlInDays, activation, dataKey, keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when generating keys.");
       throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);
     }
 
     try {
       // Reserve the key ID with a placeholder key that's not valid yet. Will be made valid at a
       // later step once key-split is successfully delivered to coordinator B.
+      LOGGER.info("Generating the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
       keyDb.createKey(
           unsignedCoordinatorAKey.toBuilder()
               // Setting activation_time to expiration_time such that the key is invalid for now.
@@ -239,38 +268,58 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               .build(),
           false);
     } catch (ServiceException e) {
-      if (e.getErrorCode().equals(Code.ALREADY_EXISTS)
-          && keyIdConflictRetryCount < KEY_ID_CONFLICT_MAX_RETRY) {
-        LOGGER.warn(
-            String.format(
-                "Failed to insert placeholder key split with keyId %s, retry count: %d, error "
-                    + "message: %s",
-                unsignedCoordinatorAKey.getKeyId(), keyIdConflictRetryCount, e.getErrorReason()));
+      LOGGER.warn("Failed to insert placeholder key due to database error: " + e.getErrorReason());
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry creating key. Current retry count: " + keyServiceRetryCount);
         createSplitKeyBase(
-            validityInDays, ttlInDays, activation, dataKey, keyIdConflictRetryCount + 1);
+            validityInDays, ttlInDays, activation, dataKey, keyServiceRetryCount + 1);
         return;
       }
-      LOGGER.error("Failed to insert placeholder key due to database error");
+      LOGGER.error("Retries exhausted when inserting placeholder key.");
       throw e;
     }
-
     // Send Coordinator B valid key split
-    EncryptionKey partyBResponse =
-        sendKeySplitToPeerCoordinator(unsignedCoordinatorBKey, encryptedKeySplitB, dataKey);
+    try {
 
-    // Accumulate signatures and store to KeyDB
-    EncryptionKey signedCoordinatorAKey =
-        unsignedCoordinatorAKey.toBuilder()
-            // Need to clear KeySplitData before adding the combined KeySplitData list.
-            .clearKeySplitData()
-            .addAllKeySplitData(
-                combineKeySplitData(
-                    partyBResponse.getKeySplitDataList(),
-                    unsignedCoordinatorAKey.getKeySplitDataList()))
-            .build();
+      EncryptionKey partyBResponse =
+          sendKeySplitToPeerCoordinator(unsignedCoordinatorBKey, encryptedKeySplitB, dataKey);
+      LOGGER.info(
+          "Sent key " + unsignedCoordinatorBKey.getKeyId() + " to peer coordinator successfully.");
 
-    // Note: We want to store the keys as they are generated and signed.
-    keyDb.createKey(signedCoordinatorAKey, true);
+      // Accumulate signatures and store to KeyDB
+      EncryptionKey signedCoordinatorAKey =
+          unsignedCoordinatorAKey.toBuilder()
+              // Need to clear KeySplitData before adding the combined KeySplitData list.
+              .clearKeySplitData()
+              .addAllKeySplitData(
+                  combineKeySplitData(
+                      partyBResponse.getKeySplitDataList(),
+                      unsignedCoordinatorAKey.getKeySplitDataList()))
+              .build();
+
+      // Note: We want to store the keys as they are generated and signed.
+      keyDb.createKey(signedCoordinatorAKey, true);
+      LOGGER.info(
+          String.format(
+              "Updated placeholder key %s to persistent key successfully.",
+              signedCoordinatorAKey.getKeyId()));
+    } catch (ServiceException e) {
+      LOGGER.warn(
+          "Failed to send key in peer coordinator or update placeholder key to persistent key due"
+              + " to: "
+              + e.getErrorReason());
+      LOGGER.info("Deleting the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
+      keyDb.deleteKey(unsignedCoordinatorAKey.getKeyId());
+
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry sending/creating key. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyBase(
+            validityInDays, ttlInDays, activation, dataKey, keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when sending key to peer coordinator.");
+      throw e;
+    }
   }
 
   /**
@@ -354,5 +403,16 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         .values()
         .stream()
         .collect(toImmutableList());
+  }
+
+  private void removePlaceholderKeys(KeyDb keyDb) throws ServiceException {
+    ImmutableList<EncryptionKey> tempKeys = findTemporaryKeys(keyDb);
+    LOGGER.info("Number of placeholder keys found in keyDb: " + tempKeys.size());
+    for (EncryptionKey tmpKey : tempKeys) {
+      LOGGER.info("Removing placeholder key: " + tmpKey.getKeyId());
+      keyDb.deleteKey(tmpKey.getKeyId());
+    }
+    LOGGER.info(
+        "Successfully removed all placeholder keys or no placeholder keys were found in Db.");
   }
 }

@@ -10,6 +10,8 @@ import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import com.google.cloud.Timestamp;
 import com.google.cloud.spanner.DatabaseClient;
 import com.google.cloud.spanner.ErrorCode;
+import com.google.cloud.spanner.Key;
+import com.google.cloud.spanner.KeySet;
 import com.google.cloud.spanner.Mutation;
 import com.google.cloud.spanner.ResultSet;
 import com.google.cloud.spanner.SpannerException;
@@ -27,6 +29,7 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDa
 import com.google.scp.shared.api.exception.ServiceException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -178,6 +181,18 @@ public final class SpannerKeyDb implements KeyDb {
     List<Mutation> mutations =
         keys.stream().map(a -> toMutation(a, true)).collect(toImmutableList());
     writeTransaction(mutations);
+  }
+
+  @Override
+  public void deleteKey(String keyId) throws ServiceException {
+    List<Mutation> mutations = new ArrayList<>();
+    mutations.add(Mutation.delete(SpannerKeyDb.TABLE_NAME, KeySet.singleKey(Key.of(keyId))));
+    try {
+      dbClient.write(mutations);
+    } catch (SpannerException e) {
+      String message = "Spanner encountered error removing keys";
+      throw new ServiceException(INTERNAL, DATASTORE_ERROR.name(), message, e);
+    }
   }
 
   private void writeTransaction(List<Mutation> mutations) throws ServiceException {

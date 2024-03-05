@@ -56,4 +56,13 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface CoordinatorBEncryptionKeyServiceBaseUrl {}
+
+  /**
+   * TTL for private key cache. To be used only for load testing and should not be used by external
+   * clients (AdTechs).
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface DecrypterCacheEntryTtlSec {}
 }

@@ -17,6 +17,7 @@
 package com.google.scp.operator.autoscaling.tasks.gcp;
 
 import static com.google.scp.operator.protos.shared.backend.asginstance.InstanceStatusProto.InstanceStatus.TERMINATING_WAIT;
+import static com.google.scp.operator.protos.shared.backend.asginstance.InstanceTerminationReasonProto.InstanceTerminationReason.SCALE_IN;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -58,16 +59,25 @@ public final class RequestScaleInTaskTest {
 
   private RequestScaleInTask requestScaleInTask;
 
-  private String instanceName;
+  private final String zoneA = "us-central1-a";
+  private final String zoneB = "us-central1-b";
+  private String instanceTemplate;
   private String instanceZone;
-  private HashMap<String, List<String>> remainingInstances;
+  private GcpComputeInstance instance;
+  private HashMap<String, List<GcpComputeInstance>> remainingInstances;
 
   @Before
   public void setup() {
-    instanceName =
+    String instanceName =
         "https://www.googleapis.com/compute/v1/projects/test/zones/us-central1-b/instances/test-"
             + UUID.randomUUID();
+    instanceTemplate = "test-template123456789";
     instanceZone = "us-central1-b";
+    instance =
+        GcpComputeInstance.builder()
+            .setInstanceId(instanceName)
+            .setInstanceTemplate(instanceTemplate)
+            .build();
     remainingInstances = new HashMap<>();
   }
 
@@ -101,12 +111,14 @@ public final class RequestScaleInTaskTest {
     when(instanceManagementClient.getAutoscaler()).thenReturn(Optional.of(autoscaler));
     requestScaleInTask =
         new RequestScaleInTask(instanceManagementClient, fakeAsgInstancesDao, clock, ttlDays);
-    remainingInstances.put(instanceZone, Arrays.asList(instanceName));
+    remainingInstances.put(instanceZone, Arrays.asList(instance));
 
     requestScaleInTask.requestScaleIn(remainingInstances);
 
     assertEquals(TERMINATING_WAIT, fakeAsgInstancesDao.getLastInstanceInserted().getStatus());
-    assertEquals(instanceName, fakeAsgInstancesDao.getLastInstanceInserted().getInstanceName());
+    assertEquals(SCALE_IN, fakeAsgInstancesDao.getLastInstanceInserted().getTerminationReason());
+    assertEquals(
+        instance.getInstanceId(), fakeAsgInstancesDao.getLastInstanceInserted().getInstanceName());
   }
 
   @Test
@@ -115,23 +127,21 @@ public final class RequestScaleInTaskTest {
     when(instanceManagementClient.getAutoscaler()).thenReturn(Optional.of(autoscaler));
     requestScaleInTask =
         new RequestScaleInTask(instanceManagementClient, fakeAsgInstancesDao, clock, ttlDays);
-    // 2 instances in us-central1-a
+    // 2 instances in zoneA (us-central1-a)
     remainingInstances.put(
-        "us-central1-a",
-        Arrays.asList(
-            createZonalInstanceUrl("us-central1-a"), createZonalInstanceUrl("us-central1-a")));
-    // 2 instances in us-central1-b
+        zoneA,
+        Arrays.asList(createZonalGcpComputeInstance(zoneA), createZonalGcpComputeInstance(zoneA)));
+    // 2 instances in zoneB (us-central1-b)
     remainingInstances.put(
-        "us-central1-b",
-        Arrays.asList(
-            createZonalInstanceUrl("us-central1-b"), createZonalInstanceUrl("us-central1-b")));
+        zoneB,
+        Arrays.asList(createZonalGcpComputeInstance(zoneB), createZonalGcpComputeInstance(zoneB)));
 
     requestScaleInTask.requestScaleIn(remainingInstances);
     Map<String, Integer> terminationZoneToInstance =
         fakeAsgInstancesDao.getZoneToInstanceCountMap();
 
-    assertEquals(terminationZoneToInstance.get("us-central1-a"), Integer.valueOf(1));
-    assertEquals(terminationZoneToInstance.get("us-central1-b"), Integer.valueOf(1));
+    assertEquals(terminationZoneToInstance.get(zoneA), Integer.valueOf(1));
+    assertEquals(terminationZoneToInstance.get(zoneB), Integer.valueOf(1));
   }
 
   @Test
@@ -140,22 +150,22 @@ public final class RequestScaleInTaskTest {
     when(instanceManagementClient.getAutoscaler()).thenReturn(Optional.of(autoscaler));
     requestScaleInTask =
         new RequestScaleInTask(instanceManagementClient, fakeAsgInstancesDao, clock, ttlDays);
-    // 3 instances in us-central1-a
+    // 3 instances in zoneA (us-central1-a)
     remainingInstances.put(
-        "us-central1-a",
+        zoneA,
         Arrays.asList(
-            createZonalInstanceUrl("us-central1-a"),
-            createZonalInstanceUrl("us-central1-a"),
-            createZonalInstanceUrl("us-central1-a")));
-    // 1 instances in us-central1-b
-    remainingInstances.put("us-central1-b", Arrays.asList(createZonalInstanceUrl("us-central1-b")));
+            createZonalGcpComputeInstance(zoneA),
+            createZonalGcpComputeInstance(zoneA),
+            createZonalGcpComputeInstance(zoneA)));
+    // 1 instances in zoneB (us-central1-b)
+    remainingInstances.put(zoneB, Arrays.asList(createZonalGcpComputeInstance(zoneB)));
 
     requestScaleInTask.requestScaleIn(remainingInstances);
     Map<String, Integer> terminationZoneToInstance =
         fakeAsgInstancesDao.getZoneToInstanceCountMap();
 
-    assertEquals(terminationZoneToInstance.get("us-central1-a"), Integer.valueOf(2));
-    assertFalse(terminationZoneToInstance.containsKey("us-central1-b"));
+    assertEquals(terminationZoneToInstance.get(zoneA), Integer.valueOf(2));
+    assertFalse(terminationZoneToInstance.containsKey(zoneB));
   }
 
   static class TestEnv extends AbstractModule {
@@ -171,5 +181,12 @@ public final class RequestScaleInTaskTest {
     return String.format(
         "https://www.googleapis.com/compute/v1/projects/test/zones/%s/instances/test-%s",
         instanceZone, UUID.randomUUID());
+  }
+
+  private GcpComputeInstance createZonalGcpComputeInstance(String zone) {
+    return GcpComputeInstance.builder()
+        .setInstanceId(createZonalInstanceUrl(zone))
+        .setInstanceTemplate(instanceTemplate)
+        .build();
   }
 }

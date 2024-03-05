@@ -18,6 +18,7 @@ package com.scp.operator.protos.shared.backend.asginstance;
 
 import "google/protobuf/timestamp.proto";
 import "operator/protos/shared/backend/asginstance/instance_status.proto";
+import "operator/protos/shared/backend/asginstance/instance_termination_reason.proto";
 
 option java_package = "com.google.scp.operator.protos.shared.backend.asginstance";
 option java_outer_classname = "AsgInstanceProto";
@@ -42,4 +43,7 @@ message AsgInstance {
 
   // The last lifecycle action heartbeat time.
   google.protobuf.Timestamp last_heartbeat_time = 6;
+
+  // The instance termination reason.
+  optional google.scp.operators.protos.shared.backend.asginstance.InstanceTerminationReason termination_reason = 7;
 }

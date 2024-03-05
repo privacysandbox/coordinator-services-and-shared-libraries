@@ -60,13 +60,8 @@ java_binary(
     ],
 )
 
-alias(
-    name = "PublicKeyServiceHttpCloudFunctionDeploy",
-    actual = ":PublicKeyServiceHttpCloudFunction_deploy.jar",
-)
-
 pkg_zip(
-    name = "PublicKeyServiceHttpCloudFunctionDeploy_zip",
+    name = "PublicKeyServiceHttpCloudFunctionDeploy",
     srcs = [
         ":PublicKeyServiceHttpCloudFunction_deploy.jar",
     ],
@@ -103,13 +98,8 @@ java_binary(
     ],
 )
 
-alias(
-    name = "EncryptionKeyServiceHttpCloudFunctionDeploy",
-    actual = ":EncryptionKeyServiceHttpCloudFunction_deploy.jar",
-)
-
 pkg_zip(
-    name = "EncryptionKeyServiceHttpCloudFunctionDeploy_zip",
+    name = "EncryptionKeyServiceHttpCloudFunctionDeploy",
     srcs = [
         ":EncryptionKeyServiceHttpCloudFunction_deploy.jar",
     ],

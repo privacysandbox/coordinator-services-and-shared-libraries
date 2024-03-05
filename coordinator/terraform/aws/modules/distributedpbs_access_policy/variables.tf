@@ -24,12 +24,6 @@ variable "pbs_auth_api_gateway_arn" {
   nullable    = false
 }
 
-variable "pbs_auth_table_name" {
-  description = "The name of the reporting origin table."
-  type        = string
-  nullable    = false
-}
-
 variable "pbs_auth_table_v2_name" {
   description = "DynamoDB table name of distributed pbs auth table V2."
   type        = string

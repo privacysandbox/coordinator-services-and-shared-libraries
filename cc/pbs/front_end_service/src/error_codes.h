@@ -55,4 +55,14 @@ DEFINE_ERROR_CODE(SC_PBS_FRONT_END_SERVICE_BEGIN_TRANSACTION_DISALLOWED,
                   "Front end does not allow new transactions at this time.",
                   HttpStatusCode::SERVICE_UNAVAILABLE)
 
+DEFINE_ERROR_CODE(SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN,
+                  SC_PBS_FRONT_END_SERVICE, 0x0008,
+                  "The request contains an invalid reporting_origin.",
+                  HttpStatusCode::BAD_REQUEST)
+
+DEFINE_ERROR_CODE(SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE,
+                  SC_PBS_FRONT_END_SERVICE, 0x0009,
+                  "The request contains a reporting_origin that does not "
+                  "belong to the provided site.",
+                  HttpStatusCode::UNAUTHORIZED)
 }  // namespace google::scp::core::errors

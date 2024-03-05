@@ -18,7 +18,7 @@ package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClient.PrivacyBudgetClientException;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -56,11 +56,12 @@ public class TransactionEngineImpl implements TransactionEngine {
         transactionPhaseManager.proceedToNextPhase(
             currentPhase, transaction.getCurrentPhaseExecutionResult());
 
-    /* This means that END state was executed either successfully or with failures. However, that does
+    /*
+     * This means that END state was executed either successfully or with failures. However, that does
      * not affect the eventual outcome of the transaction. What decides whether the budget consumption
-     *  was successful or not depends on if ABORT was invoked. If it was, that means the transaction
-     *  failed and it has been marked as such in the Transaction object
-     * */
+     * was successful or not depends on if ABORT was invoked. If it was, that means the transaction
+     * failed and it has been marked as such in the Transaction object
+     */
     if (nextPhase == TransactionPhase.FINISHED) {
       if (transaction.isTransactionFailed()) {
         StatusCode statusCode = transaction.getTransactionExecutionResult().statusCode();
@@ -91,9 +92,10 @@ public class TransactionEngineImpl implements TransactionEngine {
     }
 
     if (transaction.getRetries() <= 0) {
-      /* In case it was NOTIFY that failed,
+      /*
+       * In case it was NOTIFY that failed,
        * we might still be able to declare success if the failure was only partial.
-       * */
+       */
       if (canMarkTransactionAsSuccessful(currentPhase, transaction)) {
         return;
       }
@@ -119,9 +121,10 @@ public class TransactionEngineImpl implements TransactionEngine {
     executeCurrentPhase(transaction);
   }
 
-  /* It is ok to ignore failures against certain coordinators for some phases if the phase has
+  /*
+   * It is ok to ignore failures against certain coordinators for some phases if the phase has
    * succeeded against at least a minimum required number of coordinators for that phase.
-   * */
+   */
   private boolean canMarkTransactionAsSuccessful(TransactionPhase phase, Transaction transaction) {
     if (PARTIAL_SUCCESS_ACCEPTABLE_PHASES.containsKey(phase)) {
       long phaseSucceededCount = getCountOfPhaseSuccessAgainstCoordinators(transaction, phase);
@@ -165,9 +168,16 @@ public class TransactionEngineImpl implements TransactionEngine {
       TransactionPhase lastSuccessfulTransactionPhase =
           transaction.getLastCompletedTransactionPhaseOnPrivacyBudgetServer(
               privacyBudgetServerIdentifier);
-      if ((lastSuccessfulTransactionPhase == TransactionPhase.NOTSTARTED
-              && currentPhase != TransactionPhase.BEGIN)
-          || lastSuccessfulTransactionPhase == TransactionPhase.END) {
+      if (lastSuccessfulTransactionPhase == TransactionPhase.NOTSTARTED
+          && currentPhase != TransactionPhase.BEGIN) {
+        /*
+         * If no phase has succeeded yet on this coordiantor and current phase is not BEGIN,
+         * we are in ABORT situation. The coordinator has no record of the transaction has it doesn't need to be aborted on this coordinator.
+         */
+        continue;
+      }
+      if (lastSuccessfulTransactionPhase == currentPhase) {
+        // The phase was already successful on this coordinator, no need to reattempt.
         continue;
       }
       logger.info(
@@ -255,7 +265,7 @@ public class TransactionEngineImpl implements TransactionEngine {
    * @param request Transaction request metadata.
    */
   @Override
-  public ImmutableList<PrivacyBudgetUnit> execute(TransactionRequest request)
+  public ImmutableList<ReportingOriginToPrivacyBudgetUnits> execute(TransactionRequest request)
       throws TransactionEngineException {
     Transaction transaction = initializeTransaction(request);
     proceedToNextPhase(TransactionPhase.NOTSTARTED, transaction);

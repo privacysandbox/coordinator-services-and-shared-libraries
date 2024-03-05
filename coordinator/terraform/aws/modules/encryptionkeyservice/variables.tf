@@ -77,44 +77,6 @@ variable "get_encryption_key_lambda_ps_client_shim_enabled" {
   type        = bool
 }
 
-################################################################################
-# Alarm Variables
-################################################################################
-
-variable "alarms_enabled" {
-  description = "Enable alarms for private key service"
-  type        = bool
-}
-
-variable "sns_topic_arn" {
-  description = "SNS topic ARN for alarm actions"
-  type        = string
-}
-
-variable "alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
-}
-
-variable "lambda_error_threshold" {
-  description = "Error rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
-}
-
-variable "lambda_error_log_threshold" {
-  description = "Error log sum greater than this to send alarm. Example: '0'."
-  type        = string
-}
-
-variable "lambda_max_duration_threshold" {
-  description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
-  type        = string
-}
-
-variable "custom_alarm_label" {
-  description = "Add any string to the label to help filtering, allowed chars (a-zA-Z_-) max 30 chars"
-  type        = string
-}
 
 ################################################################################
 # VPC Variables

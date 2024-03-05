@@ -21,6 +21,7 @@ import static com.google.scp.shared.proto.ProtoUtil.toProtoTimestamp;
 
 import com.google.scp.operator.protos.shared.backend.asginstance.AsgInstanceProto.AsgInstance;
 import com.google.scp.operator.protos.shared.backend.asginstance.InstanceStatusProto.InstanceStatus;
+import com.google.scp.operator.protos.shared.backend.asginstance.InstanceTerminationReasonProto.InstanceTerminationReason;
 import com.google.scp.operator.shared.model.BackendModelUtil;
 import java.time.Instant;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -37,6 +38,7 @@ public final class DynamoAsgInstancesTable {
   private static final String TERMINATION_TIME = "TerminationTime";
   private static final String TTL = "Ttl";
   private static final String LAST_HEARTBEAT_TIME = "LastHeartbeatTime";
+  private static final String TERMINATION_REASON = "TerminationReason";
 
   /** Returns the table schema for the DynamoDB representation of {@code AsgInstance}. */
   public static TableSchema<AsgInstance> getDynamoDbTableSchema() {
@@ -83,6 +85,13 @@ public final class DynamoAsgInstancesTable {
                     .name(LAST_HEARTBEAT_TIME)
                     .getter(BackendModelUtil::getAsgInstanceLastHeartbeatTimeValue)
                     .setter(BackendModelUtil::setAsgInstanceLastHeartbeatTimeValue))
+        .addAttribute(
+            InstanceTerminationReason.class,
+            attribute ->
+                attribute
+                    .name(TERMINATION_REASON)
+                    .getter(AsgInstance::getTerminationReason)
+                    .setter(AsgInstance.Builder::setTerminationReason))
         .build();
   }
 }

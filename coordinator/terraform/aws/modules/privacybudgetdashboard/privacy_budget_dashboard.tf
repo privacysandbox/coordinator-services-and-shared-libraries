@@ -26,8 +26,7 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              [{ "expression" : "FILL(m1, 0)/60", "label" : "Requests Count", "id" : "e1", "region" : "${var.region}", "stat" : "Sum", "period" : var.privacy_budget_dashboard_time_period_seconds, "yAxis" : "left" }],
-              ["AWS/ApiGateway", "Count", "ApiId", "${var.privacy_budget_api_gateway_id}", { "id" : "m1", "visible" : false, "region" : "${var.region}" }]
+              ["AWS/ApiGateway", "Count", "ApiId", "${var.privacy_budget_api_gateway_id}", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -108,6 +107,33 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
             "stacked" : false,
             "region" : "${var.region}",
             "title" : "PBS Auth API APIGateway Latency",
+            "period" : var.privacy_budget_dashboard_time_period_seconds,
+            "stat" : "Sum",
+            "yAxis" : {
+              "left" : {
+                "showUnits" : false,
+                "label" : "Millisecond"
+              },
+              "right" : {
+                "showUnits" : false
+              }
+            }
+          }
+        },
+        {
+          "height" : 6,
+          "width" : 12,
+          "y" : 8,
+          "x" : 12,
+          "type" : "metric",
+          "properties" : {
+            "metrics" : [
+              ["AWS/ApiGateway", "IntegrationLatency", "ApiId", "${var.privacy_budget_api_gateway_id}", { "region" : "${var.region}" }]
+            ],
+            "view" : "timeSeries",
+            "stacked" : false,
+            "region" : "${var.region}",
+            "title" : "PBS Auth API APIGateway IntegrationLatency",
             "period" : var.privacy_budget_dashboard_time_period_seconds,
             "stat" : "Sum",
             "yAxis" : {

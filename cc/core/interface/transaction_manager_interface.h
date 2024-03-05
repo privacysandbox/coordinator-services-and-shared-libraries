@@ -88,6 +88,9 @@ struct TransactionRequest {
   std::shared_ptr<std::string> transaction_secret;
   /// The origin of the transaction aka domain name of the caller.
   std::shared_ptr<std::string> transaction_origin;
+  /// Whether this transaction request is executed as part of the journal
+  /// recovery process.
+  bool is_journal_recovery = false;
 };
 
 /**

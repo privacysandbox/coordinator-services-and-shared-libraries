@@ -7,6 +7,12 @@ build --config=java
 build:cpp --client_env=BAZEL_CXXOPTS=-std=c++17
 build:cpp --cxxopt=-std=c++17
 
+# Don't use opentelemetry-cpp’s copy of Abseil
+# https://github.com/open-telemetry/opentelemetry-cpp/pull/1172
+# https://github.com/open-telemetry/opentelemetry-cpp/blob/main/examples/otlp/README.md#additional-notes-regarding-abseil-library
+# https://github.com/open-telemetry/opentelemetry-cpp/issues/1042
+build:cpp --@io_opentelemetry_cpp//api:with_abseil=true
+
 build:clang --config=cpp
 build:clang --cxxopt=-fbracket-depth=512
 

@@ -191,7 +191,6 @@ TEST_F(Http2ServerTest, HandleHttp2RequestSetsAuthorizedDomainFromRequest) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutor>();
-  setenv(kPBSAuthorizationEnableSiteBasedAuthorization, "true", /*replace=*/1);
   shared_ptr<ConfigProviderInterface> config = make_shared<EnvConfigProvider>();
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, authorization_proxy,
@@ -225,64 +224,6 @@ TEST_F(Http2ServerTest, HandleHttp2RequestSetsAuthorizedDomainFromRequest) {
   EXPECT_EQ(
       *sync_context->http2_context.request->auth_context.authorized_domain,
       "https://origin.site.com");
-}
-
-TEST_F(Http2ServerTest,
-       HandleHttp2RequestSetsAuthorizedDomainFromAuthResponse) {
-  string host_address("localhost");
-  string port("0");
-
-  auto mock_authorization_proxy = make_shared<MockAuthorizationProxy>();
-  shared_ptr<AuthorizationProxyInterface> authorization_proxy =
-      mock_authorization_proxy;
-
-  EXPECT_CALL(*mock_authorization_proxy, Authorize).WillOnce([](auto& context) {
-    context.response = make_shared<AuthorizationProxyResponse>();
-    context.response->authorized_metadata.authorized_domain =
-        make_shared<string>("https://site.com");
-    context.result = SuccessExecutionResult();
-
-    context.Finish();
-    return SuccessExecutionResult();
-  });
-
-  auto mock_metric_client = make_shared<MockMetricClient>();
-  shared_ptr<AsyncExecutorInterface> async_executor =
-      make_shared<MockAsyncExecutor>();
-  setenv(kPBSAuthorizationEnableSiteBasedAuthorization, "false", /*replace=*/1);
-  MockHttp2ServerWithOverrides http_server(
-      host_address, port, async_executor, authorization_proxy,
-      mock_metric_client, make_shared<EnvConfigProvider>());
-  EXPECT_SUCCESS(http_server.Init());
-
-  HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
-    return SuccessExecutionResult();
-  };
-
-  nghttp2::asio_http2::server::request request;
-  nghttp2::asio_http2::server::response response;
-  auto mock_http2_request =
-      make_shared<MockNgHttp2RequestWithOverrides>(request);
-  auto mock_http2_response =
-      std::make_shared<MockNgHttp2ResponseWithOverrides>(response);
-  mock_http2_request->headers = make_shared<HttpHeaders>();
-  mock_http2_request->headers->insert(
-      {kClaimedIdentityHeader, "htps://origin.site.com"});
-  AsyncContext<NgHttp2Request, NgHttp2Response> ng_http2_context(
-      mock_http2_request,
-      [](AsyncContext<NgHttp2Request, NgHttp2Response>&) {});
-  ng_http2_context.response = mock_http2_response;
-
-  http_server.HandleHttp2Request(ng_http2_context, callback);
-  shared_ptr<MockHttp2ServerWithOverrides::Http2SynchronizationContext>
-      sync_context;
-  EXPECT_EQ(http_server.GetActiveRequests().Find(ng_http2_context.request->id,
-                                                 sync_context),
-            SuccessExecutionResult());
-  EXPECT_EQ(sync_context->failed.load(), false);
-  EXPECT_EQ(
-      *sync_context->http2_context.request->auth_context.authorized_domain,
-      "https://site.com");
 }
 
 TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {

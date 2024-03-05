@@ -16,34 +16,35 @@
 
 #pragma once
 
+#include <google/protobuf/util/time_util.h>
+
 #include <chrono>
 #include <list>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_set>
 #include <vector>
-
-#include <google/protobuf/util/time_util.h>
-#include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/http_types.h"
 #include "core/interface/transaction_manager_interface.h"
 #include "core/interface/type_def.h"
+#include "error_codes.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "pbs/interface/front_end_service_interface.h"
 #include "pbs/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
 
-#include "error_codes.h"
-
 namespace google::scp::pbs {
 
 core::ExecutionResult ParseBeginTransactionRequestBody(
     const std::string& authorized_domain, const core::BytesBuffer& request_body,
-    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-    bool enable_site_based_authorization) noexcept;
+    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept;
+
+core::ExecutionResultOr<std::string> TransformReportingOriginToSite(
+    const std::string& reporting_origin);
 
 class FrontEndUtils {
  public:

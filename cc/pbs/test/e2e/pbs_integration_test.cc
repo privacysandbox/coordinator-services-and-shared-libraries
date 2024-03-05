@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <aws/core/Aws.h>
 #include <gtest/gtest.h>
 
 #include <atomic>
@@ -22,8 +23,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include <aws/core/Aws.h>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/common/global_logger/src/global_logger.h"
@@ -170,9 +169,7 @@ static TestPbsConfig BuildTestPbsConfig(const string& pbs1_port,
   return config;
 }
 
-static string CreateUrl(string host, string port) {
-  return host + ":" + port;
-}
+static string CreateUrl(string host, string port) { return host + ":" + port; }
 
 static AsyncContext<ConsumeBudgetTransactionRequest,
                     ConsumeBudgetTransactionResponse>
@@ -291,7 +288,8 @@ static void EnsureBothPBSServersAreTakingClientRequests(
     // Flip the retry to false so that the request flows would exit.
     should_retry_request = false;
     // Wait until requests are done.
-    while (request_flow_exited_count != 2) {}
+    while (request_flow_exited_count != 2) {
+    }
     throw exception;
   }
 }
@@ -359,7 +357,6 @@ class PBSIntegrationTestForTwoServers : public ::testing::Test {
     map<string, string> env_overrides;
     env_overrides[core::kTransactionTimeoutInSecondsConfigName] =
         kTransactionTimeoutInSeconds;
-    env_overrides[core::kPBSAuthorizationEnableSiteBasedAuthorization] = "true";
     env_overrides[kServiceMetricsBatchPush] = "true";
     env_overrides[kServiceMetricsNamespace] = "pbs";
 

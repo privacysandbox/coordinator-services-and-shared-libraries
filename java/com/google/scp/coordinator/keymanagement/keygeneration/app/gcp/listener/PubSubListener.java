@@ -1,6 +1,7 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener;
 
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.InstantiatingExecutorProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
@@ -53,7 +54,7 @@ public abstract class PubSubListener {
   protected abstract void createKeys(
       int numberOfKeysToCreate, int keysValidityInDays, int ttlInDays) throws ServiceException;
 
-  /** Sets up subscriber for given subscriptionId. Creates keys when message is received. */
+  /** Sets up subscriber for given subscriptionId. Create keys when message is received. */
   public void start() {
     ProjectSubscriptionName subscriptionName =
         ProjectSubscriptionName.of(projectId, subscriptionId);
@@ -87,6 +88,9 @@ public abstract class PubSubListener {
     if (credentialsProvider != null) {
       builder.setCredentialsProvider(credentialsProvider);
     }
+    // Use single thread here to avoid keys collisions or incorrect key counts.
+    builder.setExecutorProvider(
+        InstantiatingExecutorProvider.newBuilder().setExecutorThreadCount(1).build());
     return builder.build();
   }
 

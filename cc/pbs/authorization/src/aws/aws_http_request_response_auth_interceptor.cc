@@ -21,11 +21,10 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <nlohmann/json.hpp>
 
 #include "core/authorization_service/src/error_codes.h"
 #include "core/http2_client/src/aws/aws_v4_signer.h"
@@ -116,10 +115,6 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
 
   http_request.headers->insert({string(core::kClaimedIdentityHeader),
                                 authorization_metadata.claimed_identity});
-  if (enable_site_based_authorization_) {
-    http_request.headers->insert(
-        {std::string(core::kEnablePerSiteEnrollmentHeader), "true"});
-  }
 
   AwsV4Signer signer(access_key, "", security_token, "execute-api",
                      aws_region_);
@@ -138,7 +133,8 @@ AwsHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
   try {
     body_json = json::parse(body_str);
     parse_fail = false;
-  } catch (...) {}
+  } catch (...) {
+  }
   if (parse_fail || !body_json.contains(kAuthorizedDomain)) {
     return FailureExecutionResult(
         core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);

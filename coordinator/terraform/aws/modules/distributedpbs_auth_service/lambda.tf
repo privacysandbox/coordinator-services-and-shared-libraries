@@ -31,7 +31,7 @@ resource "aws_iam_role" "lambda_iam_role" {
 data "aws_iam_policy_document" "dynamo_db_access_policy_document" {
   statement {
     actions   = ["dynamodb:GetItem"]
-    resources = ["${var.auth_dynamo_db_table_arn}", "${var.pbs_authorization_v2_table_arn}"]
+    resources = ["${var.pbs_authorization_v2_table_arn}"]
   }
 }
 
@@ -65,8 +65,7 @@ resource "aws_lambda_function" "lambda" {
 
   environment {
     variables = {
-      REPORTING_ORIGIN_AUTH_DYNAMO_DB_TABLE_NAME = "${var.auth_dynamo_db_table_name}",
-      PBS_AUTHORIZATION_V2_DYNAMODB_TABLE_NAME   = "${var.pbs_authorization_v2_table_name}"
+      PBS_AUTHORIZATION_V2_DYNAMODB_TABLE_NAME = "${var.pbs_authorization_v2_table_name}"
     }
   }
 }

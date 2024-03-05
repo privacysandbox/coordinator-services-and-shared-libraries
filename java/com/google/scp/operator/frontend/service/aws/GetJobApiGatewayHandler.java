@@ -24,6 +24,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.scp.operator.frontend.injection.factories.FrontendServicesFactory;
 import com.google.scp.operator.frontend.service.FrontendService;
 import com.google.scp.operator.frontend.tasks.ErrorReasons;
@@ -33,6 +34,7 @@ import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import com.google.scp.shared.aws.util.ApiGatewayHandler;
 import java.util.Map;
+import java.util.Optional;
 
 /** The API Gateway handler for the GetJobRequest method for the front end REST api service. */
 public final class GetJobApiGatewayHandler
@@ -53,7 +55,9 @@ public final class GetJobApiGatewayHandler
   protected GetJobRequest toRequest(
       APIGatewayProxyRequestEvent apiGatewayProxyRequestEvent, Context context)
       throws ServiceException {
-    Map<String, String> queryParams = apiGatewayProxyRequestEvent.getQueryStringParameters();
+    Map<String, String> queryParams =
+        Optional.ofNullable(apiGatewayProxyRequestEvent.getQueryStringParameters())
+            .orElse(ImmutableMap.of());
     ImmutableList<String> missingParams =
         REQUIRED_PARAMS.stream()
             .filter(not(queryParams::containsKey))
@@ -66,6 +70,12 @@ public final class GetJobApiGatewayHandler
           String.format("Missing required query parameters: %s must be specified", missingParams));
     }
 
+    if (queryParams.get(JOB_REQUEST_ID_PARAM).isBlank()) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.VALIDATION_FAILED.toString(),
+          String.format("Required query parameter '%s' must not be empty", JOB_REQUEST_ID_PARAM));
+    }
     return GetJobRequest.newBuilder()
         .setJobRequestId(queryParams.get(JOB_REQUEST_ID_PARAM))
         .build();

@@ -57,39 +57,6 @@ def get_caller_identity(headers):
         print(e)
         return FAILURE
 
-
-def get_reporting_origin(caller_identity):
-    try:
-        instance_id = os.environ['REPORTING_ORIGIN_AUTH_SPANNER_INSTANCE_ID']
-        database_id = os.environ['REPORTING_ORIGIN_AUTH_SPANNER_DATABASE_ID']
-        table_name = os.environ['REPORTING_ORIGIN_AUTH_SPANNER_TABLE_NAME']
-
-        client = spanner.Client()
-
-        instance = client.instance(instance_id)
-        database = instance.database(database_id)
-
-        reporting_origin = ''
-
-        with database.snapshot() as snapshot:
-            query = "SELECT ro.ReportingOriginUrl FROM {} ro WHERE AccountId = @accountId".format(
-                table_name)
-            results = snapshot.execute_sql(
-                query,
-                params={'accountId': caller_identity},
-                param_types={'accountId': spanner.param_types.STRING})
-            # Get the expected one result or throw
-            reporting_origin = results.one()[0]
-
-        if not reporting_origin:
-            return FAILURE
-
-        return reporting_origin
-    except Exception as e:
-        print(e)
-        return FAILURE
-
-
 def get_adtech_sites(caller_identity):
     try:
         instance_id = os.environ['AUTH_V2_SPANNER_INSTANCE_ID']
@@ -138,7 +105,7 @@ def convert_claimed_identity_url_to_site(claimed_identity_url):
     return 'https://' + private_suffix
 
 
-def handle_request_v2(headers):
+def handle_request(headers):
     claimed_identity_url = get_claimed_identity(headers)
     if claimed_identity_url is FAILURE:
       print('Failed to get claimed identity from headers')
@@ -165,29 +132,6 @@ def handle_request_v2(headers):
     return json.dumps({'authorized_domain': derived_site}), 200
 
 
-def handle_request_v1(headers):
-    reported_origin = get_claimed_identity(headers)
-    if reported_origin is FAILURE:
-        print('Failed to get reported origin from headers')
-        return forbidden('reported_origin')
-
-    caller_identity = get_caller_identity(headers)
-    if caller_identity is FAILURE:
-        print('Failed to get caller identity')
-        return forbidden('caller_identity')
-
-    reporting_origin = get_reporting_origin(caller_identity)
-    if reporting_origin is FAILURE:
-        print('Failed to get reporting origin')
-        return forbidden('reporting_origin')
-
-    if reported_origin != reporting_origin:
-        print('Reported and reporting origin do not match')
-        return forbidden('origin_check')
-
-    return (json.dumps({'authorized_domain': reporting_origin}), 200)
-
-
 @functions_framework.http
 def function_handler(request):
     """HTTP Cloud Function.
@@ -202,10 +146,4 @@ def function_handler(request):
         <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
     """
     headers = request.headers
-    if (
-        'x-gscp-enable-per-site-enrollment' in headers
-        and headers['x-gscp-enable-per-site-enrollment'] == 'true'
-    ):
-        return handle_request_v2(headers)
-    else:
-        return handle_request_v1(headers)
+    return handle_request(headers)

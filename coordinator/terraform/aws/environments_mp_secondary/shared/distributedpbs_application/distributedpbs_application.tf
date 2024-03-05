@@ -66,37 +66,49 @@ module "distributedpbs_application" {
 
   beanstalk_solution_stack_name = var.beanstalk_solution_stack_name
 
-  alarms_enabled                               = var.alarms_enabled
-  alarm_notification_email                     = var.alarm_notification_email
-  sns_topic_arn                                = var.sns_topic_arn
-  sqs_queue_arn                                = var.sqs_queue_arn
-  cloudwatch_logging_retention_days            = var.cloudwatch_logging_retention_days
-  pbs_cloudwatch_log_group_name                = var.pbs_cloudwatch_log_group_name
-  pbs_alarm_eval_period_sec                    = var.pbs_alarm_eval_period_sec
-  pbs_error_log_log_corrupted_threshold        = var.pbs_error_log_log_corrupted_threshold
-  pbs_error_log_missing_transaction_threshold  = var.pbs_error_log_missing_transaction_threshold
-  pbs_error_log_checkpointing_threshold        = var.pbs_error_log_checkpointing_threshold
-  pbs_error_log_database_read_threshold        = var.pbs_error_log_database_read_threshold
-  pbs_error_log_database_update_threshold      = var.pbs_error_log_database_update_threshold
-  pbs_error_log_missing_component_id_threshold = var.pbs_error_log_missing_component_id_threshold
-  pbs_error_log_handle_journal_threshold       = var.pbs_error_log_handle_journal_threshold
+  alarms_enabled                                  = var.alarms_enabled
+  alarm_notification_email                        = var.alarm_notification_email
+  sns_topic_arn                                   = var.sns_topic_arn
+  cloudwatch_logging_retention_days               = var.cloudwatch_logging_retention_days
+  sqs_queue_arn                                   = var.sqs_queue_arn
+  pbs_cloudwatch_log_group_name                   = var.pbs_cloudwatch_log_group_name
+  pbs_error_log_log_corrupted_eval_periods        = var.pbs_error_log_log_corrupted_eval_periods
+  pbs_error_log_log_corrupted_threshold           = var.pbs_error_log_log_corrupted_threshold
+  pbs_error_log_missing_transaction_eval_periods  = var.pbs_error_log_missing_transaction_eval_periods
+  pbs_error_log_missing_transaction_threshold     = var.pbs_error_log_missing_transaction_threshold
+  pbs_error_log_checkpointing_eval_periods        = var.pbs_error_log_checkpointing_eval_periods
+  pbs_error_log_checkpointing_threshold           = var.pbs_error_log_checkpointing_threshold
+  pbs_error_log_database_read_eval_periods        = var.pbs_error_log_database_read_eval_periods
+  pbs_error_log_database_read_threshold           = var.pbs_error_log_database_read_threshold
+  pbs_error_log_database_update_eval_periods      = var.pbs_error_log_database_update_eval_periods
+  pbs_error_log_database_update_threshold         = var.pbs_error_log_database_update_threshold
+  pbs_error_log_missing_component_id_eval_periods = var.pbs_error_log_missing_component_id_eval_periods
+  pbs_error_log_missing_component_id_threshold    = var.pbs_error_log_missing_component_id_threshold
+  pbs_error_log_handle_journal_eval_periods       = var.pbs_error_log_handle_journal_eval_periods
+  pbs_error_log_handle_journal_threshold          = var.pbs_error_log_handle_journal_threshold
 
-  pbs_elb_error_ratio_4xx_threshold = var.pbs_elb_error_ratio_4xx_threshold
-  pbs_elb_error_ratio_5xx_threshold = var.pbs_elb_error_ratio_5xx_threshold
+  pbs_elb_error_ratio_4xx_eval_periods = var.pbs_elb_error_ratio_4xx_eval_periods
+  pbs_elb_error_ratio_4xx_threshold    = var.pbs_elb_error_ratio_4xx_threshold
+  pbs_elb_error_ratio_5xx_eval_periods = var.pbs_elb_error_ratio_5xx_eval_periods
+  pbs_elb_error_ratio_5xx_threshold    = var.pbs_elb_error_ratio_5xx_threshold
 
-  partition_lock_table_read_capacity_alarm_ratio_threshold    = var.partition_lock_table_read_capacity_alarm_ratio_threshold
-  partition_lock_table_write_capacity_alarm_ratio_threshold   = var.partition_lock_table_write_capacity_alarm_ratio_threshold
-  budget_key_table_read_capacity_alarm_ratio_threshold        = var.budget_key_table_read_capacity_alarm_ratio_threshold
-  budget_key_table_write_capacity_alarm_ratio_threshold       = var.budget_key_table_write_capacity_alarm_ratio_threshold
-  reporting_origin_table_read_capacity_alarm_ratio_threshold  = var.reporting_origin_table_read_capacity_alarm_ratio_threshold
-  reporting_origin_table_write_capacity_alarm_ratio_threshold = var.reporting_origin_table_write_capacity_alarm_ratio_threshold
+  partition_lock_table_read_capacity_alarm_ratio_eval_periods  = var.partition_lock_table_read_capacity_alarm_ratio_eval_periods
+  partition_lock_table_read_capacity_alarm_ratio_threshold     = var.partition_lock_table_read_capacity_alarm_ratio_threshold
+  partition_lock_table_write_capacity_alarm_ratio_eval_periods = var.partition_lock_table_write_capacity_alarm_ratio_eval_periods
+  partition_lock_table_write_capacity_alarm_ratio_threshold    = var.partition_lock_table_write_capacity_alarm_ratio_threshold
+  budget_key_table_read_capacity_alarm_ratio_eval_periods      = var.budget_key_table_read_capacity_alarm_ratio_eval_periods
+  budget_key_table_read_capacity_alarm_ratio_threshold         = var.budget_key_table_read_capacity_alarm_ratio_threshold
+  budget_key_table_write_capacity_alarm_ratio_eval_periods     = var.budget_key_table_write_capacity_alarm_ratio_eval_periods
+  budget_key_table_write_capacity_alarm_ratio_threshold        = var.budget_key_table_write_capacity_alarm_ratio_threshold
 
   enable_vpc_flow_logs            = var.enable_vpc && var.enable_vpc_flow_logs
   vcp_flow_logs_traffic_type      = var.vpc_flow_logs_traffic_type
   vpc_flow_logs_retention_in_days = var.vpc_flow_logs_retention_in_days
 
-  privacy_budget_dashboard_time_period_seconds                    = var.privacy_budget_dashboard_time_period_seconds
-  custom_alarm_label                                              = var.custom_alarm_label
-  pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold  = var.pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold
-  pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold
+  privacy_budget_dashboard_time_period_seconds                       = var.privacy_budget_dashboard_time_period_seconds
+  custom_alarm_label                                                 = var.custom_alarm_label
+  pbs_authorization_v2_table_read_capacity_alarm_ratio_eval_periods  = var.pbs_authorization_v2_table_read_capacity_alarm_ratio_eval_periods
+  pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold     = var.pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold
+  pbs_authorization_v2_table_write_capacity_alarm_ratio_eval_periods = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_eval_periods
+  pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold    = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold
 }

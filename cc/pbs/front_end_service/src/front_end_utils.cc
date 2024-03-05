@@ -16,6 +16,10 @@
 
 #include "front_end_utils.h"
 
+#include <libpsl.h>
+
+#include "absl/strings/match.h"
+#include "absl/strings/strip.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
@@ -24,9 +28,13 @@ namespace google::scp::pbs {
 
 namespace {
 
+using ::google::scp::core::ExecutionResultOr;
+
 constexpr char kFrontEndUtils[] = "FrontEndUtils";
 constexpr char kVersion1[] = "1.0";
 constexpr char kVersion2[] = "2.0";
+constexpr char kHttpPrefix[] = "http://";
+constexpr char kHttpsPrefix[] = "https://";
 
 core::ExecutionResultOr<TimeBucket> ReportingTimeToTimeBucket(
     const std::string& reporting_time) {
@@ -62,8 +70,7 @@ core::ExecutionResultOr<TimeBucket> ReportingTimeToTimeBucket(
 // }
 core::ExecutionResult ParseBeginTransactionRequestBodyV1(
     const std::string& authorized_domain, const core::BytesBuffer& request_body,
-    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-    bool enable_site_based_authorization) noexcept {
+    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
   try {
     auto transaction_request = nlohmann::json::parse(
         request_body.bytes->begin(), request_body.bytes->end());
@@ -94,46 +101,20 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV1(
             core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
       }
 
-      if (enable_site_based_authorization) {
-        consume_budget_metadata.budget_key_name =
-            std::make_shared<std::string>(absl::StrCat(
-                authorized_domain, "/",
-                consume_budget_transaction_key.at("key").get<std::string>()));
-      } else {
-        consume_budget_metadata.budget_key_name = std::make_shared<std::string>(
-            consume_budget_transaction_key.at("key"));
-      }
+      consume_budget_metadata.budget_key_name =
+          std::make_shared<std::string>(absl::StrCat(
+              authorized_domain, "/",
+              consume_budget_transaction_key.at("key").get<std::string>()));
       consume_budget_metadata.token_count =
           consume_budget_transaction_key["token"].get<TokenCount>();
 
       auto reporting_time =
           consume_budget_transaction_key["reporting_time"].get<std::string>();
-      if (enable_site_based_authorization) {
-        auto time_bucket = ReportingTimeToTimeBucket(reporting_time);
-        if (!time_bucket.Successful()) {
-          return time_bucket.result();
-        }
-        consume_budget_metadata.time_bucket = *time_bucket;
-      } else {
-        google::protobuf::Timestamp reporting_timestamp;
-        if (!google::protobuf::util::TimeUtil::FromString(
-                reporting_time, &reporting_timestamp)) {
-          return core::FailureExecutionResult(
-              core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-        }
-
-        if (reporting_timestamp.seconds() < 0) {
-          return core::FailureExecutionResult(
-              core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-        }
-
-        uint64_t seconds_since_epoch = reporting_timestamp.seconds();
-        std::chrono::nanoseconds reporting_time_nanoseconds =
-            std::chrono::seconds(seconds_since_epoch);
-
-        consume_budget_metadata.time_bucket =
-            reporting_time_nanoseconds.count();
+      auto time_bucket_or = ReportingTimeToTimeBucket(reporting_time);
+      if (!time_bucket_or.Successful()) {
+        return time_bucket_or.result();
       }
+      consume_budget_metadata.time_bucket = *time_bucket_or;
 
       // TODO: This is a temporary solution to prevent transaction
       // commands belong to the same reporting hour to execute within the
@@ -206,6 +187,28 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
     }
 
+    ExecutionResultOr<std::string> site =
+        TransformReportingOriginToSite(reporting_origin);
+    if (!site.Successful()) {
+      consume_budget_metadata_list.clear();
+      return core::FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    if (*site != authorized_domain) {
+      consume_budget_metadata_list.clear();
+      return core::FailureExecutionResult(
+          core::errors::
+              SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE);
+    }
+
+    if (visited_reporting_origin.find(reporting_origin) !=
+        visited_reporting_origin.end()) {
+      return core::FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
+    }
+    visited_reporting_origin.emplace(reporting_origin);
+
     for (auto key_it = it->at("keys").begin(); key_it != it->at("keys").end();
          ++key_it) {
       if (!key_it->contains("key") || !key_it->contains("token") ||
@@ -243,13 +246,6 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
       }
       visited.emplace(visited_key);
 
-      if (visited_reporting_origin.find(reporting_origin) !=
-          visited_reporting_origin.end()) {
-        return core::FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-      }
-      visited_reporting_origin.emplace(reporting_origin);
-
       consume_budget_metadata_list.emplace_back(ConsumeBudgetMetadata{
           budget_key_name, token_count, *reporting_timestamp});
     }
@@ -267,13 +263,7 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
 
 core::ExecutionResult ParseBeginTransactionRequestBody(
     const std::string& authorized_domain, const core::BytesBuffer& request_body,
-    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
-    bool enable_site_based_authorization) noexcept {
-  if (!enable_site_based_authorization) {
-    return ParseBeginTransactionRequestBodyV1(authorized_domain, request_body,
-                                              consume_budget_metadata_list,
-                                              enable_site_based_authorization);
-  }
+    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
   try {
     nlohmann::json transaction_request = nlohmann::json::parse(
         request_body.bytes->begin(), request_body.bytes->end(),
@@ -294,9 +284,8 @@ core::ExecutionResult ParseBeginTransactionRequestBody(
     }
 
     if (transaction_request["v"] == kVersion1) {
-      return ParseBeginTransactionRequestBodyV1(
-          authorized_domain, request_body, consume_budget_metadata_list,
-          enable_site_based_authorization);
+      return ParseBeginTransactionRequestBodyV1(authorized_domain, request_body,
+                                                consume_budget_metadata_list);
     }
 
     // transaction_request["v"] == "2.0"
@@ -309,6 +298,26 @@ core::ExecutionResult ParseBeginTransactionRequestBody(
     return core::FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
+}
+
+core::ExecutionResultOr<std::string> TransformReportingOriginToSite(
+    const std::string& reporting_origin) {
+  const psl_ctx_t* psl = psl_builtin();
+  const char* private_suffix_part_start =
+      psl_registrable_domain(psl, reporting_origin.c_str());
+  if (private_suffix_part_start == nullptr) {
+    return core::FailureExecutionResult(
+        core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN);
+  }
+  std::string private_suffix_part = std::string(private_suffix_part_start);
+  if (absl::StartsWith(private_suffix_part, kHttpsPrefix)) {
+    return private_suffix_part;
+  }
+  if (absl::StartsWith(private_suffix_part, kHttpPrefix)) {
+    return absl::StrCat(kHttpsPrefix,
+                        absl::StripPrefix(private_suffix_part, kHttpPrefix));
+  }
+  return absl::StrCat(kHttpsPrefix, private_suffix_part);
 }
 
 }  // namespace google::scp::pbs

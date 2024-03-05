@@ -73,13 +73,8 @@ java_binary(
     ],
 )
 
-alias(
-    name = "KeyStorageServiceHttpCloudFunctionDeploy",
-    actual = ":KeyStorageServiceHttpCloudFunction_deploy.jar",
-)
-
 pkg_zip(
-    name = "KeyStorageServiceHttpCloudFunctionDeploy_zip",
+    name = "KeyStorageServiceHttpCloudFunctionDeploy",
     srcs = [
         ":KeyStorageServiceHttpCloudFunction_deploy.jar",
     ],

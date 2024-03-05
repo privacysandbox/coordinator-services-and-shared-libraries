@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
 import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetClientException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetServiceException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionEngine.TransactionEngineException;
@@ -64,7 +65,13 @@ public final class DistributedPrivacyBudgetClientTest {
             .reportingWindow(testInstant)
             .build();
     ImmutableList<PrivacyBudgetUnit> exhaustedUnits = ImmutableList.of(exhaustedUnit);
-    when(transactionManager.execute(any(TransactionRequest.class))).thenReturn(exhaustedUnits);
+    ReportingOriginToPrivacyBudgetUnits exhaustedUnitsByOrigin =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("dummy-origin")
+            .setPrivacyBudgetUnits(exhaustedUnits)
+            .build();
+    when(transactionManager.execute(any(TransactionRequest.class)))
+        .thenReturn(ImmutableList.of(exhaustedUnitsByOrigin));
 
     ConsumePrivacyBudgetResponse consumePrivacyBudgetResponse =
         distributedPrivacyBudgetClient.consumePrivacyBudget(getRequest(1));
@@ -77,7 +84,7 @@ public final class DistributedPrivacyBudgetClientTest {
   public void consumePrivacyBudget_nonExhaustedBudget() throws Exception {
     var argument = ArgumentCaptor.forClass(TransactionRequest.class);
     when(transactionManager.execute(any(TransactionRequest.class)))
-        .thenReturn(ImmutableList.<PrivacyBudgetUnit>builder().build());
+        .thenReturn(ImmutableList.<ReportingOriginToPrivacyBudgetUnits>builder().build());
 
     ConsumePrivacyBudgetResponse consumePrivacyBudgetResponse =
         distributedPrivacyBudgetClient.consumePrivacyBudget(getRequest(1));
@@ -124,14 +131,20 @@ public final class DistributedPrivacyBudgetClientTest {
                     .reportingWindow(testInstant)
                     .build())
             .build();
+    ReportingOriginToPrivacyBudgetUnits exhaustedUnitsByOrigin =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("dummy-origin")
+            .setPrivacyBudgetUnits(privacyBudgetUnits)
+            .build();
     return ConsumePrivacyBudgetResponse.builder()
-        .exhaustedPrivacyBudgetUnits(privacyBudgetUnits)
+        .exhaustedPrivacyBudgetUnitsByOrigin(ImmutableList.of(exhaustedUnitsByOrigin))
         .build();
   }
 
   private ConsumePrivacyBudgetResponse getNotExhaustedBudget() {
     return ConsumePrivacyBudgetResponse.builder()
-        .exhaustedPrivacyBudgetUnits(ImmutableList.<PrivacyBudgetUnit>builder().build())
+        .exhaustedPrivacyBudgetUnitsByOrigin(
+            ImmutableList.<ReportingOriginToPrivacyBudgetUnits>builder().build())
         .build();
   }
 
@@ -143,9 +156,14 @@ public final class DistributedPrivacyBudgetClientTest {
           PrivacyBudgetUnit.builder().privacyBudgetKey(key).reportingWindow(testInstant).build());
     }
     var privacyBudgetUnits = builder.build();
+    var originToBudgetUnitMapping =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setPrivacyBudgetUnits(privacyBudgetUnits)
+            .setReportingOrigin("abc.com")
+            .build();
     return ConsumePrivacyBudgetRequest.builder()
-        .attributionReportTo("abc.com")
-        .privacyBudgetUnits(privacyBudgetUnits)
+        .claimedIdentity("abc.com")
+        .reportingOriginToPrivacyBudgetUnitsList(ImmutableList.of(originToBudgetUnitMapping))
         .build();
   }
 }

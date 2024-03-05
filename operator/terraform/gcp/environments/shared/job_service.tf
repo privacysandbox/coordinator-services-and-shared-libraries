@@ -107,4 +107,7 @@ module "job_service" {
 
   # Notifications
   enable_job_completion_notifications = var.enable_job_completion_notifications
+
+  # OTel Metrics
+  allowed_otel_metrics = var.allowed_otel_metrics
 }

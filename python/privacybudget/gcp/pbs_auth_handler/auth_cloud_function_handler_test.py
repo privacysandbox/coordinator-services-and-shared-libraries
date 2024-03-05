@@ -36,7 +36,7 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
         ret = auth_cloud_function_handler.function_handler(request)
 
         self.assertEqual(ret[1], 403)
-        self.assertEqual(ret[2], 'reported_origin')
+        self.assertEqual(ret[2], 'claimed_identity_url')
 
     def test_unauthorized_if_bad_caller_identity(self):
         Request = namedtuple('Request', ['headers'])
@@ -108,7 +108,7 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
             ret = auth_cloud_function_handler.function_handler(request)
 
         self.assertEqual(ret[1], 403)
-        self.assertEqual(ret[2], 'reporting_origin')
+        self.assertEqual(ret[2], 'adtech_sites')
 
     def test_unauthorized_if_caller_identity_yields_more_than_one_record(self):
         Request = namedtuple('Request', ['headers'])
@@ -128,35 +128,7 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
             ret = auth_cloud_function_handler.function_handler(request)
 
         self.assertEqual(ret[1], 403)
-        self.assertEqual(ret[2], 'reporting_origin')
-
-    def test_should_query_the_spanner_data_from_environment_vars(self):
-        Request = namedtuple('Request', ['headers'])
-        empty_identity = json.dumps({'email': 'googler@google.com'})
-        id_part = base64.b64encode(empty_identity.encode('utf-8'))
-        token = 'HEADER.{}.SIGNATURE'.format(id_part.decode('utf-8'))
-
-        request = Request(headers={
-                          'x-gscp-claimed-identity': 'domain.com',
-                          'Authorization': 'bearer {}'.format(token)})
-
-        # Empty result
-        db_mocks = self.setup_mock_spanner_result([])
-
-        with patch.dict('os.environ', self.get_env()):
-            auth_cloud_function_handler.function_handler(request)
-
-        self.assertEqual(db_mocks['client'].instance_id, 'my_instance_id')
-        self.assertEqual(db_mocks['instance'].database_id, 'my_database_id')
-        self.assertEqual(
-            db_mocks['snapshot'].query,
-            "SELECT ro.ReportingOriginUrl FROM my_table_name ro WHERE AccountId = @accountId")
-        self.assertEqual(
-            db_mocks['snapshot'].params[0]['accountId'],
-            'googler@google.com')
-        self.assertEqual(
-            db_mocks['snapshot'].param_types['accountId'],
-            gc.spanner.param_types.STRING)
+        self.assertEqual(ret[2], 'adtech_sites')
 
     def test_unauthorized_if_reported_origin_does_not_match_reporting_origin(self):
         Request = namedtuple('Request', ['headers'])
@@ -176,100 +148,7 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
             ret = auth_cloud_function_handler.function_handler(request)
 
         self.assertEqual(ret[1], 403)
-        self.assertEqual(ret[2], 'origin_check')
-
-    def test_authorized_if_reported_origin_matches_reporting_origin(self):
-        Request = namedtuple('Request', ['headers'])
-        empty_identity = json.dumps({'email': 'googler@google.com'})
-        id_part = base64.b64encode(empty_identity.encode('utf-8'))
-        token = 'HEADER.{}.SIGNATURE'.format(id_part.decode('utf-8'))
-
-        request = Request(headers={
-                          'x-gscp-claimed-identity': 'domain.com',
-                          'Authorization': 'bearer {}'.format(token)})
-
-        # Return the reporting origin
-        self.setup_mock_spanner_result(['domain.com'])
-
-        ret = None
-        with patch.dict('os.environ', self.get_env()):
-            ret = auth_cloud_function_handler.function_handler(request)
-
-        self.assertEqual(ret[0], '{"authorized_domain": "domain.com"}')
-        self.assertEqual(ret[1], 200)
-
-    # Format
-    # @patch(<function_to_mock>, <return_value>)
-    # Note that @patch statements are listed in the reverse order.
-    # Because of how decorators work, they will be passed in the right order to the function.
-    @patch(
-        'python.privacybudget.gcp.pbs_auth_handler.auth_cloud_function_handler.handle_request_v1'
-    )
-    @patch(
-        'python.privacybudget.gcp.pbs_auth_handler.auth_cloud_function_handler.handle_request_v2'
-    )
-    def test_handler_v1_called_if_site_enrollment_flag_absent(
-        self, mock_handle_request_v2, mock_handle_request_v1
-    ):
-      Request = namedtuple('Request', ['headers'])
-      request = Request(headers={'x-gscp-claimed-identity': 'domain.com'})
-
-      auth_cloud_function_handler.function_handler(request)
-
-      mock_handle_request_v1.assert_called_once_with(request[0])
-      mock_handle_request_v2.assert_not_called()
-
-    # Format
-    # @patch(<function_to_mock>, <return_value>)
-    # Note that @patch statements are listed in the reverse order.
-    # Because of how decorators work, they will be passed in the right order to the function.
-    @patch(
-        'python.privacybudget.gcp.pbs_auth_handler.auth_cloud_function_handler.handle_request_v1'
-    )
-    @patch(
-        'python.privacybudget.gcp.pbs_auth_handler.auth_cloud_function_handler.handle_request_v2'
-    )
-    def test_handler_v1_called_if_site_enrollment_flag_false(
-        self, mock_handle_request_v2, mock_handle_request_v1
-    ):
-      Request = namedtuple('Request', ['headers'])
-      request = Request(
-          headers={
-              'x-gscp-claimed-identity': 'domain.com',
-              'x-gscp-enable-per-site-enrollment': 'false',
-          }
-      )
-
-      auth_cloud_function_handler.function_handler(request)
-
-      mock_handle_request_v1.assert_called_once_with(request[0])
-      mock_handle_request_v2.assert_not_called()
-
-    # Format
-    # @patch(<function_to_mock>, <return_value>)
-    # Note that @patch statements are listed in the reverse order.
-    # Because of how decorators work, they will be passed in the right order to the function.
-    @patch(
-        'python.privacybudget.gcp.pbs_auth_handler.auth_cloud_function_handler.handle_request_v1'
-    )
-    @patch(
-        'python.privacybudget.gcp.pbs_auth_handler.auth_cloud_function_handler.handle_request_v2'
-    )
-    def test_handler_v1_called_if_site_enrollment_flag_true(
-        self, mock_handle_request_v2, mock_handle_request_v1
-    ):
-      Request = namedtuple('Request', ['headers'])
-      request = Request(
-          headers={
-              'x-gscp-claimed-identity': 'domain.com',
-              'x-gscp-enable-per-site-enrollment': 'true',
-          }
-      )
-
-      auth_cloud_function_handler.function_handler(request)
-
-      mock_handle_request_v2.assert_called_once_with(request[0])
-      mock_handle_request_v1.assert_not_called()
+        self.assertEqual(ret[2], 'auth_check')
 
     def test_should_query_the_spanner_v2_data_from_environment_vars(self):
       Request = namedtuple('Request', ['headers'])

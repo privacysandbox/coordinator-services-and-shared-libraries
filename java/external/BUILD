@@ -707,3 +707,8 @@ alias(
     name = "grcp_netty_shaded",
     actual = "@maven//:io_grpc_grpc_netty_shaded",
 )
+
+alias(
+    name = "google_oauth_client",
+    actual = "@maven//:com_google_oauth_client_google_oauth_client",
+)

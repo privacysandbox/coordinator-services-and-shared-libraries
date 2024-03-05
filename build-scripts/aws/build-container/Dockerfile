@@ -50,14 +50,15 @@ RUN \
         apt-transport-https \
         ca-certificates \
         lsb-release
+
 RUN \
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
     echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
     $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
     apt-get -y update && \
-    apt-get install -y docker-ce docker-ce-cli && \
-    apt-get -y autoclean && apt-get -y autoremove
+    apt-get install -y docker-ce=$(apt-cache madison docker-ce | grep 24.0 | head -1 | awk '{print $3}') \
+    docker-ce-cli && apt-get -y autoclean && apt-get -y autoremove
 
 
 # AWS Tools

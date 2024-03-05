@@ -56,12 +56,6 @@ variable "privacy_budget_api_gateway_arn" {
   type        = string
 }
 
-variable "privacy_budget_auth_table_name" {
-  description = "DynamoDB table name of distributed pbs auth table"
-  type        = string
-  default     = ""
-}
-
 variable "privacy_budget_auth_table_v2_name_suffix" {
   description = <<-EOT
     DynamoDB table name suffix of distributed pbs auth table V2.

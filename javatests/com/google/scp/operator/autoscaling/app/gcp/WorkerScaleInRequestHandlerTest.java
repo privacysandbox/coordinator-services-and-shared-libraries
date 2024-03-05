@@ -26,6 +26,7 @@ import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
 import com.google.scp.operator.autoscaling.tasks.gcp.ManageTerminatingWaitInstancesTask;
 import com.google.scp.operator.autoscaling.tasks.gcp.RequestScaleInTask;
+import com.google.scp.operator.autoscaling.tasks.gcp.RequestUpdateTask;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -47,6 +48,7 @@ public final class WorkerScaleInRequestHandlerTest {
   @Mock private HttpResponse httpResponse;
   @Mock private ManageTerminatingWaitInstancesTask manageInstancesTask;
   @Mock private RequestScaleInTask requestScaleInTask;
+  @Mock private RequestUpdateTask requestUpdateTask;
 
   private StringWriter httpResponseOut;
   private BufferedWriter writerOut;
@@ -55,7 +57,7 @@ public final class WorkerScaleInRequestHandlerTest {
   @Before
   public void setUp() throws IOException {
     workerScaleInRequestHandler =
-        new WorkerScaleInRequestHandler(manageInstancesTask, requestScaleInTask);
+        new WorkerScaleInRequestHandler(manageInstancesTask, requestScaleInTask, requestUpdateTask);
     httpResponseOut = new StringWriter();
     writerOut = new BufferedWriter(httpResponseOut);
     when(httpResponse.getWriter()).thenReturn(writerOut);
@@ -64,9 +66,11 @@ public final class WorkerScaleInRequestHandlerTest {
   @Test
   public void handleRequest_success() throws Exception {
     when(manageInstancesTask.manageInstances()).thenReturn(new HashMap<>());
+    when(requestUpdateTask.requestUpdate(anyMap())).thenReturn(new HashMap<>());
     doNothing().when(requestScaleInTask).requestScaleIn(anyMap());
 
     workerScaleInRequestHandler.handleRequest(httpRequest, httpResponse);
+    verify(requestUpdateTask, times(1)).requestUpdate(anyMap());
     verify(requestScaleInTask, times(1)).requestScaleIn(anyMap());
   }
 }
