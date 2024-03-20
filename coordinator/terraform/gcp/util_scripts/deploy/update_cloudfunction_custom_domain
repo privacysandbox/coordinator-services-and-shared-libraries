@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# Update custom audience with domain for cloud run service.
+# This script should be executed under account with all required roles.
+#
+# Arguments:
+#   name: Name of cloud function to update. Can be retrieved using GCP console or `gcloud run services list`
+#   region: Region of cloud function
+#   custom domain: list of custom domain to be supported as audience for calling the API. It should be in '["aud1", "aud2"]' form
+set -eu
+#TODO: b/258850312
+gcloud alpha run services update $1 --custom-audiences $3 --region=$2 --labels time-created=$(date '+%s')

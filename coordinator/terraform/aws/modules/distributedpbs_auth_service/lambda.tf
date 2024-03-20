@@ -12,20 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "aws_iam_policy_document" "lambda_iam_role_policy_document" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
+locals {
+  role_name_prefix       = "${var.environment_prefix}-google-scp-pbs-auth-lambda"
+  pbs_auth_function_name = "${var.environment_prefix}-google-scp-pbs-auth-lambda"
 }
 
-resource "aws_iam_role" "lambda_iam_role" {
-  name = "${var.environment_prefix}-google-scp-pbs-auth-lambda-iam-role"
-
-  assume_role_policy = data.aws_iam_policy_document.lambda_iam_role_policy_document.json
+module "lambda_roles" {
+  source           = "../shared/lambda_roles"
+  role_name_prefix = local.role_name_prefix
 }
 
 data "aws_iam_policy_document" "dynamo_db_access_policy_document" {
@@ -36,29 +30,20 @@ data "aws_iam_policy_document" "dynamo_db_access_policy_document" {
 }
 
 resource "aws_iam_role_policy" "dynamo_db_access_policy" {
-  name = "${var.environment_prefix}-google-scp-pbs-auth-lambda-dynamo-policy"
-  role = aws_iam_role.lambda_iam_role.id
+  name = "${local.pbs_auth_function_name}-dynamo-policy"
+  role = module.lambda_roles.trustedparty_lambda_role_id
 
   policy = data.aws_iam_policy_document.dynamo_db_access_policy_document.json
 
   depends_on = [
-    aws_iam_role.lambda_iam_role
-  ]
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_policy" {
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-
-  depends_on = [
-    aws_iam_role.lambda_iam_role
+    module.lambda_roles.trustedparty_lambda_log_attachment,
   ]
 }
 
 resource "aws_lambda_function" "lambda" {
   filename         = var.auth_lambda_handler_path
-  function_name    = "${var.environment_prefix}-google-scp-pbs-auth-lambda"
-  role             = aws_iam_role.lambda_iam_role.arn
+  function_name    = local.pbs_auth_function_name
+  role             = module.lambda_roles.trustedparty_lambda_role_arn
   handler          = "auth_lambda_handler.lambda_handler"
   source_code_hash = filebase64sha256("${var.auth_lambda_handler_path}")
   runtime          = "python3.8"
@@ -68,4 +53,17 @@ resource "aws_lambda_function" "lambda" {
       PBS_AUTHORIZATION_V2_DYNAMODB_TABLE_NAME = "${var.pbs_authorization_v2_table_name}"
     }
   }
+
+  depends_on = [
+    module.lambda_roles.trustedparty_lambda_log_attachment,
+    # This group is auto-created when creating the lambda, force the log group
+    # to be created first so terraform doesn't get a
+    # ResourceAlreadyExistsException.
+    aws_cloudwatch_log_group.lambda_cloudwatch
+  ]
+}
+
+resource "aws_cloudwatch_log_group" "lambda_cloudwatch" {
+  name              = "/aws/lambda/${local.pbs_auth_function_name}"
+  retention_in_days = var.logging_retention_days
 }

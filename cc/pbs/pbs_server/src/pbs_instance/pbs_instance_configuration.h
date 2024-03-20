@@ -23,7 +23,6 @@
 #include "core/common/global_logger/src/global_logger.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/config_provider_interface.h"
-#include "core/interface/configuration_keys.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
 #include "public/core/interface/execution_result.h"
@@ -31,6 +30,9 @@
 #include "error_codes.h"
 
 namespace google::scp::pbs {
+
+inline constexpr int kDefaultLeaseDurationInSeconds = 10;
+inline constexpr int kDefaultVnodeLeaseDurationInSeconds = 20;
 
 /**
  * PBS Instance Configuration Knobs.
@@ -69,9 +71,9 @@ struct PBSInstanceConfig {
   std::shared_ptr<std::string> partition_lease_table_name;
   std::shared_ptr<std::string> vnode_lease_table_name;
   std::chrono::seconds partition_lease_duration_in_seconds =
-      std::chrono::seconds(10);
+      std::chrono::seconds(kDefaultLeaseDurationInSeconds);
   std::chrono::seconds vnode_lease_duration_in_seconds =
-      std::chrono::seconds(20);
+      std::chrono::seconds(kDefaultVnodeLeaseDurationInSeconds);
 };
 
 /**
@@ -247,9 +249,9 @@ GetPBSInstanceConfigFromConfigProvider(
         "Failed to obtain kPBSPartitionLeaseDurationInSeconds from config. "
         "Using a default value of '%llu' seconds",
         configured_partition_lease_duration_in_seconds);
-    pbs_instance_config.partition_lease_duration_in_seconds =
-        std::chrono::seconds(configured_partition_lease_duration_in_seconds);
   }
+  pbs_instance_config.partition_lease_duration_in_seconds =
+      std::chrono::seconds(configured_partition_lease_duration_in_seconds);
 
   // VNode Lease
   std::string vnode_lease_table_name;
@@ -272,9 +274,9 @@ GetPBSInstanceConfigFromConfigProvider(
               "Failed to obtain kPBSVNodeLeaseDurationInSeconds from config. "
               "Using a default value of '%llu' seconds",
               configured_vnode_lease_duration_in_seconds);
-    pbs_instance_config.vnode_lease_duration_in_seconds =
-        std::chrono::seconds(configured_vnode_lease_duration_in_seconds);
   }
+  pbs_instance_config.vnode_lease_duration_in_seconds =
+      std::chrono::seconds(configured_vnode_lease_duration_in_seconds);
 
   return pbs_instance_config;
 }

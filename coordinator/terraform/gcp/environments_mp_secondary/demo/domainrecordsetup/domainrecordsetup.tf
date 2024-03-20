@@ -1,0 +1,1 @@
+../../shared/domainrecordsetup/domainrecordsetup.tf

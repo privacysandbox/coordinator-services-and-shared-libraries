@@ -18,8 +18,6 @@
 
 #include <gtest/gtest.h>
 
-#include <string>
-
 #include "core/config_provider/mock/mock_config_provider.h"
 #include "core/config_provider/src/env_config_provider.h"
 #include "core/interface/config_provider_interface.h"
@@ -247,27 +245,64 @@ TEST_F(PBSInstanceConfiguration, ReadConfigurationReadsAllConfigs) {
   config_provider->Set(kHttp2ServerPrivateKeyFilePath, "/key/path");
   config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
   config_provider->Set(kPBSPartitionLockTableNameConfigName, "partition_lock");
+  config_provider->SetInt(kPBSPartitionLeaseDurationInSeconds, 20);
+  config_provider->SetInt(kPBSVNodeLeaseDurationInSeconds, 30);
 
-  auto pbs_config_or = GetPBSInstanceConfigFromConfigProvider(config_provider);
-  EXPECT_SUCCESS(pbs_config_or);
+  core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
+      GetPBSInstanceConfigFromConfigProvider(config_provider);
+  EXPECT_SUCCESS(pbs_config);
 
-  EXPECT_EQ(pbs_config_or->async_executor_queue_size, 1);
-  EXPECT_EQ(pbs_config_or->async_executor_thread_pool_size, 2);
-  EXPECT_EQ(pbs_config_or->io_async_executor_queue_size, 3);
-  EXPECT_EQ(pbs_config_or->io_async_executor_thread_pool_size, 4);
-  EXPECT_EQ(pbs_config_or->transaction_manager_capacity, 5);
-  EXPECT_EQ(pbs_config_or->http2server_thread_pool_size, 10);
-  EXPECT_EQ(pbs_config_or->http2server_thread_pool_size, 10);
-  EXPECT_EQ(*pbs_config_or->journal_bucket_name, "bucket");
-  EXPECT_EQ(*pbs_config_or->journal_partition_name,
+  EXPECT_EQ(pbs_config->async_executor_queue_size, 1);
+  EXPECT_EQ(pbs_config->async_executor_thread_pool_size, 2);
+  EXPECT_EQ(pbs_config->io_async_executor_queue_size, 3);
+  EXPECT_EQ(pbs_config->io_async_executor_thread_pool_size, 4);
+  EXPECT_EQ(pbs_config->transaction_manager_capacity, 5);
+  EXPECT_EQ(pbs_config->http2server_thread_pool_size, 10);
+  EXPECT_EQ(pbs_config->http2server_thread_pool_size, 10);
+  EXPECT_EQ(*pbs_config->journal_bucket_name, "bucket");
+  EXPECT_EQ(*pbs_config->journal_partition_name,
             "00000000-0000-0000-0000-000000000000");
-  EXPECT_EQ(*pbs_config_or->host_address, "0.0.0.0");
-  EXPECT_EQ(*pbs_config_or->host_port, "8000");
-  EXPECT_EQ(*pbs_config_or->external_exposed_host_port, "80");
-  EXPECT_EQ(*pbs_config_or->health_port, "8001");
-  EXPECT_EQ(*pbs_config_or->http2_server_private_key_file_path, "/key/path");
-  EXPECT_EQ(*pbs_config_or->http2_server_certificate_file_path, "/cert/path");
-  EXPECT_EQ(*pbs_config_or->partition_lease_table_name, "partition_lock");
-  EXPECT_EQ(pbs_config_or->http2_server_use_tls, true);
+  EXPECT_EQ(*pbs_config->host_address, "0.0.0.0");
+  EXPECT_EQ(*pbs_config->host_port, "8000");
+  EXPECT_EQ(*pbs_config->external_exposed_host_port, "80");
+  EXPECT_EQ(*pbs_config->health_port, "8001");
+  EXPECT_EQ(*pbs_config->http2_server_private_key_file_path, "/key/path");
+  EXPECT_EQ(*pbs_config->http2_server_certificate_file_path, "/cert/path");
+  EXPECT_EQ(*pbs_config->partition_lease_table_name, "partition_lock");
+  EXPECT_EQ(pbs_config->http2_server_use_tls, true);
+  EXPECT_EQ(pbs_config->partition_lease_duration_in_seconds,
+            std::chrono::seconds(20));
+  EXPECT_EQ(pbs_config->vnode_lease_duration_in_seconds,
+            std::chrono::seconds(30));
+}
+
+TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
+  auto config_provider = std::make_shared<MockConfigProvider>();
+  config_provider->SetInt(kAsyncExecutorQueueSize, 1);
+  config_provider->SetInt(kAsyncExecutorThreadsCount, 2);
+  config_provider->SetInt(kIOAsyncExecutorQueueSize, 3);
+  config_provider->SetInt(kIOAsyncExecutorThreadsCount, 4);
+  config_provider->SetInt(kTransactionManagerCapacity, 5);
+  config_provider->Set(kJournalServiceBucketName, "bucket");
+  config_provider->Set(kJournalServicePartitionName,
+                       "00000000-0000-0000-0000-000000000000");
+  config_provider->Set(kPrivacyBudgetServiceHostAddress, "0.0.0.0");
+  config_provider->Set(kPrivacyBudgetServiceHostPort, "8000");
+  config_provider->Set(kPrivacyBudgetServiceHealthPort, "8001");
+  config_provider->Set(kPrivacyBudgetServiceExternalExposedHostPort, "80");
+  config_provider->SetInt(kTotalHttp2ServerThreadsCount, 10);
+  config_provider->SetBool(kHttp2ServerUseTls, true);
+  config_provider->Set(kHttp2ServerPrivateKeyFilePath, "/key/path");
+  config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
+  config_provider->Set(kPBSPartitionLockTableNameConfigName, "partition_lock");
+
+  core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
+      GetPBSInstanceConfigFromConfigProvider(config_provider);
+  EXPECT_SUCCESS(pbs_config);
+
+  EXPECT_EQ(pbs_config->partition_lease_duration_in_seconds,
+            std::chrono::seconds(kDefaultLeaseDurationInSeconds));
+  EXPECT_EQ(pbs_config->vnode_lease_duration_in_seconds,
+            std::chrono::seconds(kDefaultVnodeLeaseDurationInSeconds));
 }
 }  // namespace google::scp::pbs::test

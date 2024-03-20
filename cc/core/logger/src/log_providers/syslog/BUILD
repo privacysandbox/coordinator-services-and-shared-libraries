@@ -31,6 +31,7 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/interface:logger_interface_lib",
+        "//cc/core/logger/src:logger_lib",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],

@@ -25,23 +25,25 @@
 #include <string>
 #include <string_view>
 
+#include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
 #include "core/common/uuid/src/uuid.h"
+#include "core/logger/src/log_utils.h"
 
 #include "error_codes.h"
 
-using std::cerr;
-using std::string;
-using std::string_view;
-
-using absl::StrAppend;
-using absl::StrCat;
-using google::scp::core::common::ToString;
-using google::scp::core::common::Uuid;
-using google::scp::core::errors::SC_SYSLOG_CLOSE_CONNECTION_ERROR;
-using google::scp::core::errors::SC_SYSLOG_OPEN_CONNECTION_ERROR;
-
 namespace google::scp::core::logger::log_providers {
+
+using ::absl::StrAppend;
+using ::absl::StrCat;
+using ::google::scp::core::common::ToString;
+using ::google::scp::core::common::Uuid;
+using ::google::scp::core::errors::SC_SYSLOG_CLOSE_CONNECTION_ERROR;
+using ::google::scp::core::errors::SC_SYSLOG_OPEN_CONNECTION_ERROR;
+using ::std::cerr;
+using ::std::string;
+using ::std::string_view;
+
 ExecutionResult SyslogLogProvider::Init() noexcept {
   try {
     openlog(log_channel, LOG_CONS | LOG_NDELAY, LOG_USER);
@@ -73,10 +75,13 @@ void SyslogLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
                             const string_view& cluster_name,
                             const string_view& location,
                             const string_view& message, va_list args) noexcept {
-  auto formatted_message =
-      StrCat(cluster_name, "|", machine_name, "|", component_name, "|",
-             ToString(correlation_id), "|", ToString(parent_activity_id), "|",
-             ToString(activity_id), "|", location, "|", message);
+  std::string severity =
+      absl::AsciiStrToUpper(google::scp::core::logger::ToString(level));
+
+  auto formatted_message = StrCat(
+      severity, "|", cluster_name, "|", machine_name, "|", component_name, "|",
+      ToString(correlation_id), "|", ToString(parent_activity_id), "|",
+      ToString(activity_id), "|", location, "|", message);
 
   try {
     switch (level) {

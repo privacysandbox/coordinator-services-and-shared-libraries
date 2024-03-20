@@ -1,0 +1,1 @@
+../../shared/allowedoperatorgroup/allowedoperatorgroup.tf

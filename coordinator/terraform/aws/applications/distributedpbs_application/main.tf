@@ -104,6 +104,7 @@ module "auth_service" {
   domain_hosted_zone_id           = var.enable_domain_management ? data.aws_route53_zone.hosted_zone[0].zone_id : null
   pbs_authorization_v2_table_arn  = module.auth_db.authorization_dynamo_db_table_v2_arn
   pbs_authorization_v2_table_name = module.auth_db.authorization_dynamo_db_table_v2_name
+  logging_retention_days          = var.cloudwatch_logging_retention_days
 }
 
 module "access_policy" {

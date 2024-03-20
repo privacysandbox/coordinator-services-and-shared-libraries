@@ -38,7 +38,7 @@ public final class ServiceJobGenerator {
   private static final String DATA_HANDLE = "dataHandle";
   private static final String DATA_HANDLE_BUCKET = "bucket";
   private static final String POSTBACK_URL = "http://postback.com";
-  private static final String ATTRIBUTION_REPORT_TO = "foo.com";
+  private static final String ATTRIBUTION_REPORT_TO = "https://foo.com";
   private static final String DEBUG_PRIVACY_BUDGET_LIMIT = "5";
   private static final String ACCOUNT_IDENTITY = "service-account@testing.com";
   private static final Timestamp REQUEST_RECEIVED_AT =

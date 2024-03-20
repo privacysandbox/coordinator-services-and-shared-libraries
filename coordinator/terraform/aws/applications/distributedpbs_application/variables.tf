@@ -437,6 +437,78 @@ variable "partition_lock_table_write_capacity_alarm_ratio_threshold" {
   description = "The capacity limit of partition lock table write processing unit"
   type        = string
 }
+################################################################################
+# PBS Auth API Gateway Alarm Variables.
+################################################################################
+
+variable "pbs_auth_api_gw_max_latency_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "pbs_auth_api_gw_max_latency_ms_threshold" {
+  description = "API Gateway max latency to send alarm. Measured in milliseconds. Default 10s because API takes 6-7 seconds on cold start."
+  type        = string
+  default     = "10000"
+}
+
+variable "pbs_auth_api_gw_4xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "pbs_auth_api_gw_error_ratio_4xx_threshold" {
+  description = "API Gateway 4xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+}
+
+variable "pbs_auth_api_gw_5xx_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "pbs_auth_api_gw_error_ratio_5xx_threshold" {
+  description = "API Gateway 5xx error ratio rate greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+}
+
+################################################################################
+# PBS Auth Lambda Alarm Variables.
+################################################################################
+
+variable "pbs_auth_lambda_execution_error_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "pbs_auth_lambda_execution_error_threshold" {
+  description = "Alarming threshold for Lambda execution errors. Must be in decimal form: 10% = 0.10. Example: '0.0'."
+  type        = string
+}
+
+variable "pbs_auth_lambda_error_log_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "pbs_auth_lambda_error_log_threshold" {
+  description = "Alarming threshold for the the count of logs containing ERROR found in the provided cloudwatch_log_group_name. Example: '0'."
+  type        = string
+}
+
+variable "pbs_auth_lambda_max_duration_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+}
+
+variable "pbs_auth_lambda_max_duration_threshold_ms" {
+  description = "Lambda max duration in ms to send alarm. Useful for timeouts. Example: '9999'."
+  type        = string
+}
+
+################################################################################
+# VPC Variables.
+################################################################################
 
 variable "enable_vpc_flow_logs" {
   description = "Whether to enable VPC flow logs that end up in a cloudwatch log group."
@@ -456,7 +528,6 @@ variable "vpc_flow_logs_retention_in_days" {
 ################################################################################
 # Dashboard Variables.
 ################################################################################
-
 
 variable "privacy_budget_dashboard_time_period_seconds" {
   description = "Time period that acts as a window for dashboard metrics. Measured in seconds."

@@ -26,3 +26,11 @@ output "api_gateway_arn" {
   description = "ARN of the API Gateway stage that provides auth"
   value       = "${aws_apigatewayv2_stage.api_gateway_stage.execution_arn}/POST/auth"
 }
+
+output "lambda_function_name" {
+  value = aws_lambda_function.lambda.function_name
+}
+
+output "lambda_cloudwatch_log_group_name" {
+  value = aws_cloudwatch_log_group.lambda_cloudwatch.name
+}

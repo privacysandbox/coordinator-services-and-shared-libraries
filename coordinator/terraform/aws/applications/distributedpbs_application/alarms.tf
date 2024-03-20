@@ -17,7 +17,7 @@ module "distributed_pbs_logs_alarms" {
   source = "../../modules/distributedpbs_alarms"
 
   environment                                 = var.environment
-  sns_topic_arn                               = var.alarms_enabled ? (var.sns_topic_arn == "" ? aws_sns_topic.pbs[0].arn : var.sns_topic_arn) : ""
+  sns_topic_arn                               = var.sns_topic_arn == "" ? aws_sns_topic.pbs[0].arn : var.sns_topic_arn
   pbs_cloudwatch_log_group_name               = var.pbs_cloudwatch_log_group_name
   error_log_log_corrupted_eval_periods        = var.pbs_error_log_log_corrupted_eval_periods
   error_log_log_corrupted_threshold           = var.pbs_error_log_log_corrupted_threshold
@@ -66,4 +66,40 @@ module "distributed_pbs_logs_alarms" {
   pbs_authorization_v2_table_write_capacity_alarm_ratio_eval_periods = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_eval_periods
   pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold    = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold
   pbs_authorization_v2_table_write_max_capacity                      = var.auth_table_write_max_capacity
+}
+
+module "pbs_auth_api_gateway_alarms" {
+  count  = var.alarms_enabled ? 1 : 0
+  source = "../../monitoring/common/api_gateway_alarms"
+
+  environment    = var.environment
+  api_name       = "PBSAuth"
+  api_gateway_id = module.auth_service.api_gateway_id
+  sns_topic_arn  = var.sns_topic_arn == "" ? aws_sns_topic.pbs[0].arn : var.sns_topic_arn
+
+  max_latency_eval_periods     = var.pbs_auth_api_gw_max_latency_eval_periods
+  max_latency_ms_threshold     = var.pbs_auth_api_gw_max_latency_ms_threshold
+  error_ratio_4xx_eval_periods = var.pbs_auth_api_gw_4xx_eval_periods
+  error_ratio_4xx_threshold    = var.pbs_auth_api_gw_error_ratio_4xx_threshold
+  error_ratio_5xx_eval_periods = var.pbs_auth_api_gw_5xx_eval_periods
+  error_ratio_5xx_threshold    = var.pbs_auth_api_gw_error_ratio_5xx_threshold
+  custom_alarm_label           = var.custom_alarm_label
+}
+
+module "pbs_auth_lambda_alarms" {
+  count                      = var.alarms_enabled ? 1 : 0
+  source                     = "../../monitoring/common/lambda_alarms"
+  environment                = var.environment
+  lambda_function_name       = module.auth_service.lambda_function_name
+  cloudwatch_log_group_name  = module.auth_service.lambda_cloudwatch_log_group_name
+  sns_topic_arn              = var.sns_topic_arn == "" ? aws_sns_topic.pbs[0].arn : var.sns_topic_arn
+  custom_alarm_label         = var.custom_alarm_label
+  lambda_function_name_alarm = "PBSAuth"
+
+  execution_error_eval_periods = var.pbs_auth_lambda_execution_error_eval_periods
+  execution_error_threshold    = var.pbs_auth_lambda_execution_error_threshold
+  error_log_eval_periods       = var.pbs_auth_lambda_error_log_eval_periods
+  error_log_threshold          = var.pbs_auth_lambda_error_log_threshold
+  max_duration_eval_periods    = var.pbs_auth_lambda_max_duration_eval_periods
+  max_duration_threshold_ms    = var.pbs_auth_lambda_max_duration_threshold_ms
 }

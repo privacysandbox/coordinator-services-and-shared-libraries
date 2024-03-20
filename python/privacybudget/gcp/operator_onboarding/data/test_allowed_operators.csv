@@ -1,0 +1,4 @@
+AccountId,AdtechSites
+cee@project-id1.iam.gserviceaccount.com,[https://domain-one.com]
+bee@project-id2.iam.gserviceaccount.com,"[https://domain2.com, https://domain3.com]"
+aaa@project-id3.iam.gserviceaccount.com,[https://domain-three.com]

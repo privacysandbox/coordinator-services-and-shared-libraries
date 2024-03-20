@@ -101,6 +101,20 @@ module "distributedpbs_application" {
   budget_key_table_write_capacity_alarm_ratio_eval_periods     = var.budget_key_table_write_capacity_alarm_ratio_eval_periods
   budget_key_table_write_capacity_alarm_ratio_threshold        = var.budget_key_table_write_capacity_alarm_ratio_threshold
 
+  pbs_auth_api_gw_max_latency_eval_periods  = var.pbs_auth_api_gw_max_latency_eval_periods
+  pbs_auth_api_gw_max_latency_ms_threshold  = var.pbs_auth_api_gw_max_latency_ms_threshold
+  pbs_auth_api_gw_4xx_eval_periods          = var.pbs_auth_api_gw_4xx_eval_periods
+  pbs_auth_api_gw_error_ratio_4xx_threshold = var.pbs_auth_api_gw_error_ratio_4xx_threshold
+  pbs_auth_api_gw_5xx_eval_periods          = var.pbs_auth_api_gw_5xx_eval_periods
+  pbs_auth_api_gw_error_ratio_5xx_threshold = var.pbs_auth_api_gw_error_ratio_5xx_threshold
+
+  pbs_auth_lambda_execution_error_eval_periods = var.pbs_auth_lambda_execution_error_eval_periods
+  pbs_auth_lambda_execution_error_threshold    = var.pbs_auth_lambda_execution_error_threshold
+  pbs_auth_lambda_error_log_eval_periods       = var.pbs_auth_lambda_error_log_eval_periods
+  pbs_auth_lambda_error_log_threshold          = var.pbs_auth_lambda_error_log_threshold
+  pbs_auth_lambda_max_duration_eval_periods    = var.pbs_auth_lambda_max_duration_eval_periods
+  pbs_auth_lambda_max_duration_threshold_ms    = var.pbs_auth_lambda_max_duration_threshold_ms
+
   enable_vpc_flow_logs            = var.enable_vpc && var.enable_vpc_flow_logs
   vcp_flow_logs_traffic_type      = var.vpc_flow_logs_traffic_type
   vpc_flow_logs_retention_in_days = var.vpc_flow_logs_retention_in_days

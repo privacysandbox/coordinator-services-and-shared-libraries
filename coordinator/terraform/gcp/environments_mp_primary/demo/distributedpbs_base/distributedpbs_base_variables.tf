@@ -1,0 +1,1 @@
+../../shared/distributedpbs_base/distributedpbs_base_variables.tf

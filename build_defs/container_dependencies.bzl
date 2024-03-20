@@ -23,16 +23,16 @@
 #  - java_base: Distroless image for running Java.
 ################################################################################
 
-# Updated as of: 2024-02-28
+# Updated as of: 2024-03-18
 
 CONTAINER_DEPS = {
     "amazonlinux_2": {
-        "digest": "sha256:6362a029e3bcfe8d0fd560c938f0b82512a45b4ff79851b863dbf0f190088cb8",
+        "digest": "sha256:648d4061d73ffae7b0270bf7ed6130154bb5fd340ea02ab690eab84a182f9840",
         "registry": "index.docker.io",
         "repository": "amazonlinux",
     },
     "java_base": {
-        "digest": "sha256:68e2373f7bef9486c08356bd9ffd3b40b56e6b9316c5f6885eb58b1d9093b43d",
+        "digest": "sha256:97db68bd6f5401aefafc3423e2a375636ab18bc472dc244804f57849c93b6b3f",
         "registry": "gcr.io",
         "repository": "distroless/java17-debian11",
     },
