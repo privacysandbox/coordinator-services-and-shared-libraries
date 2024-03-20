@@ -1,0 +1,1 @@
+../../shared/operator_wipp/operator_wipp_outputs.tf

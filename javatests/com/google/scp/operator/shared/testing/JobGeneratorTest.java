@@ -65,7 +65,7 @@ public class JobGeneratorTest {
     String postbackUrl = "http://postback.com";
     ImmutableList<String> privacyBudgetKeys =
         ImmutableList.of("privacyBudgetKey1", "privacyBudgetKey2");
-    String attributionReportTo = "foo.com";
+    String attributionReportTo = "https://foo.com";
     Integer debugPrivacyBudgetLimit = 5;
     Instant requestReceivedAt = Instant.parse("2019-10-01T08:25:24.00Z");
     Instant requestUpdatedAt = Instant.parse("2019-10-01T08:29:24.00Z");

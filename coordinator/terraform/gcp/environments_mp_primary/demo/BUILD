@@ -1,0 +1,48 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_pkg//:mappings.bzl", "pkg_filegroup")
+
+package(default_visibility = ["//visibility:public"])
+
+pkg_filegroup(
+    name = "mp_primary_coordinator_demo",
+    srcs = [
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/allowedoperatorgroup:allowedoperatorgroup_demo",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/allowedoperatorgroup:allowedoperatorgroup_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/allowedoperatorgroup:allowedoperatorgroup_outputs_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/allowedoperatorgroup:allowedoperatorgroup_variables_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_application:distributedpbs_application_demo",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_application:distributedpbs_application_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_application:distributedpbs_application_outputs_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_application:distributedpbs_application_variables_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_base:distributedpbs_base_demo",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_base:distributedpbs_base_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_base:distributedpbs_base_outputs_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/distributedpbs_base:distributedpbs_base_variables_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/domainrecordsetup:domainrecordsetup_demo",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/domainrecordsetup:domainrecordsetup_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/domainrecordsetup:domainrecordsetup_outputs_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/domainrecordsetup:domainrecordsetup_variables_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/mpkhs_primary:mpkhs_primary_demo",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/mpkhs_primary:mpkhs_primary_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/mpkhs_primary:mpkhs_primary_outputs_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/mpkhs_primary:mpkhs_primary_variables_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_demo",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_outputs_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_variables_link",
+    ],
+    prefix = "environments_mp_primary/demo",
+)

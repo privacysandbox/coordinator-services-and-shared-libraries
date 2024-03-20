@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.6.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.6.0...v1.6.1) (2024-03-19)
+
+* **Important note**
+  * **[AWS only]** Cloudwatch alerting changes requires special handling in order to preserve log:
+    * Prior to generating the Terraform plan, run the following command:
+      `terraform import module.distributedpbs_application.module.auth_service.aws_cloudwatch_log_group.lambda_cloudwatch /aws/lambda/${environment}-google-scp-pbs-auth-lambda`
+    * In case of rollback, prior to generate the Terraform plan, run the following:
+      `terraform state rm module.distributedpbs_application.module.auth_service.aws_cloudwatch_log_group.lambda_cloudwatch`
+  * **[GCP only]** GCP coordinator services is officially open sourced with this release.
+
+### Changes
+  * Added api_gateway and lambda alarms for PBS Auth service
+  * Fixed a bug where PBS is not picking up the correct parameters for refreshing leader lease; it wwill refresh the lease more frequently (every 5s) after this fix
+  * Pinned Docker engine version to 24.0.5 for operator AMI build
+  * Switched PBS instance disk to regional SSD
+  * Updated container dependencies
+  * Updated logging in PBS so that only the first 5 journal IDs are logged
+  * Updated PBS instance startup script to increase the soft file descriptor limit
+  * [GCP only] Updated fluentd config for PBS so that PBS logs are parsed correctly before being sent to GCP Cloud Logging
+
 ## [1.6.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.5.1...v1.6.0) (2024-02-29)
 
 * **Important note**

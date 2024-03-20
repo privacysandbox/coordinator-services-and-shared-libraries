@@ -35,33 +35,34 @@
 #include "core/journal_service/src/proto/journal_service.pb.h"
 #include "public/core/interface/execution_result.h"
 
-using google::scp::core::common::Uuid;
-using google::scp::core::journal_service::CheckpointMetadata;
-using google::scp::core::journal_service::JournalLog;
-using google::scp::core::journal_service::JournalSerialization;
-using google::scp::core::journal_service::JournalStreamReadLogObject;
-using google::scp::core::journal_service::JournalStreamReadLogRequest;
-using google::scp::core::journal_service::JournalStreamReadLogResponse;
-using google::scp::core::journal_service::JournalUtils;
-using google::scp::core::journal_service::LastCheckpointMetadata;
-using std::atomic;
-using std::bind;
-using std::list;
-using std::make_shared;
-using std::max_element;
-using std::move;
-using std::set;
-using std::shared_ptr;
-using std::sort;
-using std::string;
-using std::vector;
-using std::placeholders::_1;
+namespace google::scp::core {
+
+using ::google::scp::core::common::Uuid;
+using ::google::scp::core::journal_service::CheckpointMetadata;
+using ::google::scp::core::journal_service::JournalLog;
+using ::google::scp::core::journal_service::JournalSerialization;
+using ::google::scp::core::journal_service::JournalStreamReadLogObject;
+using ::google::scp::core::journal_service::JournalStreamReadLogRequest;
+using ::google::scp::core::journal_service::JournalStreamReadLogResponse;
+using ::google::scp::core::journal_service::JournalUtils;
+using ::google::scp::core::journal_service::LastCheckpointMetadata;
+using ::std::atomic;
+using ::std::bind;
+using ::std::list;
+using ::std::make_shared;
+using ::std::max_element;
+using ::std::move;
+using ::std::set;
+using ::std::shared_ptr;
+using ::std::sort;
+using ::std::string;
+using ::std::vector;
+using ::std::placeholders::_1;
 
 // TODO: Use configuration provider to update the following.
 static constexpr char kLastCheckpointBlobName[] = "last_checkpoint";
 static constexpr char kJournalInputStream[] = "JournalInputStream";
-
-namespace google::scp::core {
+constexpr size_t kDefaultTruncatedJournalIdSize = 5;
 
 /**
  * @brief Calls finish on the context by putting the supplied logs in the
@@ -642,11 +643,21 @@ ExecutionResult JournalInputStream::ReadJournalBlobs(
   }
   total_journals_to_read_ = total_journals_to_read;
 
-  string journal_ids_string = absl::StrJoin(journal_ids, " ");
-
+  // Truncate the journal IDs to a smaller list before logging. This prevents
+  // log spamming when there is a huge amount of logs to be recovered.
+  std::vector<JournalId> truncated_journal_ids;
+  if (journal_ids.size() < kDefaultTruncatedJournalIdSize) {
+    truncated_journal_ids = journal_ids;
+  } else {
+    truncated_journal_ids.reserve(kDefaultTruncatedJournalIdSize);
+    for (size_t i = 0; i < kDefaultTruncatedJournalIdSize; ++i) {
+      truncated_journal_ids.push_back(journal_ids[i]);
+    }
+  }
+  std::string journal_ids_string = absl::StrJoin(truncated_journal_ids, " ");
   SCP_DEBUG_CONTEXT(kJournalInputStream, journal_stream_read_log_context,
-                    "All the journals to be read: %s",
-                    journal_ids_string.c_str());
+                    "First %d journals to be read: %s",
+                    kDefaultTruncatedJournalIdSize, journal_ids_string.c_str());
 
   size_t total_failed_read_journal = 0;
   size_t journal_buffer_current_size = journal_buffers_.size();

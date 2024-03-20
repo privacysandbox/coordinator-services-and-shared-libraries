@@ -42,7 +42,7 @@ public final class JobGenerator {
   private static final String ACCOUNT_IDENTITY = "service-account@testing.com";
   private static final ImmutableList<String> PRIVACY_BUDGET_KEYS =
       ImmutableList.of("privacyBudgetKey1", "privacyBudgetKey2");
-  private static final String ATTRIBUTION_REPORT_TO = "foo.com";
+  private static final String ATTRIBUTION_REPORT_TO = "https://foo.com";
   private static final Integer DEBUG_PRIVACY_BUDGET_LIMIT = 5;
   private static final Instant REQUEST_RECEIVED_AT = Instant.parse("2019-10-01T08:25:24.00Z");
   private static final Instant REQUEST_UPDATED_AT = Instant.parse("2019-10-01T08:29:24.00Z");

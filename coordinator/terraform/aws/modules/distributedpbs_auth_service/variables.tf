@@ -65,3 +65,8 @@ variable "domain_hosted_zone_id" {
   description = "Hosted zone for route53 record"
   type        = string
 }
+
+variable "logging_retention_days" {
+  description = "Number of days to keep logs in Cloudwatch"
+  type        = number
+}

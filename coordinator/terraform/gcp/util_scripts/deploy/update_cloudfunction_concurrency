@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# Update concurrency value for Cloud Run service for a specific Cloud Function Gen 2.
+#
+# Arguments:
+#   name: Name of cloud function to update. Can be retrieved using GCP console or `gcloud run services list`
+#   region: Region of cloud function
+#   concurrency: Concurrency value
+set -eu
+
+gcloud run services update $1 --region $2 --cpu 1 --concurrency $3

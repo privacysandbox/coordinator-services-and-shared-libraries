@@ -23,3 +23,7 @@ output "trustedparty_lambda_log_attachment" {
 output "trustedparty_lambda_role_id" {
   value = aws_iam_role.trustedparty_lambda_role.id
 }
+
+output "trustedparty_lambda_role_name" {
+  value = aws_iam_role.trustedparty_lambda_role.name
+}

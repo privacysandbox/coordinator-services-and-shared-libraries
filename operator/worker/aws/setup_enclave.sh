@@ -19,7 +19,7 @@ sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/late
 #
 # Builds enclave image inside the /home/ec2-user directory as part of automatic
 # AMI generation.
-sudo yum install docker -y
+sudo yum install docker-24.0.5-1.amzn2023.0.3 -y
 sudo systemctl enable docker
 sudo systemctl start docker
 
