@@ -48,6 +48,31 @@ public interface BlobStorageClient {
       throws BlobStorageClientException;
 
   /**
+   * Blocking call to retrieve the blob size from the storage provider.
+   *
+   * @param location The data location of the blob to retrieve.
+   * @return The file size in bytes.
+   * @throws BlobStorageClientException
+   */
+  default Long getBlobSize(DataLocation location) throws BlobStorageClientException {
+    return null;
+  }
+
+  /**
+   * Blocking call to retrieve the blob size from the storage provider using account identity.
+   *
+   * @param location The data location of the blob to retrieve.
+   * @param accountIdentity The identity to use to make the request. Instance default credentials
+   *     will use if accountIdentity is empty.
+   * @return The file size in bytes.
+   * @throws BlobStorageClientException
+   */
+  default Long getBlobSize(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    return null;
+  }
+
+  /**
    * Blocking call to upload a blob to the storage provider.
    *
    * @param location The data location of the blob to be uploaded.

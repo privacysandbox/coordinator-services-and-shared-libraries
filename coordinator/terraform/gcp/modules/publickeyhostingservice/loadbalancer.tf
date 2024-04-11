@@ -53,7 +53,7 @@ resource "google_compute_backend_service" "get_public_key_loadbalancer_backend" 
   }
 
   log_config {
-    enable = false
+    enable = var.public_key_load_balancer_logs_enabled
   }
 }
 

@@ -25,80 +25,80 @@
 #include <string>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/common/uuid/src/error_codes.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/http2_server/mock/mock_http2_server.h"
-#include "core/interface/async_context.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/http_server_interface.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/interface/remote_transaction_manager_interface.h"
-#include "core/interface/transaction_command_serializer_interface.h"
-#include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
-#include "core/test/utils/conditional_wait.h"
-#include "pbs/front_end_service/mock/mock_front_end_service_with_overrides.h"
-#include "pbs/front_end_service/src/error_codes.h"
-#include "pbs/front_end_service/src/front_end_utils.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/partition_request_router/mock/mock_transaction_request_router.h"
-#include "pbs/transactions/mock/mock_consume_budget_command_factory.h"
-#include "pbs/transactions/src/batch_consume_budget_command.h"
-#include "pbs/transactions/src/consume_budget_command.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/common/uuid/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/http2_server/mock/mock_http2_server.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_server_interface.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/interface/remote_transaction_manager_interface.h"
+#include "cc/core/interface/transaction_command_serializer_interface.h"
+#include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/pbs/front_end_service/mock/mock_front_end_service_with_overrides.h"
+#include "cc/pbs/front_end_service/src/error_codes.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/partition_request_router/mock/mock_transaction_request_router.h"
+#include "cc/pbs/transactions/mock/mock_consume_budget_command_factory.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command.h"
+#include "cc/pbs/transactions/src/consume_budget_command.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
-using google::scp::core::AsyncContext;
-using google::scp::core::AsyncExecutorInterface;
-using google::scp::core::Byte;
-using google::scp::core::BytesBuffer;
-using google::scp::core::ConfigProviderInterface;
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::GetTransactionManagerStatusRequest;
-using google::scp::core::GetTransactionManagerStatusResponse;
-using google::scp::core::GetTransactionStatusRequest;
-using google::scp::core::GetTransactionStatusResponse;
-using google::scp::core::HttpHeaders;
-using google::scp::core::HttpRequest;
-using google::scp::core::HttpResponse;
-using google::scp::core::HttpServerInterface;
-using google::scp::core::JournalServiceInterface;
-using google::scp::core::NoSQLDatabaseProviderInterface;
-using google::scp::core::RemoteTransactionManagerInterface;
-using google::scp::core::RetryExecutionResult;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::Timestamp;
-using google::scp::core::TransactionCommandSerializerInterface;
-using google::scp::core::TransactionExecutionPhase;
-using google::scp::core::TransactionManagerInterface;
-using google::scp::core::TransactionPhaseRequest;
-using google::scp::core::TransactionPhaseResponse;
-using google::scp::core::TransactionRequest;
-using google::scp::core::TransactionResponse;
-using google::scp::core::async_executor::mock::MockAsyncExecutor;
-using google::scp::core::common::Uuid;
-using google::scp::core::config_provider::mock::MockConfigProvider;
-using google::scp::core::http2_server::mock::MockHttp2Server;
-using google::scp::core::nosql_database_provider::mock::
+namespace google::scp::pbs::test {
+
+using ::google::scp::core::AsyncContext;
+using ::google::scp::core::AsyncExecutorInterface;
+using ::google::scp::core::Byte;
+using ::google::scp::core::BytesBuffer;
+using ::google::scp::core::ConfigProviderInterface;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::GetTransactionManagerStatusRequest;
+using ::google::scp::core::GetTransactionManagerStatusResponse;
+using ::google::scp::core::GetTransactionStatusRequest;
+using ::google::scp::core::GetTransactionStatusResponse;
+using ::google::scp::core::HttpHeaders;
+using ::google::scp::core::HttpRequest;
+using ::google::scp::core::HttpResponse;
+using ::google::scp::core::HttpServerInterface;
+using ::google::scp::core::JournalServiceInterface;
+using ::google::scp::core::NoSQLDatabaseProviderInterface;
+using ::google::scp::core::RemoteTransactionManagerInterface;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::Timestamp;
+using ::google::scp::core::TransactionCommandSerializerInterface;
+using ::google::scp::core::TransactionExecutionPhase;
+using ::google::scp::core::TransactionManagerInterface;
+using ::google::scp::core::TransactionPhaseRequest;
+using ::google::scp::core::TransactionPhaseResponse;
+using ::google::scp::core::TransactionRequest;
+using ::google::scp::core::TransactionResponse;
+using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
+using ::google::scp::core::common::Uuid;
+using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::google::scp::core::http2_server::mock::MockHttp2Server;
+using ::google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::WaitUntil;
-using google::scp::cpio::AggregateMetricInterface;
-using google::scp::cpio::MockAggregateMetric;
-using google::scp::cpio::MockMetricClient;
-using google::scp::pbs::BatchConsumeBudgetCommand;
-using google::scp::pbs::BudgetKeyProviderInterface;
-using google::scp::pbs::ConsumeBudgetCommand;
-using google::scp::pbs::front_end_service::mock::
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::WaitUntil;
+using ::google::scp::cpio::AggregateMetricInterface;
+using ::google::scp::cpio::MockAggregateMetric;
+using ::google::scp::cpio::MockMetricClient;
+using ::google::scp::pbs::BatchConsumeBudgetCommand;
+using ::google::scp::pbs::BudgetKeyProviderInterface;
+using ::google::scp::pbs::ConsumeBudgetCommand;
+using ::google::scp::pbs::front_end_service::mock::
     MockFrontEndServiceWithOverrides;
-using google::scp::pbs::partition_request_router::mock::
+using ::google::scp::pbs::partition_request_router::mock::
     MockTransactionRequestRouter;
-using google::scp::pbs::transactions::mock::MockConsumeBudgetCommandFactory;
+using ::google::scp::pbs::transactions::mock::MockConsumeBudgetCommandFactory;
 using std::atomic;
 using std::dynamic_pointer_cast;
 using std::list;
@@ -116,8 +116,6 @@ using ::testing::_;
 using ::testing::An;
 using ::testing::DoAll;
 using ::testing::Return;
-
-namespace google::scp::pbs::test {
 
 std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
 GetMockConsumeBudgetCommandFactory() {
@@ -1687,7 +1685,7 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
 }
 
 TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommands) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");
@@ -1754,7 +1752,7 @@ TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommands) {
 }
 
 TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");
@@ -1823,7 +1821,7 @@ TEST_F(FrontEndServiceTest, GenerateConsumeBudgetCommandsBatchedPerDaySameKey) {
 
 TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayDifferentKeys) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");
@@ -1893,7 +1891,7 @@ TEST_F(FrontEndServiceTest,
 
 TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayDifferentDaysSameKey) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");
@@ -1965,7 +1963,7 @@ TEST_F(FrontEndServiceTest,
 
 TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayCommonDay) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");
@@ -2038,7 +2036,7 @@ TEST_F(FrontEndServiceTest,
 TEST_F(
     FrontEndServiceTest,
     GenerateConsumeBudgetCommandsBatchedPerDayOrderedBudgetsWithinTimeGroup) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");
@@ -2093,7 +2091,7 @@ TEST_F(
 
 TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayMultipleBatches) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");
@@ -2195,7 +2193,7 @@ TEST_F(FrontEndServiceTest,
 
 TEST_F(FrontEndServiceTest,
        GenerateConsumeBudgetCommandsBatchedPerDayMultipleBatchesDiffKeys) {
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   consume_budget_metadata_list.emplace_back();
   consume_budget_metadata_list.back().budget_key_name =
       make_shared<string>("key1");

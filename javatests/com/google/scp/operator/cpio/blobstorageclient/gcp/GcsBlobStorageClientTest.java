@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -120,6 +121,38 @@ public final class GcsBlobStorageClientTest {
         BlobStorageClientException.class,
         () ->
             gcsBlobStorageClient.getBlob(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create("no-such-bucket", ""))));
+  }
+
+  @Test
+  public void getBlobSize_matchesFileSize() throws Exception {
+    Long fileSize = Files.size(file.toPath());
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(GCP_BUCKET, "keyname"));
+    gcsBlobStorageClient.putBlob(location, file.toPath());
+
+    Long gcsBlobSize = gcsBlobStorageClient.getBlobSize(location);
+
+    assertThat(gcsBlobSize).isEqualTo(fileSize);
+  }
+
+  @Test
+  public void getBlobSize_exceptionOnMissingObject() {
+    assertThrows(
+        BlobStorageClientException.class,
+        () ->
+            gcsBlobStorageClient.getBlobSize(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create(GCP_BUCKET, "NonExistentKey"))));
+  }
+
+  @Test
+  public void getBlobSize_NoSuchBucketException() {
+    assertThrows(
+        BlobStorageClientException.class,
+        () ->
+            gcsBlobStorageClient.getBlobSize(
                 DataLocation.ofBlobStoreDataLocation(
                     BlobStoreDataLocation.create("no-such-bucket", ""))));
   }

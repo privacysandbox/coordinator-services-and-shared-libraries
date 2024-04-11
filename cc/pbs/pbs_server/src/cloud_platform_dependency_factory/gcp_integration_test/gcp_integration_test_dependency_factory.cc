@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/test_gcp_spanner.h"
 #include "core/authorization_proxy/mock/mock_authorization_proxy.h"
 #include "core/blob_storage_provider/src/gcp/gcp_cloud_storage.h"
 #include "core/common/uuid/src/uuid.h"
@@ -34,8 +36,6 @@
 #include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/dummy_impls.h"
 #include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
 #include "public/cpio/mock/metric_client/mock_metric_client.h"
-
-#include "test_gcp_spanner.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
@@ -121,6 +121,23 @@ GcpIntegrationTestDependencyFactory::ConstructNoSQLDatabaseClient(
       make_pair(kPartitionLockTablePartitionKeyName, nullopt));
   return make_unique<TestGcpSpanner>(async_executor, io_async_executor,
                                      config_provider_, move(table_schema_map));
+}
+
+std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
+GcpIntegrationTestDependencyFactory::ConstructBudgetConsumptionHelper(
+    google::scp::core::AsyncExecutorInterface* async_executor,
+    google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept {
+  google::scp::core::ExecutionResultOr<
+      std::shared_ptr<cloud::spanner::Connection>>
+      spanner_connection =
+          BudgetConsumptionHelper::MakeSpannerConnectionForProd(
+              *config_provider_);
+  if (!spanner_connection.result().Successful()) {
+    return nullptr;
+  }
+  return std::make_unique<pbs::BudgetConsumptionHelper>(
+      config_provider_.get(), async_executor, io_async_executor,
+      std::move(*spanner_connection));
 }
 
 unique_ptr<cpio::MetricClientInterface>

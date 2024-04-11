@@ -41,6 +41,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -133,6 +134,28 @@ public class S3BlobStorageClientTest {
         BlobStorageClientException.class,
         () ->
             s3BlobStorageClient.getBlob(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create(BUCKET_NAME, "NonExistentKey"))));
+  }
+
+  @Test
+  public void getBlobSize_matchesFileSize() throws Exception {
+    Long fileSize = Files.size(file.toPath());
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(BUCKET_NAME, "keyname"));
+    s3BlobStorageClient.putBlob(location, file.toPath());
+
+    Long s3BlobSize = s3BlobStorageClient.getBlobSize(location);
+
+    assertThat(s3BlobSize).isEqualTo(fileSize);
+  }
+
+  @Test
+  public void getBlobSize_exceptionOnMissingObject() {
+    assertThrows(
+        BlobStorageClientException.class,
+        () ->
+            s3BlobStorageClient.getBlobSize(
                 DataLocation.ofBlobStoreDataLocation(
                     BlobStoreDataLocation.create(BUCKET_NAME, "NonExistentKey"))));
   }

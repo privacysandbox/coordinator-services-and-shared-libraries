@@ -65,4 +65,10 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface DecrypterCacheEntryTtlSec {}
+
+  /** TTL for exception cache. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface ExceptionCacheEntryTtlSec {}
 }

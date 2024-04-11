@@ -15,8 +15,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "configure_make")
 
-package(default_visibility = ["//visibility:public"])
-
 configure_make(
     name = "libpsl",
     configure_in_place = True,
@@ -28,21 +26,58 @@ configure_make(
 )
 
 cc_library(
-    name = "pbs_front_end_service_lib",
-    srcs = glob(
-        [
-            "*.cc",
-            "*.h",
-        ],
-    ),
+    name = "error_codes",
+    hdrs = ["error_codes.h"],
+    visibility = ["//cc/pbs/front_end_service:__subpackages__"],
+)
+
+cc_library(
+    name = "front_end_utils",
+    srcs = ["front_end_utils.cc"],
+    hdrs = ["front_end_utils.h"],
+    deps = [
+        ":error_codes",
+        ":libpsl",
+        "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
+    ],
+)
+
+cc_library(
+    name = "transaction_request_router",
+    srcs = ["transaction_request_router.cc"],
+    hdrs = ["transaction_request_router.h"],
+    deps = [
+        "//cc/core/interface:interface_lib",
+        "//cc/pbs/interface:pbs_interface_lib",
+    ],
+)
+
+cc_library(
+    name = "metric_initialization",
+    srcs = ["metric_initialization.cc"],
+    hdrs = ["metric_initialization.h"],
+    deps = [
+        "//cc/pbs/transactions/src:pbs_transactions_lib",
+        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_library(
+    name = "front_end_service",
+    srcs = ["front_end_service.cc"],
+    hdrs = ["front_end_service.h"],
     copts = [
         "-std=c++17",
     ],
     linkopts = [
         "-latomic",
     ],
+    visibility = ["//visibility:public"],
     deps = [
-        ":libpsl",
+        ":error_codes",
+        ":front_end_utils",
+        ":transaction_request_router",
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
@@ -53,6 +88,38 @@ cc_library(
         "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
         "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:lib",
+    ],
+)
+
+cc_library(
+    name = "front_end_service_v2",
+    srcs = ["front_end_service_v2.cc"],
+    hdrs = ["front_end_service_v2.h"],
+    copts = [
+        "-std=c++17",
+    ],
+    linkopts = [
+        "-latomic",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":error_codes",
+        ":front_end_utils",
+        ":metric_initialization",
+        ":transaction_request_router",
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:interface_lib",
+        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
+        "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
+        "//cc/pbs/interface:pbs_interface_lib",
+        "//cc/pbs/transactions/src:pbs_transactions_lib",
+        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
+        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
+        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/functional:bind_front",
         "@com_google_absl//absl/strings",
         "@nlohmann_json//:lib",
     ],

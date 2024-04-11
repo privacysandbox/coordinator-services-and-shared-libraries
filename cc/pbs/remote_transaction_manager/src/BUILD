@@ -35,7 +35,7 @@ cc_library(
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
-        "//cc/pbs/front_end_service/src:pbs_front_end_service_lib",
+        "//cc/pbs/front_end_service/src:front_end_service",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
     ],
 )

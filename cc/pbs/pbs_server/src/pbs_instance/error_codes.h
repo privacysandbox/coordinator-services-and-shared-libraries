@@ -52,4 +52,8 @@ DEFINE_ERROR_CODE(SC_PBS_SERVICE_UNRECOVERABLE_ERROR, SC_PBS_SERVICE, 0x0007,
                   "The PBS service encountered an unrecoverable error.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
+DEFINE_ERROR_CODE(SC_PBS_SERVICE_INITIALIZATION_ERROR, SC_PBS_SERVICE, 0x0008,
+                  "The PBS service cannot be initialized.",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+
 }  // namespace google::scp::core::errors

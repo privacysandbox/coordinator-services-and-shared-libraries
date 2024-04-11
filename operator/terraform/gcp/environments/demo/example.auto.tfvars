@@ -44,3 +44,11 @@ instance_type = "n2d-standard-8" # 8 cores, 32GiB
 # If not set otherwise, uncomment and edit the lines below:
 #coordinator_a_impersonate_service_account = "<CoordinatorAServiceAccountEmail>"
 #coordinator_b_impersonate_service_account = "<CoordinatorBServiceAccountEmail>"
+
+# If min_worker_instances is set to 0, the worker autoscaling group will scale down to 0
+# instances when there are no jobs left to process in the job queue.
+min_worker_instances = 1
+max_worker_instances = 20
+
+user_provided_worker_sa_email = "<WorkerServiceAccount>"
+

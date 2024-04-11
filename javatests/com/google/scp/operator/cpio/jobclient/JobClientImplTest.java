@@ -36,6 +36,7 @@ import com.google.scp.operator.cpio.jobclient.JobClient.JobClientException;
 import com.google.scp.operator.cpio.jobclient.JobHandlerModule.JobClientJobMaxNumAttemptsBinding;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobResultGenerator;
 import com.google.scp.operator.cpio.jobclient.testing.OneTimePullBackoff;
@@ -93,6 +94,7 @@ public final class JobClientImplTest {
 
   private JobQueueItem baseJobQueueItem;
   private JobMetadata baseJobMetadata;
+  private JobRetryRequest baseJobRetryRequest;
   private Job baseJob;
   private Job expectedBaseJob;
   private RequestInfo requestInfo;
@@ -516,6 +518,68 @@ public final class JobClientImplTest {
     for (int i = 0; i < sampleErrorMessages.length; i++) {
       assertThat(actualErrorMessages.get(i)).isEqualTo(sampleErrorMessages[i]);
     }
+  }
+
+  @Test
+  public void returnJobForRetry_throwsNotInProgress() throws JobClientException {
+    JobRetryRequest jobRetryRequest = JobRetryRequest.builder().setJobKey(baseJob.jobKey()).build();
+    JobMetadata metadata = baseJobMetadata.toBuilder().setJobStatus(JobStatus.FINISHED).build();
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(metadata));
+
+    ThrowingRunnable methodToTest = () -> jobClient.returnJobForRetry(jobRetryRequest);
+    assertThrows(JobClientException.class, methodToTest);
+  }
+
+  @Test
+  public void returnJobForRetry_throwsMetadataNotFound() throws JobClientException {
+    JobRetryRequest jobRetryRequest = JobRetryRequest.builder().setJobKey(baseJob.jobKey()).build();
+    jobMetadataDb.setJobMetadataToReturn(Optional.empty());
+
+    ThrowingRunnable methodToTest = () -> jobClient.returnJobForRetry(jobRetryRequest);
+    assertThrows(JobClientException.class, methodToTest);
+  }
+
+  @Test
+  public void returnJobForRetry_success() throws JobClientException, JobQueueException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+    Optional<Job> actual = jobClient.getJob();
+    assertThat(actual).isPresent();
+    assertThat(actual.get()).isEqualTo(expectedBaseJob);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getJobStatus())
+        .isEqualTo(JobStatus.IN_PROGRESS);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getRequestProcessingStartedAt())
+        .isEqualTo(ProtoUtil.toProtoTimestamp(Instant.now(clock)));
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(jobMetadataDb.getLastJobMetadataUpdated()));
+
+    String sampleErrorMessage = "fake.error.message to put within the error summary";
+    ErrorSummary updatedErrorSummary =
+        ErrorSummary.newBuilder().addErrorMessages(sampleErrorMessage).build();
+    Clock clock = Clock.systemUTC();
+    ResultInfo newResultInfo =
+        ResultInfo.newBuilder()
+            .setErrorSummary(updatedErrorSummary)
+            .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
+            .setReturnCode(ReturnCode.RETURN_CODE_UNKNOWN.name())
+            .setReturnMessage("retrying.")
+            .build();
+    JobRetryRequest jobRetryRequest =
+        JobRetryRequest.builder()
+            .setJobKey(actual.get().jobKey())
+            .setDelay(Duration.ofSeconds(0))
+            .setResultInfo(newResultInfo)
+            .build();
+
+    jobClient.returnJobForRetry(jobRetryRequest);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getJobStatus())
+        .isEqualTo(JobStatus.RECEIVED);
+    assertThat(
+            jobMetadataDb
+                .getLastJobMetadataUpdated()
+                .getResultInfo()
+                .getErrorSummary()
+                .getErrorMessages(0))
+        .isEqualTo(sampleErrorMessage);
   }
 
   private static final class TestEnv extends AbstractModule {

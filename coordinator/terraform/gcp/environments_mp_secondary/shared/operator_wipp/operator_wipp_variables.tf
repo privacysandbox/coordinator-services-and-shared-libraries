@@ -66,7 +66,7 @@ variable "assertion_tee_support_attributes" {
 variable "assertion_tee_container_image_reference_list" {
   description = "List of acceptable image names TEE can run."
   type        = list(string)
-  default     = ["us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:dev"]
+  default     = []
 }
 
 variable "assertion_tee_container_image_hash_list" {

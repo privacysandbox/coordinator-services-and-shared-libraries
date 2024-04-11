@@ -18,43 +18,46 @@
 #include <unordered_map>
 #include <utility>
 
-#include "core/blob_storage_provider/src/gcp/gcp_cloud_storage.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/configuration_keys.h"
-#include "core/nosql_database_provider/src/gcp/gcp_spanner.h"
-#include "core/token_provider_cache/src/auto_refresh_token_provider.h"
-#include "cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
-#include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_provider.h"
-#include "cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
-#include "pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
-#include "pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "pbs/pbs_client/src/pbs_client.h"
+#include "cc/core/authorization_proxy/src/authorization_proxy.h"
+#include "cc/core/blob_storage_provider/src/gcp/gcp_cloud_storage.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/nosql_database_provider/src/gcp/gcp_spanner.h"
+#include "cc/core/token_provider_cache/src/auto_refresh_token_provider.h"
+#include "cc/cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_provider.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
+#include "cc/pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
+#include "cc/pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
+#include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
 
 #include "dummy_impls.h"
 
-using google::scp::core::AsyncContext;
-using google::scp::core::AsyncExecutorInterface;
-using google::scp::core::AuthorizationProxyInterface;
-using google::scp::core::AutoRefreshTokenProviderService;
-using google::scp::core::BlobStorageProviderInterface;
-using google::scp::core::ConfigProviderInterface;
-using google::scp::core::CredentialsProviderInterface;
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::NoSQLDatabaseProviderInterface;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::TimeDuration;
-using google::scp::core::blob_storage_provider::GcpCloudStorageProvider;
-using google::scp::core::common::kZeroUuid;
-using google::scp::core::nosql_database_provider::GcpSpanner;
-using google::scp::cpio::MetricClientOptions;
-using google::scp::cpio::client_providers::GcpAuthTokenProvider;
-using google::scp::cpio::client_providers::GcpInstanceClientProvider;
-using google::scp::cpio::client_providers::GcpMetricClientProvider;
-using google::scp::cpio::client_providers::MetricBatchingOptions;
-using google::scp::pbs::GcpAuthorizationTokenFetcher;
+namespace google::scp::pbs {
+
+using ::google::scp::core::AsyncContext;
+using ::google::scp::core::AsyncExecutorInterface;
+using ::google::scp::core::AuthorizationProxyInterface;
+using ::google::scp::core::AutoRefreshTokenProviderService;
+using ::google::scp::core::BlobStorageProviderInterface;
+using ::google::scp::core::ConfigProviderInterface;
+using ::google::scp::core::CredentialsProviderInterface;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::NoSQLDatabaseProviderInterface;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::TimeDuration;
+using ::google::scp::core::blob_storage_provider::GcpCloudStorageProvider;
+using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::core::nosql_database_provider::GcpSpanner;
+using ::google::scp::cpio::MetricClientOptions;
+using ::google::scp::cpio::client_providers::GcpAuthTokenProvider;
+using ::google::scp::cpio::client_providers::GcpInstanceClientProvider;
+using ::google::scp::cpio::client_providers::GcpMetricClientProvider;
+using ::google::scp::cpio::client_providers::MetricBatchingOptions;
+using ::google::scp::pbs::GcpAuthorizationTokenFetcher;
 using std::make_pair;
 using std::make_shared;
 using std::make_unique;
@@ -75,8 +78,6 @@ static constexpr char kBudgetKeyTablePartitionKeyName[] = "Budget_Key";
 static constexpr char kBudgetKeyTableSortKeyName[] = "Timeframe";
 static constexpr char kPartitionLockTablePartitionKeyName[] = "LockId";
 static constexpr TimeDuration kDefaultMetricBatchTimeDuration = 3000;
-
-namespace google::scp::pbs {
 
 GcpDependencyFactory::GcpDependencyFactory(
     shared_ptr<ConfigProviderInterface> config_provider)
@@ -222,6 +223,23 @@ GcpDependencyFactory::ConstructNoSQLDatabaseClient(
                                  config_provider_, move(table_schema_map),
                                  async_execution_priority,
                                  io_async_execution_priority);
+}
+
+std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
+GcpDependencyFactory::ConstructBudgetConsumptionHelper(
+    google::scp::core::AsyncExecutorInterface* async_executor,
+    google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept {
+  google::scp::core::ExecutionResultOr<
+      std::shared_ptr<cloud::spanner::Connection>>
+      spanner_connection =
+          BudgetConsumptionHelper::MakeSpannerConnectionForProd(
+              *config_provider_);
+  if (!spanner_connection.result().Successful()) {
+    return nullptr;
+  }
+  return std::make_unique<pbs::BudgetConsumptionHelper>(
+      config_provider_.get(), async_executor, io_async_executor,
+      std::move(*spanner_connection));
 }
 
 unique_ptr<cpio::MetricClientInterface>

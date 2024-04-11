@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
 #include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/configuration_keys.h"
@@ -35,7 +36,6 @@ using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::AuthorizationProxyInterface;
 using google::scp::core::BlobStorageProviderInterface;
 using google::scp::core::ConfigProviderInterface;
-using google::scp::core::CredentialsProviderInterface;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::NoSQLDatabaseProviderInterface;
@@ -123,6 +123,23 @@ LocalDependencyFactory::ConstructNoSQLDatabaseClient(
       make_unique<MockNoSQLDatabaseProvider>(in_memory_database);
   InitializeInMemoryDatabase(nosql_database_provider, partition_ids_);
   return move(nosql_database_provider);
+}
+
+std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
+LocalDependencyFactory::ConstructBudgetConsumptionHelper(
+    core::AsyncExecutorInterface* async_executor,
+    core::AsyncExecutorInterface* io_async_executor) noexcept {
+  google::scp::core::ExecutionResultOr<
+      std::shared_ptr<cloud::spanner::Connection>>
+      spanner_connection =
+          BudgetConsumptionHelper::MakeSpannerConnectionForProd(
+              *config_provider_);
+  if (!spanner_connection.result().Successful()) {
+    return nullptr;
+  }
+  return std::make_unique<pbs::BudgetConsumptionHelper>(
+      config_provider_.get(), async_executor, io_async_executor,
+      std::move(*spanner_connection));
 }
 
 unique_ptr<cpio::MetricClientInterface>

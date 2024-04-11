@@ -42,7 +42,7 @@ cc_test(
         "//cc/core/transaction_manager/mock:core_transaction_manager_mock",
         "//cc/pbs/budget_key_provider/mock:pbs_budget_key_provider_mock",
         "//cc/pbs/front_end_service/mock:pbs_front_end_service_mock",
-        "//cc/pbs/front_end_service/src:pbs_front_end_service_lib",
+        "//cc/pbs/front_end_service/src:front_end_service",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/partition/mock:pbs_partition_mock",
         "//cc/pbs/partition_namespace/src:pbs_partition_namespace_lib",

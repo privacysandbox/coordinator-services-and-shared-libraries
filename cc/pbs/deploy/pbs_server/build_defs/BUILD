@@ -39,7 +39,7 @@ genrule(
     # $4 is the build container name
     # $5 is the build container target path
     # $6+ are the build args
-    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_aws", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_aws.tar", "--//cc/pbs/pbs_server/src/pbs_instance:platform=aws"),
+    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_aws", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_aws.tar", "--//cc:platform=aws"),
     tags = ["manual"],
 )
 
@@ -64,7 +64,7 @@ genrule(
     # $4 is the build container name
     # $5 is the build container target path
     # $6+ are the build args
-    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_gcp", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_gcp.tar", "--//cc/pbs/pbs_server/src/pbs_instance:platform=gcp"),
+    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_gcp", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_gcp.tar", "--//cc:platform=gcp"),
     tags = ["manual"],
 )
 
@@ -89,7 +89,7 @@ genrule(
     # $4 is the build container name
     # $5 is the build container target path
     # $6+ are the build args
-    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_aws_integration_test", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_aws_integration_test.tar", "--//cc/pbs/pbs_server/src/pbs_instance:platform=aws_integration_test"),
+    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_aws_integration_test", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_aws_integration_test.tar", "--//cc:platform=aws_integration_test"),
     tags = ["manual"],
 )
 
@@ -114,7 +114,7 @@ genrule(
     # $4 is the build container name
     # $5 is the build container target path
     # $6+ are the build args
-    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_gcp_integration_test", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_gcp_integration_test.tar", "--//cc/pbs/pbs_server/src/pbs_instance:platform=gcp_integration_test"),
+    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_gcp_integration_test", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_gcp_integration_test.tar", "--//cc:platform=gcp_integration_test"),
     tags = ["manual"],
 )
 
@@ -139,6 +139,6 @@ genrule(
     # $4 is the build container name
     # $5 is the build container target path
     # $6+ are the build args
-    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_local", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_local.tar", "--//cc/pbs/pbs_server/src/pbs_instance:platform=local"),
+    cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s" % ("pbs_container_local", "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_local.tar", "--//cc:platform=local"),
     tags = ["manual"],
 )

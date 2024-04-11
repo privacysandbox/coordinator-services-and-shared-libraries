@@ -142,4 +142,8 @@ static constexpr char kPBSHealthServiceEnableMemoryAndStorageCheck[] =
 static constexpr char kPBSWorkloadGeneratorMaxHttpRetryCount[] =
     "pbs_workload_generator_max_http_retry_count";
 
+// PBS with relaxed consistency
+static constexpr char kPBSRelaxedConsistencyEnabled[] =
+    "google_scp_pbs_relaxed_consistency_enabled";
+
 }  // namespace google::scp::pbs

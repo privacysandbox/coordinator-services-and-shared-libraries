@@ -182,4 +182,13 @@ TEST_F(GcpCloudDependencyFactoryTest, ConstructRemoteCoordinatorPBSClient) {
   EXPECT_THAT(client->Stop(), ResultIs(SuccessExecutionResult()));
 }
 
+TEST_F(GcpCloudDependencyFactoryTest, ConstructBudgetConsumptionHelper) {
+  auto helper = gcp_factory_.ConstructBudgetConsumptionHelper(
+      async_executor1_.get(), async_executor2_.get());
+  ASSERT_NE(helper, nullptr);
+  EXPECT_THAT(helper->Init(), ResultIs(SuccessExecutionResult()));
+  EXPECT_THAT(helper->Run(), ResultIs(SuccessExecutionResult()));
+  EXPECT_THAT(helper->Stop(), ResultIs(SuccessExecutionResult()));
+}
+
 }  // namespace google::scp::pbs::test

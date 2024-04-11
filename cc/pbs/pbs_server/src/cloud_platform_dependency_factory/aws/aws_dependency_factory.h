@@ -59,6 +59,12 @@ class AwsDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       core::AsyncPriority io_async_execution_priority =
           kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
 
+  std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
+  ConstructBudgetConsumptionHelper(
+      google::scp::core::AsyncExecutorInterface* async_executor,
+      google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept
+      override;
+
   std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
   ConstructInstanceAuthorizer(std::shared_ptr<core::HttpClientInterface>
                                   http1_client) noexcept override;

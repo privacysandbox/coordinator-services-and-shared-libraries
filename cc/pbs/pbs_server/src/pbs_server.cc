@@ -12,17 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <execinfo.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 #include <chrono>
-#include <csignal>
-#include <filesystem>
 #include <iostream>
 #include <list>
 #include <memory>
@@ -30,96 +22,136 @@
 #include <unordered_set>
 
 #include "absl/debugging/failure_signal_handler.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/config_provider/src/env_config_provider.h"
-#include "core/interface/errors.h"
-#include "core/logger/src/log_providers/syslog/syslog_log_provider.h"
-#include "core/logger/src/log_utils.h"
-#include "core/logger/src/logger.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance.h"
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance_multi_partition_platform_wrapper.h"
+#include "absl/log/check.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/config_provider/src/env_config_provider.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/logger/src/log_providers/syslog/syslog_log_provider.h"
+#include "cc/core/logger/src/log_utils.h"
+#include "cc/core/logger/src/logger.h"
+#include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_server/src/error_codes.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_multi_partition_platform_wrapper.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_v3.h"
+#include "cc/public/core/interface/execution_result.h"
 
-#include "error_codes.h"
+#if defined(PBS_GCP)
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
+#elif defined(PBS_GCP_INTEGRATION_TEST)
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/gcp_integration_test_dependency_factory.h"
+#elif defined(PBS_AWS)
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
+#elif defined(PBS_AWS_INTEGRATION_TEST)
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/aws_integration_test_dependency_factory.h"
+#elif defined(PBS_LOCAL)
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
+#endif
 
-using google::scp::core::ConfigProviderInterface;
-using google::scp::core::EnvConfigProvider;
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::LoggerInterface;
-using google::scp::core::LogLevel;
-using google::scp::core::ServiceInterface;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::common::GlobalLogger;
-using google::scp::core::common::kZeroUuid;
-using google::scp::core::errors::GetErrorMessage;
-using google::scp::core::logger::FromString;
-using google::scp::core::logger::Logger;
-using google::scp::core::logger::log_providers::SyslogLogProvider;
-using google::scp::pbs::PBSInstance;
-using google::scp::pbs::PBSInstanceConfig;
-using google::scp::pbs::PBSInstanceMultiPartitionPlatformWrapper;
-using std::list;
-using std::make_shared;
-using std::make_unique;
-using std::mutex;
-using std::runtime_error;
-using std::shared_ptr;
-using std::string;
-using std::thread;
-using std::unique_ptr;
-using std::unordered_set;
-using std::chrono::milliseconds;
-using std::chrono::minutes;
-using std::filesystem::exists;
-using std::filesystem::path;
+namespace {
 
-shared_ptr<ConfigProviderInterface> config_provider;
-shared_ptr<ServiceInterface> pbs_instance;
+using ::google::scp::core::ConfigProviderInterface;
+using ::google::scp::core::EnvConfigProvider;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::LoggerInterface;
+using ::google::scp::core::LogLevel;
+using ::google::scp::core::ServiceInterface;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::common::GlobalLogger;
+using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::core::errors::GetErrorMessage;
+using ::google::scp::core::errors::INVALID_ENVIROMENT;
+using ::google::scp::core::logger::FromString;
+using ::google::scp::core::logger::Logger;
+using ::google::scp::core::logger::log_providers::SyslogLogProvider;
+using ::google::scp::pbs::CloudPlatformDependencyFactoryInterface;
+using ::google::scp::pbs::PBSInstance;
+using ::google::scp::pbs::PBSInstanceMultiPartitionPlatformWrapper;
+using ::google::scp::pbs::PBSInstanceV3;
 
-static constexpr char kPBSServer[] = "PBSServer";
+std::shared_ptr<ConfigProviderInterface> config_provider;
+std::shared_ptr<ServiceInterface> pbs_instance;
 
-void Init(shared_ptr<ServiceInterface> service, string service_name) {
+inline constexpr char kPBSServer[] = "PBSServer";
+
+inline ExecutionResultOr<
+    std::unique_ptr<CloudPlatformDependencyFactoryInterface>>
+GetEnvironmentSpecificFactory(const std::shared_ptr<ConfigProviderInterface>&
+                                  config_provider_for_factory) {
+#if defined(PBS_GCP)
+  SCP_INFO(kPBSServer, kZeroUuid, "Running GCP PBS Instance.");
+  return std::make_unique<google::scp::pbs::GcpDependencyFactory>(
+      config_provider_for_factory);
+#elif defined(PBS_GCP_INTEGRATION_TEST)
+  SCP_INFO(kPBSServer, kZeroUuid, "Running GCP Integration Test PBS Instance.");
+  return std::make_unique<
+      google::scp::pbs::GcpIntegrationTestDependencyFactory>(
+      config_provider_for_factory);
+#elif defined(PBS_AWS)
+  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS PBS Instance.");
+  return std::make_unique<google::scp::pbs::AwsDependencyFactory>(
+      config_provider_for_factory);
+#elif defined(PBS_AWS_INTEGRATION_TEST)
+  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS Integration Test PBS Instance.");
+  return std::make_unique<
+      google::scp::pbs::AwsIntegrationTestDependencyFactory>(
+      config_provider_for_factory);
+#elif defined(PBS_LOCAL)
+  SCP_INFO(kPBSServer, kZeroUuid, "Running Local PBS Instance.");
+  return std::make_unique<google::scp::pbs::LocalDependencyFactory>(
+      config_provider_for_factory);
+#else
+  SCP_INFO(kPBSServer, kZeroUuid, "Environment not found.");
+  return FailureExecutionResult(INVALID_ENVIROMENT);
+#endif
+}
+
+}  // namespace
+
+void Init(std::shared_ptr<ServiceInterface> service, std::string service_name) {
   auto execution_result = service->Init();
   if (!execution_result.Successful()) {
     auto err_message = service_name + " failed to initialized.";
     SCP_ERROR(kPBSServer, kZeroUuid, execution_result, "%s",
               err_message.c_str());
-    throw runtime_error(err_message);
+    throw std::runtime_error(err_message);
   }
 
   SCP_INFO(kPBSServer, kZeroUuid, "Properly initialized the service.");
 }
 
-void Run(shared_ptr<ServiceInterface> service, string service_name) {
+void Run(std::shared_ptr<ServiceInterface> service, std::string service_name) {
   auto execution_result = service->Run();
   if (!execution_result.Successful()) {
     auto err_message = service_name + " failed to run.";
     SCP_ERROR(kPBSServer, kZeroUuid, execution_result, "%s",
               err_message.c_str());
-    throw runtime_error(err_message);
+    throw std::runtime_error(err_message);
   }
 
   SCP_INFO(kPBSServer, kZeroUuid, "Properly run the service.");
 }
 
-void Stop(shared_ptr<ServiceInterface> service, string service_name) {
+void Stop(std::shared_ptr<ServiceInterface> service, std::string service_name) {
   auto execution_result = service->Stop();
   if (!execution_result.Successful()) {
     auto err_message = service_name + " failed to stop.";
     SCP_ERROR(kPBSServer, kZeroUuid, execution_result, "%s",
               err_message.c_str());
-    throw runtime_error(err_message);
+    throw std::runtime_error(err_message);
   }
 
   SCP_INFO(kPBSServer, kZeroUuid, "Properly stopped the service.");
 }
 
-std::string ReadConfig(const string& config_key) {
-  string config_value;
+std::string ReadConfig(const std::string& config_key) {
+  std::string config_value;
   if (config_provider->Get(config_key, config_value) !=
       SuccessExecutionResult()) {
-    throw runtime_error(config_key + " is not provided");
+    throw std::runtime_error(config_key + " is not provided");
   }
   return config_value;
 }
@@ -141,11 +173,11 @@ int main(int argc, char** argv) {
   absl::FailureSignalHandlerOptions options;
   absl::InstallFailureSignalHandler(options);
 
-  config_provider = make_shared<EnvConfigProvider>();
+  config_provider = std::make_shared<EnvConfigProvider>();
   config_provider->Init();
 
-  list<string> enabled_log_levels;
-  unordered_set<LogLevel> log_levels;
+  std::list<std::string> enabled_log_levels;
+  std::unordered_set<LogLevel> log_levels;
   if (config_provider
           ->Get(google::scp::pbs::kEnabledLogLevels, enabled_log_levels)
           .Successful()) {
@@ -156,36 +188,48 @@ int main(int argc, char** argv) {
     GlobalLogger::SetGlobalLogLevels(log_levels);
   }
 
-  unique_ptr<LoggerInterface> logger_ptr =
-      make_unique<Logger>(make_unique<SyslogLogProvider>());
+  std::unique_ptr<LoggerInterface> logger_ptr =
+      std::make_unique<Logger>(std::make_unique<SyslogLogProvider>());
   if (!logger_ptr->Init().Successful()) {
-    throw runtime_error("Cannot initialize logger.");
+    throw std::runtime_error("Cannot initialize logger.");
   }
   if (!logger_ptr->Run().Successful()) {
-    throw runtime_error("Cannot run logger.");
+    throw std::runtime_error("Cannot run logger.");
   }
   GlobalLogger::SetGlobalLogger(std::move(logger_ptr));
 
   bool pbs_partitioning_enabled = false;
+  bool pbs_relaxed_consistency_enabled = false;
   if (config_provider
           ->Get(google::scp::pbs::kPBSPartitioningEnabled,
                 pbs_partitioning_enabled)
           .Successful() &&
       pbs_partitioning_enabled) {
     SCP_INFO(kPBSServer, kZeroUuid, "Instantiated Multi-Partition PBS");
-    pbs_instance =
-        make_shared<PBSInstanceMultiPartitionPlatformWrapper>(config_provider);
+    pbs_instance = std::make_shared<PBSInstanceMultiPartitionPlatformWrapper>(
+        config_provider);
+  } else if (config_provider
+                 ->Get(google::scp::pbs::kPBSRelaxedConsistencyEnabled,
+                       pbs_relaxed_consistency_enabled)
+                 .Successful() &&
+             pbs_relaxed_consistency_enabled) {
+    SCP_INFO(kPBSServer, kZeroUuid, "Instantiating PBSInstanceV3.");
+    auto factory_interface = GetEnvironmentSpecificFactory(config_provider);
+    CHECK(factory_interface.Successful())
+        << "GetEnvironmentSpecificFactory was unsuccessful.";
+    pbs_instance = std::make_shared<PBSInstanceV3>(
+        config_provider, std::move(factory_interface.value()));
   } else {
     SCP_INFO(kPBSServer, kZeroUuid,
              "Instantiated Single-Partition (Global Partition) PBS");
-    pbs_instance = make_shared<PBSInstance>(config_provider);
+    pbs_instance = std::make_shared<PBSInstance>(config_provider);
   }
 
   Init(pbs_instance, "PBS_Instance");
   Run(pbs_instance, "PBS_Instance");
 
   while (true) {
-    std::this_thread::sleep_for(minutes(1));
+    std::this_thread::sleep_for(std::chrono::minutes(1));
   }
   return 0;
 }

@@ -19,6 +19,7 @@ package com.google.scp.operator.cpio.jobclient;
 import com.google.scp.operator.cpio.jobclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
 import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
 import java.util.Optional;
 
@@ -32,6 +33,14 @@ public interface JobClient {
    *     {@code JobPullBackoff} mechanism decides to terminate polling.
    */
   Optional<Job> getJob() throws JobClientException;
+
+  /**
+   * Releases a held job after a provided delay so that it may be picked up by another worker. The
+   * maximum delay that can be set is 10 minutes.
+   *
+   * @param jobRetryRequest JobRetryRequest of the job to release.
+   */
+  void returnJobForRetry(JobRetryRequest jobRetryRequest) throws JobClientException;
 
   /**
    * Marks aggregation work completed either successfully or with a non-retryable error, by updating

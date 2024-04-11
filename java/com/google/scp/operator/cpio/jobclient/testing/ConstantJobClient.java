@@ -20,6 +20,7 @@ import com.google.scp.operator.cpio.jobclient.JobClient;
 import com.google.scp.operator.cpio.jobclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
 import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
 import java.util.Optional;
 
@@ -37,6 +38,8 @@ public class ConstantJobClient implements JobClient {
   private boolean shouldThrowOnMarkJobCompleted;
   private boolean shouldThrowOnAppendJobErrorMessage;
 
+  private boolean shouldThrowOnReturnJobForRetry;
+
   private JobResult lastJobResultCompleted;
 
   private void reset() {
@@ -46,6 +49,7 @@ public class ConstantJobClient implements JobClient {
     shouldThrowOnGetJob = false;
     shouldThrowOnMarkJobCompleted = false;
     shouldThrowOnAppendJobErrorMessage = false;
+    shouldThrowOnReturnJobForRetry = false;
   }
 
   @Override
@@ -74,6 +78,14 @@ public class ConstantJobClient implements JobClient {
     }
 
     lastJobResultCompleted = jobResult;
+  }
+
+  @Override
+  public void returnJobForRetry(JobRetryRequest jobRetryRequest) throws JobClientException {
+    if (shouldThrowOnReturnJobForRetry) {
+      throw new JobClientException(
+          new IllegalStateException("Was set to throw"), ErrorReason.UNSPECIFIED_ERROR);
+    }
   }
 
   @Override
@@ -108,6 +120,10 @@ public class ConstantJobClient implements JobClient {
   /** Set true to throw an exception in the {@code markJobCompleted} method. */
   public void setShouldThrowOnMarkJobCompleted(boolean shouldThrowOnMarkJobCompleted) {
     this.shouldThrowOnMarkJobCompleted = shouldThrowOnMarkJobCompleted;
+  }
+
+  public void setShouldThrowOnReturnJobForRetry(boolean shouldThrowOnReturnJobForRetry) {
+    this.shouldThrowOnReturnJobForRetry = shouldThrowOnReturnJobForRetry;
   }
 
   public void setShouldThrowOnAppendJobErrorMessage(boolean shouldThrowOnAppendJobErrorMessage) {

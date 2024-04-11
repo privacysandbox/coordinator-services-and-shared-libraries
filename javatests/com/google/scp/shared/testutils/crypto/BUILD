@@ -19,7 +19,6 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "tink_utils",
     srcs = [
-        "AwsTinkUtilsModule.java",
         "MockTinkUtils.java",
         "TinkUtils.java",
     ],

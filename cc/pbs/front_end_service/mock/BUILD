@@ -29,7 +29,7 @@ cc_library(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
-        "//cc/pbs/front_end_service/src:pbs_front_end_service_lib",
+        "//cc/pbs/front_end_service/src:front_end_service",
         "//cc/public/cpio/mock/metric_client:metric_client_mock",
     ],
 )

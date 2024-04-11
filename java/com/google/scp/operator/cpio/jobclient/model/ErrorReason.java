@@ -20,6 +20,8 @@ package com.google.scp.operator.cpio.jobclient.model;
 public enum ErrorReason {
   // Could not pull new job from the queue.
   JOB_PULL_FAILED,
+  // Could not release the job back to the queue for other workers to pick up.
+  RETURN_JOB_FOR_RETRY_FAILED,
   // Could not retrieve the job queue receipt handle from job cache, in order to marking job
   // completed.
   JOB_RECEIPT_HANDLE_NOT_FOUND,
@@ -31,6 +33,8 @@ public enum ErrorReason {
   JOB_MARK_COMPLETION_FAILED,
   // Could not update ErrorSummary by appending an error message.
   JOB_ERROR_SUMMARY_UPDATE_FAILED,
+  // The delay was out of range
+  JOB_DELAY_OUT_OF_RANGE,
   // An unspecified fatal error occurred.
   UNSPECIFIED_ERROR
 }

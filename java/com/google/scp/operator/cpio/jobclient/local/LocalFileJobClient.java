@@ -26,6 +26,7 @@ import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.Lo
 import com.google.scp.operator.cpio.jobclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
 import java.io.IOException;
@@ -134,6 +135,11 @@ final class LocalFileJobClient implements JobClient {
     } catch (IOException e) {
       throw new JobClientException(e, ErrorReason.JOB_MARK_COMPLETION_FAILED);
     }
+  }
+
+  @Override
+  public void returnJobForRetry(JobRetryRequest jobRetryRequest) throws JobClientException {
+    // Requires access to Job Metadata DB and the job cache.
   }
 
   @Override

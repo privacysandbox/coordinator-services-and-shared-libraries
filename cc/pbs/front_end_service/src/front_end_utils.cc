@@ -70,7 +70,7 @@ core::ExecutionResultOr<TimeBucket> ReportingTimeToTimeBucket(
 // }
 core::ExecutionResult ParseBeginTransactionRequestBodyV1(
     const std::string& authorized_domain, const core::BytesBuffer& request_body,
-    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
+    std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
   try {
     auto transaction_request = nlohmann::json::parse(
         request_body.bytes->begin(), request_body.bytes->end());
@@ -164,7 +164,7 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV1(
 core::ExecutionResult ParseBeginTransactionRequestBodyV2(
     const nlohmann::json& transaction_request,
     const std::string& authorized_domain,
-    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list) {
+    std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) {
   if (!transaction_request.contains("data")) {
     return core::FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
@@ -263,7 +263,7 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
 
 core::ExecutionResult ParseBeginTransactionRequestBody(
     const std::string& authorized_domain, const core::BytesBuffer& request_body,
-    std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
+    std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
   try {
     nlohmann::json transaction_request = nlohmann::json::parse(
         request_body.bytes->begin(), request_body.bytes->end(),

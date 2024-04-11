@@ -31,6 +31,9 @@ public interface DecryptionKeyService {
    */
   HybridDecrypt getDecrypter(String decryptionKeyId) throws KeyFetchException;
 
+  /** Remove all exceptions from the exception cache. */
+  default void clearExceptionCache() {}
+
   /** Represents an exception thrown by the {@code DecryptionKeyService} class. */
   final class KeyFetchException extends Exception {
     public final ErrorReason reason;

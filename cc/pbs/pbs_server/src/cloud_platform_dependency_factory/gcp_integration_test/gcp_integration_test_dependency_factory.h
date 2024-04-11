@@ -17,9 +17,8 @@
 #pragma once
 
 #include <memory>
-#include <string>
 
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
 
 namespace google::scp::pbs {
 class GcpIntegrationTestDependencyFactory : public GcpDependencyFactory {
@@ -47,6 +46,12 @@ class GcpIntegrationTestDependencyFactory : public GcpDependencyFactory {
           kDefaultAsyncPriorityForCallbackExecution,
       core::AsyncPriority io_async_execution_priority =
           kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
+
+  std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
+  ConstructBudgetConsumptionHelper(
+      google::scp::core::AsyncExecutorInterface* async_executor,
+      google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept
+      override;
 
   std::unique_ptr<cpio::MetricClientInterface> ConstructMetricClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,

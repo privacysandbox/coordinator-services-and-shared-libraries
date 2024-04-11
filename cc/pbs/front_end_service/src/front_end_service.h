@@ -265,7 +265,7 @@ class FrontEndService : public FrontEndServiceInterface {
    */
   std::vector<std::shared_ptr<core::TransactionCommand>>
   GenerateConsumeBudgetCommands(
-      std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
+      std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list,
       const std::string& authorized_domain,
       const core::common::Uuid& transaction_id);
 
@@ -279,7 +279,7 @@ class FrontEndService : public FrontEndServiceInterface {
    */
   std::vector<std::shared_ptr<core::TransactionCommand>>
   GenerateConsumeBudgetCommandsWithBatchesPerDay(
-      std::list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
+      std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list,
       const std::string& authorized_domain,
       const core::common::Uuid& transaction_id);
 

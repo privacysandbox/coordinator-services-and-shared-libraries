@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#include "pbs/front_end_service/src/transaction_request_router.h"
-
-using google::scp::core::AsyncContext;
-using google::scp::core::ExecutionResult;
-using google::scp::core::GetTransactionManagerStatusRequest;
-using google::scp::core::GetTransactionManagerStatusResponse;
-using google::scp::core::GetTransactionStatusRequest;
-using google::scp::core::GetTransactionStatusResponse;
-using google::scp::core::TransactionPhaseRequest;
-using google::scp::core::TransactionPhaseResponse;
-using google::scp::core::TransactionRequest;
-using google::scp::core::TransactionResponse;
+#include "cc/pbs/front_end_service/src/transaction_request_router.h"
 
 namespace google::scp::pbs {
+using ::google::scp::core::AsyncContext;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::GetTransactionManagerStatusRequest;
+using ::google::scp::core::GetTransactionManagerStatusResponse;
+using ::google::scp::core::GetTransactionStatusRequest;
+using ::google::scp::core::GetTransactionStatusResponse;
+using ::google::scp::core::TransactionPhaseRequest;
+using ::google::scp::core::TransactionPhaseResponse;
+using ::google::scp::core::TransactionRequest;
+using ::google::scp::core::TransactionResponse;
+
 ExecutionResult TransactionRequestRouter::Execute(
     AsyncContext<TransactionRequest, TransactionResponse>& context) noexcept {
   return transaction_manager_->Execute(context);

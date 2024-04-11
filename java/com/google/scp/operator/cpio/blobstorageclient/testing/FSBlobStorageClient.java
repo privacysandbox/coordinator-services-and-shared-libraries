@@ -56,6 +56,29 @@ public class FSBlobStorageClient implements BlobStorageClient {
   }
 
   @Override
+  public Long getBlobSize(DataLocation location) throws BlobStorageClientException {
+    BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+    try {
+      Path filePath = fileSystem.getPath(blobLocation.bucket(), blobLocation.key());
+      return Files.size(filePath);
+    } catch (IOException e) {
+      throw new BlobStorageClientException(e);
+    }
+  }
+
+  @Override
+  public Long getBlobSize(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+    try {
+      Path filePath = fileSystem.getPath(blobLocation.bucket(), blobLocation.key());
+      return Files.size(filePath);
+    } catch (IOException e) {
+      throw new BlobStorageClientException(e);
+    }
+  }
+
+  @Override
   public void putBlob(DataLocation location, Path filePath) throws BlobStorageClientException {
     BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
     try {

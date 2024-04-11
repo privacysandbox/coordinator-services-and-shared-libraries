@@ -28,4 +28,9 @@ DEFINE_ERROR_CODE(SC_PBS_SERVER_CHILD_SIGNALLED, SC_PBS_SERVER, 0x0002,
                   "PBS server's child signalled.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
+DEFINE_ERROR_CODE(
+    INVALID_ENVIROMENT, SC_PBS_SERVER, 0x0003,
+    "A specific environment is being depended on that isn't present.",
+    HttpStatusCode::INTERNAL_SERVER_ERROR)
+
 }  // namespace google::scp::core::errors

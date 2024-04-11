@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -30,4 +31,41 @@ package_group(
     packages = [
         "//cc/...",
     ],
+)
+
+string_flag(
+    name = "platform",
+    build_setting_default = "local",
+    values = [
+        "aws",
+        "aws_integration_test",
+        "gcp",
+        "gcp_integration_test",
+        "local",
+    ],
+)
+
+config_setting(
+    name = "cloud_platform_aws",
+    flag_values = {"platform": "aws"},
+)
+
+config_setting(
+    name = "cloud_platform_aws_integration_test",
+    flag_values = {"platform": "aws_integration_test"},
+)
+
+config_setting(
+    name = "cloud_platform_gcp",
+    flag_values = {"platform": "gcp"},
+)
+
+config_setting(
+    name = "cloud_platform_gcp_integration_test",
+    flag_values = {"platform": "gcp_integration_test"},
+)
+
+config_setting(
+    name = "cloud_platform_local",
+    flag_values = {"platform": "local"},
 )

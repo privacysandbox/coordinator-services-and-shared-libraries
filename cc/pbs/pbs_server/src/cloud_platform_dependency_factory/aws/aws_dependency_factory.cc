@@ -220,6 +220,13 @@ AwsDependencyFactory::ConstructNoSQLDatabaseClient(
                                   config_provider_);
 }
 
+std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
+AwsDependencyFactory::ConstructBudgetConsumptionHelper(
+    core::AsyncExecutorInterface* async_executor,
+    core::AsyncExecutorInterface* io_async_executor) noexcept {
+  return nullptr;
+}
+
 unique_ptr<cpio::MetricClientInterface>
 AwsDependencyFactory::ConstructMetricClient(
     shared_ptr<core::AsyncExecutorInterface> async_executor,

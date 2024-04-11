@@ -102,6 +102,11 @@ variable "application_name" {
   type        = string
 }
 
+variable "public_key_load_balancer_logs_enabled" {
+  description = "Whether to enable logs for Load Balancer in Public Key Hosting Service."
+  type        = bool
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################

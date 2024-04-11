@@ -33,6 +33,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -100,6 +102,25 @@ public final class S3BlobStorageClient implements BlobStorageClient {
 
   @Override
   public InputStream getBlob(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    throw new UnsupportedOperationException(ACCOUNT_IDENTITY_NOT_SUPPORTED_MESSAGE);
+  }
+
+  @Override
+  public Long getBlobSize(DataLocation location) throws BlobStorageClientException {
+    BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+    HeadObjectRequest objectRequest =
+        HeadObjectRequest.builder().bucket(blobLocation.bucket()).key(blobLocation.key()).build();
+    try {
+      HeadObjectResponse headObjectResponse = client.headObject(objectRequest);
+      return headObjectResponse.contentLength();
+    } catch (SdkException e) {
+      throw new BlobStorageClientException(e);
+    }
+  }
+
+  @Override
+  public Long getBlobSize(DataLocation location, Optional<String> accountIdentity)
       throws BlobStorageClientException {
     throw new UnsupportedOperationException(ACCOUNT_IDENTITY_NOT_SUPPORTED_MESSAGE);
   }

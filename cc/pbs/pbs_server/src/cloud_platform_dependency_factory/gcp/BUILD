@@ -42,6 +42,7 @@ cc_library(
         "//cc/cpio/client_providers/metric_client_provider/src/gcp:gcp_metric_client_provider_lib",
         "//cc/pbs/authorization/src/gcp:gcp_http_request_response_auth_interceptor",
         "//cc/pbs/authorization_token_fetcher/src/gcp:pbs_gcp_authorization_token_fetcher",
+        "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
     ],

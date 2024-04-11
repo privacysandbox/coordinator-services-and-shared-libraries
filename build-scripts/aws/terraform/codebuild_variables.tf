@@ -33,7 +33,7 @@ variable "region" {
 variable "compute_type" {
   type        = string
   description = "CodeBuild compute type to use for build."
-  default     = "BUILD_GENERAL1_MEDIUM"
+  default     = "BUILD_GENERAL1_LARGE"
 }
 
 variable "build_artifacts_output_bucket" {

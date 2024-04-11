@@ -18,41 +18,39 @@
 #include <gtest/gtest.h>
 
 #include <memory>
-#include <vector>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/http2_client/mock/mock_http_client.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/token_provider_cache_interface.h"
-#include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-
-using google::scp::core::AsyncExecutorInterface;
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::HttpClientInterface;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::TokenProviderCacheInterface;
-using google::scp::core::config_provider::mock::MockConfigProvider;
-using google::scp::core::http2_client::mock::MockHttpClient;
-using google::scp::core::test::ResultIs;
-using google::scp::core::token_provider_cache::mock::DummyTokenProviderCache;
-using google::scp::cpio::client_providers::AuthTokenProviderInterface;
-using google::scp::cpio::client_providers::InstanceClientProviderInterface;
-using google::scp::cpio::client_providers::mock::MockInstanceClientProvider;
-using google::scp::pbs::AwsDependencyFactory;
-using std::make_shared;
-using std::shared_ptr;
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/http2_client/mock/mock_http_client.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/token_provider_cache_interface.h"
+#include "cc/core/token_provider_cache/mock/token_provider_cache_dummy.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 namespace google::scp::pbs::test {
+
+using ::google::scp::core::AsyncExecutorInterface;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::HttpClientInterface;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::TokenProviderCacheInterface;
+using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::google::scp::core::http2_client::mock::MockHttpClient;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::token_provider_cache::mock::DummyTokenProviderCache;
+using ::google::scp::cpio::client_providers::AuthTokenProviderInterface;
+using ::google::scp::cpio::client_providers::InstanceClientProviderInterface;
+using ::google::scp::cpio::client_providers::mock::MockInstanceClientProvider;
+using ::google::scp::pbs::AwsDependencyFactory;
+using std::make_shared;
+using std::shared_ptr;
 
 class AwsCloudDependencyFactoryTest : public ::testing::Test {
  protected:
@@ -168,6 +166,12 @@ TEST_F(AwsCloudDependencyFactoryTest, ConstructRemoteCoordinatorPBSClient) {
   EXPECT_THAT(client->Init(), ResultIs(SuccessExecutionResult()));
   EXPECT_THAT(client->Run(), ResultIs(SuccessExecutionResult()));
   EXPECT_THAT(client->Stop(), ResultIs(SuccessExecutionResult()));
+}
+
+TEST_F(AwsCloudDependencyFactoryTest, ConstructBudgetConsumptionHelper) {
+  auto helper = aws_factory_.ConstructBudgetConsumptionHelper(
+      async_executor1_.get(), async_executor2_.get());
+  EXPECT_EQ(helper, nullptr);
 }
 
 }  // namespace google::scp::pbs::test

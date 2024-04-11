@@ -32,7 +32,7 @@ cc_test(
         "//cc/core/logger/src/log_providers/syslog:syslog_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
-        "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_lib",
+        "//cc/pbs/pbs_server/src/pbs_instance",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],
@@ -40,7 +40,7 @@ cc_test(
 
 # To run this test locally, use command:
 #   ./cc/tools/build/run_within_container.sh
-#   --bazel_command="bazel test --//cc/pbs/pbs_server/src/pbs_instance:platform=aws_integration_test //cc/pbs/test/e2e:pbs_integration_test" --bazel_output_directory=/tmp/my_output_dir
+#   --bazel_command="bazel test --//cc:platform=aws_integration_test //cc/pbs/test/e2e:pbs_integration_test" --bazel_output_directory=/tmp/my_output_dir
 cc_test(
     name = "pbs_integration_test",
     size = "large",

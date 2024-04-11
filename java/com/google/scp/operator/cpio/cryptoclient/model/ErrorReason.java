@@ -30,4 +30,6 @@ public enum ErrorReason {
   UNKNOWN_ERROR,
   // Service unresponsive or not available.
   KEY_SERVICE_UNAVAILABLE,
+  // Encryption key type unspecified.
+  UNSUPPORTED_ENCRYPTION_KEY_TYPE_ERROR,
 }

@@ -148,6 +148,7 @@ module "publickeyhostingservice" {
   enable_get_public_key_cdn                    = var.enable_get_public_key_cdn
   get_public_key_cloud_cdn_default_ttl_seconds = var.get_public_key_cloud_cdn_default_ttl_seconds
   get_public_key_cloud_cdn_max_ttl_seconds     = var.get_public_key_cloud_cdn_max_ttl_seconds
+  public_key_load_balancer_logs_enabled        = var.public_key_load_balancer_logs_enabled
 
   # Domain Management
   enable_domain_management                  = var.enable_domain_management
