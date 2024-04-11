@@ -45,4 +45,6 @@ static constexpr char kPBSJournalInputStreamNumberOfJournalLogsToReturn[] =
     "google_scp_pbs_journal_input_stream_number_of_journal_logs_to_return";
 static constexpr char kTransactionManagerSkipDuplicateTransactionInRecovery[] =
     "google_scp_transaction_manager_skip_duplicate_transaction_in_recovery";
+static constexpr char kSpannerEndpointOverride[] =
+    "google_scp_core_spanner_endpoint_override";
 }  // namespace google::scp::core

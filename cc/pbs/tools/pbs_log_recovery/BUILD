@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
 cc_binary(
     name = "pbs_log_recovery_aws",
-    srcs = glob(["*.cc"]),
+    srcs = ["pbs_log_recovery_on_aws.cc"],
     copts = [
         "-std=c++17",
     ],
@@ -36,5 +36,49 @@ cc_binary(
         "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@aws_sdk_cpp//:core",
         "@aws_sdk_cpp//:s3",
+    ],
+)
+
+cc_library(
+    name = "read_journal_internal",
+    srcs = ["read_journal_internal.cc"],
+    hdrs = ["read_journal_internal.h"],
+    copts = [
+        "-std=c++17",
+    ],
+    visibility = ["//cc/pbs/tools/pbs_log_recovery:__subpackages__"],
+    deps = [
+        "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
+        "//cc/core/journal_service/interface:core_journal_service_interface_lib",
+        "//cc/core/journal_service/src:core_journal_service_lib",
+        "//cc/core/journal_service/src/proto:core_journal_service_proto_lib",
+        "//cc/core/transaction_manager/src/proto:core_transaction_manager_proto_lib",
+        "//cc/pbs/budget_key_provider/src/proto:pbs_budget_key_provider_proto_lib",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:flags",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_test(
+    name = "read_journal_internal_test",
+    srcs = ["read_journal_internal_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
+    linkopts = [
+        "-latomic",
+    ],
+    deps = [
+        ":read_journal_internal",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
     ],
 )

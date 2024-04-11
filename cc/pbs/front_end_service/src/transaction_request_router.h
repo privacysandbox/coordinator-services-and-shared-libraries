@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "core/interface/transaction_manager_interface.h"
-#include "core/interface/transaction_request_router_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/core/interface/transaction_request_router_interface.h"
 
 namespace google::scp::pbs {
 /**

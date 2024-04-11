@@ -36,6 +36,7 @@ cc_library(
         "//cc/core/credentials_provider/src:core_credentials_provider_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
+        "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
     ],

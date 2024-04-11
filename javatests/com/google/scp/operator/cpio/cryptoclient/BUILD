@@ -51,22 +51,6 @@ java_test(
 )
 
 java_test(
-    name = "DecryptionKeyServiceImplTest",
-    srcs = ["DecryptionKeyServiceImplTest.java"],
-    deps = [
-        "//java/com/google/scp/operator/cpio/cryptoclient",
-        "//java/com/google/scp/shared/api/model",
-        "//java/external:acai",
-        "//java/external:google_truth",
-        "//java/external:guice",
-        "//java/external:mockito",
-        "//java/external:protobuf_java",
-        "//java/external:tink",
-        "//javatests/com/google/scp/shared/testutils/crypto:tink_utils",
-    ],
-)
-
-java_test(
     name = "MultiPartyDecryptionKeyServiceImplTest",
     srcs = ["MultiPartyDecryptionKeyServiceImplTest.java"],
     deps = [

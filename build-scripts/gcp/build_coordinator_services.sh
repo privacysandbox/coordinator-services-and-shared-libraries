@@ -45,7 +45,7 @@ cat <<EOT >> environments_mp_primary/shared/mpkhs_primary/image_params.auto.tfva
 # Prefiled values for container image lookup based on released version #
 ########################################################################
 
-key_generation_image = "${IMAGE_NAME}"
+key_generation_image = "${IMAGE_REPO_PATH}/${IMAGE_NAME}:${IMAGE_TAG}"
 EOT
 
 ln -s ../../shared/mpkhs_primary/image_params.auto.tfvars environments_mp_primary/demo/mpkhs_primary/image_params.auto.tfvars

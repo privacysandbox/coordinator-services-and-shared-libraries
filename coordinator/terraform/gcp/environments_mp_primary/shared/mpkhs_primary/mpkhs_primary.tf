@@ -33,6 +33,8 @@ module "multipartykeyhosting_primary" {
   alarms_enabled            = var.alarms_enabled
   alarms_notification_email = var.alarms_notification_email
 
+  public_key_load_balancer_logs_enabled = var.public_key_load_balancer_logs_enabled
+
   enable_domain_management                  = var.enable_domain_management
   parent_domain_name                        = var.parent_domain_name
   parent_domain_name_project                = var.parent_domain_name_project

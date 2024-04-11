@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "absl/strings/strip.h"
 #include "core/blob_storage_provider/src/common/error_codes.h"
 #include "core/interface/blob_storage_provider_interface.h"
@@ -43,8 +44,15 @@ class MockBlobStorageClient : public BlobStorageClientInterface {
     if (get_blob_mock) {
       return get_blob_mock(get_blob_context);
     }
-    auto full_path = *get_blob_context.request->bucket_name + std::string("/") +
-                     *get_blob_context.request->blob_name;
+
+    // Just use the blob_name if the bucket_name is empty (e.g., if bucket_name
+    // is "" and blob_name is "123").
+    auto full_path = *get_blob_context.request->blob_name;
+
+    if (!get_blob_context.request->bucket_name->empty()) {
+      full_path = absl::StrCat(*get_blob_context.request->bucket_name, "/",
+                               *get_blob_context.request->blob_name);
+    }
 
     std::ifstream input_stream(full_path, std::ios::binary | std::ios::ate);
 

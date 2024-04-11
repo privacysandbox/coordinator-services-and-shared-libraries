@@ -100,7 +100,7 @@ repo_top_level_dir=$(git rev-parse --show-toplevel)
 
 "$repo_top_level_dir"/cc/tools/build/local/start_container_local.sh
 "$repo_top_level_dir"/cc/tools/build/local/bazel_build_within_container.sh \
-    --bazel_command="bazel build --//cc/pbs/pbs_server/src/pbs_instance:platform=local //cc/pbs/deploy/pbs_server/build_defs:pbs_container_local.tar"
+    --bazel_command="bazel build --//cc:platform=local //cc/pbs/deploy/pbs_server/build_defs:pbs_container_local.tar"
 
 docker load < "$repo_top_level_dir/bazel-bin/cc/pbs/deploy/pbs_server/build_defs/pbs_container_local.tar"
 

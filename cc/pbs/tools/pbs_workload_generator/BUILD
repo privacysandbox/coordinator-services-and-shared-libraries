@@ -41,7 +41,7 @@ cc_binary(
         "//cc/pbs/authorization_token_fetcher/src/aws:pbs_aws_authorization_token_fetcher",
         "//cc/pbs/authorization_token_fetcher/src/gcp:pbs_gcp_authorization_token_fetcher",
         "//cc/pbs/pbs_client/src/transactional:pbs_transactional_client_lib",
-        "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_lib",
+        "//cc/pbs/pbs_server/src/pbs_instance",
         "@com_google_googletest//:gtest_main",
     ],
 )

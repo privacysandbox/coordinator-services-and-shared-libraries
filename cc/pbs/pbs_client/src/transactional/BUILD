@@ -38,7 +38,7 @@ cc_library(
         "//cc/core/journal_service/mock:core_journal_service_mock",
         "//cc/core/transaction_manager/mock:core_transaction_manager_mock",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-        "//cc/pbs/front_end_service/src:pbs_front_end_service_lib",
+        "//cc/pbs/front_end_service/src:front_end_service",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
         "//cc/public/cpio/mock/metric_client:metric_client_mock",

@@ -27,83 +27,82 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/http_types.h"
-#include "error_codes.h"
-#include "front_end_utils.h"
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/front_end_service_interface.h"
-#include "pbs/transactions/src/batch_consume_budget_command.h"
-#include "pbs/transactions/src/consume_budget_command.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
-#include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
+#include "cc/pbs/front_end_service/src/error_codes.h"
+#include "cc/pbs/front_end_service/src/front_end_utils.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/front_end_service_interface.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command.h"
+#include "cc/pbs/transactions/src/consume_budget_command.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 
-using google::scp::core::AsyncContext;
-using google::scp::core::Byte;
-using google::scp::core::ExecutionResult;
-using google::scp::core::ExecutionResultOr;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::GetTransactionManagerStatusRequest;
-using google::scp::core::GetTransactionManagerStatusResponse;
-using google::scp::core::GetTransactionStatusRequest;
-using google::scp::core::GetTransactionStatusResponse;
-using google::scp::core::HttpHandler;
-using google::scp::core::HttpMethod;
-using google::scp::core::HttpRequest;
-using google::scp::core::HttpResponse;
-using google::scp::core::kAggregatedMetricIntervalMs;
-using google::scp::core::kDefaultAggregatedMetricIntervalMs;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::TimeDuration;
-using google::scp::core::Timestamp;
-using google::scp::core::TransactionCommand;
-using google::scp::core::TransactionExecutionPhase;
-using google::scp::core::TransactionPhaseRequest;
-using google::scp::core::TransactionPhaseResponse;
-using google::scp::core::TransactionRequest;
-using google::scp::core::TransactionResponse;
-using google::scp::core::common::kZeroUuid;
-using google::scp::core::common::TimeProvider;
-using google::scp::core::common::ToString;
-using google::scp::core::common::Uuid;
-using google::scp::cpio::AggregateMetric;
-using google::scp::cpio::AggregateMetricInterface;
-using google::scp::cpio::kCountSecond;
-using google::scp::cpio::MetricDefinition;
-using google::scp::cpio::MetricLabels;
-using google::scp::cpio::MetricLabelsBase;
-using google::scp::cpio::MetricName;
-using google::scp::cpio::MetricUnit;
-using google::scp::pbs::FrontEndUtils;
-using std::any_of;
-using std::bind;
-using std::dynamic_pointer_cast;
-using std::list;
-using std::make_pair;
-using std::make_shared;
-using std::map;
-using std::move;
-using std::pair;
-using std::set;
-using std::shared_ptr;
-using std::string;
-using std::to_string;
-using std::vector;
-using std::chrono::milliseconds;
-using std::placeholders::_1;
+namespace google::scp::pbs {
+using ::google::scp::core::AsyncContext;
+using ::google::scp::core::Byte;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::GetTransactionManagerStatusRequest;
+using ::google::scp::core::GetTransactionManagerStatusResponse;
+using ::google::scp::core::GetTransactionStatusRequest;
+using ::google::scp::core::GetTransactionStatusResponse;
+using ::google::scp::core::HttpHandler;
+using ::google::scp::core::HttpMethod;
+using ::google::scp::core::HttpRequest;
+using ::google::scp::core::HttpResponse;
+using ::google::scp::core::kAggregatedMetricIntervalMs;
+using ::google::scp::core::kDefaultAggregatedMetricIntervalMs;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::TimeDuration;
+using ::google::scp::core::Timestamp;
+using ::google::scp::core::TransactionCommand;
+using ::google::scp::core::TransactionExecutionPhase;
+using ::google::scp::core::TransactionPhaseRequest;
+using ::google::scp::core::TransactionPhaseResponse;
+using ::google::scp::core::TransactionRequest;
+using ::google::scp::core::TransactionResponse;
+using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::core::common::TimeProvider;
+using ::google::scp::core::common::ToString;
+using ::google::scp::core::common::Uuid;
+using ::google::scp::cpio::AggregateMetric;
+using ::google::scp::cpio::AggregateMetricInterface;
+using ::google::scp::cpio::kCountSecond;
+using ::google::scp::cpio::MetricDefinition;
+using ::google::scp::cpio::MetricLabels;
+using ::google::scp::cpio::MetricLabelsBase;
+using ::google::scp::cpio::MetricName;
+using ::google::scp::cpio::MetricUnit;
+using ::google::scp::pbs::FrontEndUtils;
+using ::std::any_of;
+using ::std::bind;
+using ::std::dynamic_pointer_cast;
+using ::std::list;
+using ::std::make_pair;
+using ::std::make_shared;
+using ::std::map;
+using ::std::move;
+using ::std::pair;
+using ::std::set;
+using ::std::shared_ptr;
+using ::std::string;
+using ::std::to_string;
+using ::std::vector;
+using ::std::chrono::milliseconds;
+using ::std::placeholders::_1;
 
 /// TODO: Use configuration service to make the timeout dynamic.
 static constexpr size_t kTransactionTimeoutMs = 120 * 1000;
 static constexpr char kFrontEndService[] = "FrontEndService";
-
-namespace google::scp::pbs {
 
 FrontEndService::FrontEndService(
     shared_ptr<core::HttpServerInterface>& http_server,
@@ -286,7 +285,7 @@ shared_ptr<string> FrontEndService::ObtainTransactionOrigin(
 
 vector<shared_ptr<TransactionCommand>>
 FrontEndService::GenerateConsumeBudgetCommands(
-    list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
+    std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list,
     const std::string& authorized_domain, const Uuid& transaction_id) {
   vector<shared_ptr<TransactionCommand>> commands;
   size_t index = 0;
@@ -312,7 +311,7 @@ struct ConsumeBudgetMetadataTimeBucketOrderingLessThanComparator {
 
 vector<shared_ptr<TransactionCommand>>
 FrontEndService::GenerateConsumeBudgetCommandsWithBatchesPerDay(
-    list<ConsumeBudgetMetadata>& consume_budget_metadata_list,
+    std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list,
     const string& authorized_domain, const Uuid& transaction_id) {
   // Populate
   //
@@ -414,7 +413,7 @@ ExecutionResult FrontEndService::BeginTransaction(
     return execution_result;
   }
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   execution_result = ParseBeginTransactionRequestBody(
       *http_context.request->auth_context.authorized_domain,
       http_context.request->body, consume_budget_metadata_list);

@@ -83,7 +83,7 @@ struct PBSInstanceConfig {
  * @param config_provider
  * @return core::ExecutionResultOr<PBSInstanceConfig>
  */
-static core::ExecutionResultOr<PBSInstanceConfig>
+[[maybe_unused]] static core::ExecutionResultOr<PBSInstanceConfig>
 GetPBSInstanceConfigFromConfigProvider(
     std::shared_ptr<core::ConfigProviderInterface> config_provider) noexcept {
   PBSInstanceConfig pbs_instance_config;

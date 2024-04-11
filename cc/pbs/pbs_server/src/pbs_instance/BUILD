@@ -12,25 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
 cloud_platform_copts = select({
-    "cloud_platform_aws": [
+    "//cc:cloud_platform_aws": [
         "-DPBS_AWS=1",
     ],
-    "cloud_platform_aws_integration_test": [
+    "//cc:cloud_platform_aws_integration_test": [
         "-DPBS_AWS_INTEGRATION_TEST=1",
     ],
-    "cloud_platform_gcp": [
+    "//cc:cloud_platform_gcp": [
         "-DPBS_GCP=1",
     ],
-    "cloud_platform_gcp_integration_test": [
+    "//cc:cloud_platform_gcp_integration_test": [
         "-DPBS_GCP_INTEGRATION_TEST=1",
     ],
-    "cloud_platform_local": [
+    "//cc:cloud_platform_local": [
         "-DPBS_LOCAL=1",
     ],
     "//conditions:default": [],
@@ -58,7 +57,7 @@ deps = [
     "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
     "//cc/pbs/budget_key_provider/src:pbs_budget_key_provider_lib",
     "//cc/pbs/checkpoint_service/src:pbs_checkpoint_service_lib",
-    "//cc/pbs/front_end_service/src:pbs_front_end_service_lib",
+    "//cc/pbs/front_end_service/src:front_end_service",
     "//cc/pbs/health_service/src:pbs_health_service_lib",
     "//cc/pbs/leasable_lock/src:pbs_leasable_lock_lib",
     "//cc/pbs/remote_transaction_manager/src:pbs_remote_transaction_manager_lib",
@@ -91,51 +90,122 @@ local_deps = deps + [
 ]
 
 cc_library(
-    name = "pbs_instance_lib",
-    srcs = glob(
-        [
-            "pbs_instance.cc",
-            "pbs_instance.h",
-            "error_codes.h",
-            "pbs_instance_configuration.h",
-            "pbs_instance_logging.h",
-        ],
-    ),
+    name = "error_codes",
+    hdrs = ["error_codes.h"],
     copts = cloud_platform_copts + [
         "-std=c++17",
     ],
-    deps = select({
-        "cloud_platform_aws": aws_deps,
-        "cloud_platform_aws_integration_test": aws_integration_test_deps,
-        "cloud_platform_gcp": gcp_deps,
-        "cloud_platform_gcp_integration_test": gcp_integration_test_deps,
-        "cloud_platform_local": local_deps,
-        "//conditions:default": [],
-    }),
+    deps = [
+        "//cc/core/interface:errors_lib",
+        "//cc/public/core/interface:execution_result",
+    ],
 )
 
 cc_library(
-    name = "pbs_instance_v2_lib",
-    srcs = glob(
-        [
-            "pbs_instance_v2.cc",
-            "pbs_instance_v2.h",
-            "error_codes.h",
-            "pbs_instance_configuration.h",
-            "pbs_instance_logging.h",
-        ],
-    ),
+    name = "pbs_instance_configuration",
+    hdrs = ["pbs_instance_configuration.h"],
+    copts = cloud_platform_copts + [
+        "-std=c++17",
+    ],
+    deps = [
+        ":pbs_instance_logging",
+        "//cc/core/common/global_logger/src:global_logger_lib",
+        "//cc/core/common/uuid/src:uuid_lib",
+        "//cc/core/interface:interface_lib",
+        "//cc/pbs/interface:pbs_interface_lib",
+        "//cc/public/core/interface:execution_result",
+    ],
+)
+
+cc_library(
+    name = "pbs_instance_logging",
+    hdrs = ["pbs_instance_logging.h"],
+    copts = cloud_platform_copts + [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc/core/common/global_logger/src:global_logger_lib",
+        "//cc/core/common/uuid/src:uuid_lib",
+        "//cc/public/core/interface:execution_result",
+    ],
+)
+
+cc_library(
+    name = "synchronous_executor",
+    hdrs = ["synchronous_executor.h"],
+    copts = cloud_platform_copts + [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc/core/interface:interface_lib",
+    ],
+)
+
+cc_library(
+    name = "pbs_instance",
+    srcs = ["pbs_instance.cc"],
+    hdrs = ["pbs_instance.h"],
     copts = cloud_platform_copts + [
         "-std=c++17",
     ],
     deps = select({
-        "cloud_platform_aws": aws_deps,
-        "cloud_platform_aws_integration_test": aws_integration_test_deps,
-        "cloud_platform_gcp": gcp_deps,
-        "cloud_platform_gcp_integration_test": gcp_integration_test_deps,
-        "cloud_platform_local": local_deps,
+        "//cc:cloud_platform_aws": aws_deps,
+        "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,
+        "//cc:cloud_platform_gcp": gcp_deps,
+        "//cc:cloud_platform_gcp_integration_test": gcp_integration_test_deps,
+        "//cc:cloud_platform_local": local_deps,
         "//conditions:default": [],
-    }),
+    }) + [
+        ":error_codes",
+        ":pbs_instance_configuration",
+        ":pbs_instance_logging",
+    ],
+)
+
+cc_library(
+    name = "pbs_instance_v2",
+    srcs = ["pbs_instance_v2.cc"],
+    hdrs = ["pbs_instance_v2.h"],
+    copts = cloud_platform_copts + [
+        "-std=c++17",
+    ],
+    deps = select({
+        "//cc:cloud_platform_aws": aws_deps,
+        "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,
+        "//cc:cloud_platform_gcp": gcp_deps,
+        "//cc:cloud_platform_gcp_integration_test": gcp_integration_test_deps,
+        "//cc:cloud_platform_local": local_deps,
+        "//conditions:default": [],
+    }) + [
+        ":error_codes",
+        ":pbs_instance_configuration",
+        ":pbs_instance_logging",
+    ],
+)
+
+cc_library(
+    name = "pbs_instance_v3",
+    srcs = ["pbs_instance_v3.cc"],
+    hdrs = ["pbs_instance_v3.h"],
+    copts = cloud_platform_copts + [
+        "-std=c++17",
+    ],
+    deps = [
+        ":error_codes",
+        ":pbs_instance_configuration",
+        ":pbs_instance_logging",
+        "//cc/core/async_executor/src:core_async_executor_lib",
+        "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
+        "//cc/core/common/global_logger/src:global_logger_lib",
+        "//cc/core/config_provider/src:config_provider_lib",
+        "//cc/core/curl_client/src:http1_curl_client_lib",
+        "//cc/core/http2_client/src:http2_client_lib",
+        "//cc/core/http2_server/src:core_http2_server_lib",
+        "//cc/core/interface:interface_lib",
+        "//cc/pbs/front_end_service/src:front_end_service_v2",
+        "//cc/pbs/health_service/src:pbs_health_service_lib",
+        "//cc/pbs/interface:pbs_interface_lib",
+    ],
 )
 
 cc_library(
@@ -144,60 +214,24 @@ cc_library(
         [
             "pbs_instance_multi_partition.cc",
             "pbs_instance_multi_partition.h",
-            "synchronous_executor.h",
             "pbs_instance_multi_partition_platform_wrapper.cc",
             "pbs_instance_multi_partition_platform_wrapper.h",
-            "error_codes.h",
-            "pbs_instance_configuration.h",
-            "pbs_instance_logging.h",
         ],
     ),
     copts = cloud_platform_copts + [
         "-std=c++17",
     ],
     deps = select({
-        "cloud_platform_aws": aws_deps,
-        "cloud_platform_aws_integration_test": aws_integration_test_deps,
-        "cloud_platform_gcp": gcp_deps,
-        "cloud_platform_gcp_integration_test": gcp_integration_test_deps,
-        "cloud_platform_local": local_deps,
+        "//cc:cloud_platform_aws": aws_deps,
+        "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,
+        "//cc:cloud_platform_gcp": gcp_deps,
+        "//cc:cloud_platform_gcp_integration_test": gcp_integration_test_deps,
+        "//cc:cloud_platform_local": local_deps,
         "//conditions:default": [],
-    }),
-)
-
-string_flag(
-    name = "platform",
-    build_setting_default = "local",
-    values = [
-        "aws",
-        "aws_integration_test",
-        "gcp",
-        "gcp_integration_test",
-        "local",
+    }) + [
+        ":error_codes",
+        ":pbs_instance_configuration",
+        ":pbs_instance_logging",
+        ":synchronous_executor",
     ],
-)
-
-config_setting(
-    name = "cloud_platform_aws",
-    flag_values = {"platform": "aws"},
-)
-
-config_setting(
-    name = "cloud_platform_aws_integration_test",
-    flag_values = {"platform": "aws_integration_test"},
-)
-
-config_setting(
-    name = "cloud_platform_gcp",
-    flag_values = {"platform": "gcp"},
-)
-
-config_setting(
-    name = "cloud_platform_gcp_integration_test",
-    flag_values = {"platform": "gcp_integration_test"},
-)
-
-config_setting(
-    name = "cloud_platform_local",
-    flag_values = {"platform": "local"},
 )

@@ -38,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.Before;
@@ -85,6 +86,33 @@ public class FSBlobStorageClientTest {
     String blobData = new String(blobStream.readAllBytes(), UTF_8);
 
     assertThat(blobData).isEqualTo(TEST_MESSAGE);
+  }
+
+  @Test
+  public void getBlobSizeReturnsExpected() throws IOException, BlobStorageClientException {
+    String getBlobKey = "get-blob";
+    Path blobPath = bucketPath.resolve(getBlobKey);
+    Files.createFile(blobPath);
+    Files.writeString(blobPath, TEST_MESSAGE);
+
+    Long blobSize = fsBlobStorageClient.getBlobSize(getDataLocation("/testbucket", getBlobKey));
+
+    assertThat(blobSize).isEqualTo(TEST_MESSAGE.length());
+  }
+
+  @Test
+  public void getBlobSizeWithAccountIdentityReturnsExpected()
+      throws IOException, BlobStorageClientException {
+    String getBlobKey = "get-blob";
+    Path blobPath = bucketPath.resolve(getBlobKey);
+    Files.createFile(blobPath);
+    Files.writeString(blobPath, TEST_MESSAGE);
+
+    Long blobSize =
+        fsBlobStorageClient.getBlobSize(
+            getDataLocation("/testbucket", getBlobKey), Optional.of("accountId"));
+
+    assertThat(blobSize).isEqualTo(TEST_MESSAGE.length());
   }
 
   @Test

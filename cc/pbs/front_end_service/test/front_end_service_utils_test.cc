@@ -90,7 +90,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSuccess) {
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_SUCCESS(execution_result);
@@ -135,7 +135,7 @@ TEST(ParseBeginTransactionTest, V2RequestWithUnauthorizedReportingOrigin) {
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -153,7 +153,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutData) {
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -169,7 +169,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -203,7 +203,7 @@ TEST(ParseBeginTransactionTest,
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -232,7 +232,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -267,7 +267,7 @@ TEST(ParseBeginTransactionTest,
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
@@ -299,7 +299,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -332,7 +332,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -366,7 +366,7 @@ TEST(ParseBeginTransactionTest,
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(
@@ -401,7 +401,7 @@ TEST(ParseBeginTransactionTest,
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
@@ -434,7 +434,7 @@ TEST(ParseBeginTransactionTest,
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
-  std::list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
       kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
@@ -444,7 +444,7 @@ TEST(ParseBeginTransactionTest,
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
   BytesBuffer bytes_buffer;
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -454,7 +454,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer1) {
   BytesBuffer bytes_buffer(120);
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -470,7 +470,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -486,7 +486,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -502,7 +502,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -518,7 +518,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -534,7 +534,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -550,7 +550,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -566,7 +566,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer8) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -584,7 +584,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -602,7 +602,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -622,7 +622,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -653,7 +653,7 @@ TEST(ParseBeginTransactionTest,
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -683,7 +683,7 @@ TEST(ParseBeginTransactionTest,
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),
@@ -704,7 +704,7 @@ TEST(ParseBeginTransactionTest,
   bytes_buffer.capacity = begin_transaction_body.length();
   bytes_buffer.length = begin_transaction_body.length();
 
-  list<ConsumeBudgetMetadata> consume_budget_metadata_list;
+  std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
                                              consume_budget_metadata_list),

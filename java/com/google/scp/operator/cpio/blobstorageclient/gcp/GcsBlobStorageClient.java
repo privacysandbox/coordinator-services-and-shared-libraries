@@ -78,6 +78,29 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
   }
 
   @Override
+  public Long getBlobSize(DataLocation location) throws BlobStorageClientException {
+    return getBlobSize(location, Optional.empty());
+  }
+
+  @Override
+  public Long getBlobSize(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    Storage storageClient = createGcsClient(accountIdentity, Scope.READ_ONLY);
+    BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+    Blob blob;
+    try {
+      blob = storageClient.get(BlobId.of(blobLocation.bucket(), blobLocation.key()));
+    } catch (StorageException e) {
+      throw new BlobStorageClientException(e);
+    }
+    if (blob != null && blob.exists()) {
+      return blob.getSize();
+    } else {
+      throw new BlobStorageClientException("Can't find the GCS object.");
+    }
+  }
+
+  @Override
   public void putBlob(DataLocation location, Path filePath) throws BlobStorageClientException {
     putBlob(location, filePath, Optional.empty());
   }

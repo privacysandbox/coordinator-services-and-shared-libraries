@@ -183,3 +183,15 @@ resource "aws_s3_bucket_policy" "pbs_elb_access_logs_deny_non_ssl_requests" {
     ]
   })
 }
+
+data "aws_s3_bucket" "beanstalk_default_bucket" {
+  bucket = "elasticbeanstalk-${var.aws_region}-${var.aws_account_id}"
+}
+
+resource "aws_s3_bucket_public_access_block" "beanstalk_default_bucket_restrictions" {
+  bucket                  = data.aws_s3_bucket.beanstalk_default_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}

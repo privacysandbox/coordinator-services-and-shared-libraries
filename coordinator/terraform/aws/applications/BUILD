@@ -53,15 +53,6 @@ pkg_files(
 )
 
 pkg_files(
-    name = "privacybudgetmanagement_module_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/applications/privacybudgetmanagement",
-    ],
-    prefix = "applications/privacybudgetmanagement",
-    strip_prefix = ".",
-)
-
-pkg_files(
     name = "distributed_pbs_base_pkg",
     srcs = [
         "//coordinator/terraform/aws/applications/distributedpbs_base",

@@ -16,24 +16,20 @@
 
 #pragma once
 
-#include <list>
 #include <memory>
-#include <string>
-#include <vector>
 
-#include "core/authorization_proxy/src/authorization_proxy.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/credentials_provider_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/initializable_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/interface/token_provider_cache_interface.h"
-#include "cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/core/interface/authorization_proxy_interface.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/initializable_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/interface/token_provider_cache_interface.h"
+#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/pbs/interface/consume_budget_interface.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
 
@@ -120,6 +116,11 @@ class CloudPlatformDependencyFactoryInterface
       core::AsyncPriority io_async_execution_priority =
           kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept = 0;
 
+  virtual std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
+  ConstructBudgetConsumptionHelper(
+      google::scp::core::AsyncExecutorInterface* async_executor,
+      google::scp::core::AsyncExecutorInterface*
+          io_async_executor) noexcept = 0;
   /**
    * @brief Create a Instance Authorizer object for Instance Metadata client.
    *

@@ -100,6 +100,10 @@ class MockConfigProvider : public ConfigProviderInterface {
     size_t_config_map_[key] = value;
   }
 
+  void SetInt32(const ConfigKey& key, const int32_t value) {
+    int32_t_config_map_[key] = value;
+  }
+
   void SetBool(const ConfigKey& key, const bool value) {
     bool_config_map_[key] = value;
   }

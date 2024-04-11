@@ -1,5 +1,24 @@
 # Changelog
 
+### Changes
+
+## [1.7.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.6.1...v1.7.0) (2024-04-09)
+
+### Changes
+  * Added ReadJournalFile functionality to the journal reading tool
+  * Added support for caching exceptions from Private Key Service
+  * Adopted release candidates for building and pushing Coordinator Services artifacts
+  * Enabled support for workers to relinquish job ownership so that other available workers can pick it up
+  * Implemented GetBlobSize function in BlobStorageClient
+  * Updated container dependencies
+  * [GCP only] Added autoscaling and worker service account variables for GCP Aggregation Service deployment script
+  * [GCP only] Added variable to enable/disable load balancer logs for Public Key Hosting Service
+  * [GCP only] Enabled live migration for host maintenance on Aggregation Service
+  * [GCP only] Fixed keygen image path in the GCP build script
+  * [GCP only] Moved Container Digest/Reference allowlisting to IAM Bindings
+  * [GCP only] Updated GCP instance startup script so that PBS log is parsed correctly
+  * [Java CPIO only] Deprecated single party key support
+
 ## [1.6.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.6.0...v1.6.1) (2024-03-19)
 
 * **Important note**

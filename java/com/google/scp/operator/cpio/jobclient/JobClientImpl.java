@@ -25,6 +25,7 @@ import com.google.scp.operator.cpio.jobclient.JobHandlerModule.JobClientJobValid
 import com.google.scp.operator.cpio.jobclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
 import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient;
 import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient.LifecycleClientException;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
@@ -242,6 +243,85 @@ public final class JobClientImpl implements JobClient {
       }
     }
     return Optional.empty();
+  }
+
+  @Override
+  public void returnJobForRetry(JobRetryRequest jobRetryRequest) throws JobClientException {
+    try {
+      // Verify the JobKey is in the cache.
+      if (!cache.containsKey(toJobKeyString(jobRetryRequest.getJobKey()))) {
+        recordJobClientError(ErrorReason.JOB_RECEIPT_HANDLE_NOT_FOUND);
+        throw new JobClientException(
+            String.format(
+                "Job cannot be released. In-memory cache does not contain job key '%s'",
+                toJobKeyString(jobRetryRequest.getJobKey())),
+            ErrorReason.JOB_RECEIPT_HANDLE_NOT_FOUND);
+      }
+      // Make sure the current metadata entry for the job is in the IN_PROGRESS state.
+      Optional<JobMetadata> currentMetadata =
+          metadataDb.getJobMetadata(jobRetryRequest.getJobKey().getJobRequestId());
+      if (currentMetadata.isEmpty()) {
+        recordJobClientError(ErrorReason.JOB_METADATA_NOT_FOUND);
+        throw new JobClientException(
+            String.format(
+                "Job cannot be released. Metadata entry for job '%s' was not found.",
+                toJobKeyString(jobRetryRequest.getJobKey())),
+            ErrorReason.JOB_METADATA_NOT_FOUND);
+      }
+      if (currentMetadata.get().getJobStatus() != JobStatus.IN_PROGRESS) {
+        throw new JobClientException(
+            String.format(
+                "Job cannot be released. Metadata entry for job '%s' indicates job is in status %s,"
+                    + " but expected to be IN_PROGRESS.",
+                toJobKeyString(jobRetryRequest.getJobKey()), currentMetadata.get().getJobStatus()),
+            ErrorReason.WRONG_JOB_STATUS);
+      }
+      // If delay is present, verify that it is range [0:10] minutes.
+      if (jobRetryRequest.getDelay().isPresent()) {
+        if (jobRetryRequest.getDelay().get().isNegative()
+            || jobRetryRequest.getDelay().get().getSeconds() > 600) {
+          recordJobClientError(ErrorReason.JOB_DELAY_OUT_OF_RANGE);
+          throw new JobClientException(
+              String.format(
+                  "Job cannot be released. Duration for job %s must be between zero and 10"
+                      + " minutes.",
+                  toJobKeyString(jobRetryRequest.getJobKey())),
+              ErrorReason.JOB_RECEIPT_HANDLE_NOT_FOUND);
+        }
+      }
+
+      // Reset the job in the metadata db to RECEIVED and update ResultInfo if provided.
+      JobMetadata.Builder builder = currentMetadata.get().toBuilder();
+      builder.setJobStatus(JobStatus.RECEIVED);
+      if (jobRetryRequest.getResultInfo().isPresent()) {
+        builder.setResultInfo(jobRetryRequest.getResultInfo().get());
+      }
+      JobMetadata updatedMetadata = builder.build();
+      metadataDb.updateJobMetadata(updatedMetadata);
+
+      // Modify the remaining processing time
+      Duration delay =
+          jobRetryRequest.getDelay().isPresent()
+              ? jobRetryRequest.getDelay().get()
+              : Duration.ofSeconds(0);
+      jobQueue.modifyJobProcessingTime(
+          cache.get(toJobKeyString(jobRetryRequest.getJobKey())), delay);
+
+      // Remove cache entry for the job so it does not continue to be extended.
+      cache.remove(toJobKeyString(jobRetryRequest.getJobKey()));
+
+      logger.info(
+          String.format(
+              "Successfully released job %s back to the queue for retry.",
+              toJobKeyString(jobRetryRequest.getJobKey())));
+    } catch (JobQueueException | JobMetadataDbException | JobMetadataConflictException e) {
+      logger.log(
+          Level.SEVERE,
+          String.format("Failed to release job '%s'.", toJobKeyString(jobRetryRequest.getJobKey())),
+          e);
+      recordJobClientError(ErrorReason.RETURN_JOB_FOR_RETRY_FAILED);
+      throw new JobClientException(e, ErrorReason.RETURN_JOB_FOR_RETRY_FAILED);
+    }
   }
 
   @Override

@@ -22,10 +22,6 @@ terraform {
 }
 
 locals {
-  # Build condition expression for TEE container hash list
-  attestation_image_reference_list = join(",", [for s in var.assertion_tee_container_image_reference_list : "'${s}'"])
-  attestation_image_hash_list      = join(",", [for s in var.assertion_tee_container_image_hash_list : "'${s}'"])
-
   # Build map of projects and services to enable IAM audit logging
   audit_log_projects = toset(var.enable_audit_log ? [var.project_id, var.wip_allowed_service_account_project_id_override] : [])
   audit_log_projects_services = flatten([
@@ -70,7 +66,8 @@ resource "google_iam_workload_identity_pool_provider" "workload_identity_pool" {
   # Confidential Space token claims https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims
   attribute_mapping = {
     "google.subject" : "\"psb::\" + assertion.submods.container.image_digest + \"::\" + assertion.submods.gce.instance_id + \"::\" + assertion.submods.gce.project_number",
-    "attribute.image_digest" : "assertion.submods.container.image_digest"
+    "attribute.image_digest" : "assertion.submods.container.image_digest",
+    "attribute.image_reference" : "assertion.submods.container.image_reference"
 
   }
 
@@ -81,8 +78,6 @@ resource "google_iam_workload_identity_pool_provider" "workload_identity_pool" {
   assertion.swname == '${var.assertion_tee_swname}'
   && ${jsonencode(var.assertion_tee_support_attributes)}.all(a, a in assertion.submods.confidential_space.support_attributes)
   && '${google_service_account.wip_allowed.email}' in assertion.google_service_accounts
-  && (assertion.submods.container.image_reference in [${local.attestation_image_reference_list}] ||
-   assertion.submods.container.image_digest in [${local.attestation_image_hash_list}])
   EOT
   : "")
 
@@ -101,13 +96,21 @@ resource "google_service_account" "wip_verified" {
   display_name = var.wip_verified_service_account_display_name
 }
 
-# Attach Service Account to WIP
-resource "google_service_account_iam_member" "workload_identity_member" {
+# Allowlist IAM binding for container image digests
+resource "google_service_account_iam_member" "workload_identity_member_image_digest" {
+  for_each           = toset(var.assertion_tee_container_image_hash_list)
   service_account_id = google_service_account.wip_verified.id
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.workload_identity_pool.name}/*"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.workload_identity_pool.name}/attribute.image_digest/${each.value}"
   role               = "roles/iam.workloadIdentityUser"
 }
 
+# Allowlist IAM binding for container image reference
+resource "google_service_account_iam_member" "workload_identity_member_image_reference" {
+  for_each           = toset(var.assertion_tee_container_image_reference_list)
+  service_account_id = google_service_account.wip_verified.id
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.workload_identity_pool.name}/attribute.image_reference/${each.value}"
+  role               = "roles/iam.workloadIdentityUser"
+}
 # Service Account which is allowed to make calls to WIP
 resource "google_service_account" "wip_allowed" {
   project = var.wip_allowed_service_account_project_id_override

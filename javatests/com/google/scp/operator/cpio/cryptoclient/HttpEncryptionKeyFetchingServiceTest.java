@@ -96,7 +96,7 @@ public final class HttpEncryptionKeyFetchingServiceTest {
   @SuppressWarnings("unchecked") // Ignore Http{Request,Response,Client} casting warnings.
   public void fetchEncryptionKey_success() throws Exception {
     HttpClientResponse response =
-        HttpClientResponse.create(200, getSingleKeyResponse(), ImmutableMap.of());
+        HttpClientResponse.create(200, getMultiPartyKeyResponse(), ImmutableMap.of());
     when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
     var expectedUri = URI.create("https://example.com/v1/encryptionKeys/12345");
     var argument = ArgumentCaptor.forClass(HttpRequestBase.class);
@@ -118,10 +118,10 @@ public final class HttpEncryptionKeyFetchingServiceTest {
         + " 03a0c66b-e8ff-42db-a750-31009c5894f8\",\"details\":[{\"reason\":\"MISSING_KEY\"}]}";
   }
 
-  private static String getSingleKeyResponse() {
+  private static String getMultiPartyKeyResponse() {
     return "{\n"
         + "    \"name\": \"encryptionKeys/12345\",\n"
-        + "    \"encryptionKeyType\": \"SINGLE_PARTY_HYBRID_KEY\",\n"
+        + "    \"encryptionKeyType\": \"MULTI_PARTY_HYBRID_KEY\",\n"
         + "    \"publicKeysetHandle\": \"myPublicKeysetHandle\",\n"
         + "    \"publicKeyMaterial\": \"abc==\",\n"
         + "    \"keyData\": [\n"

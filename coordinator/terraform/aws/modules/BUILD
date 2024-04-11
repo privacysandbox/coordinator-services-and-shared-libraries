@@ -71,22 +71,6 @@ pkg_files(
 )
 
 pkg_files(
-    name = "privacybudgetdb_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/privacybudgetdb",
-    ],
-    prefix = "modules/privacybudgetdb",
-)
-
-pkg_files(
-    name = "privacybudgetservice_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/privacybudgetservice",
-    ],
-    prefix = "modules/privacybudgetservice",
-)
-
-pkg_files(
     name = "distributed_pbs_access_policy_pkg",
     srcs = [
         "//coordinator/terraform/aws/modules/distributedpbs_access_policy",
@@ -226,15 +210,6 @@ pkg_files(
         "//coordinator/terraform/aws/modules/privacybudgetdashboard",
     ],
     prefix = "modules/privacybudgetdashboard",
-    strip_prefix = ".",
-)
-
-pkg_files(
-    name = "privacybudgetdomainprovider_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/privacybudgetdomainprovider",
-    ],
-    prefix = "modules/privacybudgetdomainprovider",
     strip_prefix = ".",
 )
 

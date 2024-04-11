@@ -95,6 +95,15 @@ variable "key_db_retention_period" {
 }
 
 ################################################################################
+# Load Balancer Variables.
+################################################################################
+
+variable "public_key_load_balancer_logs_enabled" {
+  description = "Whether to enable logs for Load Balancer in Public Key Hosting Service."
+  type        = bool
+}
+
+################################################################################
 # Key Generation Variables.
 ################################################################################
 

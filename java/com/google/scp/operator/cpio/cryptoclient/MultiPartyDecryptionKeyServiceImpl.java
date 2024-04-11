@@ -21,10 +21,13 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.crypto.tink.HybridDecrypt;
 import com.google.crypto.tink.JsonKeysetReader;
@@ -37,6 +40,7 @@ import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.KeyDataProt
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAAead;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBAead;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
+import com.google.scp.operator.cpio.cryptoclient.Annotations.ExceptionCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.EncryptionKeyFetchingService.EncryptionKeyFetchingServiceException;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -57,13 +61,21 @@ import java.util.concurrent.TimeUnit;
 public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeyService {
 
   private static final int MAX_CACHE_SIZE = 100;
+  private static final int EXCEPTION_CACHE_THRESHOLD = 3;
+  // List of exceptions that can be cached.
+  private static final ImmutableSet<ErrorReason> EXCEPTIONS_FOR_CACHING =
+      ImmutableSet.of(
+          ErrorReason.INTERNAL, ErrorReason.KEY_NOT_FOUND, ErrorReason.KEY_DECRYPTION_ERROR);
   private final long decrypterCacheEntryTtlSec;
+  private final long exceptionCacheEntryTtlSec;
   private static final int CONCURRENCY_LEVEL = Runtime.getRuntime().availableProcessors();
   private final CloudAeadSelector coordinatorAAeadService;
   private final CloudAeadSelector coordinatorBAeadService;
   private final EncryptionKeyFetchingService coordinatorAEncryptionKeyFetchingService;
   private final EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService;
   private final LoadingCache<String, HybridDecrypt> decrypterCache;
+  private final Cache<String, KeyFetchException> exceptionCache;
+  private final ConcurrentHashMultiset<String> exceptionCounts = ConcurrentHashMultiset.create();
 
   /** Creates a new instance of the {@code MultiPartyDecryptionKeyServiceImpl} class. */
   @Inject
@@ -74,12 +86,14 @@ public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeySe
           EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService,
       @CoordinatorAAead CloudAeadSelector coordinatorAAeadService,
       @CoordinatorBAead CloudAeadSelector coordinatorBAeadService,
-      @DecrypterCacheEntryTtlSec long decrypterCacheEntryTtlSec) {
+      @DecrypterCacheEntryTtlSec long decrypterCacheEntryTtlSec,
+      @ExceptionCacheEntryTtlSec long exceptionCacheEntryTtlSec) {
     this.coordinatorAEncryptionKeyFetchingService = coordinatorAEncryptionKeyFetchingService;
     this.coordinatorBEncryptionKeyFetchingService = coordinatorBEncryptionKeyFetchingService;
     this.coordinatorAAeadService = coordinatorAAeadService;
     this.coordinatorBAeadService = coordinatorBAeadService;
     this.decrypterCacheEntryTtlSec = decrypterCacheEntryTtlSec;
+    this.exceptionCacheEntryTtlSec = exceptionCacheEntryTtlSec;
     this.decrypterCache =
         CacheBuilder.newBuilder()
             .maximumSize(MAX_CACHE_SIZE)
@@ -92,20 +106,51 @@ public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeySe
                     return createDecrypter(keyId);
                   }
                 });
+    this.exceptionCache =
+        CacheBuilder.newBuilder()
+            .expireAfterWrite(this.exceptionCacheEntryTtlSec, TimeUnit.SECONDS)
+            .concurrencyLevel(CONCURRENCY_LEVEL)
+            .build();
   }
 
   /** Returns the decrypter for the provided key. */
   @Override
   public HybridDecrypt getDecrypter(String keyId) throws KeyFetchException {
     try {
-      return decrypterCache.get(keyId);
+      HybridDecrypt decrypter = decrypterCache.getIfPresent(keyId);
+      if (decrypter != null) {
+        return decrypter;
+      } else {
+        KeyFetchException keyFetchException = exceptionCache.getIfPresent(keyId);
+        if (keyFetchException != null) {
+          throw keyFetchException;
+        } else {
+          // If there is no cached exception for a keyId, fetch and cache the decrypter by calling
+          // Key Fetching Service.
+          return decrypterCache.get(keyId);
+        }
+      }
     } catch (ExecutionException | UncheckedExecutionException e) {
       ErrorReason reason = ErrorReason.UNKNOWN_ERROR;
       if (e.getCause() instanceof KeyFetchException) {
         reason = ((KeyFetchException) e.getCause()).getReason();
       }
-      throw new KeyFetchException("Failed to get key with id: " + keyId, reason, e);
+      KeyFetchException keyFetchException =
+          new KeyFetchException("Failed to get key with id: " + keyId, reason, e);
+      exceptionCounts.add(keyId);
+      if (exceptionCounts.count(keyId) >= EXCEPTION_CACHE_THRESHOLD
+          && EXCEPTIONS_FOR_CACHING.contains(reason)) {
+        exceptionCache.put(keyId, keyFetchException);
+      }
+      throw keyFetchException;
     }
+  }
+
+  /** Remove all exceptions from the exception cache. */
+  @Override
+  public void clearExceptionCache() {
+    exceptionCache.invalidateAll();
+    exceptionCounts.clear();
   }
 
   /** Key fetching service for coordinator A. */
@@ -125,8 +170,11 @@ public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeySe
       var primaryEncryptionKey = coordinatorAEncryptionKeyFetchingService.fetchEncryptionKey(keyId);
 
       switch (primaryEncryptionKey.getEncryptionKeyType()) {
+          // TODO(b/328059618): Update SINGLE_PARTY_HYBRID_KEY to UNSPECIFIED
         case SINGLE_PARTY_HYBRID_KEY:
-          return createDecrypterSingleKey(primaryEncryptionKey);
+          throw new KeyFetchException(
+              "Encryption key type is unsupported",
+              ErrorReason.UNSUPPORTED_ENCRYPTION_KEY_TYPE_ERROR);
         case MULTI_PARTY_HYBRID_EVEN_KEYSPLIT:
           var secondaryEncryptionKey =
               coordinatorBEncryptionKeyFetchingService.fetchEncryptionKey(keyId);

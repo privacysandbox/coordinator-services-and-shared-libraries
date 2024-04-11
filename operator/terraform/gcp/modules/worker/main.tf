@@ -63,9 +63,10 @@ resource "google_compute_instance_template" "worker_instance_template" {
   }
 
   scheduling {
-    # Confidential compute requires on_host_maintenance to be TERMINATE
-    on_host_maintenance = "TERMINATE"
+    on_host_maintenance = "MIGRATE"
   }
+
+  min_cpu_platform = "milan"
 
   confidential_instance_config {
     enable_confidential_compute = true

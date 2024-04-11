@@ -17,9 +17,8 @@ load("@rules_cc//cc:defs.bzl", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_test(
-    name = "pbs_front_end_service_test",
-    size = "small",
-    srcs = glob(["*.cc"]),
+    name = "front_end_service_test",
+    srcs = ["front_end_service_test.cc"],
     copts = [
         "-std=c++17",
     ],
@@ -27,24 +26,74 @@ cc_test(
         "-latomic",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/http2_server/mock:core_http2_server_mock",
-        "//cc/core/interface:interface_lib",
+        "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/pbs/front_end_service/mock:pbs_front_end_service_mock",
+        "//cc/pbs/partition_request_router/mock:transaction_request_router_mock",
+        "//cc/pbs/transactions/mock:pbs_transactions_mock",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "front_end_service_utils_test",
+    srcs = ["front_end_service_utils_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
+    linkopts = [
+        "-latomic",
+    ],
+    deps = [
+        "//cc/core/test/utils:utils_lib",
+        "//cc/pbs/front_end_service/mock:pbs_front_end_service_mock",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "transaction_request_router_test",
+    srcs = ["transaction_request_router_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
+    linkopts = [
+        "-latomic",
+    ],
+    deps = [
+        "//cc/core/test/utils:utils_lib",
+        "//cc/core/transaction_manager/mock:core_transaction_manager_mock",
+        "//cc/pbs/front_end_service/mock:pbs_front_end_service_mock",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "front_end_service_v2_test",
+    srcs = ["front_end_service_v2_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
+    linkopts = [
+        "-latomic",
+    ],
+    deps = [
+        "//cc/core/async_executor/mock:core_async_executor_mock",
+        "//cc/core/config_provider/mock:core_config_provider_mock",
+        "//cc/core/http2_server/mock:core_http2_server_mock",
         "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/transaction_manager/mock:core_transaction_manager_mock",
-        "//cc/pbs/budget_key_provider/mock:pbs_budget_key_provider_mock",
         "//cc/pbs/front_end_service/mock:pbs_front_end_service_mock",
-        "//cc/pbs/front_end_service/src:pbs_front_end_service_lib",
+        "//cc/pbs/front_end_service/src:error_codes",
+        "//cc/pbs/front_end_service/src:front_end_service_v2",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/partition_request_router/mock:transaction_request_router_mock",
         "//cc/pbs/transactions/mock:pbs_transactions_mock",
-        "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
-        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
-        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
+        "//cc/public/cpio/utils/metric_aggregation/mock:metric_aggregation_mock",
         "@com_google_googletest//:gtest_main",
     ],
 )
