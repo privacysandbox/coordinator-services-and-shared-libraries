@@ -15,7 +15,7 @@
  */
 
 locals {
-  deploy_service_account = var.deploy_service_account_email != "" ? var.deploy_service_account_email : google_service_account.deploy_service_account[0].email
+  deploy_service_account = var.deploy_service_account_email != "" ? var.deploy_service_account_email : var.deploy_service_account_name != "" ? google_service_account.deploy_service_account[0].email : ""
   worker_service_account = var.worker_service_account_email != "" ? var.worker_service_account_email : google_service_account.worker_service_account[0].email
 }
 
@@ -119,6 +119,7 @@ resource "google_service_account" "worker_service_account" {
 }
 
 resource "google_project_iam_custom_role" "deploy_custom_role" {
+  count       = local.deploy_service_account != "" ? 1 : 0
   project     = var.project
   role_id     = var.deploy_sa_role_name
   title       = "Deploy Custom Role"
@@ -135,7 +136,8 @@ resource "google_project_iam_custom_role" "worker_custom_role" {
 }
 
 resource "google_project_iam_member" "deploy_service_account_role" {
-  role    = "projects/${var.project}/roles/${google_project_iam_custom_role.deploy_custom_role.role_id}"
+  count   = local.deploy_service_account != "" ? 1 : 0
+  role    = "projects/${var.project}/roles/${google_project_iam_custom_role.deploy_custom_role[0].role_id}"
   member  = "serviceAccount:${local.deploy_service_account}"
   project = var.project
 }
@@ -147,6 +149,7 @@ resource "google_project_iam_member" "worker_service_account_role" {
 }
 
 resource "google_service_account_iam_policy" "deploy_token_creator_policy" {
+  count              = local.deploy_service_account != "" ? 1 : 0
   service_account_id = "projects/${var.project}/serviceAccounts/${local.deploy_service_account}"
   policy_data        = data.google_iam_policy.policy_token_create.policy_data
 }
