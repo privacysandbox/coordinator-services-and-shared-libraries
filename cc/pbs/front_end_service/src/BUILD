@@ -113,6 +113,8 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
+        "//cc/pbs/consume_budget/src/gcp:consume_budget",
+        "//cc/pbs/consume_budget/src/gcp:error_codes",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/transactions/src:pbs_transactions_lib",
         "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",

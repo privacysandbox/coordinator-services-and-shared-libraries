@@ -42,7 +42,16 @@
 #include "core/journal_service/src/journal_service.h"
 #include "core/lease_manager/src/lease_manager.h"
 #include "core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
+#include "core/telemetry/mock/in_memory_metric_exporter.h"
+#include "core/telemetry/src/authentication/aws_token_fetcher.h"
+#include "core/telemetry/src/authentication/gcp_token_fetcher.h"
+#include "core/telemetry/src/authentication/grpc_auth_config.h"
+#include "core/telemetry/src/authentication/grpc_id_token_authenticator.h"
+#include "core/telemetry/src/common/telemetry_configuration.h"
+#include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
 #include "core/transaction_manager/src/transaction_manager.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
+#include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "pbs/budget_key_provider/src/budget_key_provider.h"
 #include "pbs/checkpoint_service/src/checkpoint_service.h"
 #include "pbs/front_end_service/src/front_end_service.h"
@@ -83,6 +92,7 @@ using google::scp::core::ConfigProvider;
 using google::scp::core::ConfigProviderInterface;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::GrpcAuthConfig;
 using google::scp::core::Http1CurlClient;
 using google::scp::core::Http2Server;
 using google::scp::core::HttpClient;
@@ -98,7 +108,9 @@ using google::scp::core::LeaseInfo;
 using google::scp::core::LeaseManager;
 using google::scp::core::LeaseManagerInterface;
 using google::scp::core::LeaseTransitionType;
+using google::scp::core::MetricRouter;
 using google::scp::core::NoSQLDatabaseProviderInterface;
+using google::scp::core::OtlpGrpcAuthedMetricExporter;
 using google::scp::core::PassThruAuthorizationProxy;
 using google::scp::core::RemoteTransactionManagerInterface;
 using google::scp::core::ServiceInterface;
@@ -222,6 +234,25 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
           auth_token_provider_);
   metric_client_ = platform_dependency_factory->ConstructMetricClient(
       async_executor_, io_async_executor_, instance_client_provider_);
+
+  bool is_otel_enabled = false;
+  auto execution_result = config_provider_->Get(kOtelEnabled, is_otel_enabled);
+  if (!execution_result.Successful()) {
+    // If config is not present, don't use opentelemetry.
+    SCP_INFO(kPBSInstance, kZeroUuid,
+             "%s flag not specified. Not using opentelemetry for observability",
+             kOtelEnabled);
+  }
+
+  // Otel metric initialization
+  if (is_otel_enabled) {
+    // On initilization of metric_router_, Meter Provider would be set globally
+    // for PBS. Services can access the Meter Provider using
+    // opentelemetry::metrics::Provider::GetMeterProvider()
+    metric_router_ =
+        platform_dependency_factory->ConstructMetricRouter(config_provider_);
+  }
+
   remote_coordinator_pbs_client_ =
       platform_dependency_factory->ConstructRemoteCoordinatorPBSClient(
           http2_client_, auth_token_provider_cache_);

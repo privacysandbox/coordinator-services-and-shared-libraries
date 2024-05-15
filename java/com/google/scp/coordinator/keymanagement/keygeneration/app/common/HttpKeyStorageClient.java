@@ -94,7 +94,6 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
             .setKeySplitEncryptionType(KeySplitEncryptionType.DIRECT)
             .setEncryptedKeySplit(encryptedKeySplit)
             .build();
-
     return executeCreateKeyRequest(createKeyRequest);
   }
 
@@ -140,7 +139,6 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
 
     var response = executeJsonRequest(request, serializeCreateKeyRequest(createKeyRequest));
     var responseBody = getSuccessResponseBody(response);
-
     return parseSuccessCreateKeyResponse(createKeyRequest.getKeyId(), responseBody);
   }
 
@@ -219,7 +217,6 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
       EncryptionKeyProto.EncryptionKey.Builder builder =
           EncryptionKeyProto.EncryptionKey.newBuilder();
       JsonFormat.parser().merge(responseBody, builder);
-
       return EncryptionKeyConverter.toStorageEncryptionKey(keyId, builder.build());
     } catch (InvalidProtocolBufferException e) {
       var message = "Failed to parse success response as EncryptionKey API model";

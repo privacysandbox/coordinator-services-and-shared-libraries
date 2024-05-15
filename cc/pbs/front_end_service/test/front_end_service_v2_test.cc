@@ -24,6 +24,7 @@
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/http2_server/mock/mock_http2_server.h"
 #include "cc/core/interface/http_server_interface.h"
+#include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/metric_initialization.h"
 #include "cc/pbs/interface/configuration_keys.h"
@@ -108,6 +109,7 @@ using ::google::scp::core::AsyncExecutorInterface;
 using ::google::scp::core::Byte;
 using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::HttpHandler;
 using ::google::scp::core::HttpHeaders;
 using ::google::scp::core::HttpMethod;
@@ -123,10 +125,12 @@ using ::google::scp::core::errors::
 using ::google::scp::core::http2_server::mock::MockHttp2Server;
 using ::google::scp::cpio::MetricClientInterface;
 using ::google::scp::cpio::MockMetricClient;
+using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
 using ::google::scp::pbs::partition_request_router::mock::
     MockTransactionRequestRouter;
 using ::google::scp::pbs::transactions::mock::MockConsumeBudgetCommandFactory;
 using ::testing::_;
+using ::testing::ElementsAre;
 using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -150,6 +154,8 @@ static constexpr absl::string_view kRequestBody = R"({
             }
         ]
     })";
+static constexpr absl::string_view kBudgetExhaustedResponseBody =
+    R"({"f":[0],"v":"1.0"})";
 
 class MockBudgetConsumptionHelper : public BudgetConsumptionHelperInterface {
  public:
@@ -438,6 +444,65 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
             23);
   EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].time_bucket,
             1576135250000000000);
+
+  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
+      front_end_service_v2_peer.GetMetricsInstance(
+          kMetricLabelPrepareTransaction, kMetricNameTotalRequest);
+  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
+}
+
+TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
+  auto budget_consumption_helper =
+      std::make_unique<MockBudgetConsumptionHelper>();
+  FrontEndServiceV2PeerOptions options;
+  options.budget_consumption_helper = budget_consumption_helper.get();
+
+  AsyncContext<HttpRequest, HttpResponse> http_context;
+  http_context.request = std::make_shared<HttpRequest>();
+  http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
+      kRequestBody.begin(), kRequestBody.end());
+  http_context.request->body.capacity = kRequestBody.length();
+  http_context.request->body.length = kRequestBody.length();
+  InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
+                      http_context);
+  http_context.response = CreateEmptyResponse();
+
+  AsyncContext<HttpRequest, HttpResponse> captured_http_context;
+  bool has_captured = false;
+  http_context.callback = [&](AsyncContext<HttpRequest, HttpResponse> context) {
+    captured_http_context = context;
+    has_captured = true;
+  };
+
+  FrontEndServiceV2Peer front_end_service_v2_peer =
+      MakeFrontEndServiceV2Peer(options);
+  ASSERT_TRUE(front_end_service_v2_peer.Init());
+
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
+      captured_consume_budgets_context;
+  EXPECT_CALL(*budget_consumption_helper, ConsumeBudgets)
+      .WillOnce([&](AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
+                        context) {
+        context.result = FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED);
+        context.response->budget_exhausted_indices.push_back(0);
+        context.Finish();
+        captured_consume_budgets_context = context;
+        return SuccessExecutionResult();
+      });
+
+  auto execution_result =
+      front_end_service_v2_peer.PrepareTransaction(http_context);
+  EXPECT_TRUE(execution_result)
+      << core::GetErrorMessage(execution_result.status_code);
+  ASSERT_TRUE(has_captured);
+  EXPECT_FALSE(captured_http_context.result);
+  EXPECT_EQ(captured_http_context.result.status_code,
+            SC_CONSUME_BUDGET_EXHAUSTED);
+  EXPECT_TRUE(captured_http_context.response->headers->find(
+                  kTransactionLastExecutionTimestampHeader) ==
+              captured_http_context.response->headers->end());
+  EXPECT_EQ(captured_http_context.response->body.ToString(),
+            kBudgetExhaustedResponseBody);
 
   std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
       front_end_service_v2_peer.GetMetricsInstance(

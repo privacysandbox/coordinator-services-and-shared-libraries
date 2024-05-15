@@ -24,10 +24,10 @@ module "lambda_roles" {
 }
 
 resource "aws_s3_bucket_object" "get_public_key_lambda_package" {
-  bucket = var.keymanagement_package_bucket
-  key    = "app/get_public_key_lambda.jar"
-  source = var.public_key_service_jar
-  etag   = filemd5(var.public_key_service_jar)
+  bucket      = var.keymanagement_package_bucket
+  key         = "app/get_public_key_lambda.jar"
+  source      = var.public_key_service_jar
+  source_hash = filemd5(var.public_key_service_jar)
 }
 
 # Define lambda configurations

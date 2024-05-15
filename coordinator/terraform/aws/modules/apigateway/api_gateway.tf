@@ -30,6 +30,7 @@ resource "aws_apigatewayv2_stage" "api_gateway_stage" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [default_route_settings[0].logging_level]
   }
 
   default_route_settings {

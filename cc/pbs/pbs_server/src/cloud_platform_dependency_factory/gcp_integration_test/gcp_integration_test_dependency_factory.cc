@@ -154,4 +154,10 @@ GcpIntegrationTestDependencyFactory::ConstructMetricClient(
       .WillByDefault(Return(SuccessExecutionResult()));
   return metric_client;
 }
+
+std::unique_ptr<core::MetricRouter>
+GcpIntegrationTestDependencyFactory::ConstructMetricRouter(
+    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
+  return GcpDependencyFactory::ConstructMetricRouter(config_provider);
+}
 }  // namespace google::scp::pbs

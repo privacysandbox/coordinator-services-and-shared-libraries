@@ -154,6 +154,21 @@ resource "aws_s3_bucket_policy" "pbs_elb_access_logs_policy" {
         Resource = [
           "arn:aws:s3:::${aws_s3_bucket.pbs_elb_access_logs.id}/AWSLogs/${var.aws_account_id}/*"
         ]
+      },
+      {
+        Sid    = "DenyNonSslRequests",
+        Action = "s3:*",
+        Effect = "Deny",
+        Resource = [
+          "${aws_s3_bucket.pbs_elb_access_logs.arn}",
+          "${aws_s3_bucket.pbs_elb_access_logs.arn}/*"
+        ],
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" : "false"
+          }
+        },
+        Principal = "*"
       }
     ]
   })

@@ -121,7 +121,7 @@ public final class HttpEncryptionKeyFetchingServiceTest {
   private static String getMultiPartyKeyResponse() {
     return "{\n"
         + "    \"name\": \"encryptionKeys/12345\",\n"
-        + "    \"encryptionKeyType\": \"MULTI_PARTY_HYBRID_KEY\",\n"
+        + "    \"encryptionKeyType\": \"MULTI_PARTY_HYBRID_EVEN_KEYSPLIT\",\n"
         + "    \"publicKeysetHandle\": \"myPublicKeysetHandle\",\n"
         + "    \"publicKeyMaterial\": \"abc==\",\n"
         + "    \"keyData\": [\n"

@@ -19,7 +19,12 @@ variable "environment" {
 
 variable "allowed_principals_map_v2" {
   type        = map(list(string))
-  description = "Map of AWS account IDs, that will assume the coordinator_assume_role, to the list of their associated (eTLD+1) sites."
+  description = "Map of AWS account IDs, that a coordinator_assume_role will be created for, to the list of their associated (eTLD+1) sites. If PBS is deployed and used, allowed_principals_map_v2 should be specified instead of allowed_principals_set."
+}
+
+variable "allowed_principals_set" {
+  type        = set(string)
+  description = "Set of AWS account IDs, that a coordinator_assume_role will be created for."
 }
 
 variable "private_key_encryptor_arn" {
@@ -35,11 +40,13 @@ variable "private_key_api_gateway_arn" {
 variable "privacy_budget_api_gateway_arn" {
   type        = string
   description = "API Gateway used to access the privacy budget service. If unspecified the generated role will not be granted access."
+  nullable    = true
 }
 
 variable "privacy_budget_auth_table_v2_name" {
   description = "DynamoDB table name of distributed pbs auth table V2"
   type        = string
+  nullable    = true
 }
 
 variable "attestation_condition_keys" {
@@ -48,4 +55,17 @@ variable "attestation_condition_keys" {
     If map is empty, then no condition is applied and any enclave can decrypt with the assume_role.
     EOT
   type        = map(list(string))
+  validation {
+    condition     = (length([for l in var.attestation_condition_keys : [for pcr in l : 1]]) < 55)
+    error_message = "Only 54 elements supported in the attestation_condition_keys list"
+
+  }
+}
+
+variable "attestation_pcr_allowlist" {
+  description = <<-EOT
+    List of PCR0s to allowlist for Nitro Enclave attestation.
+    If list is empty, then no condition is applied and any enclave can decrypt with the assume_role.
+    EOT
+  type        = list(string)
 }

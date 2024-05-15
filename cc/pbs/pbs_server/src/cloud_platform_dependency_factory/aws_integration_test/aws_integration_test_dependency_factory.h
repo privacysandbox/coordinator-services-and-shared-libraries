@@ -80,6 +80,10 @@ class AwsIntegrationTestDependencyFactory : public AwsDependencyFactory {
       std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
           instance_client_provider) noexcept override;
 
+  std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
+      const std::shared_ptr<core::ConfigProviderInterface>&
+          config_provider) noexcept override;
+
  private:
   core::ExecutionResult ReadTestConfigurations();
 

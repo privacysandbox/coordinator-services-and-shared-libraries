@@ -33,3 +33,12 @@ privacy_budget_api_gateway_arn = "<from distributedpbs_application output>"
 #    "4a9d4bebda73694552d1bea7bf1b5e2a3758b075ff1a1240ddbe319eb140355e52b53a3e130bcafab4bae8513a27cdf0"
 #  ]
 #}
+
+
+# New variable to allowlist PCR0 hashes to address a limitation with the previous format
+
+#attestation_pcr_allowlist = [
+# "dde96c25d0766825f9746651a0a3a20960d818313d89af380b25a8d9347c58eaeee8f3e35fc1a7e1cc1f672c3fc63f5e",
+# "4644f46180661f2f15ca6c7caed62bff33356659466ba93e983b7ae9e1405e51b3c20d5c606b7327d8bb5ae47835524d",
+# "4a9d4bebda73694552d1bea7bf1b5e2a3758b075ff1a1240ddbe319eb140355e52b53a3e130bcafab4bae8513a27cdf0"
+#]

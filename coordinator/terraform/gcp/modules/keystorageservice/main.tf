@@ -77,6 +77,12 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
   labels = {
     environment = var.environment
   }
+
+  lifecycle {
+    ignore_changes = [
+      build_config[0].docker_repository
+    ]
+  }
 }
 
 # IAM entry for key storage service account to use the database
@@ -89,12 +95,13 @@ resource "google_spanner_database_iam_member" "keydb_iam_policy" {
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
+  for_each = setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : [])
   project  = var.project_id
   location = google_cloudfunctions2_function.key_storage_cloudfunction.location
   service  = google_cloudfunctions2_function.key_storage_cloudfunction.name
 
   role   = "roles/run.invoker"
-  member = "group:${var.allowed_wip_user_group}"
+  member = each.key
 }
 
 # IAM entry to allow function to encrypt and decrypt using KMS

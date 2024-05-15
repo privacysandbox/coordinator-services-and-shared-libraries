@@ -32,10 +32,10 @@ module "worker_enclave_encryption_key" {
 }
 
 resource "aws_s3_bucket_object" "key_storage_package" {
-  bucket = var.keymanagement_package_bucket
-  key    = "app/key_storage_lambda.jar"
-  source = var.key_storage_jar
-  etag   = filemd5(var.key_storage_jar)
+  bucket      = var.keymanagement_package_bucket
+  key         = "app/key_storage_lambda.jar"
+  source      = var.key_storage_jar
+  source_hash = filemd5(var.key_storage_jar)
 }
 
 # Define lambda configurations

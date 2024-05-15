@@ -28,7 +28,9 @@ struct ConsumeBudgetsRequest {
   std::vector<ConsumeBudgetMetadata> budgets;
 };
 
-struct ConsumeBudgetsResponse {};
+struct ConsumeBudgetsResponse {
+  std::vector<size_t> budget_exhausted_indices;
+};
 
 // A helper class to consume a given list of budgets.
 class BudgetConsumptionHelperInterface

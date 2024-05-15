@@ -36,6 +36,7 @@
 #include "core/interface/traffic_forwarder_interface.h"
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "core/interface/transaction_manager_interface.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/auth_token_provider_interface.h"
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
@@ -119,6 +120,7 @@ class PBSInstance : public core::ServiceInterface {
   std::shared_ptr<core::CredentialsProviderInterface> credentials_provider_;
   std::shared_ptr<pbs::PrivacyBudgetServiceClientInterface>
       remote_coordinator_pbs_client_;
+  std::shared_ptr<core::MetricRouter> metric_router_;
 
   bool is_multi_instance_mode_ = true;
   bool is_running_ = false;

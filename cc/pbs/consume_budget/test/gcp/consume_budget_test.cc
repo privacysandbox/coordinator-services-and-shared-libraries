@@ -53,9 +53,11 @@ using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
 using ::testing::_;
 using ::testing::AllOf;
 using ::testing::ByMove;
+using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Field;
 using ::testing::FieldsAre;
+using ::testing::IsEmpty;
 using ::testing::Return;
 using ::testing::UnorderedElementsAre;
 namespace spanner = ::google::cloud::spanner;
@@ -189,6 +191,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   context.request = std::make_shared<ConsumeBudgetsRequest>();
   context.request->budgets.push_back(ConsumeBudgetMetadata{
       std::make_shared<std::string>("fake-key-name"), 1, 3601000000000});
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
 
   spanner::Mutation m =
       cloud::spanner::InsertMutationBuilder(
@@ -215,6 +218,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   blocking.Wait();
 
   EXPECT_SUCCESS(result_context.result);
+  EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
 TEST_F(BudgetConsumptionHelperWithLifecycleTest,
@@ -246,6 +250,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   context.request = std::make_shared<ConsumeBudgetsRequest>();
   context.request->budgets.push_back(ConsumeBudgetMetadata{
       std::make_shared<std::string>("fake-key-name"), 1, 3601000000000});
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
 
   spanner::Mutation m =
       cloud::spanner::UpdateMutationBuilder(
@@ -272,6 +277,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   blocking.Wait();
 
   EXPECT_SUCCESS(result_context.result);
+  EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
 TEST_F(BudgetConsumptionHelperWithLifecycleTest, ConsumeBudgetsWithoutBudget) {
@@ -302,6 +308,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest, ConsumeBudgetsWithoutBudget) {
   context.request = std::make_shared<ConsumeBudgetsRequest>();
   context.request->budgets.push_back(ConsumeBudgetMetadata{
       std::make_shared<std::string>("fake-key-name"), 1, 3601000000000});
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
 
   EXPECT_CALL(*mock_connection_, Commit).Times(0);
   EXPECT_CALL(*mock_connection_, Rollback).Times(1);
@@ -318,6 +325,8 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest, ConsumeBudgetsWithoutBudget) {
 
   EXPECT_THAT(result_context.result,
               ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
+  EXPECT_THAT(result_context.response->budget_exhausted_indices,
+              ElementsAre(0));
 }
 
 TEST_F(BudgetConsumptionHelperWithLifecycleTest,
@@ -348,6 +357,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   context.request = std::make_shared<ConsumeBudgetsRequest>();
   context.request->budgets.push_back(ConsumeBudgetMetadata{
       std::make_shared<std::string>("fake-key-name"), 1, 3601000000000});
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
 
   EXPECT_CALL(*mock_connection_, Commit).Times(0);
   EXPECT_CALL(*mock_connection_, Rollback).Times(1);
@@ -365,6 +375,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(
       result_context.result,
       ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+  EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
 TEST_F(BudgetConsumptionHelperWithLifecycleTest,
@@ -395,6 +406,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   context.request = std::make_shared<ConsumeBudgetsRequest>();
   context.request->budgets.push_back(ConsumeBudgetMetadata{
       std::make_shared<std::string>("fake-key-name"), 1, 3601000000000});
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
 
   EXPECT_CALL(*mock_connection_, Commit).Times(0);
   EXPECT_CALL(*mock_connection_, Rollback).Times(1);
@@ -412,6 +424,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(
       result_context.result,
       ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+  EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
 TEST_F(BudgetConsumptionHelperWithLifecycleTest,
@@ -442,6 +455,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   context.request = std::make_shared<ConsumeBudgetsRequest>();
   context.request->budgets.push_back(ConsumeBudgetMetadata{
       std::make_shared<std::string>("fake-key-name"), 1, 3601000000000});
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
 
   EXPECT_CALL(*mock_connection_, Commit).Times(0);
   EXPECT_CALL(*mock_connection_, Rollback).Times(1);
@@ -459,6 +473,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(
       result_context.result,
       ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+  EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 }  // namespace
 }  // namespace google::scp::pbs

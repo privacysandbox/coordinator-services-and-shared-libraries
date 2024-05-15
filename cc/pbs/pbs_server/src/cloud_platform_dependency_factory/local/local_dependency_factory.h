@@ -98,6 +98,10 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       std::shared_ptr<core::TokenProviderCacheInterface>
           auth_token_provider_cache) noexcept override;
 
+  std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
+      const std::shared_ptr<core::ConfigProviderInterface>&
+          config_provider) noexcept override;
+
  private:
   core::ExecutionResult ReadConfigurations();
 

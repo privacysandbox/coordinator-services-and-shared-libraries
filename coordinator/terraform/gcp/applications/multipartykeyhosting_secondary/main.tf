@@ -109,10 +109,11 @@ module "keydb" {
 module "keystorageservice" {
   source = "../../modules/keystorageservice"
 
-  project_id             = var.project_id
-  environment            = var.environment
-  region                 = var.primary_region
-  allowed_wip_user_group = var.allowed_wip_user_group
+  project_id                 = var.project_id
+  environment                = var.environment
+  region                     = var.primary_region
+  allowed_wip_iam_principals = var.allowed_wip_iam_principals
+  allowed_wip_user_group     = var.allowed_wip_user_group
 
   # Function vars
   key_encryption_key_id                           = google_kms_crypto_key.key_encryption_key.id
@@ -219,6 +220,7 @@ module "workload_identity_pool" {
   wip_allowed_service_account_display_name = "${var.environment} Allowed Coordinator User"
 
   key_encryption_key_id                        = google_kms_crypto_key.key_encryption_key.id
+  allowed_wip_iam_principals                   = var.allowed_wip_iam_principals
   allowed_wip_user_group                       = var.allowed_wip_user_group
   enable_attestation                           = var.enable_attestation
   assertion_tee_swname                         = var.assertion_tee_swname

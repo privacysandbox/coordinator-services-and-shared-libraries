@@ -23,6 +23,8 @@
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/configuration_keys.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "core/telemetry/mock/in_memory_metric_exporter.h"
+#include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/pbs_client_interface.h"
 #include "pbs/pbs_client/src/pbs_client.h"
@@ -38,6 +40,8 @@ using google::scp::core::BlobStorageProviderInterface;
 using google::scp::core::ConfigProviderInterface;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::InMemoryMetricExporter;
+using google::scp::core::MetricRouter;
 using google::scp::core::NoSQLDatabaseProviderInterface;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::blob_storage_provider::mock::MockBlobStorageProvider;
@@ -176,6 +180,20 @@ LocalDependencyFactory::ConstructRemoteCoordinatorPBSClient(
   return make_unique<PrivacyBudgetServiceClient>(
       reporting_origin_, remote_coordinator_endpoint_, http_client,
       auth_token_provider_cache);
+}
+
+std::unique_ptr<core::MetricRouter>
+LocalDependencyFactory::ConstructMetricRouter(
+    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
+  // We would not be using any token fetching (no authentication) for local.
+  // Instead, we are using in_memory_metric_exporter to store the data locally
+  // in memory
+  std::atomic<bool> data_ready(true);
+  std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
+      metric_exporter = std::make_unique<InMemoryMetricExporter>(data_ready);
+
+  return std::make_unique<MetricRouter>(config_provider,
+                                        std::move(metric_exporter));
 }
 
 }  // namespace google::scp::pbs

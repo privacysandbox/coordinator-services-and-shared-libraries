@@ -63,6 +63,7 @@ TEST(PBSInstanceV3Test, TestInitRunAndStopWithLocalDependencyFactory) {
   setenv(kTotalHttp2ServerThreadsCount, "10", should_overwrite);
   setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table",
          should_overwrite);
+  setenv(kOtelEnabled, "true", should_overwrite);
   std::shared_ptr<EnvConfigProvider> config_provider =
       std::make_shared<EnvConfigProvider>();
   std::unique_ptr<LocalDependencyFactory> platform_dependency_factory =

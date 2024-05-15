@@ -182,9 +182,13 @@ variable "key_storage_service_cloudfunction_max_instances" {
 # Key Management Variables.
 ################################################################################
 
-# TODO: Manage group in terraform
+variable "allowed_wip_iam_principals" {
+  description = "List of allowed coordinator IAM principals."
+  type        = list(string)
+}
+
 variable "allowed_wip_user_group" {
-  description = "Google Group to manage allowed coordinator users."
+  description = "Google Group to manage allowed coordinator users. Deprecated - use allowed_wip_iam_principals instead."
   type        = string
 }
 

@@ -67,6 +67,10 @@ deps = [
     "//cc/pbs/partition_namespace/src:pbs_partition_namespace_lib",
     "//cc/pbs/partition_request_router/src:pbs_partition_request_router_lib",
     "//cc/pbs/partition_lease_preference_applier/src:pbs_partition_lease_preference_applier_lib",
+    "//cc/core/telemetry/src/metric:telemetry_metric",
+    "//cc/core/telemetry/src/common:telemetry_common",
+    "//cc/core/telemetry/src/authentication:telemetry_authentication",
+    "//cc/core/telemetry/mock:telemetry_fake",
 ]
 
 aws_deps = deps + [
@@ -202,6 +206,10 @@ cc_library(
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/http2_server/src:core_http2_server_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/src/authentication:telemetry_authentication",
+        "//cc/core/telemetry/src/common:telemetry_common",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/pbs/front_end_service/src:front_end_service_v2",
         "//cc/pbs/health_service/src:pbs_health_service_lib",
         "//cc/pbs/interface:pbs_interface_lib",

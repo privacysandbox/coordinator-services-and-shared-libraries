@@ -46,6 +46,11 @@ public final class EncryptionKeyConverter {
       throw new IllegalArgumentException("KeyId cannot be null or empty.");
     }
 
+    if (encryptionKey == null
+        || encryptionKey.getEncryptionKeyType().name().equals("UNSPECIFIED")) {
+      throw new IllegalArgumentException("Encryption key type is unspecified.");
+    }
+
     // currently ignores keyMaterial
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.copyOf(
@@ -110,12 +115,13 @@ public final class EncryptionKeyConverter {
             .addAllKeyData(keyData);
 
     Set<String> keyTypeValues = ProtoUtil.getValidEnumValues(EncryptionKeyType.class);
-    if (keyTypeValues.contains(encryptionKey.getKeyType())) {
+
+    if (keyTypeValues.contains(encryptionKey.getKeyType())
+        && !encryptionKey.getKeyType().equals("UNSPECIFIED")) {
       encryptionKeyBuilder.setEncryptionKeyType(
           EncryptionKeyType.valueOf(encryptionKey.getKeyType()));
     } else if (encryptionKey.getKeyType().isEmpty()) {
-      // Default to single key if no key type specified.
-      encryptionKeyBuilder.setEncryptionKeyType(EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY);
+      throw new IllegalArgumentException("KeyType is not specified.");
     } else {
       throw new IllegalArgumentException("Unrecognized KeyType: " + encryptionKey.getKeyType());
     }

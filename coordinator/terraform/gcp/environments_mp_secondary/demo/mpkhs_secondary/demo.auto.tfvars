@@ -41,7 +41,8 @@ mpkhs_package_bucket_location = "US"
 spanner_instance_config  = "nam10"
 spanner_processing_units = 100
 
-allowed_wip_user_group = "<Needs to be created manually, recommended format environment-b-allowedcoordinatorusers@example.com>"
+# Uncomment and re-apply once primary MPKHS has been deployed.
+#allowed_wip_iam_principals = ["serviceAccount:<output from mpkhs-primary in primary coordinator>"]
 
 allowed_operator_user_group = "<output from allowedoperatorgroup in secondary coordinator>"
 

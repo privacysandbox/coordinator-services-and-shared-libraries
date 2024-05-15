@@ -15,6 +15,7 @@
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_v3.h"
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "cc/core/async_executor/src/async_executor.h"
@@ -24,6 +25,8 @@
 #include "cc/core/curl_client/src/http1_curl_client.h"
 #include "cc/core/http2_client/src/http2_client.h"
 #include "cc/core/http2_server/src/http2_server.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "cc/pbs/front_end_service/src/front_end_service_v2.h"
 #include "cc/pbs/health_service/src/health_service.h"
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
@@ -84,6 +87,22 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
           auth_token_provider_);
   metric_client_ = cloud_platform_dependency_factory_->ConstructMetricClient(
       async_executor_, io_async_executor_, instance_client_provider_);
+
+  bool is_otel_enabled = false;
+  auto execution_result = config_provider_->Get(kOtelEnabled, is_otel_enabled);
+  if (!execution_result.Successful()) {
+    SCP_INFO(
+        kPBSInstance, kZeroUuid,
+        "%s flag not specified. Not using OpenTelemetry for observability.",
+        kOtelEnabled);
+  }
+  if (is_otel_enabled) {
+    // On initialization of metric_router_, Meter Provider would be set globally
+    // for PBS. Services can access the Meter Provider using
+    // opentelemetry::metrics::Provider::GetMeterProvider()
+    metric_router_ = cloud_platform_dependency_factory_->ConstructMetricRouter(
+        config_provider_);
+  }
 
   pass_thru_authorization_proxy_ =
       std::make_shared<PassThruAuthorizationProxy>();

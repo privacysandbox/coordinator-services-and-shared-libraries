@@ -29,8 +29,8 @@ locals {
 }
 
 module "roleprovider" {
-  source = "../../../applications/roleprovider"
-
+  source                            = "../../../applications/roleprovider"
+  allowed_principals_set            = length(var.allowed_principals_map_v2) > 0 ? keys(var.allowed_principals_map_v2) : var.allowed_principals_set
   environment                       = var.environment
   private_key_encryptor_arn         = var.private_key_encryptor_arn
   private_key_api_gateway_arn       = var.private_key_api_gateway_arn
@@ -38,4 +38,5 @@ module "roleprovider" {
   attestation_condition_keys        = var.attestation_condition_keys
   allowed_principals_map_v2         = var.allowed_principals_map_v2
   privacy_budget_auth_table_v2_name = local.privacy_budget_auth_table_v2_name
+  attestation_pcr_allowlist         = var.attestation_pcr_allowlist
 }

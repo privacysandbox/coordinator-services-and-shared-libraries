@@ -14,12 +14,14 @@
 
 #include "cc/pbs/front_end_service/src/front_end_service_v2.h"
 
+#include <list>
 #include <memory>
 #include <utility>
 
 #include "absl/functional/bind_front.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/configuration_keys.h"
+#include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/front_end_utils.h"
 #include "cc/pbs/front_end_service/src/metric_initialization.h"
@@ -355,6 +357,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
           absl::bind_front(&FrontEndServiceV2::OnConsumeBudgetCallback, this,
                            http_context),
           http_context);
+  consume_budget_context.response = std::make_shared<ConsumeBudgetsResponse>();
   if (auto execution_result = ParseBeginTransactionRequestBody(
           *http_context.request->auth_context.authorized_domain,
           http_context.request->body, consume_budget_context.request->budgets);
@@ -424,6 +427,26 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
     SCP_ERROR_CONTEXT(kFrontEndService, http_context,
                       consume_budget_context.result,
                       "Failed to consume budget.");
+    if (consume_budget_context.result.status_code ==
+        errors::SC_CONSUME_BUDGET_EXHAUSTED) {
+      std::list<size_t> budget_exhausted_indices(
+          consume_budget_context.response->budget_exhausted_indices.begin(),
+          consume_budget_context.response->budget_exhausted_indices.end());
+      auto serialization_execution_result =
+          FrontEndUtils::SerializeTransactionFailedCommandIndicesResponse(
+              budget_exhausted_indices, http_context.response->body);
+      if (!serialization_execution_result.Successful()) {
+        // We can log it but should not update the error code getting back to
+        // the client since it will make it confusing for the proper diagnosis
+        // on the transaction execution errors.
+        //
+        // This behavior is consistent with front_end_service.cc
+        SCP_ERROR_CONTEXT(kFrontEndService, http_context,
+                          serialization_execution_result,
+                          "Serialization of the transaction response failed");
+      }
+    }
+
     (*server_error_metrics_instance)->Increment(reporting_origin_metric_label);
     http_context.result = consume_budget_context.result;
     http_context.Finish();

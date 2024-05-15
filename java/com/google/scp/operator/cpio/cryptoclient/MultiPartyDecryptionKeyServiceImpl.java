@@ -170,8 +170,7 @@ public final class MultiPartyDecryptionKeyServiceImpl implements DecryptionKeySe
       var primaryEncryptionKey = coordinatorAEncryptionKeyFetchingService.fetchEncryptionKey(keyId);
 
       switch (primaryEncryptionKey.getEncryptionKeyType()) {
-          // TODO(b/328059618): Update SINGLE_PARTY_HYBRID_KEY to UNSPECIFIED
-        case SINGLE_PARTY_HYBRID_KEY:
+        case UNSPECIFIED:
           throw new KeyFetchException(
               "Encryption key type is unsupported",
               ErrorReason.UNSUPPORTED_ENCRYPTION_KEY_TYPE_ERROR);

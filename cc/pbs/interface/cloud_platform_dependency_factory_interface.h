@@ -25,6 +25,7 @@
 #include "cc/core/interface/initializable_interface.h"
 #include "cc/core/interface/nosql_database_provider_interface.h"
 #include "cc/core/interface/token_provider_cache_interface.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
 #include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
@@ -161,6 +162,15 @@ class CloudPlatformDependencyFactoryInterface
       std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
       std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
           instance_client_provider) noexcept = 0;
+
+  /**
+   * @brief Construct Metric Router for Otel metrics collection
+   * @param config_provider
+   * @return std::unique_ptr<core::MetricRouter>
+   */
+  virtual std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
+      const std::shared_ptr<core::ConfigProviderInterface>&
+          config_provider) noexcept = 0;
 
   /**
    * @brief Construct PBS client to talk to remote coordinator

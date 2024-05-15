@@ -36,9 +36,15 @@ variable "environment" {
 }
 
 variable "allowed_principals_map_v2" {
-  description = "Map of AWS account IDs, that will assume the coordinator_assume_role, to the list of their associated (eTLD+1) sites."
   type        = map(list(string))
+  description = "Map of AWS account IDs, that a coordinator_assume_role will be created for, to a list of their associated (eTLD+1) sites. If PBS is deployed and used, allowed_principals_map_v2 should be specified instead of allowed_principals_set."
   default     = {}
+}
+
+variable "allowed_principals_set" {
+  type        = set(string)
+  description = "Set of AWS account IDs, that a coordinator_assume_role will be created for."
+  default     = []
 }
 
 variable "private_key_encryptor_arn" {
@@ -69,7 +75,17 @@ variable "attestation_condition_keys" {
   description = <<-EOT
     Map of Condition Keys for Nitro Enclave attestation. Key = Condition key type (PCR0). Value = list of acceptable enclave hashes.
     If map is empty, then no condition is applied and any enclave can decrypt with the assume_role.
+    DEPRECATED: Use attestation_pcr_allowlist instead.
     EOT
   type        = map(list(string))
   default     = {}
+}
+
+variable "attestation_pcr_allowlist" {
+  description = <<-EOT
+    List of PCR0s to allowlist for Nitro Enclave attestation.
+    If list is empty, then no condition is applied and any enclave can decrypt with the assume_role.
+    EOT
+  type        = list(string)
+  default     = []
 }

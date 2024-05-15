@@ -171,4 +171,10 @@ AwsIntegrationTestDependencyFactory::ConstructInstanceMetadataClient(
   return make_unique<TestAwsInstanceClientProvider>(options);
 }
 
+std::unique_ptr<core::MetricRouter>
+AwsIntegrationTestDependencyFactory::ConstructMetricRouter(
+    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
+  return AwsDependencyFactory::ConstructMetricRouter(config_provider);
+}
+
 }  // namespace google::scp::pbs

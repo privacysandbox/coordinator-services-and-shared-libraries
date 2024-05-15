@@ -65,9 +65,6 @@ public final class EncryptionKeyConverter {
     if (keyTypeValues.contains(encryptionKey.getKeyType())) {
       encryptionKeyBuilder.setEncryptionKeyType(
           EncryptionKeyType.valueOf(encryptionKey.getKeyType()));
-    } else if (encryptionKey.getKeyType().isEmpty()) {
-      // Default to single key if no key type specified.
-      encryptionKeyBuilder.setEncryptionKeyType(EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY);
     } else {
       throw new IllegalArgumentException("Unrecognized KeyType: " + encryptionKey.getKeyType());
     }

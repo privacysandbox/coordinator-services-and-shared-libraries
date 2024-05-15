@@ -42,7 +42,7 @@ echo "  <parse>" >> $logging_config_path
 echo "    @type multi_format" >> $logging_config_path
 echo "    <pattern>" >> $logging_config_path
 echo "      format regexp" >> $logging_config_path
-echo "      expression /^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[^ :\[]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<severity>(DEBUG|INFO|NOTICE|WARNING))\|(?<cluster_name>[^ |]*)\|(?<machine_name>[^ |]*)\|(?<component_name>[^ |]*)\|(?<correlation_id>[^ |]*)\|(?<spanId>[^ |]*)\|(?<trace>[^ |]*)\|(?<sourceLocation>[^ \:|]*):(?<method_name>[^ \:]*):(?<line_number>[0-9]*)\|(?<message>.*)$/" >> $logging_config_path
+echo "      expression /^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[^ :\[]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<severity>(DEBUG|INFO|NOTICE|WARNING|ERROR))\|(?<cluster_name>[^ |]*)\|(?<machine_name>[^ |]*)\|(?<component_name>[^ |]*)\|(?<correlation_id>[^ |]*)\|(?<spanId>[^ |]*)\|(?<trace>[^ |]*)\|(?<sourceLocation>[^ \:|]*):(?<method_name>[^ \:]*):(?<line_number>[0-9]*)\|(?<message>.*)$/" >> $logging_config_path
 echo "      time_format %b %d %H:%M:%S" >> $logging_config_path
 echo "    </pattern>" >> $logging_config_path
 echo "    <pattern>" >> $logging_config_path

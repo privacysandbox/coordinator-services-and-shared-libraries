@@ -22,21 +22,21 @@ REGISTER_COMPONENT_CODE(SC_PBS_CONSUME_BUDGET, 0x0157)
 
 DEFINE_ERROR_CODE(
     SC_CONSUME_BUDGET_INITIALIZATION_ERROR, SC_PBS_CONSUME_BUDGET, 0x0001,
-    "Failed to initialied BudgetConsumptionHelper",
+    "Failed to initialize BudgetConsumptionHelper.",
     google::scp::core::errors::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(
     SC_CONSUME_BUDGET_PARSING_ERROR, SC_PBS_CONSUME_BUDGET, 0x0002,
-    "Failed parse value in database",
+    "Failed parse value in database.",
     google::scp::core::errors::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(
     SC_CONSUME_BUDGET_FAIL_TO_COMMIT, SC_PBS_CONSUME_BUDGET, 0x0003,
-    "Failed commit to database",
+    "Failed commit to database.",
     google::scp::core::errors::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(SC_CONSUME_BUDGET_EXHAUSTED, SC_PBS_CONSUME_BUDGET, 0x0004,
-                  "Failed to consume budget because budget is exhausted",
+                  "Failed to consume budget because budget is exhausted.",
                   google::scp::core::errors::HttpStatusCode::CONFLICT)
 
 }  // namespace google::scp::pbs::errors

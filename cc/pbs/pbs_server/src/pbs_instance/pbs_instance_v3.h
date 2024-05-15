@@ -23,6 +23,7 @@
 #include "cc/core/interface/http_client_interface.h"
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/interface/service_interface.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
 #include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
@@ -71,6 +72,8 @@ class PBSInstanceV3 : public core::ServiceInterface {
 
   std::unique_ptr<CloudPlatformDependencyFactoryInterface>
       cloud_platform_dependency_factory_;
+
+  std::shared_ptr<core::MetricRouter> metric_router_;
 };
 
 }  // namespace google::scp::pbs

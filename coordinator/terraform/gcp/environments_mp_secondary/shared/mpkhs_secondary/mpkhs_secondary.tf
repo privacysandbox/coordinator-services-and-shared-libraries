@@ -59,6 +59,7 @@ module "multipartykeyhosting_secondary" {
   spanner_processing_units                = var.spanner_processing_units
   key_db_retention_period                 = var.key_db_retention_period
 
+  allowed_wip_iam_principals                   = var.allowed_wip_iam_principals
   allowed_wip_user_group                       = var.allowed_wip_user_group
   enable_attestation                           = var.enable_attestation
   assertion_tee_swname                         = var.assertion_tee_swname

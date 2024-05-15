@@ -77,6 +77,12 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
   labels = {
     environment = var.environment
   }
+
+  lifecycle {
+    ignore_changes = [
+      build_config[0].docker_repository
+    ]
+  }
 }
 
 # IAM entry for service account to read from the database

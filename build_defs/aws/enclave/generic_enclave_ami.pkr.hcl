@@ -51,6 +51,13 @@ source "amazon-ebs" "amzn2-ami" {
   }
   ssh_username = "ec2-user"
   ssh_timeout = "15m"
+  # enforces imdsv2 support on the running instance being provisioned by Packer
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens = "required"
+    http_put_response_hop_limit = 1
+  }
+  imds_support  = "v2.0" # enforces imdsv2 support on the resulting AMI
 }
 
 build {

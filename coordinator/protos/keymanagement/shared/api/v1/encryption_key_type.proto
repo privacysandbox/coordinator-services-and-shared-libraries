@@ -26,18 +26,9 @@ option java_outer_classname = "EncryptionKeyTypeProto";
  * type.
  */
 enum EncryptionKeyType {
-  /** Single-coordinator managed key using a Tink hybrid key */
-  SINGLE_PARTY_HYBRID_KEY = 0;
+  /** If the type is not assigned, UNSPECIFIED by default. */
+  UNSPECIFIED = 0;
   /** Multi-coordinator using a Tink hybrid key, split using XOR with random
    * data */
   MULTI_PARTY_HYBRID_EVEN_KEYSPLIT = 1;
-  /**
-   * Adding a new value to this enum may have unexpected consequence for clients
-   * on older version of this proto because some clients parse unknown enum into
-   * the 0 value.
-   * Normally, this is non issue as 0 is reserved for `UNSPECIFIED`, however,
-   * since 0 for this enum used for application logic, it can cause client to
-   * unintentionally treat it as whatever 0 means i.e. `SINGLE_PARTY_HYBRID_KEY`
-   * here.
-   */
 }

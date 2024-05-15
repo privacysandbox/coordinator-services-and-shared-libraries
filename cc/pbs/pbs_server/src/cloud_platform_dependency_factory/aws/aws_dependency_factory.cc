@@ -26,10 +26,19 @@
 #include "core/interface/configuration_keys.h"
 #include "core/interface/token_fetcher_interface.h"
 #include "core/nosql_database_provider/src/aws/aws_dynamo_db.h"
+#include "core/telemetry/src/authentication/aws_token_fetcher.h"
+#include "core/telemetry/src/authentication/grpc_auth_config.h"
+#include "core/telemetry/src/authentication/grpc_id_token_authenticator.h"
+#include "core/telemetry/src/authentication/token_fetcher.h"
+#include "core/telemetry/src/common/telemetry_configuration.h"
+#include "core/telemetry/src/metric/metric_router.h"
+#include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
 #include "core/token_provider_cache/src/auto_refresh_token_provider.h"
 #include "cpio/client_providers/auth_token_provider/src/aws/aws_auth_token_provider.h"
 #include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
+#include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
 #include "pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
 #include "pbs/interface/configuration_keys.h"
@@ -43,9 +52,15 @@ using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::AuthorizationProxyInterface;
 using google::scp::core::AutoRefreshTokenProviderService;
 using google::scp::core::AwsAssumeRoleCredentialsProvider;
+using google::scp::core::AwsTokenFetcher;
 using google::scp::core::BlobStorageProviderInterface;
 using google::scp::core::ConfigProviderInterface;
+using google::scp::core::GrpcAuthConfig;
+using google::scp::core::GrpcIdTokenAuthenticator;
+using google::scp::core::MetricRouter;
 using google::scp::core::NoSQLDatabaseProviderInterface;
+using google::scp::core::OtlpGrpcAuthedMetricExporter;
+using google::scp::core::TokenFetcher;
 using google::scp::core::TokenFetcherInterface;
 using google::scp::core::blob_storage_provider::AwsS3Provider;
 using google::scp::core::common::kZeroUuid;
@@ -269,6 +284,40 @@ AwsDependencyFactory::ConstructRemoteCoordinatorPBSClient(
   return make_unique<PrivacyBudgetServiceClient>(
       reporting_origin_for_remote_coordinator_, remote_coordinator_endpoint_,
       http_client, auth_token_provider_cache);
+}
+
+std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
+    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
+  std::unique_ptr<GrpcAuthConfig> metric_auth_config =
+      std::make_unique<GrpcAuthConfig>(
+          GetConfigValue(std::string(core::kOtelServiceAccountKey),
+                         std::string(core::kOtelServiceAccountValue),
+                         *config_provider),
+          GetConfigValue(std::string(core::kOtelAudienceKey),
+                         std::string(core::kOtelAudienceValue),
+                         *config_provider),
+          GetConfigValue(std::string(core::kOtelCredConfigKey),
+                         std::string(core::kOtelCredConfigValue),
+                         *config_provider));
+  std::unique_ptr<TokenFetcher> metric_token_fetcher =
+      std::make_unique<AwsTokenFetcher>(*metric_auth_config);
+  std::unique_ptr<GrpcIdTokenAuthenticator> metric_id_token_authenticator =
+      std::make_unique<GrpcIdTokenAuthenticator>(
+          std::move(metric_auth_config), std::move(metric_token_fetcher));
+
+  const std::string exporter_path = GetConfigValue(
+      std::string(core::kOtelExporterOtlpEndpointKey),
+      std::string(core::kOtelExporterOtlpEndpointValue), *config_provider);
+
+  opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions exporter_options;
+  exporter_options.endpoint = exporter_path;
+
+  std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
+      metric_exporter = std::make_unique<OtlpGrpcAuthedMetricExporter>(
+          exporter_options, std::move(metric_id_token_authenticator));
+
+  return std::make_unique<MetricRouter>(config_provider,
+                                        std::move(metric_exporter));
 }
 
 }  // namespace google::scp::pbs

@@ -17,9 +17,9 @@ variable "environment" {
   type        = string
 }
 
-variable "allowed_principals_map_v2" {
-  type        = map(list(string))
-  description = "Map of AWS account IDs that will assume coordinator_assume_role associated with their list of Adtech sites"
+variable "allowed_principals_set" {
+  type        = set(string)
+  description = "Set of AWS account IDs, that will assume the coordinator_assume_role."
 }
 
 variable "private_key_encryptor_arn" {
@@ -40,4 +40,12 @@ variable "privacy_budget_api_gateway_arn" {
 variable "attestation_condition_keys" {
   description = "AWS Condition Keys for Nitro Enclaves. Map key defines Condition key type, while list defines acceptable hashes."
   type        = map(list(string))
+}
+
+variable "attestation_pcr_allowlist" {
+  description = <<-EOT
+    List of PCR0s to allowlist for Nitro Enclave attestation.
+    If list is empty, then no condition is applied and any enclave can decrypt with the assume_role.
+    EOT
+  type        = list(string)
 }

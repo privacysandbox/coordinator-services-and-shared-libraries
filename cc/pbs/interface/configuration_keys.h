@@ -146,4 +146,7 @@ static constexpr char kPBSWorkloadGeneratorMaxHttpRetryCount[] =
 static constexpr char kPBSRelaxedConsistencyEnabled[] =
     "google_scp_pbs_relaxed_consistency_enabled";
 
+// Opentelemetry
+static constexpr char kOtelEnabled[] = "google_scp_otel_enabled";
+
 }  // namespace google::scp::pbs

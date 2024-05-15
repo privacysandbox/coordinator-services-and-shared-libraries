@@ -300,6 +300,8 @@ map<string, string> TestPbsServerStarter::CreatePbsEnvVariables(
       "00000000-0000-0000-0000-000000000000";
   env_variables[kPrivacyBudgetServiceHostAddress] = "0.0.0.0";
   env_variables[kPBSMultiInstanceModeDisabledConfigKey] = "true";
+  // set the grpc config and kOtelEnabled
+  // env_variables[]
   return env_variables;
 }
 }  // namespace google::scp::pbs::test::e2e

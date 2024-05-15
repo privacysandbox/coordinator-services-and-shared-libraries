@@ -82,25 +82,25 @@ inline ExecutionResultOr<
 GetEnvironmentSpecificFactory(const std::shared_ptr<ConfigProviderInterface>&
                                   config_provider_for_factory) {
 #if defined(PBS_GCP)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running GCP PBS Instance.");
+  SCP_INFO(kPBSServer, kZeroUuid, "Running GCP PBS.");
   return std::make_unique<google::scp::pbs::GcpDependencyFactory>(
       config_provider_for_factory);
 #elif defined(PBS_GCP_INTEGRATION_TEST)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running GCP Integration Test PBS Instance.");
+  SCP_INFO(kPBSServer, kZeroUuid, "Running GCP Integration Test PBS.");
   return std::make_unique<
       google::scp::pbs::GcpIntegrationTestDependencyFactory>(
       config_provider_for_factory);
 #elif defined(PBS_AWS)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS PBS Instance.");
+  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS PBS.");
   return std::make_unique<google::scp::pbs::AwsDependencyFactory>(
       config_provider_for_factory);
 #elif defined(PBS_AWS_INTEGRATION_TEST)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS Integration Test PBS Instance.");
+  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS Integration Test PBS.");
   return std::make_unique<
       google::scp::pbs::AwsIntegrationTestDependencyFactory>(
       config_provider_for_factory);
 #elif defined(PBS_LOCAL)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running Local PBS Instance.");
+  SCP_INFO(kPBSServer, kZeroUuid, "Running Local PBS.");
   return std::make_unique<google::scp::pbs::LocalDependencyFactory>(
       config_provider_for_factory);
 #else

@@ -67,3 +67,27 @@ java_test(
         "//java/external:google_truth",
     ],
 )
+
+java_test(
+    name = "PbsGcpFunctionalTest",
+    srcs = ["PbsGcpFunctionalTest.java"],
+    deps = [
+        "//java/com/google/scp/coordinator/privacy/budgeting/model",
+        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
+        "//java/com/google/scp/shared/api/util",
+        "//java/com/google/scp/shared/aws/util",
+        "//java/com/google/scp/shared/gcp/util",
+        "//java/com/google/scp/shared/mapper",
+        "//java/external:acai",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:gcp_spanner",
+        "//java/external:google_truth",
+        "//java/external:guice",
+        "//java/external:jackson_databind",
+        "//java/external:mockito",
+        "//java/external:testcontainers",
+        "//javatests/com/google/scp/coordinator/privacy/budgeting/utils/gcp:pbs_gcp_e2e_test_utils",
+        "//javatests/com/google/scp/shared/testutils/gcp",
+    ],
+)

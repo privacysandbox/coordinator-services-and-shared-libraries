@@ -35,6 +35,7 @@ module "workload_identity_pool" {
   wip_allowed_service_account_display_name = "${var.environment} Allowed Operator User"
 
   key_encryption_key_id                        = var.key_encryption_key_id
+  allowed_wip_iam_principals                   = var.allowed_wip_iam_principals
   allowed_wip_user_group                       = var.allowed_wip_user_group
   enable_attestation                           = var.enable_attestation
   assertion_tee_swname                         = var.assertion_tee_swname

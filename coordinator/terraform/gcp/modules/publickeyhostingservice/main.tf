@@ -87,6 +87,12 @@ resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
   labels = {
     environment = var.environment
   }
+
+  lifecycle {
+    ignore_changes = [
+      build_config[0].docker_repository
+    ]
+  }
 }
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.

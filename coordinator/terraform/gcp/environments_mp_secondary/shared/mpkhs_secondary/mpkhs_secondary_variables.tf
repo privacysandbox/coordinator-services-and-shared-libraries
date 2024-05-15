@@ -221,10 +221,16 @@ variable "key_storage_service_cloudfunction_max_instances" {
 # Workload Identity Pool Provider Variables.
 ################################################################################
 
-# TODO: Manage group in terraform
+variable "allowed_wip_iam_principals" {
+  description = "List of allowed IAM principals."
+  type        = list(string)
+  default     = []
+}
+
 variable "allowed_wip_user_group" {
-  description = "Google Group to manage allowed coordinator users."
+  description = "Google Group to manage allowed coordinator users. Deprecated - use allowed_wip_iam_principals instead."
   type        = string
+  default     = null
 }
 
 variable "allowed_operator_user_group" {

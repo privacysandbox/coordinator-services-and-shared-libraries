@@ -37,9 +37,13 @@ variable "key_encryption_key_id" {
   type        = string
 }
 
-# TODO: Manage group in terraform
+variable "allowed_wip_iam_principals" {
+  description = "List of allowed IAM principals."
+  type        = list(string)
+}
+
 variable "allowed_wip_user_group" {
-  description = "Google Group to manage allowed users."
+  description = "Google Group to manage allowed users. Deprecated - use allowed_wip_iam_principals instead."
   type        = string
 }
 

@@ -29,6 +29,7 @@
 #include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -225,6 +226,45 @@ std::tuple<cloud::Status, ExecutionResult> CreatePbsMutations(
   return std::make_tuple(cloud::Status(), SuccessExecutionResult());
 }
 
+std::tuple<cloud::Status, ExecutionResult, std::vector<size_t>>
+ValidatePbsMutations(
+    const std::vector<ConsumeBudgetMetadata>& budgets_metadata,
+    absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>& pbs_mutations) {
+  std::vector<size_t> budget_exhausted_indices;
+  for (int i = 0; i < budgets_metadata.size(); ++i) {
+    const ConsumeBudgetMetadata& metadata = budgets_metadata[i];
+    PbsPrimaryKey primary_key{
+        *metadata.budget_key_name,
+        absl::StrCat(budget_key_timeframe_manager::Utils::GetTimeGroup(
+            metadata.time_bucket))};
+    auto pbs_mutation = pbs_mutations.find(primary_key);
+
+    // The privacy budget key is seen for the first time in the database, so the
+    // key must have enough budget
+    if (pbs_mutation == pbs_mutations.end()) {
+      continue;
+    }
+
+    TimeBucket hours_of_the_day =
+        budget_key_timeframe_manager::Utils::GetTimeBucket(
+            metadata.time_bucket);
+    TokenCount current_token_count =
+        pbs_mutation->second.GetTokenCount(hours_of_the_day);
+    if (current_token_count < metadata.token_count) {
+      budget_exhausted_indices.push_back(i);
+    }
+  }
+
+  if (!budget_exhausted_indices.empty()) {
+    return std::make_tuple(cloud::Status(cloud::StatusCode::kInvalidArgument,
+                                         "Not enough budget."),
+                           FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED),
+                           budget_exhausted_indices);
+  }
+  return std::make_tuple(cloud::Status(), SuccessExecutionResult(),
+                         budget_exhausted_indices);
+}
+
 std::tuple<cloud::Status, ExecutionResult> UpdatePbsMutationsToConsumeBudgets(
     const std::vector<ConsumeBudgetMetadata>& budgets_metadata,
     absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>& pbs_mutations) {
@@ -403,6 +443,7 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSync(
         consume_budgets_context) {
   spanner::Client client(spanner_connection_);
   ExecutionResult captured_execution_result = SuccessExecutionResult();
+  std::vector<size_t> captured_budget_exhausted_indices;
   auto commit_result = client.Commit(
       [&](spanner::Transaction txn) -> cloud::StatusOr<spanner::Mutations> {
         spanner::KeySet spanner_key_set =
@@ -419,6 +460,15 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSync(
                 CreatePbsMutations(*results, pbs_mutations);
             !status.ok()) {
           captured_execution_result = execution_result;
+          return status;
+        }
+
+        if (auto [status, execution_result, budget_exhausted_indices] =
+                ValidatePbsMutations(consume_budgets_context.request->budgets,
+                                     pbs_mutations);
+            !status.ok()) {
+          captured_execution_result = execution_result;
+          captured_budget_exhausted_indices = budget_exhausted_indices;
           return status;
         }
 
@@ -439,7 +489,13 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSync(
         }
         return mutations;
       });
+
   if (!commit_result) {
+    if (captured_execution_result.status_code == SC_CONSUME_BUDGET_EXHAUSTED) {
+      consume_budgets_context.response->budget_exhausted_indices =
+          captured_budget_exhausted_indices;
+    }
+
     // If the error status is coming from PBS's application logics, the
     // captured_execution_result should contain failure result. Otherwise, the
     // error status is considered to be coming from Spanner. In this case, the

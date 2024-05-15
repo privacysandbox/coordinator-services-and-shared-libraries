@@ -175,11 +175,11 @@ resource "aws_sns_topic_subscription" "heartbeat-sns-topic-subscription" {
 }
 
 resource "aws_s3_object" "canary_function_zip" {
-  bucket = aws_s3_bucket.heartbeat-canary.id
-  key    = "canary-function-${filemd5(var.heartbeat_source_zip)}.zip"
-  acl    = "private"
-  source = var.heartbeat_source_zip
-  etag   = filemd5(var.heartbeat_source_zip)
+  bucket      = aws_s3_bucket.heartbeat-canary.id
+  key         = "canary-function-${filemd5(var.heartbeat_source_zip)}.zip"
+  acl         = "private"
+  source      = var.heartbeat_source_zip
+  source_hash = filemd5(var.heartbeat_source_zip)
 }
 
 resource "aws_synthetics_canary" "heartbeat" {

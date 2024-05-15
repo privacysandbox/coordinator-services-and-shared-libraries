@@ -96,6 +96,14 @@ resource "google_service_account" "wip_verified" {
   display_name = var.wip_verified_service_account_display_name
 }
 
+# Allowlist IAM binding for all if enable_attestation = false
+resource "google_service_account_iam_member" "workload_identity_member_disabled_attestation" {
+  count              = var.enable_attestation ? 0 : 1
+  service_account_id = google_service_account.wip_verified.id
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.workload_identity_pool.name}/*"
+  role               = "roles/iam.workloadIdentityUser"
+}
+
 # Allowlist IAM binding for container image digests
 resource "google_service_account_iam_member" "workload_identity_member_image_digest" {
   for_each           = toset(var.assertion_tee_container_image_hash_list)
@@ -119,10 +127,11 @@ resource "google_service_account" "wip_allowed" {
   display_name = var.wip_allowed_service_account_display_name
 }
 
-# Allow group to create tokens for Service Account that is allowed to make calls to WIP
+# Allow principals to create tokens for Service Account that is allowed to make calls to WIP
 resource "google_service_account_iam_member" "allowed_service_account_token_creator" {
+  for_each           = setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : [])
   service_account_id = google_service_account.wip_allowed.id
-  member             = "group:${var.allowed_wip_user_group}"
+  member             = each.key
   role               = "roles/iam.serviceAccountTokenCreator"
 }
 

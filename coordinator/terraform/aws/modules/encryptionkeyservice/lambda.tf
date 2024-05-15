@@ -26,10 +26,10 @@ module "lambda_roles" {
 }
 
 resource "aws_s3_bucket_object" "encryption_key_lambda_package" {
-  bucket = var.keymanagement_package_bucket
-  key    = "app/encryption_key_lambda.jar"
-  source = var.encryption_key_service_jar
-  etag   = filemd5(var.encryption_key_service_jar)
+  bucket      = var.keymanagement_package_bucket
+  key         = "app/encryption_key_lambda.jar"
+  source      = var.encryption_key_service_jar
+  source_hash = filemd5(var.encryption_key_service_jar)
 }
 
 # Functions are not instrumented with X-Ray.

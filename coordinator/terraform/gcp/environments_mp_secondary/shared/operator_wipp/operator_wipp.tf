@@ -27,6 +27,7 @@ module "operator_workloadidentitypoolprovider" {
   wipp_project_id_override                        = var.wipp_project_id_override
   wip_allowed_service_account_project_id_override = var.wip_allowed_service_account_project_id_override
   key_encryption_key_id                           = var.key_encryption_key_id
+  allowed_wip_iam_principals                      = var.allowed_wip_iam_principals
   allowed_wip_user_group                          = var.allowed_wip_user_group
   enable_attestation                              = var.enable_attestation
   assertion_tee_swname                            = var.assertion_tee_swname
