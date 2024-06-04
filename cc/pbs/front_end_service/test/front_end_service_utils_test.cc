@@ -1172,8 +1172,47 @@ TEST(TransformReportingOriginToSite, HttpReportingOriginSuccess) {
   EXPECT_EQ(*site, "https://google.com");
 }
 
+TEST(TransformReportingOriginToSite, HttpReportingOriginWithPortSuccess) {
+  auto site =
+      TransformReportingOriginToSite("http://analytics.google.com:8080");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, HttpReportingOriginWithSlashSuccess) {
+  auto site = TransformReportingOriginToSite("http://analytics.google.com/");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite,
+     HttpReportingOriginWithPortAndSlashSuccess) {
+  auto site =
+      TransformReportingOriginToSite("http://analytics.google.com:8080/");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
 TEST(TransformReportingOriginToSite, WithoutHttpsSuccess) {
   auto site = TransformReportingOriginToSite("analytics.google.com");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, WithoutHttpsWithPortSuccess) {
+  auto site = TransformReportingOriginToSite("analytics.google.com:8080");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, WithoutHttpsWithSlashSuccess) {
+  auto site = TransformReportingOriginToSite("analytics.google.com/");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, WithoutHttpsWithPortAndSlashSuccess) {
+  auto site = TransformReportingOriginToSite("analytics.google.com:8080/");
   EXPECT_SUCCESS(site.result());
   EXPECT_EQ(*site, "https://google.com");
 }
@@ -1184,8 +1223,44 @@ TEST(TransformReportingOriginToSite, SiteToSiteSuccess) {
   EXPECT_EQ(*site, "https://google.com");
 }
 
+TEST(TransformReportingOriginToSite, SiteWithPortToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("https://google.com:8080");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, SiteWithSlashToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("https://google.com/");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, SiteWithPortAndSlashToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("https://google.com:8080/");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
 TEST(TransformReportingOriginToSite, HttpSiteToSiteSuccess) {
   auto site = TransformReportingOriginToSite("http://google.com");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, HttpSiteWithPortToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("http://google.com:8080");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, HttpSiteWithSlashToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("http://google.com/");
+  EXPECT_SUCCESS(site.result());
+  EXPECT_EQ(*site, "https://google.com");
+}
+
+TEST(TransformReportingOriginToSite, HttpSiteWithPortAndSlashToSiteSuccess) {
+  auto site = TransformReportingOriginToSite("http://google.com:8080/");
   EXPECT_SUCCESS(site.result());
   EXPECT_EQ(*site, "https://google.com");
 }

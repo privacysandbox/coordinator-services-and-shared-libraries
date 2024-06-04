@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.8.0...v1.8.1) (2024-06-03)
+
+### Changes
+
+- Ignored port and trailing slash of provided reporting origin during authorization checks in PrivacyBudgetService
+
 ## [1.8.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.7.0...v1.8.0) (2024-05-14)
 
 - **Important note**

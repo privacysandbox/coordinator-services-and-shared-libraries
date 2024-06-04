@@ -109,12 +109,121 @@ class AuthLambdaHandlerTest(unittest.TestCase):
         self.assertEqual(
             ret['body'], '{"authorized_domain": "' + db_adtech_sites + '"}')
 
+    def test_should_parse_public_suffix_with_port(self):
+        os.environ["enable_site_enrollment"] = "True"
+        # The recieved ARN
+        user_arn = "arn:aws:iam::123456789012:role/demo"
+        reported_origin = 'extra-prefix.top-level-private-suffix.kimitsu.chiba.jp:8888'
+
+        event = {'requestContext': {'identity': {'userArn': user_arn}},
+                 'headers': {'x-gscp-claimed-identity': reported_origin,
+                             'x-gscp-enable-per-site-enrollment': 'true'}}
+
+        # Mock the call to get the table name from an environment variable
+        os.environ = MagicMock(return_value="my-table-name")
+        # Mock the calls to boto3
+        dynamodb_table_mock = boto3.DynamoDbTableMock()
+
+        # Item the DB returns
+        db_adtech_sites = 'https://top-level-private-suffix.kimitsu.chiba.jp'
+        db_item_return = {'Item': {'adtech_sites': {db_adtech_sites}}}
+
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
+
+        ret = auth_lambda_handler.lambda_handler(event, {})
+
+        self.assertEqual(ret['statusCode'], 200)
+        self.assertEqual(
+            ret['body'], '{"authorized_domain": "' + db_adtech_sites + '"}')
+
+    def test_should_parse_public_suffix_with_trailing_slash(self):
+        os.environ["enable_site_enrollment"] = "True"
+        # The recieved ARN
+        user_arn = "arn:aws:iam::123456789012:role/demo"
+        reported_origin = 'extra-prefix.top-level-private-suffix.kimitsu.chiba.jp/'
+
+        event = {'requestContext': {'identity': {'userArn': user_arn}},
+                 'headers': {'x-gscp-claimed-identity': reported_origin,
+                             'x-gscp-enable-per-site-enrollment': 'true'}}
+
+        # Mock the call to get the table name from an environment variable
+        os.environ = MagicMock(return_value="my-table-name")
+        # Mock the calls to boto3
+        dynamodb_table_mock = boto3.DynamoDbTableMock()
+
+        # Item the DB returns
+        db_adtech_sites = 'https://top-level-private-suffix.kimitsu.chiba.jp'
+        db_item_return = {'Item': {'adtech_sites': {db_adtech_sites}}}
+
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
+
+        ret = auth_lambda_handler.lambda_handler(event, {})
+
+        self.assertEqual(ret['statusCode'], 200)
+        self.assertEqual(
+            ret['body'], '{"authorized_domain": "' + db_adtech_sites + '"}')
+
+    def test_should_parse_public_suffix_with_port_and_trailing_slash(self):
+        os.environ["enable_site_enrollment"] = "True"
+        # The recieved ARN
+        user_arn = "arn:aws:iam::123456789012:role/demo"
+        reported_origin = 'extra-prefix.top-level-private-suffix.kimitsu.chiba.jp:8888/'
+
+        event = {'requestContext': {'identity': {'userArn': user_arn}},
+                 'headers': {'x-gscp-claimed-identity': reported_origin,
+                             'x-gscp-enable-per-site-enrollment': 'true'}}
+
+        # Mock the call to get the table name from an environment variable
+        os.environ = MagicMock(return_value="my-table-name")
+        # Mock the calls to boto3
+        dynamodb_table_mock = boto3.DynamoDbTableMock()
+
+        # Item the DB returns
+        db_adtech_sites = 'https://top-level-private-suffix.kimitsu.chiba.jp'
+        db_item_return = {'Item': {'adtech_sites': {db_adtech_sites}}}
+
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
+
+        ret = auth_lambda_handler.lambda_handler(event, {})
+
+        self.assertEqual(ret['statusCode'], 200)
+        self.assertEqual(
+            ret['body'], '{"authorized_domain": "' + db_adtech_sites + '"}')
+
     def test_authorized_if_no_protocol_reported_origin_belongs_to_allowlisted_site(
         self,
     ):
         # The recieved ARN
         user_arn = "arn:aws:iam::123456789012:role/demo"
         reported_origin = 'my-origin.my-top-level-site.com'
+
+        event = {'requestContext': {'identity': {'userArn': user_arn}},
+                 'headers': {'x-gscp-claimed-identity': reported_origin,
+                             'x-gscp-enable-per-site-enrollment': 'true'}}
+
+        # Mock the call to get the table name from an environment variable
+        os.environ = MagicMock(return_value="my-table-name")
+        # Mock the calls to boto3
+        dynamodb_table_mock = boto3.DynamoDbTableMock()
+
+        # Item the DB returns
+        db_item_return = {'Item': {'adtech_sites': {'https://my-top-level-site.com'}}}
+
+        self._init_dynamodb_mock(dynamodb_table_mock, db_item_return)
+
+        ret = auth_lambda_handler.lambda_handler(event, {})
+
+        self.assertEqual(ret['statusCode'], 200)
+        self.assertEqual(
+            ret['body'], '{"authorized_domain": "https://my-top-level-site.com"}')
+
+
+    def test_authorized_if_no_protocol_reported_origin_with_port_belongs_to_allowlisted_site(
+        self,
+    ):
+        # The recieved ARN
+        user_arn = "arn:aws:iam::123456789012:role/demo"
+        reported_origin = 'my-origin.my-top-level-site.com:8888'
 
         event = {'requestContext': {'identity': {'userArn': user_arn}},
                  'headers': {'x-gscp-claimed-identity': reported_origin,
