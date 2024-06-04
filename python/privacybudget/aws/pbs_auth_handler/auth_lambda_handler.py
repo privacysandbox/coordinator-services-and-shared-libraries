@@ -59,6 +59,7 @@ def lambda_handler(event, context):
         print('authorization failed at stage: ' + str(stage))
         return {'statusCode': 403, 'body': json.dumps('authorization forbidden')}
 
+    print("Reported origin ", reported_origin)
     stage = 'validateReportedOrigin'
     derived_site = convert_reported_origin_url_to_site(reported_origin)
     if not derived_site:
@@ -68,6 +69,7 @@ def lambda_handler(event, context):
     print("Derived site from authorization request: ", derived_site)
 
     userArn = identity['userArn']
+    print("Identified caller identity: ", userArn)
     if userArn[:11] == 'arn:aws:sts':
         roles = userArn.split('/')
         domain = roles[0].split(':')
@@ -116,5 +118,7 @@ def convert_reported_origin_url_to_site(claimed_identity_url):
     claimed_identity_url = claimed_identity_url.replace('http://', '').replace(
         'https://', ''
     )
+    claimed_identity_url = claimed_identity_url.split(':')[0]
+    claimed_identity_url = claimed_identity_url.split('/')[0]
     private_suffix = psl.privatesuffix(claimed_identity_url)
     return 'https://' + private_suffix
