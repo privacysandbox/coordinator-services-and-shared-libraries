@@ -177,6 +177,14 @@ ExecutionResult Http2Server::Init() noexcept {
     request_routing_enabled_ = request_routing_enabled;
   }
 
+  bool adtech_site_authorized_domain_enabled = false;
+  if (config_provider_ && config_provider_
+                              ->Get(kPBSAdtechSiteAsAuthorizedDomain,
+                                    adtech_site_authorized_domain_enabled)
+                              .Successful()) {
+    adtech_site_authorized_domain_enabled_ =
+        adtech_site_authorized_domain_enabled;
+  }
   return SuccessExecutionResult();
 }
 
@@ -518,9 +526,15 @@ void Http2Server::OnAuthorizationCallback(
     SCP_DEBUG_CONTEXT(kHttp2Server, authorization_context,
                       "Authorization failed.");
   } else {
-    sync_context->http2_context.request->auth_context.authorized_domain =
-        make_shared<string>(authorization_context.request
-                                ->authorization_metadata.claimed_identity);
+    if (adtech_site_authorized_domain_enabled_) {
+      sync_context->http2_context.request->auth_context.authorized_domain =
+          authorization_context.response->authorized_metadata.authorized_domain;
+    } else {
+      sync_context->http2_context.request->auth_context.authorized_domain =
+          make_shared<std::string>(
+              authorization_context.request->authorization_metadata
+                  .claimed_identity);
+    }
   }
 
   OnHttp2PendingCallback(authorization_context.result, request_id);

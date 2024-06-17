@@ -69,7 +69,8 @@ core::ExecutionResultOr<TimeBucket> ReportingTimeToTimeBucket(
 //   ]
 // }
 core::ExecutionResult ParseBeginTransactionRequestBodyV1(
-    const std::string& authorized_domain, const core::BytesBuffer& request_body,
+    const std::string& transaction_origin,
+    const core::BytesBuffer& request_body,
     std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
   try {
     auto transaction_request = nlohmann::json::parse(
@@ -103,7 +104,7 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV1(
 
       consume_budget_metadata.budget_key_name =
           std::make_shared<std::string>(absl::StrCat(
-              authorized_domain, "/",
+              transaction_origin, "/",
               consume_budget_transaction_key.at("key").get<std::string>()));
       consume_budget_metadata.token_count =
           consume_budget_transaction_key["token"].get<TokenCount>();
@@ -300,6 +301,46 @@ core::ExecutionResult ParseBeginTransactionRequestBody(
   }
 }
 
+core::ExecutionResult ParseBeginTransactionRequestBody(
+    const std::string& authorized_domain, const std::string& transaction_origin,
+    const core::BytesBuffer& request_body,
+    std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept {
+  try {
+    nlohmann::json transaction_request = nlohmann::json::parse(
+        request_body.bytes->begin(), request_body.bytes->end(),
+        /*parser_callback_t=*/nullptr,
+        /*allow_exceptions=*/false);
+    if (transaction_request.is_discarded()) {
+      return core::FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+    if (transaction_request.find("v") == transaction_request.end()) {
+      return core::FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+    if (transaction_request["v"] != kVersion1 &&
+        transaction_request["v"] != kVersion2) {
+      return core::FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    if (transaction_request["v"] == kVersion1) {
+      return ParseBeginTransactionRequestBodyV1(
+          transaction_origin, request_body, consume_budget_metadata_list);
+    }
+
+    // transaction_request["v"] == "2.0"
+    return ParseBeginTransactionRequestBodyV2(
+        transaction_request, authorized_domain, consume_budget_metadata_list);
+  } catch (const std::exception& exception) {
+    SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
+             absl::StrCat("ParseBeginTransactionRequestBody failed ",
+                          exception.what()));
+    return core::FailureExecutionResult(
+        core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+  }
+}
+
 core::ExecutionResultOr<std::string> TransformReportingOriginToSite(
     const std::string& reporting_origin) {
   const psl_ctx_t* psl = psl_builtin();
@@ -310,19 +351,6 @@ core::ExecutionResultOr<std::string> TransformReportingOriginToSite(
         core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN);
   }
   std::string private_suffix_part = std::string(private_suffix_part_start);
-  // Extract port number after the address portion (skipping protocol scheme).
-  size_t port_idx =
-      private_suffix_part.find(":", private_suffix_part.find("."));
-  if (port_idx != std::string::npos) {
-    // Remove a port number if exists.
-    private_suffix_part = private_suffix_part.substr(0, port_idx);
-  }
-  // Remove trailing slash (/) if it exists
-  size_t trailing_slash_idx =
-      private_suffix_part.find("/", private_suffix_part.find("."));
-  if (trailing_slash_idx != std::string::npos) {
-    private_suffix_part = private_suffix_part.substr(0, trailing_slash_idx);
-  }
   if (absl::StartsWith(private_suffix_part, kHttpsPrefix)) {
     return private_suffix_part;
   }

@@ -332,6 +332,9 @@ class FrontEndService : public FrontEndServiceInterface {
   /// present in the requests coming from the remote coordinator and can be
   /// used to identify such requests.
   std::string remote_coordinator_claimed_identity_;
+
+  /// @brief enables use of adtech site value as authorized_domain.
+  bool adtech_site_authorized_domain_enabled_;
 };
 
 }  // namespace google::scp::pbs

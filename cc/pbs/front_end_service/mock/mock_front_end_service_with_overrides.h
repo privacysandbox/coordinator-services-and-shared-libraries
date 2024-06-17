@@ -64,6 +64,8 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
     return FrontEndService::InitMetricInstances();
   }
 
+  core::ExecutionResult Init() noexcept { return FrontEndService::Init(); }
+
   void OnTransactionCallback(
       const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,

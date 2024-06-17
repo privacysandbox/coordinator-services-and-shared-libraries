@@ -46,6 +46,9 @@ using ::std::string;
 using ::std::vector;
 
 static constexpr char kAuthorizedDomain[] = "https://fake.com";
+static constexpr char kTransactionOriginWithSubdomain[] =
+    "https://subdomain.fake.com";
+static constexpr char kTransactionOriginWithoutSubdomain[] = "https://fake.com";
 
 struct ParseBeginTransactionTestCase {
   std::string test_name;
@@ -92,7 +95,8 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSuccess) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_SUCCESS(execution_result);
   EXPECT_EQ(consume_budget_metadata_list.size(), 4);
 
@@ -137,7 +141,8 @@ TEST(ParseBeginTransactionTest, V2RequestWithUnauthorizedReportingOrigin) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -155,7 +160,8 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutData) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -171,7 +177,8 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -205,7 +212,8 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -234,7 +242,8 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -269,7 +278,8 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
@@ -301,7 +311,8 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -334,7 +345,8 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -368,7 +380,8 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
@@ -403,7 +416,8 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
@@ -436,7 +450,8 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, bytes_buffer, consume_budget_metadata_list);
+      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
@@ -446,8 +461,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
   BytesBuffer bytes_buffer;
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -456,8 +472,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer1) {
   BytesBuffer bytes_buffer(120);
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -472,8 +489,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -488,8 +506,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -504,8 +523,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -520,8 +540,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -536,8 +557,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -552,8 +574,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             SuccessExecutionResult());
 }
 
@@ -568,8 +591,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer8) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -586,8 +610,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -604,8 +629,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
@@ -624,18 +650,20 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             SuccessExecutionResult());
 
   EXPECT_EQ(consume_budget_metadata_list.size(), 2);
   auto it = consume_budget_metadata_list.begin();
-  EXPECT_EQ(*it->budget_key_name, absl::StrCat(kAuthorizedDomain, "/test_key"));
+  EXPECT_EQ(*it->budget_key_name,
+            absl::StrCat(kTransactionOriginWithSubdomain, "/test_key"));
   EXPECT_EQ(it->token_count, 10);
   EXPECT_EQ(it->time_bucket, 1639329650000000000);
   ++it;
   EXPECT_EQ(*it->budget_key_name,
-            absl::StrCat(kAuthorizedDomain, "/test_key_2"));
+            absl::StrCat(kTransactionOriginWithSubdomain, "/test_key_2"));
   EXPECT_EQ(it->token_count, 23);
   EXPECT_EQ(it->time_bucket, 1576135250000000000);
 }
@@ -655,17 +683,20 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             SuccessExecutionResult());
 
   EXPECT_EQ(consume_budget_metadata_list.size(), 2);
   auto it = consume_budget_metadata_list.begin();
-  EXPECT_EQ(*it->budget_key_name, absl::StrCat(kAuthorizedDomain, "/test_key"));
+  EXPECT_EQ(*it->budget_key_name,
+            absl::StrCat(kTransactionOriginWithSubdomain, "/test_key"));
   EXPECT_EQ(it->token_count, 10);
   EXPECT_EQ(it->time_bucket, 1639329650000000000);
   ++it;
-  EXPECT_EQ(*it->budget_key_name, absl::StrCat(kAuthorizedDomain, "/test_key"));
+  EXPECT_EQ(*it->budget_key_name,
+            absl::StrCat(kTransactionOriginWithSubdomain, "/test_key"));
   EXPECT_EQ(it->token_count, 23);
   EXPECT_EQ(it->time_bucket, 1639332000000000000);
 }
@@ -685,8 +716,9 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
@@ -706,8 +738,9 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(kAuthorizedDomain, bytes_buffer,
-                                             consume_budget_metadata_list),
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                kAuthorizedDomain, kTransactionOriginWithSubdomain,
+                bytes_buffer, consume_budget_metadata_list),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
@@ -1172,47 +1205,8 @@ TEST(TransformReportingOriginToSite, HttpReportingOriginSuccess) {
   EXPECT_EQ(*site, "https://google.com");
 }
 
-TEST(TransformReportingOriginToSite, HttpReportingOriginWithPortSuccess) {
-  auto site =
-      TransformReportingOriginToSite("http://analytics.google.com:8080");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, HttpReportingOriginWithSlashSuccess) {
-  auto site = TransformReportingOriginToSite("http://analytics.google.com/");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite,
-     HttpReportingOriginWithPortAndSlashSuccess) {
-  auto site =
-      TransformReportingOriginToSite("http://analytics.google.com:8080/");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
 TEST(TransformReportingOriginToSite, WithoutHttpsSuccess) {
   auto site = TransformReportingOriginToSite("analytics.google.com");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, WithoutHttpsWithPortSuccess) {
-  auto site = TransformReportingOriginToSite("analytics.google.com:8080");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, WithoutHttpsWithSlashSuccess) {
-  auto site = TransformReportingOriginToSite("analytics.google.com/");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, WithoutHttpsWithPortAndSlashSuccess) {
-  auto site = TransformReportingOriginToSite("analytics.google.com:8080/");
   EXPECT_SUCCESS(site.result());
   EXPECT_EQ(*site, "https://google.com");
 }
@@ -1223,44 +1217,8 @@ TEST(TransformReportingOriginToSite, SiteToSiteSuccess) {
   EXPECT_EQ(*site, "https://google.com");
 }
 
-TEST(TransformReportingOriginToSite, SiteWithPortToSiteSuccess) {
-  auto site = TransformReportingOriginToSite("https://google.com:8080");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, SiteWithSlashToSiteSuccess) {
-  auto site = TransformReportingOriginToSite("https://google.com/");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, SiteWithPortAndSlashToSiteSuccess) {
-  auto site = TransformReportingOriginToSite("https://google.com:8080/");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
 TEST(TransformReportingOriginToSite, HttpSiteToSiteSuccess) {
   auto site = TransformReportingOriginToSite("http://google.com");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, HttpSiteWithPortToSiteSuccess) {
-  auto site = TransformReportingOriginToSite("http://google.com:8080");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, HttpSiteWithSlashToSiteSuccess) {
-  auto site = TransformReportingOriginToSite("http://google.com/");
-  EXPECT_SUCCESS(site.result());
-  EXPECT_EQ(*site, "https://google.com");
-}
-
-TEST(TransformReportingOriginToSite, HttpSiteWithPortAndSlashToSiteSuccess) {
-  auto site = TransformReportingOriginToSite("http://google.com:8080/");
   EXPECT_SUCCESS(site.result());
   EXPECT_EQ(*site, "https://google.com");
 }

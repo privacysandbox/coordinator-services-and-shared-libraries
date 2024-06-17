@@ -107,7 +107,8 @@ class Http2Server : public HttpServerInterface {
         private_key_file_(*options.private_key_file),
         certificate_chain_file_(*options.certificate_chain_file),
         tls_context_(boost::asio::ssl::context::sslv23),
-        request_routing_enabled_(false) {}
+        request_routing_enabled_(false),
+        adtech_site_authorized_domain_enabled_(false) {}
 
   // Construct HTTP Server with Request Routing capabilities.
   Http2Server(
@@ -370,5 +371,8 @@ class Http2Server : public HttpServerInterface {
 
   /// @brief enables disables request routing.
   bool request_routing_enabled_;
+
+  /// @brief enables use of adtech site value as authorized_domain.
+  bool adtech_site_authorized_domain_enabled_;
 };
 }  // namespace google::scp::core
