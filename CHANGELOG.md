@@ -1,10 +1,31 @@
 # Changelog
 
-## [1.8.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.8.0...v1.8.1) (2024-06-03)
+## [1.8.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.8.0...v1.8.1) (2024-06-14)
+
+- **Important note**
+  - To address a discovered PBS Auth issue please follow the steps described in the changes section to enable sites_as_authorized_domain.
 
 ### Changes
 
-- Ignored port and trailing slash of provided reporting origin during authorization checks in PrivacyBudgetService
+- Fixed authentication issue related to use of PrivacyBudgetService V2 API.
+- To enable the use of adtech site as authorized domain perform the following steps:
+  - [GCP]
+    - In the `auto.tfvars` file of distributedpbs_application, in the `pbs_application_environment_variables` map, add the following lines
+      ```
+      {
+       name = "google_scp_pbs_adtech_site_as_authorized_domain_enabled"
+       # The flag toggles using adtech site as authorized domain.
+       value = "true"
+      },
+      ```
+  - [AWS]
+    - In the `auto.tfvars` file of distributedpbs_application, in the `application_environment_variables` map, add the following line
+      ```
+      google_scp_pbs_adtech_site_as_authorized_domain_enabled = "true"
+      ```
+- Rollback steps:
+  - Rollback the terraform changes performed in the above steps.
+  - Deploy the previous release (v1.8.0-rc01) along with the rolled back terraform changes.
 
 ## [1.8.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.7.0...v1.8.0) (2024-05-14)
 

@@ -235,7 +235,7 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
       self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
       self.assertEqual(ret[1], 200)
 
-    def test_authorized_if_http_reported_origin_with_port_belongs_to_allowlisted_site(self):
+    def test_authorized_if_http_reported_origin_belongs_to_allowlisted_site(self):
       Request = namedtuple('Request', ['headers'])
       empty_identity = json.dumps({'email': 'googler@google.com'})
       id_part = base64.b64encode(empty_identity.encode('utf-8'))
@@ -243,79 +243,7 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
 
       request = Request(
           headers={
-              'x-gscp-claimed-identity': 'http://www.domain.com:8888',
-              'Authorization': 'bearer {}'.format(token),
-              'x-gscp-enable-per-site-enrollment': 'true',
-          }
-      )
-
-      # Return the reporting origin
-      self.setup_mock_spanner_result(['https://domain.com'])
-
-      ret = None
-      with patch.dict('os.environ', self.get_env()):
-        ret = auth_cloud_function_handler.function_handler(request)
-
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
-
-    def test_authorized_if_http_reported_origin_with_port_belongs_to_allowlisted_site(self):
-      Request = namedtuple('Request', ['headers'])
-      empty_identity = json.dumps({'email': 'googler@google.com'})
-      id_part = base64.b64encode(empty_identity.encode('utf-8'))
-      token = 'HEADER.{}.SIGNATURE'.format(id_part.decode('utf-8'))
-
-      request = Request(
-          headers={
-              'x-gscp-claimed-identity': 'http://www.domain.com:8888',
-              'Authorization': 'bearer {}'.format(token),
-              'x-gscp-enable-per-site-enrollment': 'true',
-          }
-      )
-
-      # Return the reporting origin
-      self.setup_mock_spanner_result(['https://domain.com'])
-
-      ret = None
-      with patch.dict('os.environ', self.get_env()):
-        ret = auth_cloud_function_handler.function_handler(request)
-
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
-
-    def test_authorized_if_reported_origin_with_trailing_slash_belongs_to_allowlisted_site(self):
-      Request = namedtuple('Request', ['headers'])
-      empty_identity = json.dumps({'email': 'googler@google.com'})
-      id_part = base64.b64encode(empty_identity.encode('utf-8'))
-      token = 'HEADER.{}.SIGNATURE'.format(id_part.decode('utf-8'))
-
-      request = Request(
-          headers={
-              'x-gscp-claimed-identity': 'http://www.domain.com/',
-              'Authorization': 'bearer {}'.format(token),
-              'x-gscp-enable-per-site-enrollment': 'true',
-          }
-      )
-
-      # Return the reporting origin
-      self.setup_mock_spanner_result(['https://domain.com'])
-
-      ret = None
-      with patch.dict('os.environ', self.get_env()):
-        ret = auth_cloud_function_handler.function_handler(request)
-
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
-
-    def test_authorized_if_reported_origin_with_port_and_trailing_slash_belongs_to_allowlisted_site(self):
-      Request = namedtuple('Request', ['headers'])
-      empty_identity = json.dumps({'email': 'googler@google.com'})
-      id_part = base64.b64encode(empty_identity.encode('utf-8'))
-      token = 'HEADER.{}.SIGNATURE'.format(id_part.decode('utf-8'))
-
-      request = Request(
-          headers={
-              'x-gscp-claimed-identity': 'http://www.domain.com:8080/',
+              'x-gscp-claimed-identity': 'http://www.domain.com',
               'Authorization': 'bearer {}'.format(token),
               'x-gscp-enable-per-site-enrollment': 'true',
           }
@@ -342,32 +270,6 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
       request = Request(
           headers={
               'x-gscp-claimed-identity': 'https://www.domain.com',
-              'Authorization': 'bearer {}'.format(token),
-              'x-gscp-enable-per-site-enrollment': 'true',
-          }
-      )
-
-      # Return the reporting origin
-      self.setup_mock_spanner_result(['https://domain.com'])
-
-      ret = None
-      with patch.dict('os.environ', self.get_env()):
-        ret = auth_cloud_function_handler.function_handler(request)
-
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
-
-    def test_authorized_if_https_reported_origin_with_port_belongs_to_allowlisted_site(
-        self,
-    ):
-      Request = namedtuple('Request', ['headers'])
-      empty_identity = json.dumps({'email': 'googler@google.com'})
-      id_part = base64.b64encode(empty_identity.encode('utf-8'))
-      token = 'HEADER.{}.SIGNATURE'.format(id_part.decode('utf-8'))
-
-      request = Request(
-          headers={
-              'x-gscp-claimed-identity': 'https://www.domain.com:8888',
               'Authorization': 'bearer {}'.format(token),
               'x-gscp-enable-per-site-enrollment': 'true',
           }

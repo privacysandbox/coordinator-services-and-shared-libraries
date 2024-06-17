@@ -16,15 +16,15 @@
 
 #pragma once
 
+#include <google/protobuf/util/time_util.h>
+
 #include <chrono>
 #include <list>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_set>
 #include <vector>
-
-#include <google/protobuf/util/time_util.h>
-#include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
@@ -41,6 +41,11 @@ namespace google::scp::pbs {
 
 core::ExecutionResult ParseBeginTransactionRequestBody(
     const std::string& authorized_domain, const core::BytesBuffer& request_body,
+    std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept;
+
+core::ExecutionResult ParseBeginTransactionRequestBody(
+    const std::string& authorized_domain, const std::string& transaction_origin,
+    const core::BytesBuffer& request_body,
     std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) noexcept;
 
 core::ExecutionResultOr<std::string> TransformReportingOriginToSite(

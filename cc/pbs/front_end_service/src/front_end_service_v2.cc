@@ -163,7 +163,8 @@ FrontEndServiceV2::FrontEndServiceV2(
       metric_client_(metric_client),
       config_provider_(config_provider),
       aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs),
-      budget_consumption_helper_(budget_consumption_helper) {}
+      budget_consumption_helper_(budget_consumption_helper),
+      adtech_site_authorized_domain_enabled_(false) {}
 
 FrontEndServiceV2::FrontEndServiceV2(
     std::shared_ptr<core::HttpServerInterface> http_server,
@@ -236,6 +237,15 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
     aggregated_metric_interval_ms_ = kDefaultAggregatedMetricIntervalMs;
   }
 
+  bool adtech_site_authorized_domain_enabled = false;
+  if (config_provider_ && config_provider_
+                              ->Get(core::kPBSAdtechSiteAsAuthorizedDomain,
+                                    adtech_site_authorized_domain_enabled)
+                              .Successful()) {
+    adtech_site_authorized_domain_enabled_ =
+        adtech_site_authorized_domain_enabled;
+  }
+
   if (budget_consumption_helper_ == nullptr) {
     auto failure_execution_result =
         FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INITIALIZATION_FAILED);
@@ -280,6 +290,20 @@ ExecutionResult FrontEndServiceV2::Stop() noexcept {
     }
   }
   return SuccessExecutionResult();
+}
+
+std::shared_ptr<std::string> FrontEndServiceV2::ObtainTransactionOrigin(
+    AsyncContext<HttpRequest, HttpResponse>& http_context) const {
+  // If transaction origin is supplied in the header use that instead. The
+  // transaction origin in the header is useful if a peer coordinator is
+  // resolving a transaction on behalf of a client.
+  std::string transaction_origin_in_header;
+  auto execution_result = FrontEndUtils::ExtractTransactionOrigin(
+      http_context.request->headers, transaction_origin_in_header);
+  if (execution_result.Successful() && !transaction_origin_in_header.empty()) {
+    return make_shared<std::string>(move(transaction_origin_in_header));
+  }
+  return http_context.request->auth_context.authorized_domain;
 }
 
 ExecutionResult FrontEndServiceV2::ExecuteConsumeBudgetTransaction(
@@ -358,12 +382,25 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
                            http_context),
           http_context);
   consume_budget_context.response = std::make_shared<ConsumeBudgetsResponse>();
-  if (auto execution_result = ParseBeginTransactionRequestBody(
-          *http_context.request->auth_context.authorized_domain,
-          http_context.request->body, consume_budget_context.request->budgets);
-      !execution_result.Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
-    return execution_result;
+  if (adtech_site_authorized_domain_enabled_) {
+    auto transaction_origin = ObtainTransactionOrigin(http_context);
+    if (auto execution_result = ParseBeginTransactionRequestBody(
+            *http_context.request->auth_context.authorized_domain,
+            *transaction_origin, http_context.request->body,
+            consume_budget_context.request->budgets);
+        !execution_result.Successful()) {
+      client_error_metrics_instance->Increment(reporting_origin_metric_label);
+      return execution_result;
+    }
+  } else {
+    if (auto execution_result = ParseBeginTransactionRequestBody(
+            *http_context.request->auth_context.authorized_domain,
+            http_context.request->body,
+            consume_budget_context.request->budgets);
+        !execution_result.Successful()) {
+      client_error_metrics_instance->Increment(reporting_origin_metric_label);
+      return execution_result;
+    }
   }
 
   if (consume_budget_context.request->budgets.size() == 0) {
@@ -600,5 +637,4 @@ ExecutionResult FrontEndServiceV2::GetTransactionStatus(
   return FailureExecutionResult(
       SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT);
 }
-
 }  // namespace google::scp::pbs

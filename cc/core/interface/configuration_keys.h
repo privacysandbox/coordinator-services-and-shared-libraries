@@ -47,4 +47,6 @@ static constexpr char kTransactionManagerSkipDuplicateTransactionInRecovery[] =
     "google_scp_transaction_manager_skip_duplicate_transaction_in_recovery";
 static constexpr char kSpannerEndpointOverride[] =
     "google_scp_core_spanner_endpoint_override";
+static constexpr char kPBSAdtechSiteAsAuthorizedDomain[] =
+    "google_scp_pbs_adtech_site_as_authorized_domain_enabled";
 }  // namespace google::scp::core

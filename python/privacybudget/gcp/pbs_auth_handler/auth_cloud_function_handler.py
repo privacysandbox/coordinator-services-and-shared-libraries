@@ -101,8 +101,6 @@ def convert_claimed_identity_url_to_site(claimed_identity_url):
     claimed_identity_url = claimed_identity_url.replace('http://', '').replace(
         'https://', ''
     )
-    claimed_identity_url = claimed_identity_url.split(':')[0]
-    claimed_identity_url = claimed_identity_url.split('/')[0]
     private_suffix = psl.privatesuffix(claimed_identity_url)
     return 'https://' + private_suffix
 
@@ -112,7 +110,6 @@ def handle_request(headers):
     if claimed_identity_url is FAILURE:
       print('Failed to get claimed identity from headers')
       return forbidden('claimed_identity_url')
-    print("Claimed identity Url ", claimed_identity_url)
     derived_site = convert_claimed_identity_url_to_site(claimed_identity_url)
     print("Derived site from claimed identity in the request: ", derived_site)
 
@@ -121,10 +118,9 @@ def handle_request(headers):
       print('Failed to get caller identity')
       return forbidden('caller_identity')
 
-    print("Identified caller identity: ", caller_identity)
     adtech_sites = get_adtech_sites(caller_identity)
     if adtech_sites is FAILURE:
-      print('Failed to get list of allowlisted adtech sites for caller identity ', caller_identity)
+      print('Failed to get reporting origin')
       return forbidden('adtech_sites')
 
     print("Adtech sites allowlisted for the provided identity are: ", adtech_sites)

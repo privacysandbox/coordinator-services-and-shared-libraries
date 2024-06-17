@@ -104,6 +104,19 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
       core::AsyncContext<core::HttpRequest, core::HttpResponse>&
           http_context) noexcept;
 
+  /**
+   * @brief Helper to obtain transaction origin from HTTP Request
+   *
+   * If transaction origin is not supplied in the headers, the authorized domain
+   * is used as transaction origin.
+   *
+   * @param http_context
+   * @return std::shared_ptr<std::string>
+   */
+  std::shared_ptr<std::string> ObtainTransactionOrigin(
+      core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context)
+      const;
+
   // An instance to the http server.
   std::shared_ptr<core::HttpServerInterface> http_server_;
 
@@ -133,6 +146,9 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   // Used to set up metrics_instances_map_.
   std::unique_ptr<const MetricInitialization> metric_initialization_;
   BudgetConsumptionHelperInterface* budget_consumption_helper_;
+
+  /// @brief enables use of adtech site value as authorized_domain.
+  bool adtech_site_authorized_domain_enabled_;
 };
 
 }  // namespace google::scp::pbs
