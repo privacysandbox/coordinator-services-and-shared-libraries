@@ -79,6 +79,8 @@ def import_tink_git(repo_name = ""):
     maybe(
         http_archive,
         name = "tink_cc",
+        patch_args = ["-p2"],
+        patches = [Label("//build_defs/tink:tink.patch")],
         sha256 = TINK_SHA256,
         strip_prefix = "{}/cc".format(TINK_STRIP_PREFIX),
         urls = TINK_URLS,

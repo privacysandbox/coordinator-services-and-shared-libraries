@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <grpcpp/grpcpp.h>
@@ -67,7 +68,6 @@ using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::cmrt::sdk::parameter_service::v1::GetParameterRequest;
 using google::cmrt::sdk::parameter_service::v1::GetParameterResponse;
 using google::cmrt::sdk::parameter_service::v1::ParameterService;
-using google::protobuf::MapPair;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
@@ -93,6 +93,7 @@ using grpc::ServerBuilder;
 using grpc::ServerUnaryReactor;
 using grpc::Status;
 using std::atomic;
+using std::make_pair;
 using std::make_shared;
 using std::make_unique;
 using std::mt19937;
@@ -139,8 +140,8 @@ void CreatePutMetricsRequest(PutMetricsRequest& put_metrics_request) {
   *custom_metric->mutable_timestamp() = TimeUtil::GetCurrentTime();
 
   auto* metric_labels = custom_metric->mutable_labels();
-  metric_labels->insert(MapPair(string(kLabelKey1), string(kLabelValue1)));
-  metric_labels->insert(MapPair(string(kLabelKey2), string(kLabelValue2)));
+  metric_labels->insert(make_pair(string(kLabelKey1), string(kLabelValue1)));
+  metric_labels->insert(make_pair(string(kLabelKey2), string(kLabelValue2)));
 }
 }  // namespace
 

@@ -23,6 +23,8 @@
 #include <tink/aead.h>
 #include <tink/util/statusor.h>
 
+#include "absl/strings/string_view.h"
+
 namespace google::scp::cpio::client_providers {
 
 // This class is copied from Tink::AwsKmsAead

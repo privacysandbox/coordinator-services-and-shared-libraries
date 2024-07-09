@@ -30,9 +30,18 @@ rules_jvm_external_setup()
 
 # Declare explicit protobuf version and hash, to override any implicit dependencies.
 # Please update both while upgrading to new versions.
-PROTOBUF_CORE_VERSION = "3.19.4"
+#
+# Staying with 25.3 until we address breaking changes in Protobuf Java 3 -> 4
+# https://protobuf.dev/news/2023-12-05/
+# https://github.com/grpc/grpc-java/issues/11015
+# https://github.com/protocolbuffers/protobuf/issues/16452#issuecomment-2047931605
+PROTOBUF_CORE_VERSION = "25.3"
 
-PROTOBUF_SHA_256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568"
+PROTOBUF_SHA_256 = "d19643d265b978383352b3143f04c0641eea75a75235c111cc01a1350173180e"
+
+# Protobuf now uses different major version numbers for each language.
+# https://protobuf.dev/support/version-support/#java
+PROTOBUF_JAVA_VERSION_PREFIX = "3."
 
 ##########################
 # SDK Dependencies Rules #
@@ -65,9 +74,6 @@ load("@com_google_api_gax_java//:repositories.bzl", "com_google_api_gax_java_rep
 
 com_google_api_gax_java_repositories()
 
-load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
-
-grpc_java_repositories()
 ##########################################################
 
 ################################################################################
@@ -128,19 +134,19 @@ maven_install(
         "commons-logging:commons-logging:1.1.1",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
         "com.google.http-client:google-http-client-jackson2:1.40.0",
-        "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
-        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.cloud:google-cloud-monitoring:3.8.0",
         "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.8.0",
         "com.google.api.grpc:proto-google-common-protos:2.9.2",
-        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.guava:guava:32.1.3-jre",
         "com.google.guava:guava-testlib:32.1.3-jre",
         "com.google.inject:guice:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.google.jimfs:jimfs:1.2",
-        "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
-        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.testparameterinjector:test-parameter-injector:1.1",
         "com.google.truth.extensions:truth-java8-extension:1.1.2",
         "com.google.truth.extensions:truth-proto-extension:1.1.2",
@@ -254,9 +260,19 @@ rules_cc_toolchains()
 ###############
 # Proto rules #
 ###############
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+
+# Used by rules_proto
+# Fixes "Repository '@bazel_features_version' is not defined."
+# https://github.com/bazelbuild/rules_proto/issues/212
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
 
 rules_proto_dependencies()
+
+load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
 
 rules_proto_toolchains()
 
@@ -293,16 +309,6 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 
 rules_foreign_cc_dependencies()
 
-# OpenTelemetry CPP
-# https://github.com/open-telemetry/opentelemetry-cpp/blob/main/INSTALL.md#incorporating-into-an-existing-bazel-project
-load("@io_opentelemetry_cpp//bazel:repository.bzl", "opentelemetry_cpp_deps")
-
-opentelemetry_cpp_deps()
-
-load("@io_opentelemetry_cpp//bazel:extra_deps.bzl", "opentelemetry_extra_deps")
-
-opentelemetry_extra_deps()
-
 ##########
 # GRPC C #
 ##########
@@ -315,6 +321,26 @@ grpc_deps()
 load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
 grpc_extra_deps()
+
+# Java gRPC dependencies must be loaded after gRPC C++
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
+
+grpc_java_repositories()
+
+###################################
+## OpenTelemetry CPP dependencies #
+###################################
+# Also make sure to build the SDK with system-provided Abseil library for optimization.
+# https://github.com/open-telemetry/opentelemetry-cpp/blob/main/examples/otlp/README.md#additional-notes-regarding-abseil-library
+#
+# https://github.com/open-telemetry/opentelemetry-cpp/blob/main/INSTALL.md#incorporating-into-an-existing-bazel-project
+load("@io_opentelemetry_cpp//bazel:repository.bzl", "opentelemetry_cpp_deps")
+
+opentelemetry_cpp_deps()
+
+load("@io_opentelemetry_cpp//bazel:extra_deps.bzl", "opentelemetry_extra_deps")
+
+opentelemetry_extra_deps()
 
 ################################################################################
 # Download Indirect Dependencies: End
@@ -390,26 +416,6 @@ container_pull(
     tag = "latest",
 )
 
-########################################################################
-# Roma dependencies
-load("//build_defs/cc:roma.bzl", "roma_dependencies")
-
-roma_dependencies()
-
-load(
-    "@com_google_sandboxed_api//sandboxed_api/bazel:llvm_config.bzl",
-    "llvm_disable_optional_support_deps",
-)
-
-# Must be right after roma_dependencies
-load(
-    "@com_google_sandboxed_api//sandboxed_api/bazel:sapi_deps.bzl",
-    "sapi_deps",
-)
-
-llvm_disable_optional_support_deps()
-
-sapi_deps()
 ########################################################################
 
 # Needed for cc reproducible builds

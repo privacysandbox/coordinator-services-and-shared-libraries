@@ -174,9 +174,20 @@ opentelemetry::sdk::common::ExportResult OtlpGrpcAuthedMetricExporter::Export(
     return opentelemetry::sdk::common::ExportResult::kFailure;
   }
 
+  google::protobuf::ArenaOptions arena_options;
+  // It's easy to allocate data blocks larger than 1024 when we populate them
+  // with basic kresource and attributes.
+  arena_options.initial_block_size = 1024;  // 1KB
+  // When in batch mode, it's easy to export a large number of spans at once; we
+  // can alloc a larger block to reduce memory fragments.
+  arena_options.max_block_size = 65536;  // 64KB
+  std::unique_ptr<google::protobuf::Arena> arena =
+      std::make_unique<google::protobuf::Arena>(arena_options);
+
   grpc::Status status =
       opentelemetry::exporter::otlp::OtlpGrpcClient::DelegateExport(
-          metrics_service_stub_.get(), context.get(), request, &response);
+          metrics_service_stub_.get(), std::move(context), std::move(arena),
+          std::move(request), &response);
 
   if (!status.ok()) {
     auto execution_result = FailureExecutionResult(SC_TELEMETRY_EXPORT_FAILED);

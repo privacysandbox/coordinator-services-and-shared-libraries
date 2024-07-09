@@ -28,7 +28,10 @@
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/http_server_interface.h"
 #include "core/interface/transaction_manager_interface.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/observer_result.h"
 #include "pbs/interface/budget_key_provider_interface.h"
 #include "pbs/interface/front_end_service_interface.h"
 #include "pbs/interface/type_def.h"
@@ -59,6 +62,16 @@ class HealthService : public core::ServiceInterface {
   core::ExecutionResult Stop() noexcept override;
 
  protected:
+  /// Callback to be used with an OTel ObservableInstrument.
+  static void ObserveMemoryUsageCallback(
+      opentelemetry::metrics::ObserverResult observer_result,
+      HealthService* self_ptr);
+
+  /// Callback to be used with an OTel ObservableInstrument.
+  static void ObserveFileSystemStorageUsageCallback(
+      opentelemetry::metrics::ObserverResult observer_result,
+      HealthService* self_ptr);
+
   HealthService() {}
 
   /**
@@ -135,6 +148,20 @@ class HealthService : public core::ServiceInterface {
       instance_filesystem_storage_usage_metric_;
   /// Metric should not be pushed too quickly, so keep track of the last push.
   std::chrono::nanoseconds last_metric_push_steady_ns_timestamp_;
+  /// The OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+  /// The OpenTelemetry Instrument for instance memory usage.
+  std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+      memory_usage_instrument_;
+  /// The OpenTelemetry Instrument for instance file system storage usage.
+  std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+      filesystem_storage_usage_instrument_;
+
+ private:
+  /// Initialize MetricClient.
+  ///
+  /// TODO: Remove MetricClient once OTel reaches feature parity.
+  core::ExecutionResult InitMetricClientInterface();
 };
 
 }  // namespace google::scp::pbs

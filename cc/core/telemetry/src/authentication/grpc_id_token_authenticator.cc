@@ -27,7 +27,7 @@ namespace google::scp::core {
 // Token validity
 // Defaults to 1hr
 // https://cloud.google.com/docs/authentication/token-types#id-lifetime
-inline constexpr std::int32_t kIdTokenValidity = 3600;
+inline constexpr std::int32_t kIdTokenValidity = 3000;
 
 /**
  * @brief Periodically refreshes authentication tokens for gRPC metadata.
@@ -55,7 +55,8 @@ grpc::Status GrpcIdTokenAuthenticator::GetMetadata(
     ExecutionResultOr<std::string> token =
         token_fetcher_->FetchIdToken(*auth_config_);
     if (!token.Successful()) {
-      return grpc::Status::CANCELLED;
+      return grpc::Status(grpc::StatusCode::UNKNOWN,
+                          "token_fetcher_->FetchIdToken() failed");
     }
     id_token_ = *token;
     expiry_time_ = std::chrono::system_clock::now() +

@@ -20,18 +20,24 @@
 
 #include <chrono>
 #include <list>
+#include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/http_types.h"
 #include "core/interface/transaction_manager_interface.h"
 #include "core/interface/type_def.h"
+#include "opentelemetry/common/key_value_iterable_view.h"
+#include "opentelemetry/context/context.h"
+#include "opentelemetry/metrics/provider.h"
+#include "opentelemetry/metrics/sync_instruments.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "pbs/interface/front_end_service_interface.h"
 #include "pbs/interface/type_def.h"
@@ -356,6 +362,14 @@ class FrontEndUtils {
     transaction_execution_phase = core::TransactionExecutionPhase::Unknown;
     return core::FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
+  }
+
+  static opentelemetry::common::KeyValueIterableView<
+      absl::flat_hash_map<std::string, std::string>>
+  CreateMetricLabelsKV(
+      const absl::flat_hash_map<std::string, std::string>& metric_labels) {
+    return opentelemetry::common::KeyValueIterableView<
+        absl::flat_hash_map<std::string, std::string>>(metric_labels);
   }
 
  private:

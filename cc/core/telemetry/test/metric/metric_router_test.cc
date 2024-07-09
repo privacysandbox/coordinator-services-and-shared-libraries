@@ -16,21 +16,20 @@
 
 #include <memory>
 
-#include <core/telemetry/mock/in_memory_metric_exporter.h>
-
 #include "core/config_provider/mock/mock_config_provider.h"
+#include "core/telemetry/mock/in_memory_metric_exporter.h"
+#include "core/telemetry/mock/in_memory_metric_reader.h"
 #include "core/telemetry/src/common/telemetry_configuration.h"
 #include "include/gtest/gtest.h"
 #include "opentelemetry/metrics/provider.h"
+#include "opentelemetry/sdk/resource/resource.h"
 
 namespace google::scp::core::test {
 namespace {
 class MetricRouterTest : public testing::Test {
  protected:
   void SetUp() override {
-    data_ready_ = false;
-
-    exporter_ = std::make_unique<InMemoryMetricExporter>(data_ready_);
+    exporter_ = std::make_unique<InMemoryMetricExporter>();
     mock_config_provider_ =
         std::make_shared<config_provider::mock::MockConfigProvider>();
     std::int32_t metric_export_interval = 1000;
@@ -43,20 +42,22 @@ class MetricRouterTest : public testing::Test {
         std::string(kOtelMetricExportTimeoutMsecKey),
         metric_export_timeout);  // timeout every .5s
 
-    metric_router_ = std::make_unique<MetricRouter>(mock_config_provider_,
-                                                    std::move(exporter_));
+    metric_router_ = std::make_unique<MetricRouter>(
+        mock_config_provider_,
+        opentelemetry::sdk::resource::Resource::GetDefault(),
+        std::move(exporter_));
   }
 
   std::shared_ptr<config_provider::mock::MockConfigProvider>
       mock_config_provider_;
   std::unique_ptr<google::scp::core::MetricRouter> metric_router_;
-  std::atomic<bool> data_ready_;
   std::unique_ptr<InMemoryMetricExporter> exporter_;
+  std::shared_ptr<InMemoryMetricReader> reader_;
 };
 
 TEST_F(MetricRouterTest, ConstructorAndGetMeterProvider) {
   std::shared_ptr<opentelemetry::metrics::MeterProvider> meter_provider =
-      metric_router_->meter_provider();
+      opentelemetry::metrics::Provider::GetMeterProvider();
 
   ASSERT_NE(nullptr, meter_provider);
   EXPECT_NE(meter_provider->GetMeter("test"), nullptr);

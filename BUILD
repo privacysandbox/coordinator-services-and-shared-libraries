@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
@@ -29,6 +30,53 @@ buildifier(
     mode = "fix",
 )
 
+# pkg_tar no longer allows directories to be specified.
+# Must use copy_directory to create Tree Artifacts.
+# https://github.com/bazelbuild/rules_pkg/issues/611
+#
+# The srcs directory is prefixed to avoid the error conflicting with
+# other build rules:
+# "One of the output paths ... is a prefix of the other.
+# These actions cannot be simultaneously present;
+# please rename one of the output files or build just one of them"
+# It will be stripped by pkg_tar remap_paths.
+
+copy_directory(
+    name = "build_defs_dir",
+    src = "build_defs",
+    out = "srcs/build_defs",
+)
+
+copy_directory(
+    name = "cc_dir",
+    src = "cc",
+    out = "srcs/cc",
+)
+
+copy_directory(
+    name = "java_dir",
+    src = "java",
+    out = "srcs/java",
+)
+
+copy_directory(
+    name = "javatests_dir",
+    src = "javatests",
+    out = "srcs/javatests",
+)
+
+copy_directory(
+    name = "licenses_dir",
+    src = "licenses",
+    out = "srcs/licenses",
+)
+
+copy_directory(
+    name = "operator_dir",
+    src = "operator",
+    out = "srcs/operator",
+)
+
 # This rule is used to copy the source code from other bazel rules.
 # This can be used for reproducible builds.
 # Only cc targets are needed at this point, so only the files needed to build
@@ -40,15 +88,18 @@ pkg_tar(
         ".bazelversion",
         "BUILD",
         "WORKSPACE",
-        "build_defs",
-        "cc",
-        "java",
-        "javatests",
-        "licenses",
-        "operator",
+        ":build_defs_dir",
+        ":cc_dir",
+        ":java_dir",
+        ":javatests_dir",
+        ":licenses_dir",
+        ":operator_dir",
     ] + glob(["*.bzl"]),
     mode = "0777",
     package_dir = "scp",
+    remap_paths = {
+        "srcs/": "",
+    },
 )
 
 pkg_files(

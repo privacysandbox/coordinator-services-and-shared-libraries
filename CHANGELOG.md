@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.9.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.8.1...v1.9.0) (2024-06-27)
+
+### Changes
+  - Added `reporting_site` optional parameter to CreateJob API schema.
+  - Copied tink patch to fix newer absl.
+  - Removed trailing slash and port from reporting origin in the PBS request handling to avoid PRIVACY_BUDGET_AUTHORIZATION_ERROR.
+  - Updated log message level for budget exhausted from error to warning.
+  - Updated Budget Recovery tool to process new json format.
+  - Updated dependencies: Bazel, Protobuf, gRPC, Abseil, GoogleTest, google-cloud-cpp.
+  - [GCP only] Added option to enable PBS instance group auto-scaling.
+  - [AWS only] Fixed AWS DynamoDB authentication return code.
+  - [AWS only] Fixed AWS tarball name reference in our release script.
+  - [AWS only] Updated PBS ELB monitoring by setting 4xx and 5xx error rate alarms to critical.
+
 ## [1.8.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.8.0...v1.8.1) (2024-06-14)
 
 - **Important note**

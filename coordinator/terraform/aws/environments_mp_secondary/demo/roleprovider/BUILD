@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "role_provider_link",
-    src = "../../shared/roleprovider/role_provider.tf",
-    dest = "roleprovider/role_provider.tf",
+    link_name = "roleprovider/role_provider.tf",
+    target = "../../shared/roleprovider/role_provider.tf",
 )
 
 pkg_mklink(
     name = "role_provider_vars_link",
-    src = "../../shared/roleprovider/role_provider_variables.tf",
-    dest = "roleprovider/role_provider_variables.tf",
+    link_name = "roleprovider/role_provider_variables.tf",
+    target = "../../shared/roleprovider/role_provider_variables.tf",
 )
 
 pkg_mklink(
     name = "role_provider_outputs_link",
-    src = "../../shared/roleprovider/role_provider_outputs.tf",
-    dest = "roleprovider/role_provider_outputs.tf",
+    link_name = "roleprovider/role_provider_outputs.tf",
+    target = "../../shared/roleprovider/role_provider_outputs.tf",
 )

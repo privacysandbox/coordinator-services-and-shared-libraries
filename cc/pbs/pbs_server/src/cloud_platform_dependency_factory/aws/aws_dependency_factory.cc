@@ -19,6 +19,7 @@
 
 #include <aws/core/Aws.h>
 
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
 #include "core/authorization_proxy/src/authorization_proxy.h"
 #include "core/blob_storage_provider/src/aws/aws_s3.h"
 #include "core/common/uuid/src/uuid.h"
@@ -39,6 +40,7 @@
 #include "cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
 #include "pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
 #include "pbs/interface/configuration_keys.h"
@@ -48,6 +50,7 @@
 using Aws::InitAPI;
 using Aws::SDKOptions;
 using Aws::ShutdownAPI;
+using google::cmrt::sdk::instance_service::v1::InstanceDetails;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::AuthorizationProxyInterface;
 using google::scp::core::AutoRefreshTokenProviderService;
@@ -68,6 +71,7 @@ using google::scp::core::nosql_database_provider::AwsDynamoDB;
 using google::scp::cpio::MetricClientOptions;
 using google::scp::cpio::client_providers::AwsAuthTokenProvider;
 using google::scp::cpio::client_providers::AwsInstanceClientProvider;
+using google::scp::cpio::client_providers::AwsInstanceClientUtils;
 using google::scp::cpio::client_providers::AwsMetricClientProvider;
 using google::scp::cpio::client_providers::MetricBatchingOptions;
 using google::scp::pbs::AwsAuthorizationTokenFetcher;
@@ -287,27 +291,86 @@ AwsDependencyFactory::ConstructRemoteCoordinatorPBSClient(
 }
 
 std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
-    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+        instance_client_provider) noexcept {
+  std::string current_instance_resource_name;
+  auto execution_result =
+      instance_client_provider->GetCurrentInstanceResourceNameSync(
+          current_instance_resource_name);
+
+  opentelemetry::sdk::resource::ResourceAttributes resource_attributes = {
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudProvider,
+       "aws"},
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudPlatform,
+       "aws_ec2"},
+  };
+  if (execution_result.Successful()) {
+    auto cloud_region_or = AwsInstanceClientUtils::ParseRegionFromResourceName(
+        current_instance_resource_name);
+    auto cloud_account_id_or =
+        AwsInstanceClientUtils::ParseAccountIdFromResourceName(
+            current_instance_resource_name);
+    auto host_id_or =
+        AwsInstanceClientUtils::ParseInstanceIdFromInstanceResourceName(
+            current_instance_resource_name);
+
+    if (cloud_region_or.result().Successful()) {
+      // This is the region string formatted for Google Cloud monitoring.
+      //
+      // The format of this field is "aws:{region}", where supported values for
+      // {region} are listed at
+      // http://docs.aws.amazon.com/general/latest/gr/rande.html.
+      // https://cloud.google.com/monitoring/api/resources#tag_aws_ec2_instance
+      std::string cloud_region = "aws:" + *cloud_region_or;
+      resource_attributes.insert(
+          {opentelemetry::sdk::resource::SemanticConventions::kCloudRegion,
+           cloud_region});
+    }
+    if (cloud_account_id_or.result().Successful()) {
+      resource_attributes.insert(
+          {opentelemetry::sdk::resource::SemanticConventions::kCloudAccountId,
+           move(*cloud_account_id_or)});
+    }
+    if (host_id_or.result().Successful()) {
+      resource_attributes.insert(
+          {opentelemetry::sdk::resource::SemanticConventions::kHostId,
+           move(*host_id_or)});
+    }
+  } else {
+    SCP_ERROR(kAwsDependencyProvider, kZeroUuid, execution_result,
+              "Failed to retrieve AWS Resource attributes.");
+  }
+  auto resource =
+      opentelemetry::sdk::resource::Resource::Create(resource_attributes);
+
+  return this->ConstructMetricRouter(instance_client_provider,
+                                     std::move(resource));
+}
+
+std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+        instance_client_provider,
+    opentelemetry::sdk::resource::Resource resource) noexcept {
   std::unique_ptr<GrpcAuthConfig> metric_auth_config =
       std::make_unique<GrpcAuthConfig>(
           GetConfigValue(std::string(core::kOtelServiceAccountKey),
                          std::string(core::kOtelServiceAccountValue),
-                         *config_provider),
+                         *config_provider_),
           GetConfigValue(std::string(core::kOtelAudienceKey),
                          std::string(core::kOtelAudienceValue),
-                         *config_provider),
+                         *config_provider_),
           GetConfigValue(std::string(core::kOtelCredConfigKey),
                          std::string(core::kOtelCredConfigValue),
-                         *config_provider));
+                         *config_provider_));
   std::unique_ptr<TokenFetcher> metric_token_fetcher =
-      std::make_unique<AwsTokenFetcher>(*metric_auth_config);
+      std::make_unique<AwsTokenFetcher>();
   std::unique_ptr<GrpcIdTokenAuthenticator> metric_id_token_authenticator =
       std::make_unique<GrpcIdTokenAuthenticator>(
           std::move(metric_auth_config), std::move(metric_token_fetcher));
 
   const std::string exporter_path = GetConfigValue(
       std::string(core::kOtelExporterOtlpEndpointKey),
-      std::string(core::kOtelExporterOtlpEndpointValue), *config_provider);
+      std::string(core::kOtelExporterOtlpEndpointValue), *config_provider_);
 
   opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions exporter_options;
   exporter_options.endpoint = exporter_path;
@@ -316,7 +379,7 @@ std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
       metric_exporter = std::make_unique<OtlpGrpcAuthedMetricExporter>(
           exporter_options, std::move(metric_id_token_authenticator));
 
-  return std::make_unique<MetricRouter>(config_provider,
+  return std::make_unique<MetricRouter>(config_provider_, std::move(resource),
                                         std::move(metric_exporter));
 }
 

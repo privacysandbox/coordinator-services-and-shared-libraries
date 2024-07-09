@@ -274,6 +274,16 @@ variable "pbs_custom_vm_tags" {
   default     = []
 }
 
+variable "pbs_autoscaling_policy" {
+  description = "Auto-scaling policy for PBS instances."
+  type = object({
+    min_replicas           = number
+    max_replicas           = number
+    cpu_utilization_target = number
+  })
+  default = null
+}
+
 ################################################################################
 # Network Variables.
 ################################################################################

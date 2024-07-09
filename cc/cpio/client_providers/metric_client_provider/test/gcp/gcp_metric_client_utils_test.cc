@@ -18,6 +18,7 @@
 
 #include <map>
 #include <memory>
+#include <utility>
 
 #include <google/protobuf/util/time_util.h>
 
@@ -37,7 +38,6 @@ using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::monitoring::v3::Point;
 using google::monitoring::v3::TimeSeries;
-using google::protobuf::MapPair;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -51,6 +51,7 @@ using google::scp::core::errors::
 using google::scp::core::errors::SC_GCP_METRIC_CLIENT_INVALID_METRIC_VALUE;
 using google::scp::core::test::ResultIs;
 using google::scp::cpio::client_providers::GcpMetricClientUtils;
+using std::make_pair;
 using std::make_shared;
 using std::map;
 using std::stod;
@@ -182,7 +183,7 @@ TEST_F(GcpMetricClientUtilsTest, OverSizeLabels) {
   // Adds oversize labels.
   auto labels = context.request->add_metrics()->mutable_labels();
   for (int i = 0; i < 33; ++i) {
-    labels->insert(MapPair(string("key") + to_string(i), string("value")));
+    labels->insert(make_pair(string("key") + to_string(i), string("value")));
   }
   vector<TimeSeries> time_series_list;
   auto result = GcpMetricClientUtils::ParseRequestToTimeSeries(

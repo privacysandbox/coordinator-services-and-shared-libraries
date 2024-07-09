@@ -27,12 +27,12 @@ pkg_files(
 
 pkg_mklink(
     name = "distributedpbs_heartbeat_prober_link",
-    src = "../../shared/distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober.tf",
-    dest = "distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober.tf",
+    link_name = "distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober.tf",
+    target = "../../shared/distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober.tf",
 )
 
 pkg_mklink(
     name = "distributedpbs_heartbeat_prober_variables_link",
-    src = "../../shared/distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober_variables.tf",
-    dest = "distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober_variables.tf",
+    link_name = "distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober_variables.tf",
+    target = "../../shared/distributedpbs_heartbeat_prober/distributedpbs_heartbeat_prober_variables.tf",
 )

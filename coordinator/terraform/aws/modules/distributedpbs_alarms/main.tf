@@ -329,9 +329,63 @@ resource "aws_cloudwatch_metric_alarm" "elb_4xx_error_ratio_high" {
   }
 }
 
+# elb_4xx_error_ratio_extremely_high(4XXerror/TotalCount)
+resource "aws_cloudwatch_metric_alarm" "elb_4xx_error_ratio_extremely_high" {
+  alarm_name                = "CriticalELB4xxErrorRatioHigh${var.custom_alarm_label}"
+  comparison_operator       = "GreaterThanOrEqualToThreshold"
+  evaluation_periods        = var.error_ratio_4xx_high_eval_periods
+  threshold                 = var.error_ratio_4xx_high_threshold
+  alarm_description         = "4XXError rate ratio has exceeded ${var.error_ratio_4xx_high_threshold}%"
+  insufficient_data_actions = []
+  alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
+
+  tags = {
+    environment = var.environment
+  }
+
+  metric_query {
+    id = "e1"
+    # Setting a minimum request count to remove the noise of low qps.
+    expression  = "IF(m1>100,(m2/m1)*100,0)"
+    label       = "Error Rate Ratio"
+    return_data = "true"
+  }
+
+  metric_query {
+    id = "m1"
+
+    metric {
+      metric_name = "RequestCount"
+      namespace   = "AWS/ApplicationELB"
+      period      = "60"
+      stat        = "Sum"
+      unit        = "Count"
+      dimensions = {
+        LoadBalancer = var.loadbalancer
+      }
+    }
+  }
+
+  metric_query {
+    id = "m2"
+
+    metric {
+      metric_name = "HTTPCode_Target_4XX_Count"
+      namespace   = "AWS/ApplicationELB"
+      period      = "60"
+      stat        = "Sum"
+      unit        = "Count"
+      dimensions = {
+        LoadBalancer = var.loadbalancer
+      }
+    }
+  }
+}
+
 # elb_5xx_error_ratio_high(5XXerror/TotalCount)
 resource "aws_cloudwatch_metric_alarm" "elb_5xx_error_ratio_high" {
-  alarm_name                = "WarningELB5xxErrorRatioHigh${var.custom_alarm_label}"
+  alarm_name                = "CriticalELB5xxErrorRatioHigh${var.custom_alarm_label}"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = var.error_ratio_5xx_eval_periods
   threshold                 = var.error_ratio_5xx_threshold

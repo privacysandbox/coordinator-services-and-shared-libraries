@@ -31,6 +31,8 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 #include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
 
 namespace google::scp::pbs {
 
@@ -43,14 +45,8 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<cpio::MetricClientInterface> metric_client,
       std::shared_ptr<core::ConfigProviderInterface> config_provider,
-      BudgetConsumptionHelperInterface* budget_consumption_helper);
-  FrontEndServiceV2(
-      std::shared_ptr<core::HttpServerInterface> http_server,
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<cpio::MetricClientInterface> metric_client,
-      std::shared_ptr<core::ConfigProviderInterface> config_provider,
-      std::unique_ptr<MetricInitialization> metric_initialization,
-      BudgetConsumptionHelperInterface* budget_consumption_helper);
+      BudgetConsumptionHelperInterface* budget_consumption_helper,
+      std::unique_ptr<MetricInitialization> metric_initialization = nullptr);
 
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;
@@ -96,6 +92,7 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
 
   void OnConsumeBudgetCallback(
       core::AsyncContext<core::HttpRequest, core::HttpResponse> http_context,
+      std::string transaction_id,
       core::AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
           consume_budget_context);
 
@@ -147,6 +144,15 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   std::unique_ptr<const MetricInitialization> metric_initialization_;
   BudgetConsumptionHelperInterface* budget_consumption_helper_;
 
+  /// OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      total_request_counter_;
+  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      client_error_counter_;
+  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      server_error_counter_;
   /// @brief enables use of adtech site value as authorized_domain.
   bool adtech_site_authorized_domain_enabled_;
 };

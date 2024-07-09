@@ -36,7 +36,8 @@ class InMemoryMetricExporter final
     : public opentelemetry::sdk::metrics::PushMetricExporter {
  public:
   explicit InMemoryMetricExporter(
-      std::atomic<bool>& data_ready, std::ostream& sout = std::cout,
+      bool is_otel_print_data_to_console_enabled = false,
+      std::ostream& sout = std::cout,
       opentelemetry::sdk::metrics::AggregationTemporality
           aggregation_temporality = opentelemetry::sdk::metrics::
               AggregationTemporality::kCumulative) noexcept;
@@ -58,7 +59,7 @@ class InMemoryMetricExporter final
   // Utility method to help debugging the exported data
   void PrintData(const opentelemetry::sdk::metrics::ResourceMetrics& data);
   // Returns the exported data
-  const std::vector<opentelemetry::sdk::metrics::ResourceMetrics>& data() const;
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data() const;
 
   bool is_shutdown() const noexcept;
 
@@ -69,12 +70,10 @@ class InMemoryMetricExporter final
       data_;  // exported data
   mutable std::mutex mutex_;
   opentelemetry::sdk::metrics::AggregationTemporality aggregation_temporality_;
-
-  // boolean which is turned to true when we export the data. Test cases are
-  // relying on this as exporter runs periodically in a different thread
-  std::atomic<bool>& data_ready_;
   std::unique_ptr<opentelemetry::exporter::metrics::OStreamMetricExporter>
       o_stream_metric_exporter_;
+  // Boolean that specifies whether metrics should be printed to the console.
+  bool is_otel_print_data_to_console_enabled_;
 };
 
 }  // namespace google::scp::core

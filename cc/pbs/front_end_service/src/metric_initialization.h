@@ -36,9 +36,8 @@ inline constexpr std::array<absl::string_view, 7>
         kMetricLabelGetStatusTransaction};
 
 inline constexpr std::array<absl::string_view, 3>
-    kMetricInitializationMetricNames = {kMetricNameTotalRequest,
-                                        kMetricNameClientError,
-                                        kMetricNameServerError};
+    kMetricInitializationMetricNames = {
+        kMetricNameRequests, kMetricNameClientErrors, kMetricNameServerErrors};
 
 typedef absl::flat_hash_map<
     std::string,

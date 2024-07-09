@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "operator_wipp_link",
-    src = "../../shared/operator_wipp/operator_wipp.tf",
-    dest = "operator_wipp/operator_wipp.tf",
+    link_name = "operator_wipp/operator_wipp.tf",
+    target = "../../shared/operator_wipp/operator_wipp.tf",
 )
 
 pkg_mklink(
     name = "operator_wipp_variables_link",
-    src = "../../shared/operator_wipp/operator_wipp_variables.tf",
-    dest = "operator_wipp/operator_wipp_variables.tf",
+    link_name = "operator_wipp/operator_wipp_variables.tf",
+    target = "../../shared/operator_wipp/operator_wipp_variables.tf",
 )
 
 pkg_mklink(
     name = "operator_wipp_outputs_link",
-    src = "../../shared/operator_wipp/operator_wipp_outputs.tf",
-    dest = "operator_wipp/operator_wipp_outputs.tf",
+    link_name = "operator_wipp/operator_wipp_outputs.tf",
+    target = "../../shared/operator_wipp/operator_wipp_outputs.tf",
 )

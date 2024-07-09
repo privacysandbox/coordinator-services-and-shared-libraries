@@ -159,7 +159,7 @@ TEST(GcpSpannerUtilsTest, ConvertItemAttributeToSpannerValueNumber) {
 
   attribute.set_value_double(1.5);
   EXPECT_THAT(GcpSpannerUtils::ConvertItemAttributeToSpannerValue(attribute),
-              IsSuccessfulAndHolds(Value(1.5f)));
+              IsSuccessfulAndHolds(Value(1.5)));
 }
 
 TEST(GcpSpannerUtilsTest, ConvertItemAttributeToSpannerValueString) {

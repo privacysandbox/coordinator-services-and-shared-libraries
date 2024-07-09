@@ -165,12 +165,12 @@ class CloudPlatformDependencyFactoryInterface
 
   /**
    * @brief Construct Metric Router for Otel metrics collection
-   * @param config_provider
+   * @param instance_client_provider
    * @return std::unique_ptr<core::MetricRouter>
    */
   virtual std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      const std::shared_ptr<core::ConfigProviderInterface>&
-          config_provider) noexcept = 0;
+      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+          instance_client_provider) noexcept = 0;
 
   /**
    * @brief Construct PBS client to talk to remote coordinator

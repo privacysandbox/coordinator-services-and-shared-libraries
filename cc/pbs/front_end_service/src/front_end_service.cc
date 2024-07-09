@@ -44,6 +44,11 @@
 #include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
 #include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
+#include "opentelemetry/common/key_value_iterable_view.h"
+#include "opentelemetry/context/context.h"
+#include "opentelemetry/metrics/provider.h"
+#include "opentelemetry/metrics/sync_instruments.h"
+#include "opentelemetry/nostd/unique_ptr.h"
 
 namespace google::scp::pbs {
 using ::google::scp::core::AsyncContext;
@@ -83,6 +88,7 @@ using ::google::scp::cpio::MetricLabelsBase;
 using ::google::scp::cpio::MetricName;
 using ::google::scp::cpio::MetricUnit;
 using ::google::scp::pbs::FrontEndUtils;
+using ::opentelemetry::metrics::Counter;
 using ::std::any_of;
 using ::std::bind;
 using ::std::dynamic_pointer_cast;
@@ -121,7 +127,41 @@ FrontEndService::FrontEndService(
       config_provider_(config_provider),
       aggregated_metric_interval_ms_(core::kDefaultAggregatedMetricIntervalMs),
       generate_batch_budget_consume_commands_per_day_(false),
-      adtech_site_authorized_domain_enabled_(false) {}
+      adtech_site_authorized_domain_enabled_(false) {
+  meter_ = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+      "Frontend Service v1", "1.0");
+
+  total_request_counter_ = meter_->CreateUInt64Counter(
+      "totalRequests", "Total number of requests received");
+  client_error_counter_ = meter_->CreateUInt64Counter(
+      "clientErrors", "Number of client errors (4xx status codes)");
+  server_error_counter_ = meter_->CreateUInt64Counter(
+      "serverErrors", "Number of server errors (5xx status codes)");
+}
+
+FrontEndService::FrontEndService(
+    shared_ptr<core::HttpServerInterface>& http_server,
+    shared_ptr<core::AsyncExecutorInterface>& async_executor,
+    std::unique_ptr<core::TransactionRequestRouterInterface>
+        transaction_request_router,
+    std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+        consume_budget_command_factory,
+    shared_ptr<cpio::MetricClientInterface> metric_client,
+    const shared_ptr<core::ConfigProviderInterface>& config_provider,
+    std::unique_ptr<Counter<uint64_t>> total_request_counter,
+    std::unique_ptr<Counter<uint64_t>> client_error_counter,
+    std::unique_ptr<Counter<uint64_t>> server_error_counter)
+    : http_server_(http_server),
+      async_executor_(async_executor),
+      transaction_request_router_(move(transaction_request_router)),
+      consume_budget_command_factory_(move(consume_budget_command_factory)),
+      metric_client_(metric_client),
+      config_provider_(config_provider),
+      aggregated_metric_interval_ms_(core::kDefaultAggregatedMetricIntervalMs),
+      generate_batch_budget_consume_commands_per_day_(false),
+      total_request_counter_(std::move(total_request_counter)),
+      client_error_counter_(std::move(client_error_counter)),
+      server_error_counter_(std::move(server_error_counter)) {}
 
 core::ExecutionResultOr<std::shared_ptr<cpio::AggregateMetricInterface>>
 FrontEndService::RegisterAggregateMetric(const string& name,
@@ -149,8 +189,8 @@ ExecutionResult FrontEndService::InitMetricInstances() noexcept {
       kMetricLabelNotifyTransaction,   kMetricLabelEndTransaction,
       kMetricLabelGetStatusTransaction};
 
-  list<string> metric_names = {kMetricNameTotalRequest, kMetricNameClientError,
-                               kMetricNameServerError};
+  list<string> metric_names = {kMetricNameRequests, kMetricNameClientErrors,
+                               kMetricNameServerErrors};
 
   for (const auto& method_name : method_names) {
     for (const auto& metric_name : metric_names) {
@@ -256,6 +296,7 @@ ExecutionResult FrontEndService::Init() noexcept {
       RETURN_IF_FAILURE(metric_instance->Init());
     }
   }
+
   return SuccessExecutionResult();
 }
 
@@ -398,11 +439,11 @@ ExecutionResult FrontEndService::BeginTransaction(
 
   const auto& total_request_metrics_instance =
       metrics_instances_map_.at(kMetricLabelBeginTransaction)
-          .at(kMetricNameTotalRequest);
+          .at(kMetricNameRequests);
   const auto& client_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelBeginTransaction)
-          .at(kMetricNameClientError);
-  const string& reporting_origin_metric_label =
+          .at(kMetricNameClientErrors);
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
@@ -410,8 +451,17 @@ ExecutionResult FrontEndService::BeginTransaction(
   Uuid transaction_id;
   execution_result = FrontEndUtils::ExtractTransactionId(
       http_context.request->headers, transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string>
+      begin_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelBeginTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, begin_transaction_label_kv);
+
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, begin_transaction_label_kv);
     return execution_result;
   }
 
@@ -420,6 +470,7 @@ ExecutionResult FrontEndService::BeginTransaction(
       http_context.request->headers, transaction_secret);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, begin_transaction_label_kv);
     return execution_result;
   }
 
@@ -438,11 +489,13 @@ ExecutionResult FrontEndService::BeginTransaction(
 
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, begin_transaction_label_kv);
     return execution_result;
   }
 
   if (consume_budget_metadata_list.size() == 0) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, begin_transaction_label_kv);
     return FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE);
   }
@@ -455,7 +508,7 @@ ExecutionResult FrontEndService::BeginTransaction(
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelBeginTransaction)
-          .at(kMetricNameServerError);
+          .at(kMetricNameServerErrors);
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context(
       make_shared<TransactionRequest>(),
       bind(&FrontEndService::OnTransactionCallback, this,
@@ -525,6 +578,7 @@ ExecutionResult FrontEndService::BeginTransaction(
                       "Failed to execute transaction %s",
                       transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, begin_transaction_label_kv);
   }
   return execution_result;
 }
@@ -533,11 +587,11 @@ ExecutionResult FrontEndService::PrepareTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   auto const& total_request_metrics_instance =
       metrics_instances_map_.at(kMetricLabelPrepareTransaction)
-          .at(kMetricNameTotalRequest);
+          .at(kMetricNameRequests);
   auto const& client_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelPrepareTransaction)
-          .at(kMetricNameClientError);
-  const string& reporting_origin_metric_label =
+          .at(kMetricNameClientErrors);
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
@@ -545,8 +599,17 @@ ExecutionResult FrontEndService::PrepareTransaction(
   Uuid transaction_id;
   auto execution_result = FrontEndUtils::ExtractTransactionId(
       http_context.request->headers, transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string>
+      prepare_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, prepare_transaction_label_kv);
+
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
     return execution_result;
   }
 
@@ -555,6 +618,7 @@ ExecutionResult FrontEndService::PrepareTransaction(
       http_context.request->headers, *transaction_secret);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
     return execution_result;
   }
 
@@ -565,6 +629,7 @@ ExecutionResult FrontEndService::PrepareTransaction(
       http_context.request->headers, last_execution_timestamp);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
     return execution_result;
   }
 
@@ -576,16 +641,18 @@ ExecutionResult FrontEndService::PrepareTransaction(
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelPrepareTransaction)
-          .at(kMetricNameServerError);
+          .at(kMetricNameServerErrors);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
       transaction_secret, transaction_origin, last_execution_timestamp,
-      TransactionExecutionPhase::Prepare);
+      TransactionExecutionPhase::Prepare,
+      std::string(kMetricLabelPrepareTransaction));
   if (!execution_result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
                       "Failed to execute PREPARE phase for transaction: %s",
                       transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
   }
   return execution_result;
 }
@@ -594,11 +661,11 @@ ExecutionResult FrontEndService::CommitTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   auto const& total_request_metrics_instance =
       metrics_instances_map_.at(kMetricLabelCommitTransaction)
-          .at(kMetricNameTotalRequest);
+          .at(kMetricNameRequests);
   auto const& client_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelCommitTransaction)
-          .at(kMetricNameClientError);
-  const string& reporting_origin_metric_label =
+          .at(kMetricNameClientErrors);
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
@@ -606,8 +673,17 @@ ExecutionResult FrontEndService::CommitTransaction(
   Uuid transaction_id;
   auto execution_result = FrontEndUtils::ExtractTransactionId(
       http_context.request->headers, transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string>
+      commit_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelCommitTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, commit_transaction_label_kv);
+
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, commit_transaction_label_kv);
     return execution_result;
   }
 
@@ -616,6 +692,7 @@ ExecutionResult FrontEndService::CommitTransaction(
       http_context.request->headers, *transaction_secret);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, commit_transaction_label_kv);
     return execution_result;
   }
 
@@ -626,6 +703,7 @@ ExecutionResult FrontEndService::CommitTransaction(
       http_context.request->headers, last_execution_timestamp);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, commit_transaction_label_kv);
     return execution_result;
   }
 
@@ -637,16 +715,18 @@ ExecutionResult FrontEndService::CommitTransaction(
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelCommitTransaction)
-          .at(kMetricNameServerError);
+          .at(kMetricNameServerErrors);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
       transaction_secret, transaction_origin, last_execution_timestamp,
-      TransactionExecutionPhase::Commit);
+      TransactionExecutionPhase::Commit,
+      std::string(kMetricLabelCommitTransaction));
   if (!execution_result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
                       "Failed to execute COMMIT phase for transaction: %s",
                       transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, commit_transaction_label_kv);
   }
   return execution_result;
 }
@@ -655,11 +735,11 @@ ExecutionResult FrontEndService::NotifyTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   auto const& total_request_metrics_instance =
       metrics_instances_map_.at(kMetricLabelNotifyTransaction)
-          .at(kMetricNameTotalRequest);
+          .at(kMetricNameRequests);
   auto const& client_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelNotifyTransaction)
-          .at(kMetricNameClientError);
-  const string& reporting_origin_metric_label =
+          .at(kMetricNameClientErrors);
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
@@ -667,8 +747,17 @@ ExecutionResult FrontEndService::NotifyTransaction(
   Uuid transaction_id;
   auto execution_result = FrontEndUtils::ExtractTransactionId(
       http_context.request->headers, transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string>
+      notify_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelNotifyTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, notify_transaction_label_kv);
+
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, notify_transaction_label_kv);
     return execution_result;
   }
 
@@ -677,6 +766,7 @@ ExecutionResult FrontEndService::NotifyTransaction(
       http_context.request->headers, *transaction_secret);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, notify_transaction_label_kv);
     return execution_result;
   }
 
@@ -687,6 +777,7 @@ ExecutionResult FrontEndService::NotifyTransaction(
       http_context.request->headers, last_execution_timestamp);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, notify_transaction_label_kv);
     return execution_result;
   }
 
@@ -698,16 +789,18 @@ ExecutionResult FrontEndService::NotifyTransaction(
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelNotifyTransaction)
-          .at(kMetricNameServerError);
+          .at(kMetricNameServerErrors);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
       transaction_secret, transaction_origin, last_execution_timestamp,
-      TransactionExecutionPhase::Notify);
+      TransactionExecutionPhase::Notify,
+      std::string(kMetricLabelNotifyTransaction));
   if (!execution_result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
                       "Failed to execute NOTIFY phase for transaction: %s",
                       transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, notify_transaction_label_kv);
   }
   return execution_result;
 }
@@ -716,11 +809,11 @@ ExecutionResult FrontEndService::AbortTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   auto const& total_request_metrics_instance =
       metrics_instances_map_.at(kMetricLabelAbortTransaction)
-          .at(kMetricNameTotalRequest);
+          .at(kMetricNameRequests);
   auto const& client_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelAbortTransaction)
-          .at(kMetricNameClientError);
-  const string& reporting_origin_metric_label =
+          .at(kMetricNameClientErrors);
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
@@ -728,8 +821,17 @@ ExecutionResult FrontEndService::AbortTransaction(
   Uuid transaction_id;
   auto execution_result = FrontEndUtils::ExtractTransactionId(
       http_context.request->headers, transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string>
+      abort_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelAbortTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, abort_transaction_label_kv);
+
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, abort_transaction_label_kv);
     return execution_result;
   }
 
@@ -738,6 +840,7 @@ ExecutionResult FrontEndService::AbortTransaction(
       http_context.request->headers, *transaction_secret);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, abort_transaction_label_kv);
     return execution_result;
   }
 
@@ -748,6 +851,7 @@ ExecutionResult FrontEndService::AbortTransaction(
       http_context.request->headers, last_execution_timestamp);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, abort_transaction_label_kv);
     return execution_result;
   }
 
@@ -759,16 +863,18 @@ ExecutionResult FrontEndService::AbortTransaction(
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelAbortTransaction)
-          .at(kMetricNameServerError);
+          .at(kMetricNameServerErrors);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
       transaction_secret, transaction_origin, last_execution_timestamp,
-      TransactionExecutionPhase::Abort);
+      TransactionExecutionPhase::Abort,
+      std::string(kMetricLabelAbortTransaction));
   if (!execution_result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
                       "Failed to execute ABORT phase for transaction: %s",
                       transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, abort_transaction_label_kv);
   }
   return execution_result;
 }
@@ -777,11 +883,11 @@ ExecutionResult FrontEndService::EndTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   auto const& total_request_metrics_instance =
       metrics_instances_map_.at(kMetricLabelEndTransaction)
-          .at(kMetricNameTotalRequest);
+          .at(kMetricNameRequests);
   auto const& client_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelEndTransaction)
-          .at(kMetricNameClientError);
-  const string& reporting_origin_metric_label =
+          .at(kMetricNameClientErrors);
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
@@ -789,8 +895,16 @@ ExecutionResult FrontEndService::EndTransaction(
   Uuid transaction_id;
   auto execution_result = FrontEndUtils::ExtractTransactionId(
       http_context.request->headers, transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string> end_transaction_label_kv =
+      {{kMetricLabelTransactionPhase, kMetricLabelEndTransaction},
+       {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, end_transaction_label_kv);
+
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, end_transaction_label_kv);
     return execution_result;
   }
 
@@ -799,6 +913,7 @@ ExecutionResult FrontEndService::EndTransaction(
       http_context.request->headers, *transaction_secret);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, end_transaction_label_kv);
     return execution_result;
   }
 
@@ -809,6 +924,7 @@ ExecutionResult FrontEndService::EndTransaction(
       http_context.request->headers, last_execution_timestamp);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, end_transaction_label_kv);
     return execution_result;
   }
 
@@ -820,16 +936,17 @@ ExecutionResult FrontEndService::EndTransaction(
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelEndTransaction)
-          .at(kMetricNameServerError);
+          .at(kMetricNameServerErrors);
   execution_result = ExecuteTransactionPhase(
       server_error_metrics_instance, http_context, transaction_id,
       transaction_secret, transaction_origin, last_execution_timestamp,
-      TransactionExecutionPhase::End);
+      TransactionExecutionPhase::End, std::string(kMetricLabelEndTransaction));
   if (!execution_result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
                       "Failed to execute END phase for transaction: %s",
                       transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, end_transaction_label_kv);
   }
   return execution_result;
 }
@@ -838,11 +955,11 @@ ExecutionResult FrontEndService::GetTransactionStatus(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   auto const& total_request_metrics_instance =
       metrics_instances_map_.at(kMetricLabelGetStatusTransaction)
-          .at(kMetricNameTotalRequest);
+          .at(kMetricNameRequests);
   auto const& client_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelGetStatusTransaction)
-          .at(kMetricNameClientError);
-  const string& reporting_origin_metric_label =
+          .at(kMetricNameClientErrors);
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
@@ -850,8 +967,17 @@ ExecutionResult FrontEndService::GetTransactionStatus(
   Uuid transaction_id;
   auto execution_result = FrontEndUtils::ExtractTransactionId(
       http_context.request->headers, transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string>
+      transaction_status_label_kv = {
+          {kMetricLabelTransactionStatus, kMetricLabelGetStatusTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, transaction_status_label_kv);
+
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, transaction_status_label_kv);
     return execution_result;
   }
 
@@ -860,6 +986,7 @@ ExecutionResult FrontEndService::GetTransactionStatus(
       http_context.request->headers, transaction_secret);
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, transaction_status_label_kv);
     return execution_result;
   }
 
@@ -872,12 +999,13 @@ ExecutionResult FrontEndService::GetTransactionStatus(
 
   auto const& server_error_metrics_instance =
       metrics_instances_map_.at(kMetricLabelGetStatusTransaction)
-          .at(kMetricNameServerError);
+          .at(kMetricNameServerErrors);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context(
           make_shared<GetTransactionStatusRequest>(),
           bind(&FrontEndService::OnGetTransactionStatusCallback, this,
-               server_error_metrics_instance, http_context, _1),
+               server_error_metrics_instance, http_context, _1,
+               std::string(kMetricLabelGetStatusTransaction)),
           http_context);
 
   get_transaction_status_context.request->transaction_id = transaction_id;
@@ -894,6 +1022,7 @@ ExecutionResult FrontEndService::GetTransactionStatus(
         "Failed to execute GetTransactionStatus for transaction: %s",
         transaction_id_string.c_str());
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, transaction_status_label_kv);
   }
   return execution_result;
 }
@@ -1047,9 +1176,14 @@ void FrontEndService::OnTransactionCallback(
     AsyncContext<HttpRequest, HttpResponse>& http_context,
     AsyncContext<TransactionRequest, TransactionResponse>&
         transaction_context) noexcept {
-  const string& reporting_origin_metric_label =
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
+
+  const absl::flat_hash_map<std::string, std::string> transaction_label_kv = {
+      {kMetricLabelTransactionPhase, kMetricLabelBeginTransaction},
+      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
   if (!transaction_context.result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context,
                       transaction_context.result,
@@ -1075,6 +1209,7 @@ void FrontEndService::OnTransactionCallback(
     http_context.result = transaction_context.result;
     http_context.Finish();
     metrics_instance->Increment(reporting_origin_metric_label);
+    server_error_counter_->Add(1, transaction_label_kv);
     return;
   }
 
@@ -1095,7 +1230,8 @@ void FrontEndService::OnTransactionCallback(
       transaction_context.request->transaction_secret,
       transaction_context.request->transaction_origin,
       transaction_context.response->last_execution_timestamp,
-      TransactionExecutionPhase::Begin);
+      TransactionExecutionPhase::Begin,
+      std::string(kMetricLabelBeginTransaction));
 
   if (!execution_result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context, execution_result,
@@ -1104,6 +1240,7 @@ void FrontEndService::OnTransactionCallback(
     http_context.result = execution_result;
     http_context.Finish();
     metrics_instance->Increment(reporting_origin_metric_label);
+    server_error_counter_->Add(1, transaction_label_kv);
     return;
   }
 }
@@ -1114,12 +1251,13 @@ ExecutionResult FrontEndService::ExecuteTransactionPhase(
     shared_ptr<string>& transaction_secret,
     shared_ptr<string>& transaction_origin,
     Timestamp last_transaction_execution_timestamp,
-    TransactionExecutionPhase transaction_execution_phase) noexcept {
+    TransactionExecutionPhase transaction_execution_phase,
+    const std::string& metric_label) noexcept {
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       transaction_phase_context(
           make_shared<TransactionPhaseRequest>(),
           bind(&FrontEndService::OnExecuteTransactionPhaseCallback, this,
-               metrics_instance, http_context, _1),
+               metrics_instance, http_context, _1, metric_label),
           http_context);
   transaction_phase_context.request->transaction_execution_phase =
       transaction_execution_phase;
@@ -1135,13 +1273,18 @@ void FrontEndService::OnExecuteTransactionPhaseCallback(
     const shared_ptr<AggregateMetricInterface>& metrics_instance,
     AsyncContext<HttpRequest, HttpResponse>& http_context,
     AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
-        transaction_phase_context) noexcept {
-  const string& reporting_origin_metric_label =
+        transaction_phase_context,
+    const std::string& metric_label) noexcept {
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
 
   auto transaction_id_string =
       ToString(transaction_phase_context.request->transaction_id);
+
+  const absl::flat_hash_map<std::string, std::string> transaction_label_kv = {
+      {kMetricLabelTransactionPhase, metric_label},
+      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
 
   if (!transaction_phase_context.result.Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context,
@@ -1150,6 +1293,7 @@ void FrontEndService::OnExecuteTransactionPhaseCallback(
                       transaction_id_string.c_str());
 
     metrics_instance->Increment(reporting_origin_metric_label);
+    server_error_counter_->Add(1, transaction_label_kv);
   }
 
   if (transaction_phase_context.result.Successful()) {
@@ -1199,13 +1343,19 @@ void FrontEndService::OnGetTransactionStatusCallback(
     const shared_ptr<AggregateMetricInterface>& metrics_instance,
     AsyncContext<HttpRequest, HttpResponse>& http_context,
     AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>&
-        get_transaction_status_context) noexcept {
+        get_transaction_status_context,
+    const std::string& metric_label) noexcept {
   auto transaction_id_string =
       ToString(get_transaction_status_context.request->transaction_id);
-  const string& reporting_origin_metric_label =
+  const string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   http_context.result = get_transaction_status_context.result;
+
+  const absl::flat_hash_map<std::string, std::string> transaction_label_kv = {
+      {kMetricLabelTransactionStatus, metric_label},
+      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
   if (!get_transaction_status_context.result.Successful()) {
     SCP_ERROR_CONTEXT(
         kFrontEndService, http_context, get_transaction_status_context.result,
@@ -1213,6 +1363,7 @@ void FrontEndService::OnGetTransactionStatusCallback(
         transaction_id_string.c_str());
     http_context.Finish();
     metrics_instance->Increment(reporting_origin_metric_label);
+    server_error_counter_->Add(1, transaction_label_kv);
     return;
   }
 
@@ -1222,6 +1373,7 @@ void FrontEndService::OnGetTransactionStatusCallback(
     http_context.result = execution_result;
     http_context.Finish();
     metrics_instance->Increment(reporting_origin_metric_label);
+    server_error_counter_->Add(1, transaction_label_kv);
     return;
   }
 
@@ -1280,4 +1432,5 @@ void FrontEndService::OnExecuteConsumeBudgetTransactionCallback(
   consume_budget_transaction_context.result = transaction_context.result;
   consume_budget_transaction_context.Finish();
 }
+
 }  // namespace google::scp::pbs

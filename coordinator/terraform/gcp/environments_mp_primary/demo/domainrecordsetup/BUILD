@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "domainrecordsetup_link",
-    src = "../../shared/domainrecordsetup/domainrecordsetup.tf",
-    dest = "domainrecordsetup/domainrecordsetup.tf",
+    link_name = "domainrecordsetup/domainrecordsetup.tf",
+    target = "../../shared/domainrecordsetup/domainrecordsetup.tf",
 )
 
 pkg_mklink(
     name = "domainrecordsetup_variables_link",
-    src = "../../shared/domainrecordsetup/domainrecordsetup_variables.tf",
-    dest = "domainrecordsetup/domainrecordsetup_variables.tf",
+    link_name = "domainrecordsetup/domainrecordsetup_variables.tf",
+    target = "../../shared/domainrecordsetup/domainrecordsetup_variables.tf",
 )
 
 pkg_mklink(
     name = "domainrecordsetup_outputs_link",
-    src = "../../shared/domainrecordsetup/domainrecordsetup_outputs.tf",
-    dest = "domainrecordsetup/domainrecordsetup_outputs.tf",
+    link_name = "domainrecordsetup/domainrecordsetup_outputs.tf",
+    target = "../../shared/domainrecordsetup/domainrecordsetup_outputs.tf",
 )

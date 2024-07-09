@@ -101,7 +101,7 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
     // for PBS. Services can access the Meter Provider using
     // opentelemetry::metrics::Provider::GetMeterProvider()
     metric_router_ = cloud_platform_dependency_factory_->ConstructMetricRouter(
-        config_provider_);
+        instance_client_provider_);
   }
 
   pass_thru_authorization_proxy_ =

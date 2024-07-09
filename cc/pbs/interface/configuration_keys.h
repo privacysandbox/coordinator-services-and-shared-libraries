@@ -148,5 +148,7 @@ static constexpr char kPBSRelaxedConsistencyEnabled[] =
 
 // Opentelemetry
 static constexpr char kOtelEnabled[] = "google_scp_otel_enabled";
+static constexpr char kOtelPrintDataToConsoleEnabled[] =
+    "google_scp_otel_print_data_to_console_enabled";
 
 }  // namespace google::scp::pbs

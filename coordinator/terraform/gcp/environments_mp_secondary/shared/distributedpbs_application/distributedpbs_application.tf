@@ -48,6 +48,7 @@ module "distributedpbs_application" {
   pbs_service_account_email                      = var.pbs_service_account_email
   pbs_image_tag                                  = var.pbs_image_tag
   pbs_custom_vm_tags                             = var.pbs_custom_vm_tags
+  pbs_autoscaling_policy                         = var.pbs_autoscaling_policy
   pbs_main_port                                  = var.pbs_main_port
   pbs_application_environment_variables          = var.pbs_application_environment_variables
   machine_type                                   = var.machine_type

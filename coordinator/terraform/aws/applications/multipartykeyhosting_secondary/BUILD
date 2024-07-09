@@ -23,11 +23,6 @@ filegroup(
 )
 
 alias(
-    name = "keyGenerationDeploy",
-    actual = "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/aws:KeyGenerationLambdaDeploy",
-)
-
-alias(
     name = "publicKeyLambdaDeploy",
     actual = "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PublicKeyApiGatewayHandlerDeploy",
 )

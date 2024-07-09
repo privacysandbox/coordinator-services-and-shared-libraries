@@ -20,6 +20,7 @@ import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
+import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_REPORTING_SITE;
 
 import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableMap;
@@ -104,6 +105,9 @@ public final class GetJobResponseConverter
       if (!createJobRequest.getAttributionReportTo().isEmpty()) {
         jobParameters.put(
             JOB_PARAM_ATTRIBUTION_REPORT_TO, createJobRequest.getAttributionReportTo());
+      }
+      if (!createJobRequest.getReportingSite().isEmpty()) {
+        jobParameters.put(JOB_PARAM_REPORTING_SITE, createJobRequest.getReportingSite());
       }
       if (!createJobRequest.getOutputDomainBucketName().equals("")) {
         jobParameters.put(

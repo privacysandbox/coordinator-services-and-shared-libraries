@@ -21,22 +21,24 @@
 #include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
 #include "cc/core/telemetry/src/authentication/grpc_id_token_authenticator.h"
 #include "cc/core/telemetry/src/authentication/token_fetcher.h"
-#include "external/com_github_opentelemetry_proto/opentelemetry/proto/collector/metrics/v1/metrics_service.grpc.pb.h"
-#include "external/io_opentelemetry_cpp/api/_virtual_includes/api/opentelemetry/common/spin_lock_mutex.h"
-#include "external/io_opentelemetry_cpp/exporters/otlp/_virtual_includes/otlp_grpc_exporter/opentelemetry/exporters/otlp/otlp_environment.h"
-#include "external/io_opentelemetry_cpp/exporters/otlp/_virtual_includes/otlp_grpc_exporter/opentelemetry/exporters/otlp/protobuf_include_prefix.h"
-#include "external/io_opentelemetry_cpp/exporters/otlp/_virtual_includes/otlp_grpc_exporter/opentelemetry/exporters/otlp/protobuf_include_suffix.h"
-#include "external/io_opentelemetry_cpp/exporters/otlp/_virtual_includes/otlp_grpc_metric_exporter/opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
-#include "external/io_opentelemetry_cpp/sdk/_virtual_includes/headers/opentelemetry/sdk/metrics/push_metric_exporter.h"
+#include "opentelemetry/common/spin_lock_mutex.h"
+#include "opentelemetry/exporters/otlp/otlp_environment.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
+#include "opentelemetry/exporters/otlp/protobuf_include_prefix.h"
+#include "opentelemetry/exporters/otlp/protobuf_include_suffix.h"
+#include "opentelemetry/proto/collector/metrics/v1/metrics_service.grpc.pb.h"
+#include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 
 namespace google::scp::core {
 
 /**
- * The OTLP exporter exports metric data in OpenTelemetry Protocol (OTLP)
- * format in gRPC.
- *
- * It also fetches the Id token which is needed for the authentication. It
- * manages the expiry of the tokens as well
+ * The OtlpGrpcAuthedMetricExporter is largely copied from
+ OtlpGrpcMetricExporter,
+ * as we need an OtlpGrpcMetricExporter with custom authentication logic.
+
+ * Like OtlpGrpcMetricExporter, the OtlpGrpcAuthedMetricExporter exports metric
+ * data in OpenTelemetry Protocol (OTLP) format in gRPC; in addition, it fetches
+ * GCP ID tokens needed for authentication, and manages their expiry.
  */
 class OtlpGrpcAuthedMetricExporter
     : public opentelemetry::sdk::metrics::PushMetricExporter {
@@ -44,8 +46,7 @@ class OtlpGrpcAuthedMetricExporter
   explicit OtlpGrpcAuthedMetricExporter(
       const opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions&
           options,
-      std::unique_ptr<GrpcIdTokenAuthenticator>
-          grpc_id_token_authenticator);
+      std::unique_ptr<GrpcIdTokenAuthenticator> grpc_id_token_authenticator);
 
   opentelemetry::sdk::metrics::AggregationTemporality GetAggregationTemporality(
       opentelemetry::sdk::metrics::InstrumentType instrument_type)
@@ -69,15 +70,13 @@ class OtlpGrpcAuthedMetricExporter
 
   ExecutionResultOr<std::shared_ptr<grpc::Channel>> MakeChannel(
       const opentelemetry::exporter::otlp::OtlpGrpcClientOptions& options,
-      std::unique_ptr<GrpcIdTokenAuthenticator>
-          grpc_id_token_authenticator);
+      std::unique_ptr<GrpcIdTokenAuthenticator> grpc_id_token_authenticator);
 
   ExecutionResultOr<std::unique_ptr<opentelemetry::proto::collector::metrics::
                                         v1::MetricsService::StubInterface>>
   MakeMetricsServiceStub(
       const opentelemetry::exporter::otlp::OtlpGrpcClientOptions& options,
-      std::unique_ptr<GrpcIdTokenAuthenticator>
-          grpc_id_token_authenticator);
+      std::unique_ptr<GrpcIdTokenAuthenticator> grpc_id_token_authenticator);
 
   const opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions options_;
   const opentelemetry::sdk::metrics::AggregationTemporalitySelector

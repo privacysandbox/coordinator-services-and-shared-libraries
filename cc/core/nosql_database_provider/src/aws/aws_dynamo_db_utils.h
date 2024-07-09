@@ -117,6 +117,7 @@ class AwsDynamoDBUtils {
       case Aws::DynamoDB::DynamoDBErrors::RESOURCE_IN_USE:
       case Aws::DynamoDB::DynamoDBErrors::TABLE_IN_USE:
       case Aws::DynamoDB::DynamoDBErrors::TRANSACTION_IN_PROGRESS:
+      case Aws::DynamoDB::DynamoDBErrors::MISSING_AUTHENTICATION_TOKEN:
         return core::RetryExecutionResult(
             errors::SC_NO_SQL_DATABASE_RETRIABLE_ERROR);
 

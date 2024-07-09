@@ -33,13 +33,15 @@
 #include "google/cloud/status.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/internal/object_requests.h"
+#include "google/cloud/storage/testing/mock_client.h"
 #include "public/core/test/interface/execution_result_matchers.h"
-#include "third_party/cloud_cpp/google/cloud/storage/testing/mock_client.h"
 
 using google::cloud::Status;
 using google::cloud::StatusOr;
 using CloudStatusCode = google::cloud::StatusCode;
 using google::cloud::storage::Client;
+using google::cloud::storage::ComputeMD5Hash;
+using google::cloud::storage::Crc32cChecksumValue;
 using google::cloud::storage::DisableCrc32cChecksum;
 using google::cloud::storage::DisableMD5Hash;
 using google::cloud::storage::LimitedErrorCountRetryPolicy;
@@ -50,6 +52,7 @@ using google::cloud::storage::Prefix;
 using google::cloud::storage::ReadRange;
 using google::cloud::storage::internal::ConstBuffer;
 using google::cloud::storage::internal::ConstBufferSequence;
+using google::cloud::storage::internal::CreateHashFunction;
 using google::cloud::storage::internal::CreateResumableUploadResponse;
 using google::cloud::storage::internal::HttpResponse;
 using google::cloud::storage::internal::ObjectReadSource;
@@ -118,6 +121,11 @@ constexpr char kBucketName[] = "bucket";
 constexpr char kBlobName[] = "blob";
 
 constexpr int64_t kStreamKeepAliveMicrosCount = 100;
+
+// GCS requires chunks to be a multiple of 256 KiB.
+// Hard-coded the value of GOOGLE_CLOUD_CPP_STORAGE_DEFAULT_UPLOAD_BUFFER_SIZE
+// from google/cloud/storage/client_options.cc which is not visible publicly.
+constexpr size_t kUploadSize = 8 * 1024 * 1024;
 
 class MockGcpCloudStorageFactory : public GcpCloudStorageFactory {
  public:
@@ -533,8 +541,12 @@ void ExpectResumableUpload(MockClient& mock_client, const string& bucket,
                                ResumableUploadRequest(bucket, blob))))
       .WillOnce(Return(CreateResumableUploadResponse{session_id}));
 
-  EXPECT_CALL(mock_client, UploadChunk(UploadChunkEquals(UploadChunkRequest(
-                               session_id, 0, MakeBuffer(initial_part)))))
+  EXPECT_CALL(
+      mock_client,
+      UploadChunk(UploadChunkEquals(UploadChunkRequest(
+          session_id, 0, MakeBuffer(initial_part),
+          CreateHashFunction(Crc32cChecksumValue(), DisableCrc32cChecksum(true),
+                             MD5HashValue(), DisableMD5Hash(true))))))
       .WillOnce(
           Return(QueryResumableUploadResponse{next_offset, std::nullopt}));
 
@@ -545,16 +557,23 @@ void ExpectResumableUpload(MockClient& mock_client, const string& bucket,
           .WillRepeatedly(
               Return(QueryResumableUploadResponse{next_offset, std::nullopt}));
     }
-    EXPECT_CALL(mock_client, UploadChunk(UploadChunkEquals(UploadChunkRequest(
-                                 session_id, next_offset, MakeBuffer(*it)))))
+    EXPECT_CALL(mock_client,
+                UploadChunk(UploadChunkEquals(UploadChunkRequest(
+                    session_id, next_offset, MakeBuffer(*it),
+                    CreateHashFunction(Crc32cChecksumValue(),
+                                       DisableCrc32cChecksum(true),
+                                       MD5HashValue(), DisableMD5Hash(true))))))
         .WillOnce(Return(QueryResumableUploadResponse{
             next_offset + it->length(), std::nullopt}));
     next_offset += it->length();
   }
   // Finalization call - no body but should return ObjectMetadata.
-  EXPECT_CALL(mock_client,
-              UploadChunk(UploadChunkEquals(UploadChunkRequest(
-                  session_id, next_offset, EmptyBuffer(), {} /*hash_values*/))))
+  EXPECT_CALL(
+      mock_client,
+      UploadChunk(UploadChunkEquals(UploadChunkRequest(
+          session_id, next_offset, EmptyBuffer(),
+          CreateHashFunction(Crc32cChecksumValue(), DisableCrc32cChecksum(true),
+                             MD5HashValue(), DisableMD5Hash(true))))))
       .WillOnce(
           Return(QueryResumableUploadResponse{next_offset, ObjectMetadata{}}));
 }
@@ -594,14 +613,13 @@ TEST_F(GcpCloudStorageClientProviderStreamTest, PutBlobStreamMultiplePortions) {
       ->mutable_metadata()
       ->set_blob_name(kBlobName);
 
-  // The API will optimize uploads to MockClient::kUploadSize bytes, we test our
+  // The API will optimize uploads to kUploadSize bytes, we test our
   // implementation by making each part that size.
-  string initial_str(MockClient::kUploadSize, 'a');
+  string initial_str(kUploadSize, 'a');
   put_blob_stream_context_.request->mutable_blob_portion()->set_data(
       initial_str);
 
-  vector<string> strings{string(MockClient::kUploadSize, 'b'),
-                         string(MockClient::kUploadSize, 'c')};
+  vector<string> strings{string(kUploadSize, 'b'), string(kUploadSize, 'c')};
   auto request2 = *put_blob_stream_context_.request;
   request2.mutable_blob_portion()->set_data(strings[0]);
   auto request3 = *put_blob_stream_context_.request;
@@ -646,14 +664,13 @@ TEST_F(GcpCloudStorageClientProviderStreamTest,
       ->mutable_metadata()
       ->set_blob_name(kBlobName);
 
-  // The API will optimize uploads to MockClient::kUploadSize bytes, we test our
+  // The API will optimize uploads to kUploadSize bytes, we test our
   // implementation by making each part that size.
-  string initial_str(MockClient::kUploadSize, 'a');
+  string initial_str(kUploadSize, 'a');
   put_blob_stream_context_.request->mutable_blob_portion()->set_data(
       initial_str);
 
-  vector<string> strings{string(MockClient::kUploadSize, 'b'),
-                         string(MockClient::kUploadSize, 'c')};
+  vector<string> strings{string(kUploadSize, 'b'), string(kUploadSize, 'c')};
 
   ExpectResumableUpload(*mock_client_, kBucketName, kBlobName, initial_str,
                         strings, true /*expect_queries*/);
@@ -698,7 +715,7 @@ TEST_F(GcpCloudStorageClientProviderStreamTest,
       ->mutable_metadata()
       ->set_blob_name(kBlobName);
 
-  string bytes_str(MockClient::kUploadSize, 'a');
+  string bytes_str(kUploadSize, 'a');
   put_blob_stream_context_.request->mutable_blob_portion()->set_data(bytes_str);
   // No additional request objects.
   put_blob_stream_context_.MarkDone();
@@ -731,7 +748,7 @@ TEST_F(GcpCloudStorageClientProviderStreamTest,
       ->mutable_metadata()
       ->set_blob_name(kBlobName);
 
-  string bytes_str(MockClient::kUploadSize, 'a');
+  string bytes_str(kUploadSize, 'a');
   put_blob_stream_context_.request->mutable_blob_portion()->set_data(bytes_str);
   // Place another request on the context.
   put_blob_stream_context_.TryPushRequest(*put_blob_stream_context_.request);
@@ -767,7 +784,7 @@ TEST_F(GcpCloudStorageClientProviderStreamTest,
       ->mutable_metadata()
       ->set_blob_name(kBlobName);
 
-  string bytes_str(MockClient::kUploadSize, 'a');
+  string bytes_str(kUploadSize, 'a');
   put_blob_stream_context_.request->mutable_blob_portion()->set_data(bytes_str);
   // Place another request on the context.
   put_blob_stream_context_.TryPushRequest(*put_blob_stream_context_.request);
@@ -807,7 +824,7 @@ TEST_F(GcpCloudStorageClientProviderStreamTest,
   *put_blob_stream_context_.request->mutable_stream_keepalive_duration() =
       TimeUtil::MicrosecondsToDuration(kStreamKeepAliveMicrosCount);
 
-  string bytes_str(MockClient::kUploadSize, 'a');
+  string bytes_str(kUploadSize, 'a');
   put_blob_stream_context_.request->mutable_blob_portion()->set_data(bytes_str);
   // Don't mark the context as done and don't enqueue any messages.
 
@@ -843,7 +860,7 @@ TEST_F(GcpCloudStorageClientProviderStreamTest, PutBlobStreamFailsIfCancelled) {
       ->mutable_metadata()
       ->set_blob_name(kBlobName);
 
-  string bytes_str(MockClient::kUploadSize, 'a');
+  string bytes_str(kUploadSize, 'a');
   put_blob_stream_context_.request->mutable_blob_portion()->set_data(bytes_str);
   // No additional request objects.
   put_blob_stream_context_.TryCancel();

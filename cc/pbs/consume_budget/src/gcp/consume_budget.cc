@@ -505,12 +505,22 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSync(
         !captured_execution_result.Successful()
             ? captured_execution_result
             : FailureExecutionResult(SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
-
-    SCP_ERROR_CONTEXT(
-        kComponentName, consume_budgets_context, final_execution_result,
-        absl::StrFormat("ConsumeBudgets failed. Error code %d, message: %s",
-                        commit_result.status().code(),
-                        commit_result.status().message()));
+    if (captured_execution_result.status_code == SC_CONSUME_BUDGET_EXHAUSTED) {
+      SCP_WARNING_CONTEXT(
+          kComponentName, consume_budgets_context,
+          absl::StrFormat("ConsumeBudgets failed. Error code %d, message: %s, "
+                          "final_execution_result: %s",
+                          commit_result.status().code(),
+                          commit_result.status().message(),
+                          google::scp::core::errors::GetErrorMessage(
+                              final_execution_result.status_code)));
+    } else {
+      SCP_ERROR_CONTEXT(
+          kComponentName, consume_budgets_context, final_execution_result,
+          absl::StrFormat("ConsumeBudgets failed. Error code %d, message: %s",
+                          commit_result.status().code(),
+                          commit_result.status().message()));
+    }
     return final_execution_result;
   }
   return SuccessExecutionResult();

@@ -27,12 +27,12 @@ pkg_files(
 
 pkg_mklink(
     name = "mpkhs_privatekey_heartbeat_prober_link",
-    src = "../../shared/mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober.tf",
-    dest = "mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober.tf",
+    link_name = "mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober.tf",
+    target = "../../shared/mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober.tf",
 )
 
 pkg_mklink(
     name = "mpkhs_privatekey_heartbeat_prober_variables_link",
-    src = "../../shared/mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober_variables.tf",
-    dest = "mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober_variables.tf",
+    link_name = "mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober_variables.tf",
+    target = "../../shared/mpkhs_privatekey_heartbeat_prober/mpkhs_privatekey_heartbeat_prober_variables.tf",
 )

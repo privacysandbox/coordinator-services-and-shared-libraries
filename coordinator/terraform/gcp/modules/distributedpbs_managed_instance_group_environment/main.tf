@@ -144,7 +144,7 @@ locals {
     },
     {
       name  = "google_scp_pbs_multi_instance_mode_disabled"
-      value = local.target_instance_count > 1 ? "false" : "true"
+      value = local.target_instance_count > 1 || var.pbs_autoscaling_policy != null ? "false" : "true"
     },
     {
       name  = "google_scp_transaction_manager_skip_duplicate_transaction_in_recovery"
@@ -346,7 +346,8 @@ resource "google_compute_region_instance_group_manager" "pbs_instance_group" {
   description        = "The PBS managed instance group for ${var.environment}."
   base_instance_name = "${var.environment}-pbs"
   region             = var.region
-  target_size        = local.target_instance_count
+  # target_size is managed by autoscaling if pbs_autoscaling_policy is set.
+  target_size = var.pbs_autoscaling_policy == null ? local.target_instance_count : null
 
   version {
     instance_template = google_compute_instance_template.pbs_instance_template.id
@@ -380,5 +381,22 @@ resource "google_compute_region_instance_group_manager" "pbs_instance_group" {
 
   lifecycle {
     create_before_destroy = true
+  }
+}
+
+resource "google_compute_region_autoscaler" "pbs_instance_group" {
+  count = var.pbs_autoscaling_policy != null ? 1 : 0
+
+  name   = "${var.environment}-pbs-autoscaler"
+  region = var.region
+  target = google_compute_region_instance_group_manager.pbs_instance_group.id
+
+  autoscaling_policy {
+    max_replicas = var.pbs_autoscaling_policy.max_replicas
+    min_replicas = var.pbs_autoscaling_policy.min_replicas
+
+    cpu_utilization {
+      target = var.pbs_autoscaling_policy.cpu_utilization_target
+    }
   }
 }

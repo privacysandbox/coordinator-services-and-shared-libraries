@@ -1,5 +1,4 @@
-#!/bin/bash
-# Copyright 2022 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-set -euo pipefail
-
-# Use python 3.7 if it is installed under /usr/local/bin, because system
-# python may be old.
-KOKORO_PY37_PATH=/usr/local/bin/python3.7
-
-if [[ -x $KOKORO_PY37_PATH ]]; then
-  exec $KOKORO_PY37_PATH "$@"
-else
-  exec python3 "$@"
-fi
+def bazel_features_rules():
+    maybe(
+        http_archive,
+        name = "bazel_features",
+        sha256 = "2cd9e57d4c38675d321731d65c15258f3a66438ad531ae09cb8bb14217dc8572",
+        strip_prefix = "bazel_features-1.11.0",
+        urls = [
+            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.11.0/bazel_features-v1.11.0.tar.gz",
+        ],
+    )

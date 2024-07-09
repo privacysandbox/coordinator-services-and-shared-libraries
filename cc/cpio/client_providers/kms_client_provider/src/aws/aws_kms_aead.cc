@@ -29,6 +29,8 @@
 #include <aws/kms/model/EncryptRequest.h>
 #include <aws/kms/model/EncryptResult.h>
 
+#include "absl/strings/str_cat.h"
+
 using crypto::tink::Aead;
 using crypto::tink::util::Status;
 using crypto::tink::util::StatusOr;

@@ -25,7 +25,7 @@ import com.google.scp.shared.api.exception.ServiceException;
 import java.time.Duration;
 import java.time.Instant;
 
-/** Shared utility functions between single-party and multi-party key generators. */
+/** Utility functions for multi-party key generators. */
 public final class KeyGenerationUtil {
 
   private KeyGenerationUtil() {}

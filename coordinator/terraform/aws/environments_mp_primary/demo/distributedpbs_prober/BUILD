@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "distributedpbs_prober_link",
-    src = "../../shared/distributedpbs_prober/pbsprober.tf",
-    dest = "distributedpbs_prober/pbsprober.tf",
+    link_name = "distributedpbs_prober/pbsprober.tf",
+    target = "../../shared/distributedpbs_prober/pbsprober.tf",
 )
 
 pkg_mklink(
     name = "distributedpbs_prober_outputs_link",
-    src = "../../shared/distributedpbs_prober/pbsprober_output.tf",
-    dest = "distributedpbs_prober/pbsprober_output.tf",
+    link_name = "distributedpbs_prober/pbsprober_output.tf",
+    target = "../../shared/distributedpbs_prober/pbsprober_output.tf",
 )
 
 pkg_mklink(
     name = "distributedpbs_prober_variables_link",
-    src = "../../shared/distributedpbs_prober/pbsprober_variables.tf",
-    dest = "distributedpbs_prober/pbsprober_variables.tf",
+    link_name = "distributedpbs_prober/pbsprober_variables.tf",
+    target = "../../shared/distributedpbs_prober/pbsprober_variables.tf",
 )

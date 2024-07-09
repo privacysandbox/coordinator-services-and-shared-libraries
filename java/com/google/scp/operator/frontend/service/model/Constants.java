@@ -20,6 +20,7 @@ package com.google.scp.operator.frontend.service.model;
 public final class Constants {
 
   public static final String JOB_PARAM_ATTRIBUTION_REPORT_TO = "attribution_report_to";
+  public static final String JOB_PARAM_REPORTING_SITE = "reporting_site";
   public static final String JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX = "output_domain_blob_prefix";
   public static final String JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME = "output_domain_bucket_name";
   public static final String JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT = "debug_privacy_budget_limit";

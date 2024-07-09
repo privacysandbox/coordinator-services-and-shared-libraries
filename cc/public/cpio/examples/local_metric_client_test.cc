@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -29,7 +30,6 @@
 using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
-using google::protobuf::MapPair;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
 using google::scp::core::GetErrorMessage;
@@ -42,6 +42,7 @@ using google::scp::cpio::MetricClientOptions;
 using google::scp::cpio::TestCpioOptions;
 using google::scp::cpio::TestLibCpio;
 using std::atomic;
+using std::make_pair;
 using std::make_shared;
 using std::make_unique;
 using std::move;
@@ -86,7 +87,7 @@ int main(int argc, char* argv[]) {
   metric->set_value("12");
   metric->set_unit(MetricUnit::METRIC_UNIT_COUNT);
   auto labels = metric->mutable_labels();
-  labels->insert(MapPair(string("lable_key"), string("label_value")));
+  labels->insert(make_pair(string("lable_key"), string("label_value")));
 
   atomic<bool> finished = false;
   auto context = AsyncContext<PutMetricsRequest, PutMetricsResponse>(

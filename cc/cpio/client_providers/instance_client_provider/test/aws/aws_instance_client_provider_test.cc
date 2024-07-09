@@ -65,7 +65,6 @@ using google::cmrt::sdk::instance_service::v1::
 using google::cmrt::sdk::instance_service::v1::GetTagsByResourceNameRequest;
 using google::cmrt::sdk::instance_service::v1::GetTagsByResourceNameResponse;
 using google::cmrt::sdk::instance_service::v1::InstanceDetails;
-using google::protobuf::MapPair;
 using google::scp::core::AsyncContext;
 using google::scp::core::BytesBuffer;
 using google::scp::core::ExecutionResult;

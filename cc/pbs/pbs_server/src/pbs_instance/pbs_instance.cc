@@ -249,8 +249,8 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
     // On initilization of metric_router_, Meter Provider would be set globally
     // for PBS. Services can access the Meter Provider using
     // opentelemetry::metrics::Provider::GetMeterProvider()
-    metric_router_ =
-        platform_dependency_factory->ConstructMetricRouter(config_provider_);
+    metric_router_ = platform_dependency_factory->ConstructMetricRouter(
+        instance_client_provider_);
   }
 
   remote_coordinator_pbs_client_ =

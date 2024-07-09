@@ -17,23 +17,6 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
-    name = "HttpPrivateKeyFetchingServiceTest",
-    srcs = ["HttpPrivateKeyFetchingServiceTest.java"],
-    deps = [
-        "//java/com/google/scp/operator/cpio/cryptoclient",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/api/util",
-        "//java/external:acai",
-        "//java/external:apache_httpclient",
-        "//java/external:apache_httpcore",
-        "//java/external:google_truth",
-        "//java/external:guice",
-        "//java/external:mockito",
-    ],
-)
-
-java_test(
     name = "HttpEncryptionKeyFetchingServiceTest",
     srcs = ["HttpEncryptionKeyFetchingServiceTest.java"],
     deps = [

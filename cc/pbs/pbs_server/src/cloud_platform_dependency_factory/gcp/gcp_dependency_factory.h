@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "opentelemetry/sdk/resource/resource.h"
 #include "pbs/interface/cloud_platform_dependency_factory_interface.h"
 
 namespace google::scp::pbs {
@@ -90,8 +91,15 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
           auth_token_provider_cache) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      const std::shared_ptr<core::ConfigProviderInterface>&
-          config_provider) noexcept override;
+      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+          instance_client_provider) noexcept override;
+
+  // This overload exists so that we can pass in a Resource from either this
+  // dependency factory, or an integration test.
+  std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
+      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+          instance_client_provider,
+      opentelemetry::sdk::resource::Resource resource) noexcept;
 
  protected:
   core::ExecutionResult ReadConfigurations();

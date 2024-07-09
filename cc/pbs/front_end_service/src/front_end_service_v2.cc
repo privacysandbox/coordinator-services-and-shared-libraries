@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "absl/functional/bind_front.h"
+#include "absl/strings/str_format.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/configuration_keys.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
@@ -153,33 +154,28 @@ void InsertBackwardCompatibleHeaders(
 }  // namespace
 
 FrontEndServiceV2::FrontEndServiceV2(
-    std::shared_ptr<HttpServerInterface> http_server,
-    std::shared_ptr<AsyncExecutorInterface> async_executor,
-    const std::shared_ptr<cpio::MetricClientInterface> metric_client,
-    const std::shared_ptr<core::ConfigProviderInterface> config_provider,
-    BudgetConsumptionHelperInterface* budget_consumption_helper)
-    : http_server_(http_server),
-      async_executor_(async_executor),
-      metric_client_(metric_client),
-      config_provider_(config_provider),
-      aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs),
-      budget_consumption_helper_(budget_consumption_helper),
-      adtech_site_authorized_domain_enabled_(false) {}
-
-FrontEndServiceV2::FrontEndServiceV2(
     std::shared_ptr<core::HttpServerInterface> http_server,
     std::shared_ptr<core::AsyncExecutorInterface> async_executor,
     const std::shared_ptr<cpio::MetricClientInterface> metric_client,
     const std::shared_ptr<core::ConfigProviderInterface> config_provider,
-    std::unique_ptr<MetricInitialization> metric_initialization,
-    BudgetConsumptionHelperInterface* budget_consumption_helper)
+    BudgetConsumptionHelperInterface* budget_consumption_helper,
+    std::unique_ptr<MetricInitialization> metric_initialization)
     : http_server_(http_server),
       async_executor_(async_executor),
       metric_client_(metric_client),
       config_provider_(config_provider),
       aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs),
       metric_initialization_(std::move(metric_initialization)),
-      budget_consumption_helper_(budget_consumption_helper) {}
+      budget_consumption_helper_(budget_consumption_helper) {
+  meter_ = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+      "Frontend Service v2", "2.0");
+  total_request_counter_ = meter_->CreateUInt64Counter(
+      kMetricNameRequests, "Total number of requests received");
+  client_error_counter_ = meter_->CreateUInt64Counter(
+      kMetricNameClientErrors, "Number of client errors (4xx status codes)");
+  server_error_counter_ = meter_->CreateUInt64Counter(
+      kMetricNameServerErrors, "Number of server errors (5xx status codes)");
+}
 
 ExecutionResult FrontEndServiceV2::Init() noexcept {
   ExecutionResult execution_result =
@@ -321,23 +317,32 @@ ExecutionResult FrontEndServiceV2::BeginTransaction(
                        total_request_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelBeginTransaction,
-                                            kMetricNameTotalRequest));
-  const std::string& reporting_origin_metric_label =
+                                            kMetricNameRequests));
+  const std::string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
+
+  const absl::flat_hash_map<std::string, std::string>
+      begin_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelBeginTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label},
+      };
+
+  total_request_counter_->Add(1, begin_transaction_label_kv);
 
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
                        client_error_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelBeginTransaction,
-                                            kMetricNameClientError));
+                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           false);
   if (!transaction_id.result().Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, begin_transaction_label_kv);
     return transaction_id.result();
   }
 
@@ -356,22 +361,32 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
                        total_request_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelPrepareTransaction,
-                                            kMetricNameTotalRequest));
-  const std::string& reporting_origin_metric_label =
+                                            kMetricNameRequests));
+  const std::string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
+
+  const absl::flat_hash_map<std::string, std::string>
+      prepare_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, prepare_transaction_label_kv);
+
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
                        client_error_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelPrepareTransaction,
-                                            kMetricNameClientError));
+                                            kMetricNameClientErrors));
+
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
     return transaction_id.result();
   }
 
@@ -379,7 +394,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
       consume_budget_context(
           std::make_shared<ConsumeBudgetsRequest>(),
           absl::bind_front(&FrontEndServiceV2::OnConsumeBudgetCallback, this,
-                           http_context),
+                           http_context, *transaction_id),
           http_context);
   consume_budget_context.response = std::make_shared<ConsumeBudgetsResponse>();
   if (adtech_site_authorized_domain_enabled_) {
@@ -390,6 +405,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
             consume_budget_context.request->budgets);
         !execution_result.Successful()) {
       client_error_metrics_instance->Increment(reporting_origin_metric_label);
+      client_error_counter_->Add(1, prepare_transaction_label_kv);
       return execution_result;
     }
   } else {
@@ -399,12 +415,14 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
             consume_budget_context.request->budgets);
         !execution_result.Successful()) {
       client_error_metrics_instance->Increment(reporting_origin_metric_label);
+      client_error_counter_->Add(1, prepare_transaction_label_kv);
       return execution_result;
     }
   }
 
   if (consume_budget_context.request->budgets.size() == 0) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
     return FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE);
   }
@@ -434,6 +452,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
           budget_consumption_helper_->ConsumeBudgets(consume_budget_context);
       !execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
     return execution_result;
   }
 
@@ -442,11 +461,13 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
 
 void FrontEndServiceV2::OnConsumeBudgetCallback(
     AsyncContext<HttpRequest, HttpResponse> http_context,
+    std::string transaction_id,
     AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
         consume_budget_context) {
   auto server_error_metrics_instance = FindAggregateMetricInMap(
       metrics_instances_map_, kMetricLabelPrepareTransaction,
-      kMetricNameServerError);
+      kMetricNameServerErrors);
+
   if (!server_error_metrics_instance.result().Successful()) {
     SCP_ERROR_CONTEXT(kFrontEndService, http_context,
                       server_error_metrics_instance.result(),
@@ -457,15 +478,33 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
     return;
   }
 
-  const std::string& reporting_origin_metric_label =
+  auto client_error_metrics_instance = FindAggregateMetricInMap(
+      metrics_instances_map_, kMetricLabelPrepareTransaction,
+      kMetricNameClientErrors);
+  if (!client_error_metrics_instance.result().Successful()) {
+    SCP_ERROR_CONTEXT(kFrontEndService, http_context,
+                      server_error_metrics_instance.result(),
+                      "Failed to find client error aggregate metric for "
+                      "prepare transaction endpoint.");
+    http_context.result = client_error_metrics_instance.result();
+    http_context.Finish();
+    return;
+  }
+
+  const std::string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
+
   if (!consume_budget_context.result.Successful()) {
-    SCP_ERROR_CONTEXT(kFrontEndService, http_context,
-                      consume_budget_context.result,
-                      "Failed to consume budget.");
     if (consume_budget_context.result.status_code ==
         errors::SC_CONSUME_BUDGET_EXHAUSTED) {
+      SCP_WARNING_CONTEXT(
+          kFrontEndService, http_context,
+          absl::StrFormat("Failed to consume budget due to budget exhausted. "
+                          "transaction_id: %s. execution_result: %s",
+                          transaction_id,
+                          google::scp::core::errors::GetErrorMessage(
+                              consume_budget_context.result.status_code)));
       std::list<size_t> budget_exhausted_indices(
           consume_budget_context.response->budget_exhausted_indices.begin(),
           consume_budget_context.response->budget_exhausted_indices.end());
@@ -473,18 +512,32 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
           FrontEndUtils::SerializeTransactionFailedCommandIndicesResponse(
               budget_exhausted_indices, http_context.response->body);
       if (!serialization_execution_result.Successful()) {
-        // We can log it but should not update the error code getting back to
-        // the client since it will make it confusing for the proper diagnosis
-        // on the transaction execution errors.
+        // We can log it but should not update the error code getting back
+        // to the client since it will make it confusing for the proper
+        // diagnosis on the transaction execution errors.
         //
         // This behavior is consistent with front_end_service.cc
-        SCP_ERROR_CONTEXT(kFrontEndService, http_context,
-                          serialization_execution_result,
-                          "Serialization of the transaction response failed");
+        SCP_ERROR_CONTEXT(
+            kFrontEndService, http_context, serialization_execution_result,
+            absl::StrFormat("Serialization of the transaction response failed. "
+                            "transaction_id: %s.",
+                            transaction_id));
       }
+      (*client_error_metrics_instance)
+          ->Increment(reporting_origin_metric_label);
+    } else {
+      SCP_ERROR_CONTEXT(kFrontEndService, http_context,
+                        consume_budget_context.result,
+                        "Failed to consume budget. transaction_id: %s.",
+                        transaction_id.c_str());
+      (*server_error_metrics_instance)
+          ->Increment(reporting_origin_metric_label);
     }
 
     (*server_error_metrics_instance)->Increment(reporting_origin_metric_label);
+    server_error_counter_->Add(
+        1, {{kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
+            {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}});
     http_context.result = consume_budget_context.result;
     http_context.Finish();
     return;
@@ -502,22 +555,31 @@ ExecutionResult FrontEndServiceV2::CommitTransaction(
                        total_request_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelCommitTransaction,
-                                            kMetricNameTotalRequest));
-  const std::string& reporting_origin_metric_label =
+                                            kMetricNameRequests));
+  const std::string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
+
+  const absl::flat_hash_map<std::string, std::string>
+      commit_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelCommitTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, commit_transaction_label_kv);
+
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
                        client_error_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelCommitTransaction,
-                                            kMetricNameClientError));
+                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, commit_transaction_label_kv);
     return transaction_id.result();
   }
 
@@ -535,23 +597,31 @@ ExecutionResult FrontEndServiceV2::NotifyTransaction(
                        total_request_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelNotifyTransaction,
-                                            kMetricNameTotalRequest));
-  const std::string& reporting_origin_metric_label =
+                                            kMetricNameRequests));
+  const std::string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
+
+  const absl::flat_hash_map<std::string, std::string>
+      notify_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelNotifyTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, notify_transaction_label_kv);
 
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
                        client_error_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelNotifyTransaction,
-                                            kMetricNameClientError));
+                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, notify_transaction_label_kv);
     return transaction_id.result();
   }
 
@@ -569,23 +639,31 @@ ExecutionResult FrontEndServiceV2::AbortTransaction(
                        total_request_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelAbortTransaction,
-                                            kMetricNameTotalRequest));
-  const std::string& reporting_origin_metric_label =
+                                            kMetricNameRequests));
+  const std::string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
+
+  const absl::flat_hash_map<std::string, std::string>
+      abort_transaction_label_kv = {
+          {kMetricLabelTransactionPhase, kMetricLabelAbortTransaction},
+          {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, abort_transaction_label_kv);
 
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
                        client_error_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelAbortTransaction,
-                                            kMetricNameClientError));
+                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, abort_transaction_label_kv);
     return transaction_id.result();
   }
 
@@ -603,23 +681,30 @@ ExecutionResult FrontEndServiceV2::EndTransaction(
                        total_request_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelEndTransaction,
-                                            kMetricNameTotalRequest));
-  const std::string& reporting_origin_metric_label =
+                                            kMetricNameRequests));
+  const std::string reporting_origin_metric_label =
       FrontEndUtils::FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
   total_request_metrics_instance->Increment(reporting_origin_metric_label);
+
+  const absl::flat_hash_map<std::string, std::string> end_transaction_label_kv =
+      {{kMetricLabelTransactionPhase, kMetricLabelEndTransaction},
+       {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
+
+  total_request_counter_->Add(1, end_transaction_label_kv);
 
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
                        client_error_metrics_instance,
                    FindAggregateMetricInMap(metrics_instances_map_,
                                             kMetricLabelEndTransaction,
-                                            kMetricNameClientError));
+                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, end_transaction_label_kv);
     return transaction_id.result();
   }
 

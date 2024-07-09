@@ -450,6 +450,18 @@ variable "pbs_elb_error_ratio_4xx_threshold" {
   default     = "5.0"
 }
 
+variable "pbs_elb_error_ratio_4xx_high_eval_periods" {
+  description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
+  type        = string
+  default     = "30"
+}
+
+variable "pbs_elb_error_ratio_4xx_high_threshold" {
+  description = "ELB 4xx error ratio rate greater than this to send alarm. Value should be a percentage. Example: 30% is '30.0'."
+  type        = string
+  default     = "30.0"
+}
+
 variable "pbs_elb_error_ratio_5xx_eval_periods" {
   description = "Evaluation Periods: is the number of the most recent periods, or data points, to evaluate when determining alarm state. Example: '5'."
   type        = string

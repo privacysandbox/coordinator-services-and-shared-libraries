@@ -19,6 +19,7 @@ package com.google.scp.operator.frontend.service.aws;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.operator.frontend.service.aws.testing.LocalFrontendServiceModule.CREATE_JOB_LAMBDA_NAME;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_ATTRIBUTION_REPORT_TO;
+import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_REPORTING_SITE;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -91,6 +92,49 @@ public final class CreateJobIntegrationTest {
     assertThat(jobMetadata.getRequestInfo().getJobParameters()).hasSize(1);
     assertThat(jobMetadata.getRequestInfo().getJobParameters().get(JOB_PARAM_ATTRIBUTION_REPORT_TO))
         .isEqualTo(attributionReportTo);
+    assertThat(payload).isNotNull();
+    assertThat(payload.headers().get("content-type")).isEqualTo("application/json");
+    assertThat(payload.statusCode()).isEqualTo(202);
+    assertThat(payload.body()).isNotNull();
+  }
+
+  @Test(timeout = 120_000)
+  public void createJob_withReportingSite_success()
+      throws JsonProcessingException, JobMetadataDbException {
+    var jobKeyString = "1";
+    var inputDataBlobPrefix = "IDBP";
+    var inputDataBlobBucket = "IDBB";
+    var outputDataBlobPrefix = "ODBP";
+    var outputDataBlobBucket = "ODBB";
+    var postbackUrl = "foo.com";
+    var reportingSite = "https://fakeurl.com";
+    var request =
+        CreateJobRequest.newBuilder()
+            .setJobRequestId(jobKeyString)
+            .setInputDataBlobPrefix(inputDataBlobPrefix)
+            .setInputDataBucketName(inputDataBlobBucket)
+            .setOutputDataBlobPrefix(outputDataBlobPrefix)
+            .setOutputDataBucketName(outputDataBlobBucket)
+            .setPostbackUrl(postbackUrl)
+            .putAllJobParameters(ImmutableMap.of(JOB_PARAM_REPORTING_SITE, reportingSite))
+            .build();
+
+    LambdaResponsePayload payload = invokeAndValidateLambdaResponse(request);
+
+    var jobMetadata = metadataDb.getJobMetadata(jobKeyString).get();
+    assertThat(jobMetadata.getJobKey().getJobRequestId()).isEqualTo(jobKeyString);
+    assertThat(jobMetadata.getRequestInfo().getInputDataBlobPrefix())
+        .isEqualTo(inputDataBlobPrefix);
+    assertThat(jobMetadata.getRequestInfo().getInputDataBucketName())
+        .isEqualTo(inputDataBlobBucket);
+    assertThat(jobMetadata.getRequestInfo().getOutputDataBlobPrefix())
+        .isEqualTo(outputDataBlobPrefix);
+    assertThat(jobMetadata.getRequestInfo().getOutputDataBucketName())
+        .isEqualTo(outputDataBlobBucket);
+    assertThat(jobMetadata.getRequestInfo().getPostbackUrl()).isEqualTo(postbackUrl);
+    assertThat(jobMetadata.getRequestInfo().getJobParameters()).hasSize(1);
+    assertThat(jobMetadata.getRequestInfo().getJobParameters().get(JOB_PARAM_REPORTING_SITE))
+        .isEqualTo(reportingSite);
     assertThat(payload).isNotNull();
     assertThat(payload.headers().get("content-type")).isEqualTo("application/json");
     assertThat(payload.statusCode()).isEqualTo(202);

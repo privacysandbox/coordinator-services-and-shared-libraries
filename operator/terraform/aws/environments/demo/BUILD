@@ -47,20 +47,20 @@ pkg_files(
 # copied.
 pkg_mklink(
     name = "operator_service_link",
-    src = "../shared/operator_service.tf",
-    dest = "demo/operator_service.tf",
+    link_name = "demo/operator_service.tf",
+    target = "../shared/operator_service.tf",
 )
 
 pkg_mklink(
     name = "operator_service_vars_link",
-    src = "../shared/operator_service_variables.tf",
-    dest = "demo/operator_service_variables.tf",
+    link_name = "demo/operator_service_variables.tf",
+    target = "../shared/operator_service_variables.tf",
 )
 
 pkg_mklink(
     name = "ami_params_link",
-    src = "../shared/ami_params.auto.tfvars",
-    dest = "demo/ami_params.auto.tfvars",
+    link_name = "demo/ami_params.auto.tfvars",
+    target = "../shared/ami_params.auto.tfvars",
 )
 
 pkg_filegroup(

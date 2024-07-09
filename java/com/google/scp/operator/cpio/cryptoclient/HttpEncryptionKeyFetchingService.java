@@ -41,7 +41,7 @@ public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetc
   private final String encryptionKeyServiceBaseUrl;
   private final Logger logger = LoggerFactory.getLogger(HttpEncryptionKeyFetchingService.class);
 
-  /** Creates a new instance of the {@code HttpPrivateKeyFetchingService} class. */
+  /** Creates a new instance of the {@code HttpEncryptionKeyFetchingService} class. */
   @Inject
   public HttpEncryptionKeyFetchingService(
       HttpClientWrapper httpClient, String encryptionKeyServiceBaseUrl) {

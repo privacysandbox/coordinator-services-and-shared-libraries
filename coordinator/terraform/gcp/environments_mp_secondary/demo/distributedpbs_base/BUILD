@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "distributedpbs_base_link",
-    src = "../../shared/distributedpbs_base/distributedpbs_base.tf",
-    dest = "distributedpbs_base/distributedpbs_base.tf",
+    link_name = "distributedpbs_base/distributedpbs_base.tf",
+    target = "../../shared/distributedpbs_base/distributedpbs_base.tf",
 )
 
 pkg_mklink(
     name = "distributedpbs_base_variables_link",
-    src = "../../shared/distributedpbs_base/distributedpbs_base_variables.tf",
-    dest = "distributedpbs_base/distributedpbs_base_variables.tf",
+    link_name = "distributedpbs_base/distributedpbs_base_variables.tf",
+    target = "../../shared/distributedpbs_base/distributedpbs_base_variables.tf",
 )
 
 pkg_mklink(
     name = "distributedpbs_base_outputs_link",
-    src = "../../shared/distributedpbs_base/distributedpbs_base_outputs.tf",
-    dest = "distributedpbs_base/distributedpbs_base_outputs.tf",
+    link_name = "distributedpbs_base/distributedpbs_base_outputs.tf",
+    target = "../../shared/distributedpbs_base/distributedpbs_base_outputs.tf",
 )

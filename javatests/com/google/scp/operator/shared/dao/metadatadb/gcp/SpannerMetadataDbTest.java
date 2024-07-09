@@ -55,6 +55,7 @@ public final class SpannerMetadataDbTest {
 
   JobKey jobKey;
   JobMetadata jobMetadata;
+  private static JobMetadata jobMetadataWithReportingSite;
 
   @Before
   public void setUp() {
@@ -87,6 +88,33 @@ public final class SpannerMetadataDbTest {
                             "foo-bar"))
                     .build())
             .build();
+
+    jobMetadataWithReportingSite =
+        JobMetadata.newBuilder()
+            .setJobKey(jobKey)
+            .setRequestReceivedAt(ProtoUtil.toProtoTimestamp(Instant.parse("2020-01-01T00:00:00Z")))
+            .setRequestUpdatedAt(ProtoUtil.toProtoTimestamp(Instant.parse("2020-01-01T00:00:00Z")))
+            .setNumAttempts(0)
+            .setJobStatus(RECEIVED)
+            .setServerJobId(UUID.randomUUID().toString())
+            .setRequestInfo(
+                RequestInfo.newBuilder()
+                    .setJobRequestId(jobRequestId)
+                    .setInputDataBlobPrefix("foobar.avro")
+                    .setInputDataBucketName("foo-bar")
+                    .setOutputDataBlobPrefix("foobar.avro")
+                    .setOutputDataBucketName("foo-bar")
+                    .setPostbackUrl("http://foo.com/bar")
+                    .putAllJobParameters(
+                        ImmutableMap.of(
+                            "reporting_site",
+                            "https://bar.com",
+                            "output_domain_blob_prefix",
+                            "foobar.avro",
+                            "output_domain_bucket_name",
+                            "foo-bar"))
+                    .build())
+            .build();
   }
 
   /** Test that getting a non-existent metadata item returns an empty optional */
@@ -112,6 +140,21 @@ public final class SpannerMetadataDbTest {
     assertJobMetadataEqualsIgnoreRecordVersion(
         lookedUpJobMetadata.get(),
         jobMetadata.toBuilder()
+            .setJobKey(JobKey.newBuilder().setJobRequestId(jobKey.getJobRequestId()).build())
+            .build());
+  }
+
+  /** Test that a metadata item with Reporting Site can be inserted and read back */
+  @Test
+  public void insertReportingSiteItemThenGet() throws Exception {
+    spannerMetadataDb.insertJobMetadata(jobMetadataWithReportingSite);
+    Optional<JobMetadata> lookedUpJobMetadata =
+        spannerMetadataDb.getJobMetadata(jobKey.getJobRequestId());
+
+    assertThat(lookedUpJobMetadata).isPresent();
+    assertJobMetadataEqualsIgnoreRecordVersion(
+        lookedUpJobMetadata.get(),
+        jobMetadataWithReportingSite.toBuilder()
             .setJobKey(JobKey.newBuilder().setJobRequestId(jobKey.getJobRequestId()).build())
             .build());
   }

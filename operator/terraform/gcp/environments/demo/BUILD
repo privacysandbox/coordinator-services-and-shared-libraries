@@ -20,20 +20,20 @@ package(default_visibility = ["//visibility:public"])
 # copied.
 pkg_mklink(
     name = "job_service_link",
-    src = "../shared/job_service.tf",
-    dest = "demo/job_service.tf",
+    link_name = "demo/job_service.tf",
+    target = "../shared/job_service.tf",
 )
 
 pkg_mklink(
     name = "job_service_vars_link",
-    src = "../shared/job_service_variables.tf",
-    dest = "demo/job_service_variables.tf",
+    link_name = "demo/job_service_variables.tf",
+    target = "../shared/job_service_variables.tf",
 )
 
 pkg_mklink(
     name = "job_service_outputs_link",
-    src = "../shared/job_service_outputs.tf",
-    dest = "demo/job_service_outputs.tf",
+    link_name = "demo/job_service_outputs.tf",
+    target = "../shared/job_service_outputs.tf",
 )
 
 pkg_files(

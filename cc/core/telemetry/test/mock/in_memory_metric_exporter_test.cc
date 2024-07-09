@@ -23,8 +23,7 @@ namespace {
 class InMemoryMetricExporterTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    data_ready_ = false;
-    exporter_ = std::make_unique<InMemoryMetricExporter>(data_ready_);
+    exporter_ = std::make_unique<InMemoryMetricExporter>();
     SetUpResourceMetrics();
   }
 
@@ -184,13 +183,12 @@ class InMemoryMetricExporterTest : public ::testing::Test {
   }
 
   std::unique_ptr<InMemoryMetricExporter> exporter_;
-  opentelemetry::nostd::unique_ptr<
+  std::unique_ptr<
       opentelemetry::sdk::instrumentationscope::InstrumentationScope>
       scope_;
   std::unique_ptr<opentelemetry::sdk::metrics::ResourceMetrics>
       resource_metrics_;
   std::shared_ptr<opentelemetry::sdk::resource::Resource> resource_;
-  std::atomic<bool> data_ready_;
 };
 
 TEST_F(InMemoryMetricExporterTest, ValidateExportingDummyData) {

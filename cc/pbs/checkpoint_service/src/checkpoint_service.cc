@@ -201,7 +201,7 @@ ExecutionResult CheckpointService::RunCheckpointWorker() noexcept {
     return execution_result;
   }
 
-  JournalId last_processed_journal_id;
+  JournalId last_processed_journal_id = 0;
   execution_result = Recover(last_processed_journal_id);
   if (!execution_result.Successful()) {
     return execution_result;
@@ -228,7 +228,7 @@ ExecutionResult CheckpointService::RunCheckpointWorker() noexcept {
   auto checkpoint_generation_start_timestamp =
       TimeProvider::GetSteadyTimestampInNanoseconds();
 
-  CheckpointId checkpoint_id;
+  CheckpointId checkpoint_id = 0;
   BytesBuffer checkpoint_buffer(initial_buffer_size_);
   BytesBuffer last_check_point_buffer(initial_buffer_size_);
   execution_result = Checkpoint(last_processed_journal_id, checkpoint_id,

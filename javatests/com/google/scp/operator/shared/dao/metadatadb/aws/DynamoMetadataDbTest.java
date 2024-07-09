@@ -81,6 +81,7 @@ public class DynamoMetadataDbTest {
   @Inject @MetadataDbDynamoTableName String tableName;
   JobKey jobKey;
   JobMetadata jobMetadata;
+  private static JobMetadata jobMetadataWithReportingSite;
   ResultInfo resultInfo;
 
   /**
@@ -123,6 +124,37 @@ public class DynamoMetadataDbTest {
                         ImmutableMap.of(
                             "attribution_report_to",
                             "bar.com",
+                            "output_domain_blob_prefix",
+                            "outputfile.avro",
+                            "output_domain_bucket_name",
+                            "bucket",
+                            "debug_privacy_budget_limit",
+                            "5"))
+                    .build())
+            .build();
+
+    jobMetadataWithReportingSite =
+        JobMetadata.newBuilder()
+            .setJobKey(jobKey)
+            .setRequestReceivedAt(ProtoUtil.toProtoTimestamp(Instant.now()))
+            .setRequestUpdatedAt(ProtoUtil.toProtoTimestamp(Instant.now()))
+            .setNumAttempts(0)
+            .setJobStatus(RECEIVED)
+            .setServerJobId(UUID.randomUUID().toString())
+            .setCreateJobRequest(
+                CreateJobRequest.newBuilder()
+                    .setJobRequestId(jobRequestId)
+                    .setInputDataBlobPrefix("foobar.avro")
+                    .setInputDataBucketName("foo-bar")
+                    .setOutputDataBlobPrefix("outputfile.avro")
+                    .setOutputDataBucketName("bucket")
+                    .setPostbackUrl("http://foo.com/bar")
+                    .setReportingSite("https://bar.com")
+                    .setDebugPrivacyBudgetLimit(5)
+                    .putAllJobParameters(
+                        ImmutableMap.of(
+                            "reporting_site",
+                            "https://bar.com",
                             "output_domain_blob_prefix",
                             "outputfile.avro",
                             "output_domain_bucket_name",
@@ -201,6 +233,20 @@ public class DynamoMetadataDbTest {
 
     assertThat(lookedUpJobMetadata).isPresent();
     assertJobMetadataEquals(lookedUpJobMetadata.get(), jobMetadata);
+    assertThat(lookedUpJobMetadata.get().getRequestProcessingStartedAt())
+        .isEqualTo(Timestamp.getDefaultInstance());
+  }
+
+  /** Test that a metadata item with reporting site can be inserted and read back. */
+  @Test
+  public void testReportingSiteItemInsertAndGet() throws Exception {
+    // No setup
+    dynamoMetadataDb.insertJobMetadata(jobMetadataWithReportingSite);
+    Optional<JobMetadata> lookedUpJobMetadata =
+        dynamoMetadataDb.getJobMetadata(jobKey.getJobRequestId());
+
+    assertThat(lookedUpJobMetadata).isPresent();
+    assertJobMetadataEquals(lookedUpJobMetadata.get(), jobMetadataWithReportingSite);
     assertThat(lookedUpJobMetadata.get().getRequestProcessingStartedAt())
         .isEqualTo(Timestamp.getDefaultInstance());
   }

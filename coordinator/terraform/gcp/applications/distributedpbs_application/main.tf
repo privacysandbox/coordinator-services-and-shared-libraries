@@ -125,8 +125,9 @@ module "pbs_managed_instance_group_environment" {
   pbs_spanner_budget_key_table_name     = module.pbs_storage.pbs_spanner_budget_key_table_name
   pbs_spanner_partition_lock_table_name = module.pbs_storage.pbs_spanner_partition_lock_table_name
 
-  machine_type        = var.machine_type
-  root_volume_size_gb = var.root_volume_size_gb
+  machine_type           = var.machine_type
+  root_volume_size_gb    = var.root_volume_size_gb
+  pbs_autoscaling_policy = var.pbs_autoscaling_policy
 
   pbs_cloud_logging_enabled    = var.pbs_cloud_logging_enabled
   pbs_cloud_monitoring_enabled = var.pbs_cloud_monitoring_enabled

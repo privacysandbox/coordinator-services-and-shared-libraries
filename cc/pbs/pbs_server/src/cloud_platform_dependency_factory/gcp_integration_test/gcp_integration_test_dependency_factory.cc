@@ -28,6 +28,8 @@
 #include "core/token_provider_cache/src/auto_refresh_token_provider.h"
 #include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
+#include "opentelemetry/sdk/resource/resource.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
 #include "pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
 #include "pbs/interface/configuration_keys.h"
@@ -157,7 +159,27 @@ GcpIntegrationTestDependencyFactory::ConstructMetricClient(
 
 std::unique_ptr<core::MetricRouter>
 GcpIntegrationTestDependencyFactory::ConstructMetricRouter(
-    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
-  return GcpDependencyFactory::ConstructMetricRouter(config_provider);
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+        instance_client_provider) noexcept {
+  // Hard-code resource attributes for testing.
+  //
+  // Example output similar to implemenation of:
+  // google-cloud-cpp/google/cloud/opentelemetry/internal/resource_detector_impl.cc
+  const opentelemetry::sdk::resource::ResourceAttributes attributes = {
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudProvider,
+       "gcp"},
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudPlatform,
+       "gcp_compute_engine"},
+      {opentelemetry::sdk::resource::SemanticConventions::kHostType,
+       "Instance"},
+      {opentelemetry::sdk::resource::SemanticConventions::kHostId,
+       "8852044229993849486"},
+      {opentelemetry::sdk::resource::SemanticConventions::kHostName,
+       "a-pbs-test"},
+  };
+  auto resource = opentelemetry::sdk::resource::Resource::Create(attributes);
+
+  return GcpDependencyFactory::ConstructMetricRouter(instance_client_provider,
+                                                     std::move(resource));
 }
 }  // namespace google::scp::pbs

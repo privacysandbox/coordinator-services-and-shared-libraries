@@ -19,6 +19,7 @@
 #include <libpsl.h>
 
 #include "absl/strings/match.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/strip.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/type_def.h"
@@ -197,6 +198,12 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
     }
 
     if (*site != authorized_domain) {
+      SCP_INFO(
+          kFrontEndUtils, core::common::kZeroUuid,
+          absl::StrFormat(
+              "The provided reporting origin does not belong to the authorized "
+              "domain. reporting_origin: %s; authorized_domain: %s",
+              *site, authorized_domain));
       consume_budget_metadata_list.clear();
       return core::FailureExecutionResult(
           core::errors::
@@ -351,6 +358,19 @@ core::ExecutionResultOr<std::string> TransformReportingOriginToSite(
         core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN);
   }
   std::string private_suffix_part = std::string(private_suffix_part_start);
+  // Extract port number after the address portion (skipping protocol scheme).
+  size_t port_idx =
+      private_suffix_part.find(":", private_suffix_part.find("."));
+  if (port_idx != std::string::npos) {
+    // Remove a port number if exists.
+    private_suffix_part = private_suffix_part.substr(0, port_idx);
+  }
+  // Remove trailing slash (/) if it exists
+  size_t trailing_slash_idx =
+      private_suffix_part.find("/", private_suffix_part.find("."));
+  if (trailing_slash_idx != std::string::npos) {
+    private_suffix_part = private_suffix_part.substr(0, trailing_slash_idx);
+  }
   if (absl::StartsWith(private_suffix_part, kHttpsPrefix)) {
     return private_suffix_part;
   }

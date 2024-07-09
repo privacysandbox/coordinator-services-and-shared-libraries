@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <aws/core/Aws.h>
 #include <aws/monitoring/CloudWatchErrors.h>
@@ -41,7 +42,6 @@ using Aws::CloudWatch::Model::StandardUnitMapper::GetStandardUnitForName;
 using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
-using google::protobuf::MapPair;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -63,6 +63,7 @@ using google::scp::core::errors::
     SC_AWS_METRIC_CLIENT_PROVIDER_OVERSIZE_DATUM_DIMENSIONS;
 using google::scp::core::test::ResultIs;
 using google::scp::cpio::client_providers::AwsMetricClientUtils;
+using std::make_pair;
 using std::make_shared;
 using std::map;
 using std::stod;
@@ -199,7 +200,7 @@ TEST_F(AwsMetricClientUtilsTest, ParseRequestToDatumOversizeDimensions) {
   auto metric_labels_ = metric->mutable_labels();
   string label_value = "test";
   for (auto i = 0; i < 31; i++) {
-    metric_labels_->insert(MapPair(to_string(i), label_value));
+    metric_labels_->insert(make_pair(to_string(i), label_value));
   }
 
   bool parse_request_to_datum_is_called = false;

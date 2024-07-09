@@ -42,7 +42,6 @@
 using google::cmrt::sdk::queue_service::v1::EnqueueMessageRequest;
 using google::cmrt::sdk::queue_service::v1::EnqueueMessageResponse;
 using google::cmrt::sdk::queue_service::v1::QueueService;
-using google::protobuf::MapPair;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;

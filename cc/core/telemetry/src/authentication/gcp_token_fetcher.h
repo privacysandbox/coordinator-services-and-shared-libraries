@@ -40,14 +40,13 @@ namespace google::scp::core {
  */
 class GcpTokenFetcher : public TokenFetcher {
  public:
-  GcpTokenFetcher();
   ExecutionResultOr<std::string> FetchIdToken(
       GrpcAuthConfig& auth_config) override;
 
  private:
   std::unique_ptr<::google::cloud::iam_credentials_v1::IAMCredentialsClient>
       iam_client_;
+  void CreateIamClient();
 };
 }  // namespace google::scp::core
 #endif
-

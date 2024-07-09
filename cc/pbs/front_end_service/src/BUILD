@@ -39,6 +39,8 @@ cc_library(
         ":error_codes",
         ":libpsl",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )
 
@@ -89,6 +91,7 @@ cc_library(
         "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
         "@nlohmann_json//:lib",
     ],
 )
@@ -123,6 +126,7 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:bind_front",
         "@com_google_absl//absl/strings",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
         "@nlohmann_json//:lib",
     ],
 )

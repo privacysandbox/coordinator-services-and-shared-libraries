@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "opentelemetry/sdk/resource/resource.h"
 #include "pbs/interface/cloud_platform_dependency_factory_interface.h"
 
 namespace google::scp::pbs {
@@ -91,8 +92,14 @@ class AwsDependencyFactory : public CloudPlatformDependencyFactoryInterface {
           auth_token_provider_cache) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      const std::shared_ptr<core::ConfigProviderInterface>&
-          config_provider) noexcept override;
+      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+          instance_client_provider) noexcept override;
+
+  // Allow passing in a Resource, for integration tests.
+  std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
+      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+          instance_client_provider,
+      opentelemetry::sdk::resource::Resource resource) noexcept;
 
  protected:
   virtual core::ExecutionResult ReadConfigurations();

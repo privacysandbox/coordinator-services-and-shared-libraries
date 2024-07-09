@@ -26,3 +26,21 @@ resource "google_service_account" "pbs_service_account" {
   account_id   = "${var.environment}-pbs-mig-sa"
   display_name = "The PBS service account of the managed instance group for ${var.environment}."
 }
+
+# Allow PBS to create ID Tokens as itself,
+# for authenticating requests to OpenTelemetry Collector in Cloud Run.
+data "google_iam_policy" "pbs_service_account" {
+  binding {
+    role = "roles/iam.serviceAccountOpenIdTokenCreator"
+    members = [
+      # google provider version 4.36 doesn't have attribute "member" yet
+      # google_service_account.pbs_service_account.member,
+      "serviceAccount:${google_service_account.pbs_service_account.email}",
+    ]
+  }
+}
+
+resource "google_service_account_iam_policy" "pbs_service_account" {
+  service_account_id = google_service_account.pbs_service_account.name
+  policy_data        = data.google_iam_policy.pbs_service_account.policy_data
+}

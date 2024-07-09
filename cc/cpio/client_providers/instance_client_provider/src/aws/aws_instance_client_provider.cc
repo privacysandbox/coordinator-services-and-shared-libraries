@@ -60,7 +60,6 @@ using google::cmrt::sdk::instance_service::v1::GetTagsByResourceNameRequest;
 using google::cmrt::sdk::instance_service::v1::GetTagsByResourceNameResponse;
 using google::cmrt::sdk::instance_service::v1::InstanceDetails;
 using google::cmrt::sdk::instance_service::v1::InstanceNetwork;
-using google::protobuf::MapPair;
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
@@ -452,7 +451,7 @@ void AwsInstanceClientProvider::OnDescribeInstancesAsyncCallback(
   // Extract instance labels.
   auto* labels_proto = instance_details->mutable_labels();
   for (const auto& tag : target_instance.GetTags()) {
-    labels_proto->insert(MapPair(tag.GetKey(), tag.GetValue()));
+    labels_proto->insert(make_pair(tag.GetKey(), tag.GetValue()));
   }
 
   FinishContext(SuccessExecutionResult(), get_details_context,
@@ -521,7 +520,7 @@ void AwsInstanceClientProvider::OnDescribeTagsAsyncCallback(
   auto* tags = get_tags_context.response->mutable_tags();
 
   for (const auto& tag : outcome.GetResult().GetTags()) {
-    tags->insert(MapPair(tag.GetKey(), tag.GetValue()));
+    tags->insert(make_pair(tag.GetKey(), tag.GetValue()));
   }
 
   FinishContext(SuccessExecutionResult(), get_tags_context,

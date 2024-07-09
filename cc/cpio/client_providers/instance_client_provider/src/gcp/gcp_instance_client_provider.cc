@@ -49,7 +49,6 @@ using google::cmrt::sdk::instance_service::v1::
 using google::cmrt::sdk::instance_service::v1::GetTagsByResourceNameRequest;
 using google::cmrt::sdk::instance_service::v1::GetTagsByResourceNameResponse;
 using google::cmrt::sdk::instance_service::v1::InstanceDetails;
-using google::protobuf::MapPair;
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
@@ -509,8 +508,8 @@ void GcpInstanceClientProvider::OnGetTagsByResourceNameCallback(
   auto* tags = get_tags_context.response->mutable_tags();
 
   for (const auto& tag : json_response[kTagBindingsListKey]) {
-    tags->insert(MapPair(tag[kTagBindingNameKey].get<string>(),
-                         tag[kTagBindingTagValueKey].get<string>()));
+    tags->insert(make_pair(tag[kTagBindingNameKey].get<string>(),
+                           tag[kTagBindingTagValueKey].get<string>()));
   }
 
   get_tags_context.result = SuccessExecutionResult();
@@ -722,7 +721,7 @@ void GcpInstanceClientProvider::OnGetInstanceDetailsCallback(
         get_instance_details_context.response->mutable_instance_details()
             ->mutable_labels();
     for (json::iterator it = labels->begin(); it != labels->end(); ++it) {
-      labels_proto->insert(MapPair(it.key(), it.value().get<string>()));
+      labels_proto->insert(make_pair(it.key(), it.value().get<string>()));
     }
   }
 

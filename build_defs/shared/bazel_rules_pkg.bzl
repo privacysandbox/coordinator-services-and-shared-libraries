@@ -15,13 +15,17 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-def bazel_rules_pkg():
+DEFAULT_BAZEL_RULES_PKG_VERSION = "1.0.0"
+DEFAULT_BAZEL_RULES_PKG_VERSION_SHA_256 = "cad05f864a32799f6f9022891de91ac78f30e0fa07dc68abac92a628121b5b11"
+
+def bazel_rules_pkg(version = DEFAULT_BAZEL_RULES_PKG_VERSION, hash = DEFAULT_BAZEL_RULES_PKG_VERSION_SHA_256):
     maybe(
         http_archive,
         name = "rules_pkg",
-        sha256 = "a89e203d3cf264e564fcb96b6e06dd70bc0557356eb48400ce4b5d97c2c3720d",
+        sha256 = hash,
         urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
-            "https://github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
+            # 1.0.0 has not been uploaded to the mirror yet?
+            # "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/%s/rules_pkg-%s.tar.gz" % (version, version),
+            "https://github.com/bazelbuild/rules_pkg/releases/download/%s/rules_pkg-%s.tar.gz" % (version, version),
         ],
     )

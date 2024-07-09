@@ -29,13 +29,11 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotat
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorServiceAccount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorWipProvider;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.Annotations.SubscriptionId;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.CreateKeysPubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.CreateSplitKeysPubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListenerConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdType;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpKeyGenerationTasksModule;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpSplitKeyGenerationTasksModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
@@ -202,22 +200,14 @@ public final class KeyGenerationModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    // TODO(b/282204533)
-    if (args.isMultiparty()) {
-      bind(PubSubListener.class).to(CreateSplitKeysPubSubListener.class);
+    bind(PubSubListener.class).to(CreateSplitKeysPubSubListener.class);
 
-      // Key Storage Bindings
-      install(new GcpKeyStorageConfigModule());
+    // Key Storage Bindings
+    install(new GcpKeyStorageConfigModule());
 
-      install(
-          new GcpSplitKeyGenerationTasksModule(
-              args.getTestEncodedKeysetHandle(), args.getTestPeerCoordinatorEncodedKeysetHandle()));
-    } else {
-      bind(PubSubListener.class).to(CreateKeysPubSubListener.class);
-      // Business layer bindings
-      install(
-          new GcpKeyGenerationTasksModule(args.getKmsKeyUri(), args.getTestEncodedKeysetHandle()));
-    }
+    install(
+        new GcpSplitKeyGenerationTasksModule(
+            args.getTestEncodedKeysetHandle(), args.getTestPeerCoordinatorEncodedKeysetHandle()));
 
     // Data layer bindings
     install(new SpannerKeyDbModule());

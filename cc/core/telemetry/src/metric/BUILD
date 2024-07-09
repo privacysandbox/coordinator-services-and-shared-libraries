@@ -50,5 +50,6 @@ cc_library(
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",
         "@io_opentelemetry_cpp//ext:headers",
         "@io_opentelemetry_cpp//sdk/src/metrics",
+        "@io_opentelemetry_cpp//sdk/src/resource",
     ],
 )

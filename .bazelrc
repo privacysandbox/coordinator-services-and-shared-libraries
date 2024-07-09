@@ -32,6 +32,11 @@ build:asan --linkopt -fsanitize=address
 build:asan --linkopt=-fuse-ld=lld
 build:asan --action_env=ASAN_OPTIONS=detect_leaks=1:color=always
 
-test --cxxopt=-D_SCP_ROMA_DEBUG_MODE=1
 test --cxxopt=-D_SCP_CORE_SOCAT_FORWARDER_NON_PRIVILEGED=1
 test --test_output=all
+
+build:kythe --keep_going
+build:kythe --experimental_extra_action_top_level_only
+build:kythe --experimental_action_listener=@kythe_release//:extract_kzip_cxx
+build:kythe --experimental_action_listener=@kythe_release//:extract_kzip_java
+build:kythe --experimental_action_listener=@kythe_release//:extract_kzip_protobuf

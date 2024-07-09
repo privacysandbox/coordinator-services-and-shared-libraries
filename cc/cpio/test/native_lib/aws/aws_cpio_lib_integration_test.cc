@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "core/test/utils/aws_helper/aws_helper.h"
@@ -47,7 +48,6 @@ using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::cmrt::sdk::parameter_service::v1::GetParameterRequest;
 using google::cmrt::sdk::parameter_service::v1::GetParameterResponse;
-using google::protobuf::MapPair;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
@@ -75,6 +75,7 @@ using google::scp::cpio::TestAwsParameterClientOptions;
 using google::scp::cpio::TestCpioOptions;
 using google::scp::cpio::TestLibCpio;
 using std::atomic;
+using std::make_pair;
 using std::make_shared;
 using std::make_unique;
 using std::runtime_error;
@@ -110,7 +111,7 @@ shared_ptr<PutMetricsRequest> CreatePutMetricsRequest() {
       cmrt::sdk::metric_service::v1::MetricUnit::METRIC_UNIT_COUNT);
 
   auto labels = metric->mutable_labels();
-  labels->insert(MapPair(string("lable_key"), string("label_value")));
+  labels->insert(make_pair(string("lable_key"), string("label_value")));
 
   return request;
 }

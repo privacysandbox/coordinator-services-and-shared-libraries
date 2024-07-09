@@ -24,17 +24,17 @@ def absl():
     maybe(
         http_archive,
         name = "bazel_skylib",
-        sha256 = "f7be3474d42aae265405a592bb7da8e171919d74c16f082a5457840f06054728",
-        urls = ["https://github.com/bazelbuild/bazel-skylib/releases/download/1.2.1/bazel-skylib-1.2.1.tar.gz"],
+        sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
+        urls = ["https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz"],
     )
 
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "81311c17599b3712069ded20cca09a62ab0bf2a89dfa16993786c8782b7ed145",
-        strip_prefix = "abseil-cpp-20230125.1",
-        # Committed on Jan 25, 2023.
+        sha256 = "733726b8c3a6d39a4120d7e45ea8b41a434cdacde401cba500f14236c49b39dc",
+        strip_prefix = "abseil-cpp-20240116.2",
+        # Committed on Apr 9, 2024.
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/20230125.1.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/20240116.2.tar.gz",
         ],
     )

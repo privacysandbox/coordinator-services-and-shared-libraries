@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "allowedoperatorgroup_link",
-    src = "../../shared/allowedoperatorgroup/allowedoperatorgroup.tf",
-    dest = "allowedoperatorgroup/allowedoperatorgroup.tf",
+    link_name = "allowedoperatorgroup/allowedoperatorgroup.tf",
+    target = "../../shared/allowedoperatorgroup/allowedoperatorgroup.tf",
 )
 
 pkg_mklink(
     name = "allowedoperatorgroup_variables_link",
-    src = "../../shared/allowedoperatorgroup/allowedoperatorgroup_variables.tf",
-    dest = "allowedoperatorgroup/allowedoperatorgroup_variables.tf",
+    link_name = "allowedoperatorgroup/allowedoperatorgroup_variables.tf",
+    target = "../../shared/allowedoperatorgroup/allowedoperatorgroup_variables.tf",
 )
 
 pkg_mklink(
     name = "allowedoperatorgroup_outputs_link",
-    src = "../../shared/allowedoperatorgroup/allowedoperatorgroup_outputs.tf",
-    dest = "allowedoperatorgroup/allowedoperatorgroup_outputs.tf",
+    link_name = "allowedoperatorgroup/allowedoperatorgroup_outputs.tf",
+    target = "../../shared/allowedoperatorgroup/allowedoperatorgroup_outputs.tf",
 )

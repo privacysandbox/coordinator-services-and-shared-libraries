@@ -18,8 +18,20 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "telemetry_fake",
-    srcs = ["in_memory_metric_exporter.cc"],
-    hdrs = ["in_memory_metric_exporter.h"],
+    srcs = [
+        "in_memory_metric_exporter.cc",
+        "in_memory_metric_reader.cc",
+        "in_memory_metric_router.cc",
+    ],
+    hdrs = [
+        "error_codes.h",
+        "in_memory_metric_exporter.h",
+        "in_memory_metric_reader.h",
+        "in_memory_metric_router.h",
+    ],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -28,6 +40,26 @@ cc_library(
         "@io_opentelemetry_cpp//exporters/ostream:ostream_metric_exporter",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_exporter",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",
+        "@io_opentelemetry_cpp//ext:headers",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
+    ],
+)
+
+cc_library(
+    name = "telemetry_mock",
+    testonly = True,
+    hdrs = [
+        "error_codes.h",
+        "instrument_mock.h",
+    ],
+    copts = [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
+        "@io_opentelemetry_cpp//api",
         "@io_opentelemetry_cpp//ext:headers",
         "@io_opentelemetry_cpp//sdk/src/metrics",
     ],

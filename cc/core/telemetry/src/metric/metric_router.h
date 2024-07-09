@@ -18,13 +18,13 @@
 #include <string>
 
 #include "cc/core/interface/config_provider_interface.h"
-#include "external/io_opentelemetry_cpp/api/_virtual_includes/api/opentelemetry/metrics/meter.h"
-#include "external/io_opentelemetry_cpp/api/_virtual_includes/api/opentelemetry/metrics/meter_provider.h"
-#include "external/io_opentelemetry_cpp/api/_virtual_includes/api/opentelemetry/metrics/observer_result.h"
-#include "external/io_opentelemetry_cpp/api/_virtual_includes/api/opentelemetry/metrics/sync_instruments.h"
-#include "external/io_opentelemetry_cpp/api/_virtual_includes/api/opentelemetry/nostd/shared_ptr.h"
-#include "external/io_opentelemetry_cpp/sdk/_virtual_includes/headers/opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
-#include "external/io_opentelemetry_cpp/sdk/_virtual_includes/headers/opentelemetry/sdk/metrics/push_metric_exporter.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/meter_provider.h"
+#include "opentelemetry/metrics/observer_result.h"
+#include "opentelemetry/metrics/sync_instruments.h"
+#include "opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
+#include "opentelemetry/sdk/metrics/push_metric_exporter.h"
+#include "opentelemetry/sdk/resource/resource.h"
 
 /**
  * @brief MetricRouter class for handling OpenTelemetry metric.
@@ -35,25 +35,27 @@ namespace google::scp::core {
 
 class MetricRouter {
  public:
-  // For testing only
-  MetricRouter() = default;
+  // Create a MetricRouter with a Periodic Reader, given a Resource and a
+  // cloud-specific Exporter
   explicit MetricRouter(
+      std::shared_ptr<ConfigProviderInterface> config_provider,
+      opentelemetry::sdk::resource::Resource resource,
+      std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
+          exporter);
+
+ protected:
+  MetricRouter() = default;
+
+  // For subclasses used in testing, to allow custom Resource and Reader
+  void SetupMetricRouter(
+      opentelemetry::sdk::resource::Resource resource,
+      std::shared_ptr<opentelemetry::sdk::metrics::MetricReader> metric_reader);
+
+ private:
+  static std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>
+  CreatePeriodicReader(
       std::shared_ptr<ConfigProviderInterface> config_provider,
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
-
-  virtual std::shared_ptr<opentelemetry::metrics::MeterProvider>
-  meter_provider() const;
-  virtual opentelemetry::sdk::metrics::PushMetricExporter& exporter() const;
-
- private:
-  void SetUpMeterProvider(
-      std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
-          exporter);
-  std::shared_ptr<opentelemetry::metrics::MeterProvider> meter_provider_;
-  std::shared_ptr<ConfigProviderInterface> config_provider_;
-  opentelemetry::sdk::metrics::PushMetricExporter* exporter_;
-  std::shared_ptr<opentelemetry::sdk::metrics::PeriodicExportingMetricReader>
-      periodic_exporting_metric_reader_;
 };
 }  // namespace google::scp::core

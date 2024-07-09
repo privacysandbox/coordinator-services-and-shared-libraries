@@ -23,12 +23,16 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <vector>
 
+#include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/pbs/health_service/src/error_codes.h"
 #include "core/async_executor/src/async_executor.h"
 #include "core/http2_server/mock/mock_http2_server.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/http_server_interface.h"
+#include "core/telemetry/mock/in_memory_metric_router.h"
+#include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "pbs/interface/configuration_keys.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/mock/metric_client/mock_metric_client.h"
@@ -190,6 +194,9 @@ class HealthServiceTest : public ::testing::Test {
     EXPECT_SUCCESS(async_executor_->Init());
     EXPECT_SUCCESS(async_executor_->Run());
 
+    // Initialize OTel for testing
+    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
+
     // Make memory and storage checking enabled by default
     ON_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock_.get()),
             Get(kPBSHealthServiceEnableMemoryAndStorageCheck, _))
@@ -218,6 +225,8 @@ class HealthServiceTest : public ::testing::Test {
   shared_ptr<ConfigProviderInterface> config_provider_mock_;
   shared_ptr<MetricClientInterface> metric_client_mock_;
   shared_ptr<AsyncExecutorInterface> async_executor_;
+  // For testing OTel metrics
+  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
 };
 
 TEST_F(HealthServiceTest,
@@ -430,4 +439,63 @@ TEST_F(HealthServiceTest, ShouldFailHealthCheckIfFilesystemInfoCantBeRead) {
   // Request response fails
   EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(SC_UNKNOWN)));
 }
+
+TEST_F(HealthServiceTest, OTelReturnsCorrectMemoryUsageInfo) {
+  const std::map<std::string, std::string> empty_label_kv = {};
+  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
+      (opentelemetry::common::KeyValueIterableView<
+          std::map<std::string, std::string>>(empty_label_kv)));
+
+  health_service_.SetMemInfoFilePath(
+      "cc/pbs/health_service/test/files/ninety_six_percent_meminfo_file.txt");
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      memory_usage_metric_point_data = core::GetMetricPointData(
+          google::scp::pbs::kMetricNameMemoryUsage, dimensions, data);
+  ASSERT_TRUE(memory_usage_metric_point_data.has_value());
+
+  auto memory_usage_last_value_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::LastValuePointData>(
+          memory_usage_metric_point_data.value()));
+  ASSERT_EQ(std::get<int64_t>(memory_usage_last_value_point_data.value_), 96)
+      << "Expected memory_usage_last_value_point_data.value_ to be 96 "
+         "(int64_t)";
+}
+
+TEST_F(HealthServiceTest,
+       OTelReturnsCorrectInstanceFileSystemStorageUsageInfo) {
+  const std::map<std::string, std::string> empty_label_kv = {};
+  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
+      (opentelemetry::common::KeyValueIterableView<
+          std::map<std::string, std::string>>(empty_label_kv)));
+
+  space_info fs_space_info;
+  fs_space_info.capacity = 100;
+  fs_space_info.available = 75;
+  health_service_.SetFileSystemSpaceInfo(fs_space_info);
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      filesystem_storage_usage_metric_point_data = core::GetMetricPointData(
+          google::scp::pbs::kMetricNameFileSystemStorageUsage, dimensions,
+          data);
+  ASSERT_TRUE(filesystem_storage_usage_metric_point_data.has_value());
+
+  auto filesystem_storage_usage_last_value_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::LastValuePointData>(
+          filesystem_storage_usage_metric_point_data.value()));
+  ASSERT_EQ(
+      std::get<int64_t>(filesystem_storage_usage_last_value_point_data.value_),
+      25)
+      << "Expected "
+         "filesystem_storage_usage_last_value_point_data.value_ to be "
+         "25 "
+         "(int64_t)";
+}
+
 }  // namespace google::scp::pbs::test

@@ -26,3 +26,21 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_library(
+    name = "telemetry_metric_utils",
+    srcs = [
+        "metric_utils.cc",
+    ],
+    hdrs = [
+        "metric_utils.h",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/telemetry/src/common:telemetry_common",
+        "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_exporter",
+        "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",
+        "@io_opentelemetry_cpp//ext:headers",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
+    ],
+)

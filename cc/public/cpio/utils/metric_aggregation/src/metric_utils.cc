@@ -16,6 +16,7 @@
 
 #include "metric_utils.h"
 
+using std::make_pair;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
@@ -46,12 +47,12 @@ void MetricUtils::GetPutMetricsRequest(
   auto labels = metric->mutable_labels();
   if (metric_info->labels) {
     for (const auto& label : *metric_info->labels) {
-      labels->insert(protobuf::MapPair(label.first, label.second));
+      labels->insert(make_pair(label.first, label.second));
     }
   }
   if (metric_tag && metric_tag->additional_labels) {
     for (const auto& label : *metric_tag->additional_labels) {
-      labels->insert(protobuf::MapPair(label.first, label.second));
+      labels->insert(make_pair(label.first, label.second));
     }
   }
   *metric->mutable_timestamp() = protobuf::util::TimeUtil::GetCurrentTime();

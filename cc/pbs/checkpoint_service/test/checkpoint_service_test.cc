@@ -185,6 +185,7 @@ TEST_F(CheckpointServiceTest, CheckpointFailure) {
   };
 
   mock_checkpoint_service_->recover_mock = [](JournalId& journal_id) {
+    journal_id = 789;
     return SuccessExecutionResult();
   };
 
@@ -212,6 +213,7 @@ TEST_F(CheckpointServiceTest, StoreFailure) {
   };
 
   mock_checkpoint_service_->recover_mock = [](JournalId& journal_id) {
+    journal_id = 789;
     return SuccessExecutionResult();
   };
 
@@ -243,6 +245,7 @@ TEST_F(CheckpointServiceTest, GetLastPersistedCheckpointIdFailure) {
   };
 
   mock_checkpoint_service_->recover_mock = [](JournalId& journal_id) {
+    journal_id = 789;
     return SuccessExecutionResult();
   };
 
@@ -278,6 +281,7 @@ TEST_F(CheckpointServiceTest, GetLastPersistedCheckpointIdStaleIfStoreFails) {
   };
 
   mock_checkpoint_service_->recover_mock = [](JournalId& journal_id) {
+    journal_id = 789;
     return SuccessExecutionResult();
   };
 
@@ -317,13 +321,16 @@ TEST_F(CheckpointServiceTest, ShutdownFailure) {
   };
 
   mock_checkpoint_service_->recover_mock = [](JournalId& journal_id) {
+    journal_id = 789;
     return SuccessExecutionResult();
   };
 
   mock_checkpoint_service_->checkpoint_mock =
       [](JournalId last_processed_journal_id, CheckpointId& checkpoint_id,
-         BytesBuffer& last_checkpoint_buffer,
-         BytesBuffer& checkpoint_buffer) { return SuccessExecutionResult(); };
+         BytesBuffer& last_checkpoint_buffer, BytesBuffer& checkpoint_buffer) {
+        checkpoint_id = 123;
+        return SuccessExecutionResult();
+      };
 
   mock_checkpoint_service_->store_mock =
       [](CheckpointId& checkpoint_id, BytesBuffer& last_checkpoint_buffer,
@@ -592,6 +599,7 @@ TEST_F(CheckpointServiceTest, GetLastPersistedCheckpointId) {
   };
 
   mock_checkpoint_service_->recover_mock = [](JournalId& journal_id) {
+    journal_id = 456;
     return SuccessExecutionResult();
   };
 

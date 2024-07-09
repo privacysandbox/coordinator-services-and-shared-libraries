@@ -33,9 +33,12 @@ cc_test(
     deps = [
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/http2_server/mock:core_http2_server_mock",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
         "//cc/pbs/health_service/src:pbs_health_service_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )

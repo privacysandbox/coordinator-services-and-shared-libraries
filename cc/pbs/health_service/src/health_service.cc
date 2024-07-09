@@ -25,6 +25,8 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_split.h"
 #include "core/common/time_provider/src/time_provider.h"
+#include "opentelemetry/metrics/provider.h"
+#include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/metrics_def.h"
 #include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
@@ -101,6 +103,26 @@ static constexpr char kVarLogDirectory[] = "/var/log";
 static constexpr size_t kDefaultInstanceHealthMetricPushIntervalInSeconds = 10;
 
 namespace google::scp::pbs {
+
+// static
+void HealthService::ObserveMemoryUsageCallback(
+    opentelemetry::metrics::ObserverResult observer_result,
+    HealthService* self_ptr) {
+  auto observer = std::get<opentelemetry::nostd::shared_ptr<
+      opentelemetry::metrics::ObserverResultT<int64_t>>>(observer_result);
+  observer->Observe(*(self_ptr->GetMemoryUsagePercentage()));
+}
+
+// static
+void HealthService::ObserveFileSystemStorageUsageCallback(
+    opentelemetry::metrics::ObserverResult observer_result,
+    HealthService* self_ptr) {
+  auto observer = std::get<opentelemetry::nostd::shared_ptr<
+      opentelemetry::metrics::ObserverResultT<int64_t>>>(observer_result);
+  observer->Observe(
+      *(self_ptr->GetFileSystemStorageUsagePercentage(kVarLogDirectory)));
+}
+
 ExecutionResult HealthService::Init() noexcept {
   HttpHandler check_health_handler =
       bind(&HealthService::CheckHealth, this, _1);
@@ -116,19 +138,25 @@ ExecutionResult HealthService::Init() noexcept {
               "Perform active memory and storage check: NO");
   }
 
-  instance_memory_usage_metric_ = MetricUtils::RegisterSimpleMetric(
-      async_executor_, metric_client_, kMetricNameInstanceHealthMemory,
-      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
-      kCountUnit);
+  meter_ = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+      "HealthService");
+  memory_usage_instrument_ = meter_->CreateInt64ObservableGauge(
+      google::scp::pbs::kMetricNameMemoryUsage, "Instance memory usage",
+      "percent");
+  filesystem_storage_usage_instrument_ = meter_->CreateInt64ObservableGauge(
+      google::scp::pbs::kMetricNameFileSystemStorageUsage,
+      "Instance file system storage usage", "percent");
 
-  instance_filesystem_storage_usage_metric_ = MetricUtils::RegisterSimpleMetric(
-      async_executor_, metric_client_,
-      kMetricNameInstanceHealthFileSystemLogStorageUsage,
-      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
-      kCountUnit);
+  memory_usage_instrument_->AddCallback(
+      reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+          &HealthService::ObserveMemoryUsageCallback),
+      this);
+  filesystem_storage_usage_instrument_->AddCallback(
+      reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+          &HealthService::ObserveFileSystemStorageUsageCallback),
+      this);
 
-  RETURN_IF_FAILURE(instance_memory_usage_metric_->Init());
-  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Init());
+  RETURN_IF_FAILURE(InitMetricClientInterface());
   return SuccessExecutionResult();
 }
 
@@ -345,4 +373,22 @@ ExecutionResultOr<int> HealthService::GetFileSystemStorageUsagePercentage(
 
   return ComputePercentage(info_object.available, info_object.capacity);
 }
+
+ExecutionResult HealthService::InitMetricClientInterface() {
+  instance_memory_usage_metric_ = MetricUtils::RegisterSimpleMetric(
+      async_executor_, metric_client_, kMetricNameInstanceHealthMemory,
+      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
+      kCountUnit);
+  instance_filesystem_storage_usage_metric_ = MetricUtils::RegisterSimpleMetric(
+      async_executor_, metric_client_,
+      kMetricNameInstanceHealthFileSystemLogStorageUsage,
+      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
+      kCountUnit);
+
+  RETURN_IF_FAILURE(instance_memory_usage_metric_->Init());
+  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Init());
+
+  return SuccessExecutionResult();
+}
+
 }  // namespace google::scp::pbs

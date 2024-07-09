@@ -16,12 +16,11 @@
 
 package com.google.scp.operator.cpio.cryptoclient.testing;
 
-import com.google.scp.operator.cpio.cryptoclient.PrivateKeyFetchingService;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 
 /** Fake PrivateKeyFetchingService which returns a preconfigured response. */
-public final class FakePrivateKeyFetchingService implements PrivateKeyFetchingService {
+public final class FakePrivateKeyFetchingService {
 
   private String response = "";
   private boolean throwException = false;
@@ -55,5 +54,24 @@ public final class FakePrivateKeyFetchingService implements PrivateKeyFetchingSe
     throwException = true;
     errorCause = code;
     errorMessage = message;
+  }
+
+  /** Represents an exception thrown by the {@code PrivateKeyFetchingService} class. */
+  final class PrivateKeyFetchingServiceException extends Exception {
+
+    /** Creates a new instance from a {@code Throwable}. */
+    public PrivateKeyFetchingServiceException(Throwable cause) {
+      super(cause);
+    }
+
+    /** Creates a new instance from a message String. */
+    public PrivateKeyFetchingServiceException(String message) {
+      super(message);
+    }
+
+    /** Creates a new instance from a message String and a Throwable. */
+    public PrivateKeyFetchingServiceException(String message, Throwable cause) {
+      super(message, cause);
+    }
   }
 }

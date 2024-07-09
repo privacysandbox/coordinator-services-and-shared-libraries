@@ -20,6 +20,7 @@ import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
+import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_REPORTING_SITE;
 import static com.google.scp.operator.frontend.tasks.ErrorMessages.DB_ERROR_MESSAGE;
 import static com.google.scp.operator.frontend.tasks.ErrorMessages.DUPLICATE_JOB_MESSAGE;
 import static com.google.scp.operator.protos.shared.backend.JobStatusProto.JobStatus.RECEIVED;
@@ -102,9 +103,9 @@ public final class AwsCreateJobTask extends CreateJobTaskBase {
         CreateJobRequest.newBuilder()
             .setJobRequestId(requestInfo.getJobRequestId())
             .setAttributionReportTo(
-                // If attribution_report_to is null, use an empty string so proto does not fail.
-                // RequestAttributionReportToIsDomainValidator will catch it and throw a 400 error.
                 requestInfo.getJobParametersMap().getOrDefault(JOB_PARAM_ATTRIBUTION_REPORT_TO, ""))
+            .setReportingSite(
+                requestInfo.getJobParametersMap().getOrDefault(JOB_PARAM_REPORTING_SITE, ""))
             .setInputDataBucketName(requestInfo.getInputDataBucketName())
             .setInputDataBlobPrefix(requestInfo.getInputDataBlobPrefix())
             .setOutputDataBucketName(requestInfo.getOutputDataBucketName())

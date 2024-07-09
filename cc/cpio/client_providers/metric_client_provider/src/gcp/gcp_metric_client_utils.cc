@@ -16,9 +16,9 @@
 
 #include "gcp_metric_client_utils.h"
 
-#include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <google/protobuf/util/time_util.h>
@@ -38,7 +38,6 @@ using google::cloud::StatusCode;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::monitoring::v3::TimeSeries;
-using google::protobuf::MapPair;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -49,6 +48,7 @@ using google::scp::core::errors::
 using google::scp::core::errors::
     SC_GCP_METRIC_CLIENT_FAILED_WITH_INVALID_TIMESTAMP;
 using google::scp::core::errors::SC_GCP_METRIC_CLIENT_INVALID_METRIC_VALUE;
+using std::make_pair;
 using std::shared_ptr;
 using std::stod;
 using std::string;
@@ -142,9 +142,9 @@ void GcpMetricClientUtils::AddResourceToTimeSeries(
   MonitoredResource resource;
   resource.set_type(kResourceType);
   auto labels = resource.mutable_labels();
-  labels->insert(MapPair(string(kProjectIdKey), project_id));
-  labels->insert(MapPair(string(kInstanceIdKey), instance_id));
-  labels->insert(MapPair(string(kInstanceZoneKey), instance_zone));
+  labels->insert(make_pair(string(kProjectIdKey), project_id));
+  labels->insert(make_pair(string(kInstanceIdKey), instance_id));
+  labels->insert(make_pair(string(kInstanceZoneKey), instance_zone));
 
   for (auto& time_series : time_series_list) {
     time_series.mutable_resource()->CopyFrom(resource);

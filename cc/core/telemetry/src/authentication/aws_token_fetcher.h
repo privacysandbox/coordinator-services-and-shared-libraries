@@ -43,12 +43,12 @@ namespace google::scp::core {
  */
 class AwsTokenFetcher : public TokenFetcher {
  public:
-  explicit AwsTokenFetcher(const GrpcAuthConfig& auth_config);
   ExecutionResultOr<std::string> FetchIdToken(
       GrpcAuthConfig& auth_config) override;
 
  private:
   std::unique_ptr<::google::cloud::iam_credentials_v1::IAMCredentialsClient>
       iam_client_;
+  void CreateIamClient(const GrpcAuthConfig& auth_config);
 };
 }  // namespace google::scp::core

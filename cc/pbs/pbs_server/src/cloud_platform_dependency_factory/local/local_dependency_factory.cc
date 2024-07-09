@@ -25,6 +25,7 @@
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "core/telemetry/mock/in_memory_metric_exporter.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
+#include "opentelemetry/sdk/resource/resource_detector.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/pbs_client_interface.h"
 #include "pbs/pbs_client/src/pbs_client.h"
@@ -184,15 +185,23 @@ LocalDependencyFactory::ConstructRemoteCoordinatorPBSClient(
 
 std::unique_ptr<core::MetricRouter>
 LocalDependencyFactory::ConstructMetricRouter(
-    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+        instance_client_provider) noexcept {
+  bool is_otel_print_data_to_console_enabled = false;
+  config_provider_->Get(kOtelPrintDataToConsoleEnabled,
+                        is_otel_print_data_to_console_enabled);
+
   // We would not be using any token fetching (no authentication) for local.
   // Instead, we are using in_memory_metric_exporter to store the data locally
   // in memory
-  std::atomic<bool> data_ready(true);
   std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
-      metric_exporter = std::make_unique<InMemoryMetricExporter>(data_ready);
+      metric_exporter = std::make_unique<InMemoryMetricExporter>(
+          is_otel_print_data_to_console_enabled);
 
-  return std::make_unique<MetricRouter>(config_provider,
+  opentelemetry::sdk::resource::OTELResourceDetector resource_detector;
+  opentelemetry::sdk::resource::Resource resource = resource_detector.Detect();
+
+  return std::make_unique<MetricRouter>(config_provider_, std::move(resource),
                                         std::move(metric_exporter));
 }
 

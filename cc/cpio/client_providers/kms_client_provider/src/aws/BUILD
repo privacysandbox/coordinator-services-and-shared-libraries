@@ -36,6 +36,7 @@ cc_library(
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface/kms_client:type_def",
         "@aws_sdk_cpp//:kms",
+        "@com_google_absl//absl/strings",
         "@tink_cc",
     ],
 )

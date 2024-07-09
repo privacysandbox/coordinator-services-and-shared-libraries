@@ -35,16 +35,16 @@ inline constexpr absl::string_view kUseOtelForMetricCollectionKey =
 inline constexpr bool kUseOtelForMetricCollectionValue = false;
 
 // Metric export interval
-// Defaults to 6s
+// Defaults to 60s
 inline constexpr absl::string_view kOtelMetricExportIntervalMsecKey =
     "google_scp_otel_metric_export_interval_msec";
-inline constexpr int32_t kOtelMetricExportIntervalMsecValue = 6000;
+inline constexpr int32_t kOtelMetricExportIntervalMsecValue = 60000;
 
 // Metric export timeout
-// Defaults to 60s
+// Defaults to 20s
 inline constexpr absl::string_view kOtelMetricExportTimeoutMsecKey =
     "google_scp_otel_metric_export_timeout_msec";
-inline constexpr int32_t kOtelMetricExportTimeoutMsecValue = 60000;
+inline constexpr int32_t kOtelMetricExportTimeoutMsecValue = 20000;
 
 // Service Account
 inline constexpr absl::string_view kOtelServiceAccountKey =

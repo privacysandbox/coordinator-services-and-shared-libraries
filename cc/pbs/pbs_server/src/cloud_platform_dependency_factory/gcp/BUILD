@@ -49,5 +49,7 @@ cc_library(
         "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
+        "@com_github_googleapis_google_cloud_cpp//:opentelemetry",
+        "@io_opentelemetry_cpp//sdk/src/resource",
     ],
 )

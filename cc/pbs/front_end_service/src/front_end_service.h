@@ -29,6 +29,8 @@
 #include "core/interface/http_types.h"
 #include "core/interface/transaction_request_router_interface.h"
 #include "core/interface/type_def.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
 #include "pbs/interface/front_end_service_interface.h"
 #include "pbs/transactions/src/consume_budget_command_factory_interface.h"
 #include "public/core/interface/execution_result.h"
@@ -49,6 +51,22 @@ class FrontEndService : public FrontEndServiceInterface {
           consume_budget_command_factory,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider);
+
+  FrontEndService(
+      std::shared_ptr<core::HttpServerInterface>& http_server,
+      std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
+      std::unique_ptr<core::TransactionRequestRouterInterface>
+          transaction_request_router,
+      std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
+          consume_budget_command_factory,
+      std::shared_ptr<cpio::MetricClientInterface> metric_client,
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+          total_request_counter,
+      std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+          client_error_counter,
+      std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+          server_error_counter);
 
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;
@@ -122,7 +140,8 @@ class FrontEndService : public FrontEndServiceInterface {
       std::shared_ptr<std::string>& transaction_secret,
       std::shared_ptr<std::string>& transaction_origin,
       core::Timestamp last_execution_timestamp,
-      core::TransactionExecutionPhase transaction_phase) noexcept;
+      core::TransactionExecutionPhase transaction_phase,
+      const std::string& metric_label) noexcept;
 
   /**
    * @brief Is called when the transaction phase operation is executed.
@@ -138,7 +157,8 @@ class FrontEndService : public FrontEndServiceInterface {
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionPhaseRequest,
                          core::TransactionPhaseResponse>&
-          transaction_phase_context) noexcept;
+          transaction_phase_context,
+      const std::string& metric_label) noexcept;
 
   /**
    * @brief Is called once the consume budget transaction has completed.
@@ -253,7 +273,8 @@ class FrontEndService : public FrontEndServiceInterface {
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::GetTransactionStatusRequest,
                          core::GetTransactionStatusResponse>&
-          get_transaction_status_context) noexcept;
+          get_transaction_status_context,
+      const std::string& metric_label) noexcept;
 
   /**
    * @brief Generate one command per budget to consume
@@ -333,6 +354,15 @@ class FrontEndService : public FrontEndServiceInterface {
   /// used to identify such requests.
   std::string remote_coordinator_claimed_identity_;
 
+  /// OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      total_request_counter_;
+  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      client_error_counter_;
+  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      server_error_counter_;
   /// @brief enables use of adtech site value as authorized_domain.
   bool adtech_site_authorized_domain_enabled_;
 };

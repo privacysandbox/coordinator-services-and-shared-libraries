@@ -243,6 +243,9 @@ INSTANTIATE_TEST_SUITE_P(
         make_pair(
             DynamoDBErrors::TRANSACTION_IN_PROGRESS,
             RetryExecutionResult(SC_NO_SQL_DATABASE_PROVIDER_RETRIABLE_ERROR)),
+        make_pair(
+            DynamoDBErrors::MISSING_AUTHENTICATION_TOKEN,
+            RetryExecutionResult(SC_NO_SQL_DATABASE_PROVIDER_RETRIABLE_ERROR)),
         make_pair(DynamoDBErrors::CONDITIONAL_CHECK_FAILED,
                   FailureExecutionResult(
                       SC_NO_SQL_DATABASE_PROVIDER_CONDITIONAL_CHECKED_FAILED)),
@@ -266,9 +269,6 @@ INSTANTIATE_TEST_SUITE_P(
                   FailureExecutionResult(
                       SC_NO_SQL_DATABASE_PROVIDER_UNRETRIABLE_ERROR)),
         make_pair(DynamoDBErrors::MISSING_ACTION,
-                  FailureExecutionResult(
-                      SC_NO_SQL_DATABASE_PROVIDER_UNRETRIABLE_ERROR)),
-        make_pair(DynamoDBErrors::MISSING_AUTHENTICATION_TOKEN,
                   FailureExecutionResult(
                       SC_NO_SQL_DATABASE_PROVIDER_UNRETRIABLE_ERROR)),
         make_pair(DynamoDBErrors::MISSING_PARAMETER,

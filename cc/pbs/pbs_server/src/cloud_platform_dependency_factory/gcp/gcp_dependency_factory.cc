@@ -39,8 +39,10 @@
 #include "core/telemetry/src/common/telemetry_configuration.h"
 #include "core/telemetry/src/metric/metric_router.h"
 #include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
+#include "google/cloud/opentelemetry/resource_detector.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
+#include "opentelemetry/sdk/resource/resource_detector.h"
 
 #include "dummy_impls.h"
 
@@ -302,18 +304,30 @@ GcpDependencyFactory::ConstructRemoteCoordinatorPBSClient(
 }
 
 std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
-    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+        instance_client_provider) noexcept {
+  auto resource_detector = google::cloud::otel::MakeResourceDetector();
+  opentelemetry::sdk::resource::Resource resource = resource_detector->Detect();
+
+  return this->ConstructMetricRouter(instance_client_provider,
+                                     std::move(resource));
+}
+
+std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+        instance_client_provider,
+    opentelemetry::sdk::resource::Resource resource) noexcept {
   std::unique_ptr<GrpcAuthConfig> metric_auth_config =
       std::make_unique<GrpcAuthConfig>(
           GetConfigValue(std::string(core::kOtelServiceAccountKey),
                          std::string(core::kOtelServiceAccountValue),
-                         *config_provider),
+                         *config_provider_),
           GetConfigValue(std::string(core::kOtelAudienceKey),
                          std::string(core::kOtelAudienceValue),
-                         *config_provider),
+                         *config_provider_),
           GetConfigValue(std::string(core::kOtelCredConfigKey),
                          std::string(core::kOtelCredConfigValue),
-                         *config_provider));
+                         *config_provider_));
   std::unique_ptr<core::TokenFetcher> metric_token_fetcher =
       std::make_unique<GcpTokenFetcher>();
   std::unique_ptr<GrpcIdTokenAuthenticator> metric_id_token_authenticator =
@@ -322,7 +336,7 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
 
   const std::string exporter_path = GetConfigValue(
       std::string(core::kOtelExporterOtlpEndpointKey),
-      std::string(core::kOtelExporterOtlpEndpointValue), *config_provider);
+      std::string(core::kOtelExporterOtlpEndpointValue), *config_provider_);
 
   opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions exporter_options;
   exporter_options.endpoint = exporter_path;
@@ -331,7 +345,7 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
       metric_exporter = std::make_unique<OtlpGrpcAuthedMetricExporter>(
           exporter_options, std::move(metric_id_token_authenticator));
 
-  return std::make_unique<MetricRouter>(config_provider,
+  return std::make_unique<MetricRouter>(config_provider_, std::move(resource),
                                         std::move(metric_exporter));
 }
 

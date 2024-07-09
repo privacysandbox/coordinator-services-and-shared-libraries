@@ -15,6 +15,7 @@
 #include "aws_integration_test_dependency_factory.h"
 
 #include <memory>
+#include <utility>
 
 #include "core/authorization_proxy/mock/mock_authorization_proxy.h"
 #include "core/common/uuid/src/uuid.h"
@@ -24,6 +25,8 @@
 #include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
 #include "cpio/client_providers/instance_client_provider/test/aws/test_aws_instance_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/test/aws/test_aws_metric_client_provider.h"
+#include "opentelemetry/sdk/resource/resource.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "pbs/interface/configuration_keys.h"
 #include "pbs/interface/pbs_client_interface.h"
 #include "pbs/pbs_client/src/pbs_client.h"
@@ -173,8 +176,25 @@ AwsIntegrationTestDependencyFactory::ConstructInstanceMetadataClient(
 
 std::unique_ptr<core::MetricRouter>
 AwsIntegrationTestDependencyFactory::ConstructMetricRouter(
-    const shared_ptr<core::ConfigProviderInterface>& config_provider) noexcept {
-  return AwsDependencyFactory::ConstructMetricRouter(config_provider);
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+        instance_client_provider) noexcept {
+  // Hard-code resource attributes for testing.
+  const opentelemetry::sdk::resource::ResourceAttributes attributes = {
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudProvider,
+       "aws"},
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudPlatform,
+       "aws_ec2"},
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudRegion,
+       "aws:us-east-1"},
+      {opentelemetry::sdk::resource::SemanticConventions::kCloudAccountId,
+       "852741098163"},
+      {opentelemetry::sdk::resource::SemanticConventions::kHostId,
+       "i-0b22a22eec53b9321"},
+  };
+  auto resource = opentelemetry::sdk::resource::Resource::Create(attributes);
+
+  return AwsDependencyFactory::ConstructMetricRouter(instance_client_provider,
+                                                     std::move(resource));
 }
 
 }  // namespace google::scp::pbs

@@ -33,6 +33,7 @@ cc_library(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/transactions/src:pbs_transactions_lib",

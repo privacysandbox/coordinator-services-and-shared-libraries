@@ -29,13 +29,14 @@
 namespace google::scp::core {
 
 InMemoryMetricExporter::InMemoryMetricExporter(
-    std::atomic<bool>& data_ready, std::ostream& sout,
+    bool is_otel_print_data_to_console_enabled, std::ostream& sout,
     opentelemetry::sdk::metrics::AggregationTemporality
         aggregation_temporality) noexcept
-    : sout_(sout),
+    : is_otel_print_data_to_console_enabled_(
+          is_otel_print_data_to_console_enabled),
+      sout_(sout),
       is_shutdown_(false),
-      aggregation_temporality_(aggregation_temporality),
-      data_ready_(data_ready) {
+      aggregation_temporality_(aggregation_temporality) {
   o_stream_metric_exporter_ =
       std::make_unique<opentelemetry::exporter::metrics::OStreamMetricExporter>(
           sout_);
@@ -75,11 +76,11 @@ opentelemetry::sdk::common::ExportResult InMemoryMetricExporter::Export(
     return opentelemetry::sdk::common::ExportResult::kSuccess;
   }
   data_.push_back(data);
-  // PrintData(data);
-  // test is waiting for the data to be exported to do the validations
-  if (!data_ready_) {
-    data_ready_.store(true, std::memory_order_release);
+
+  if (is_otel_print_data_to_console_enabled_) {
+    PrintData(data);
   }
+
   return opentelemetry::sdk::common::ExportResult::kSuccess;
 }
 
@@ -102,13 +103,11 @@ bool InMemoryMetricExporter::Shutdown(
 }
 
 bool InMemoryMetricExporter::is_shutdown() const noexcept {
-  std::lock_guard<std::mutex> lock(mutex_);
   return is_shutdown_;
 }
 
-const std::vector<opentelemetry::sdk::metrics::ResourceMetrics>&
+std::vector<opentelemetry::sdk::metrics::ResourceMetrics>
 InMemoryMetricExporter::data() const {
-  std::lock_guard<std::mutex> lock(mutex_);
   return data_;
 }
 

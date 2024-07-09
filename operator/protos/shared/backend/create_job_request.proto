@@ -50,4 +50,6 @@ message CreateJobRequest {
   int32 debug_privacy_budget_limit = 10;
   /** Data plane application specific parameters. */
   map<string, string> job_parameters = 11;
+  /** Ad-tech reporting site where reports will be sent. This is derived from jobParameters. */
+  string reporting_site = 12;
 }

@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "absl/strings/str_cat.h"
 #include "core/interface/async_context.h"
@@ -53,7 +54,6 @@ using google::cmrt::sdk::instance_service::v1::
     GetInstanceDetailsByResourceNameResponse;
 using google::cmrt::sdk::parameter_service::v1::GetParameterRequest;
 using google::cmrt::sdk::parameter_service::v1::GetParameterResponse;
-using google::protobuf::MapPair;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
@@ -65,6 +65,7 @@ using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
 using std::atomic;
+using std::make_pair;
 using std::make_shared;
 using std::make_unique;
 using std::move;
@@ -125,7 +126,7 @@ class ConfigurationFetcherTest : public ::testing::Test {
               if (result.Successful() &&
                   request.instance_resource_name() == kInstanceResourceName) {
                 response.mutable_instance_details()->mutable_labels()->insert(
-                    MapPair(tag, string(kEnvName)));
+                    make_pair(tag, string(kEnvName)));
               }
               callback(result, move(response));
               return result;

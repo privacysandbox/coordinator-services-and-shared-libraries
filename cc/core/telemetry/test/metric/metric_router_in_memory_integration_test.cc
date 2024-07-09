@@ -17,6 +17,7 @@
 
 #include "core/config_provider/mock/mock_config_provider.h"
 #include "core/telemetry/mock/in_memory_metric_exporter.h"
+#include "core/telemetry/mock/in_memory_metric_router.h"
 #include "core/telemetry/src/common/telemetry_configuration.h"
 #include "core/telemetry/src/metric/metric_router.h"
 #include "include/gtest/gtest.h"
@@ -30,53 +31,22 @@ namespace {
 class MetricRouterInMemoryIntegrationTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    data_ready_ = false;
-
-    exporter_ = std::make_unique<InMemoryMetricExporter>(data_ready_);
-    mock_config_provider_ =
-        std::make_shared<config_provider::mock::MockConfigProvider>();
-
-    std::int32_t metric_export_interval = 1000;
-    std::int32_t metric_export_timeout = 500;
-    mock_config_provider_->SetInt32(
-        std::string(kOtelMetricExportIntervalMsecKey),
-        metric_export_interval);  // exporting every 1s
-    mock_config_provider_->SetInt32(
-        std::string(kOtelMetricExportTimeoutMsecKey),
-        metric_export_timeout);  // timeout every .5s
-    metric_router_ = std::make_unique<MetricRouter>(
-        MetricRouter(mock_config_provider_, std::move(exporter_)));
+    metric_router_ = std::make_unique<InMemoryMetricRouter>();
   }
 
   void TearDown() override {
-    std::shared_ptr<opentelemetry::metrics::MeterProvider> none;
-    opentelemetry::metrics::Provider::SetMeterProvider(none);
+    std::shared_ptr<opentelemetry::metrics::MeterProvider> noop_meter_provider =
+        std::make_shared<opentelemetry::metrics::NoopMeterProvider>();
+    opentelemetry::metrics::Provider::SetMeterProvider(noop_meter_provider);
   }
 
-  std::shared_ptr<config_provider::mock::MockConfigProvider>
-      mock_config_provider_;
-  std::unique_ptr<MetricRouter> metric_router_;
-  std::atomic<bool> data_ready_;
-  std::unique_ptr<InMemoryMetricExporter> exporter_;
+  std::unique_ptr<InMemoryMetricRouter> metric_router_;
 };
 
 TEST_F(MetricRouterInMemoryIntegrationTest, SuccesfulInitialization) {
-  ASSERT_NE(nullptr, &metric_router_->exporter());
-  ASSERT_NE(nullptr, metric_router_->meter_provider());
-}
-
-TEST_F(MetricRouterInMemoryIntegrationTest, ValidateExporterInMetricRouter) {
-  auto& base_exporter = metric_router_->exporter();
-
-  auto* in_memory_exporter =
-      dynamic_cast<InMemoryMetricExporter*>(&base_exporter);
-  ASSERT_TRUE(in_memory_exporter != nullptr);
-}
-
-TEST_F(MetricRouterInMemoryIntegrationTest,
-       ValidateMeterProviderInMetricRouter) {
-  auto meter_provider = metric_router_->meter_provider();
-  ASSERT_TRUE(meter_provider != nullptr);
+  ASSERT_NE(nullptr, &metric_router_->GetMetricExporter());
+  ASSERT_NE(nullptr, opentelemetry::metrics::Provider::GetMeterProvider());
+  ASSERT_NE(nullptr, &metric_router_->GetMetricReader());
 }
 
 /*
@@ -107,18 +77,13 @@ resources	:
 TEST_F(MetricRouterInMemoryIntegrationTest,
        ValidateExportingDataUsingGlobalMeterProvider) {
   // getting meter provider globally
-  opentelemetry::nostd::shared_ptr<opentelemetry::metrics::MeterProvider>
-      meter_provider = opentelemetry::metrics::Provider::GetMeterProvider();
+  std::shared_ptr<opentelemetry::metrics::MeterProvider> meter_provider =
+      opentelemetry::metrics::Provider::GetMeterProvider();
 
-  // this works too (using metric router)
-  // opentelemetry::metric::MeterProvider& meter_provider =
-  // metric_router_->meter_provider();
-
-  opentelemetry::nostd::shared_ptr<opentelemetry::metrics::Meter> meter =
+  std::shared_ptr<opentelemetry::metrics::Meter> meter =
       meter_provider->GetMeter("test_meter", "1", "dummy_schema_url");
-  opentelemetry::nostd::unique_ptr<opentelemetry::metrics::Counter<double>>
-      counter = meter->CreateDoubleCounter("test_counter",
-                                           "test_counter_description");
+  std::unique_ptr<opentelemetry::metrics::Counter<double>> counter =
+      meter->CreateDoubleCounter("test_counter", "test_counter_description");
 
   std::map<std::string, opentelemetry::common::AttributeValue> attributes_map =
       {{"attribute1", "value1"}, {"attribute2", 42}};
@@ -127,19 +92,9 @@ TEST_F(MetricRouterInMemoryIntegrationTest,
   // it would be a different point data attribute if we don't add the same
   // attributes here
 
-  // active waiting for data to export
-  while (!data_ready_.load(std::memory_order_acquire)) {
-    std::this_thread::yield();
-  }
-
-  // Validations
-  // getting exporter from metric_router to make sure exporter is set correctly
-  auto& base_exporter = metric_router_->exporter();
-  auto& in_memory_exporter =
-      dynamic_cast<InMemoryMetricExporter&>(base_exporter);
-
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      in_memory_exporter.data();
+      metric_router_->GetExportedData();
+
   opentelemetry::sdk::metrics::ResourceMetrics resource_metrics = data[0];
 
   std::vector<opentelemetry::sdk::metrics::ScopeMetrics> scope_metric_data =
@@ -183,15 +138,13 @@ TEST_F(MetricRouterInMemoryIntegrationTest,
 
   opentelemetry::sdk::metrics::PointDataAttributes point_data_attr =
       point_data_attrs[0];
-  ASSERT_TRUE(opentelemetry::nostd::holds_alternative<
-              opentelemetry::sdk::metrics::SumPointData>(
+  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
       point_data_attr.point_data));
 
-  auto sum_point_data =
-      opentelemetry::nostd::get<opentelemetry::sdk::metrics::SumPointData>(
-          point_data_attr.point_data);
+  auto sum_point_data = std::get<opentelemetry::sdk::metrics::SumPointData>(
+      point_data_attr.point_data);
 
-  ASSERT_EQ(opentelemetry::nostd::get<double>(sum_point_data.value_), 30);
+  ASSERT_EQ(std::get<double>(sum_point_data.value_), 30);
 
   opentelemetry::sdk::common::OrderedAttributeMap dimensions =
       point_data_attr.attributes;

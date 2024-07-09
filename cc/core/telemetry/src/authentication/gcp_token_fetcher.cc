@@ -24,25 +24,26 @@ namespace google::scp::core {
 
 inline constexpr absl::string_view kGcpTokenFetcher = "GcpTokenFetcher";
 
-GcpTokenFetcher::GcpTokenFetcher() {
-  std::shared_ptr<::google::cloud::iam_credentials_v1::IAMCredentialsConnection>
-      credentials_connection =
-          ::google::cloud::iam_credentials_v1::MakeIAMCredentialsConnection();
-  iam_client_ = std::make_unique<
-      ::google::cloud::iam_credentials_v1::IAMCredentialsClient>(
-      credentials_connection);
-}
-
 ExecutionResultOr<std::string> GcpTokenFetcher::FetchIdToken(
     GrpcAuthConfig& auth_config) {
+  CreateIamClient();
   auto execution_result = FetchIdTokenInternal(*iam_client_, auth_config);
   if (!execution_result.Successful()) {
     SCP_ERROR(kGcpTokenFetcher, google::scp::core::common::kZeroUuid,
               execution_result.result(),
-              "[Gcp Token Fetch] Id token fetch failed: %s",
+              "FetchIdToken() ID Token fetch failed: %s",
               ::google::scp::core::errors::GetErrorMessage(
                   execution_result.result().status_code));
   }
   return execution_result;
+}
+
+void GcpTokenFetcher::CreateIamClient() {
+  std::shared_ptr<cloud::iam_credentials_v1::IAMCredentialsConnection>
+      credentials_connection =
+          cloud::iam_credentials_v1::MakeIAMCredentialsConnection();
+  iam_client_ =
+      std::make_unique<cloud::iam_credentials_v1::IAMCredentialsClient>(
+          credentials_connection);
 }
 }  // namespace google::scp::core

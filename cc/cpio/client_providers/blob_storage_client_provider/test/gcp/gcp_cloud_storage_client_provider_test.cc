@@ -32,8 +32,8 @@
 #include "google/cloud/status.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/internal/object_requests.h"
+#include "google/cloud/storage/testing/mock_client.h"
 #include "public/core/test/interface/execution_result_matchers.h"
-#include "third_party/cloud_cpp/google/cloud/storage/testing/mock_client.h"
 
 using google::cloud::Status;
 using google::cloud::StatusOr;

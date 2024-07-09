@@ -34,11 +34,13 @@ module "distributed_pbs_logs_alarms" {
   error_log_handle_journal_eval_periods       = var.pbs_error_log_handle_journal_eval_periods
   error_log_handle_journal_threshold          = var.pbs_error_log_handle_journal_threshold
 
-  loadbalancer                 = regex(local.elb_regex, module.beanstalk_environment.elb_loadbalancers[0])
-  error_ratio_4xx_eval_periods = var.pbs_elb_error_ratio_4xx_eval_periods
-  error_ratio_4xx_threshold    = var.pbs_elb_error_ratio_4xx_threshold
-  error_ratio_5xx_eval_periods = var.pbs_elb_error_ratio_5xx_eval_periods
-  error_ratio_5xx_threshold    = var.pbs_elb_error_ratio_5xx_threshold
+  loadbalancer                      = regex(local.elb_regex, module.beanstalk_environment.elb_loadbalancers[0])
+  error_ratio_4xx_eval_periods      = var.pbs_elb_error_ratio_4xx_eval_periods
+  error_ratio_4xx_threshold         = var.pbs_elb_error_ratio_4xx_threshold
+  error_ratio_4xx_high_eval_periods = var.pbs_elb_error_ratio_4xx_high_eval_periods
+  error_ratio_4xx_high_threshold    = var.pbs_elb_error_ratio_4xx_high_threshold
+  error_ratio_5xx_eval_periods      = var.pbs_elb_error_ratio_5xx_eval_periods
+  error_ratio_5xx_threshold         = var.pbs_elb_error_ratio_5xx_threshold
 
   partition_lock_table_name = module.storage.partition_lock_dynamo_db_table_name
   budget_key_table_name     = module.storage.budget_keys_dynamo_db_table_name

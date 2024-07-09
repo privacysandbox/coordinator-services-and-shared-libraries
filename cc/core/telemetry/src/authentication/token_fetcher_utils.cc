@@ -19,10 +19,14 @@
 
 #include "absl/strings/str_cat.h"
 #include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
+#include "core/common/global_logger/src/global_logger.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/telemetry/src/authentication/error_codes.h"
 
 namespace google::scp::core {
+
+inline constexpr absl::string_view kFetchIdTokenInternal =
+    "FetchIdTokenInternal";
 
 /*
  * The resource name of the service account for which the credentials are
@@ -37,10 +41,19 @@ ExecutionResultOr<std::string> FetchIdTokenInternal(
       absl::StrCat("projects/-/serviceAccounts/",
                    std::string(auth_config.service_account()));
   const std::vector<std::string> delegates;
+  const std::string audience(auth_config.audience());
   cloud::StatusOr<google::iam::credentials::v1::GenerateIdTokenResponse>
-      response = iam_client.GenerateIdToken(
-          request_name, delegates, std::string(auth_config.audience()), true);
+      response =
+          iam_client.GenerateIdToken(request_name, delegates, audience, true);
   if (!response) {
+    SCP_ERROR(
+        kFetchIdTokenInternal, google::scp::core::common::kZeroUuid,
+        ExecutionResult(),
+        "FetchIdTokenInternal() iam_client.GenerateIdToken(\"%s\", delegates, "
+        "\"%s\") failed: %s: %s",
+        request_name.c_str(), audience.c_str(),
+        google::cloud::StatusCodeToString(response.status().code()).c_str(),
+        response.status().message().c_str());
     return FailureExecutionResult(
         SC_TELEMETRY_AUTHENTICATION_ID_TOKEN_FETCH_FAILED);
   }

@@ -1,0 +1,31 @@
+diff --git a/closure/protobuf/closure_js_proto_library.bzl b/closure/protobuf/closure_js_proto_library.bzl
+index 4c96626..42c98ee 100644
+--- a/closure/protobuf/closure_js_proto_library.bzl
++++ b/closure/protobuf/closure_js_proto_library.bzl
+@@ -36,6 +36,7 @@ def closure_js_proto_library(
+         binary = 1,
+         import_style = None,
+         protocbin = Label("@com_google_protobuf//:protoc"),
++        protoc_gen_js_bin = Label("@com_google_protobuf_javascript//generator:protoc-gen-js"),
+         **kwargs):
+     cmd = ["$(location %s)" % protocbin]
+     js_out_options = ["library=%s" % name]
+@@ -48,6 +49,9 @@ def closure_js_proto_library(
+     if import_style:
+         js_out_options += ["import_style=%s" % import_style]
+
++    if protoc_gen_js_bin:
++        cmd += ["--plugin=$(location %s)" % protoc_gen_js_bin]
++
+     cmd += ["-I%s" % i for i in _collect_includes(srcs)]
+     cmd += ["--js_out=%s:$(@D)" % ",".join(js_out_options)]
+     cmd += ["--descriptor_set_out=$(@D)/%s.descriptor" % name]
+@@ -60,7 +64,7 @@ def closure_js_proto_library(
+         visibility = ["//visibility:private"],
+         message = "Generating JavaScript Protocol Buffer file",
+         outs = [name + ".js", name + ".descriptor"],
+-        tools = [protocbin],
++        tools = [protocbin, protoc_gen_js_bin],
+         cmd = " ".join(cmd),
+     )
+

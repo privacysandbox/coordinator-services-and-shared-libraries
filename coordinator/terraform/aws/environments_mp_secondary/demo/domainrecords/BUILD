@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "domain_records_link",
-    src = "../../shared/domainrecords/domain_records.tf",
-    dest = "domainrecords/domain_records.tf",
+    link_name = "domainrecords/domain_records.tf",
+    target = "../../shared/domainrecords/domain_records.tf",
 )
 
 pkg_mklink(
     name = "domain_records_vars_link",
-    src = "../../shared/domainrecords/domain_records_variables.tf",
-    dest = "domainrecords/domain_records_variables.tf",
+    link_name = "domainrecords/domain_records_variables.tf",
+    target = "../../shared/domainrecords/domain_records_variables.tf",
 )
 
 pkg_mklink(
     name = "domain_records_outputs_link",
-    src = "../../shared/domainrecords/domain_records_outputs.tf",
-    dest = "domainrecords/domain_records_outputs.tf",
+    link_name = "domainrecords/domain_records_outputs.tf",
+    target = "../../shared/domainrecords/domain_records_outputs.tf",
 )

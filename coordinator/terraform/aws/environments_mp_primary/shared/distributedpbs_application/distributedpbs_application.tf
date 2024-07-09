@@ -87,10 +87,12 @@ module "distributedpbs_application" {
   pbs_error_log_handle_journal_eval_periods       = var.pbs_error_log_handle_journal_eval_periods
   pbs_error_log_handle_journal_threshold          = var.pbs_error_log_handle_journal_threshold
 
-  pbs_elb_error_ratio_4xx_eval_periods = var.pbs_elb_error_ratio_4xx_eval_periods
-  pbs_elb_error_ratio_4xx_threshold    = var.pbs_elb_error_ratio_4xx_threshold
-  pbs_elb_error_ratio_5xx_eval_periods = var.pbs_elb_error_ratio_5xx_eval_periods
-  pbs_elb_error_ratio_5xx_threshold    = var.pbs_elb_error_ratio_5xx_threshold
+  pbs_elb_error_ratio_4xx_eval_periods      = var.pbs_elb_error_ratio_4xx_eval_periods
+  pbs_elb_error_ratio_4xx_threshold         = var.pbs_elb_error_ratio_4xx_threshold
+  pbs_elb_error_ratio_4xx_high_eval_periods = var.pbs_elb_error_ratio_4xx_high_eval_periods
+  pbs_elb_error_ratio_4xx_high_threshold    = var.pbs_elb_error_ratio_4xx_high_threshold
+  pbs_elb_error_ratio_5xx_eval_periods      = var.pbs_elb_error_ratio_5xx_eval_periods
+  pbs_elb_error_ratio_5xx_threshold         = var.pbs_elb_error_ratio_5xx_threshold
 
   partition_lock_table_read_capacity_alarm_ratio_eval_periods  = var.partition_lock_table_read_capacity_alarm_ratio_eval_periods
   partition_lock_table_read_capacity_alarm_ratio_threshold     = var.partition_lock_table_read_capacity_alarm_ratio_threshold

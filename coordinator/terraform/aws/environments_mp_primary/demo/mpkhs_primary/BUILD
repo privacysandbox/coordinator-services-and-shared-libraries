@@ -27,18 +27,18 @@ pkg_files(
 
 pkg_mklink(
     name = "mpkhs_primary_link",
-    src = "../../shared/mpkhs_primary/mpkhs_primary.tf",
-    dest = "mpkhs_primary/mpkhs_primary.tf",
+    link_name = "mpkhs_primary/mpkhs_primary.tf",
+    target = "../../shared/mpkhs_primary/mpkhs_primary.tf",
 )
 
 pkg_mklink(
     name = "mpkhs_primary_vars_link",
-    src = "../../shared/mpkhs_primary/mpkhs_primary_variables.tf",
-    dest = "mpkhs_primary/mpkhs_primary_variables.tf",
+    link_name = "mpkhs_primary/mpkhs_primary_variables.tf",
+    target = "../../shared/mpkhs_primary/mpkhs_primary_variables.tf",
 )
 
 pkg_mklink(
     name = "mpkhs_primary_outputs_link",
-    src = "../../shared/mpkhs_primary/mpkhs_primary_outputs.tf",
-    dest = "mpkhs_primary/mpkhs_primary_outputs.tf",
+    link_name = "mpkhs_primary/mpkhs_primary_outputs.tf",
+    target = "../../shared/mpkhs_primary/mpkhs_primary_outputs.tf",
 )

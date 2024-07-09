@@ -43,23 +43,32 @@ static constexpr char kStatusTransactionPath[] = "/v1/transactions:status";
 static constexpr char kServiceStatusPath[] = "/v1/service:status";
 
 // Metric labels
-static constexpr char kMetricLabelFrontEndService[] = "FrontEndService";
-static constexpr char kMetricLabelBeginTransaction[] = "BeginTransaction";
-static constexpr char kMetricLabelPrepareTransaction[] = "PrepareTransaction";
-static constexpr char kMetricLabelCommitTransaction[] = "CommitTransaction";
-static constexpr char kMetricLabelAbortTransaction[] = "AbortTransaction";
-static constexpr char kMetricLabelNotifyTransaction[] = "NotifyTransaction";
-static constexpr char kMetricLabelEndTransaction[] = "EndTransaction";
+static constexpr char kMetricLabelFrontEndService[] = "frontend_service";
+static constexpr char kMetricLabelBeginTransaction[] = "begin_transaction";
+static constexpr char kMetricLabelPrepareTransaction[] = "prepare_transaction";
+static constexpr char kMetricLabelCommitTransaction[] = "commit_transaction";
+static constexpr char kMetricLabelAbortTransaction[] = "abort_transaction";
+static constexpr char kMetricLabelNotifyTransaction[] = "notify_transaction";
+static constexpr char kMetricLabelEndTransaction[] = "end_transaction";
 static constexpr char kMetricLabelGetStatusTransaction[] =
-    "GetStatusTransaction";
-static constexpr char kMetricLabelValueOperator[] = "Operator";
-static constexpr char kMetricLabelValueCoordinator[] = "Coordinator";
-static constexpr char kMetricLabelKeyReportingOrigin[] = "ReportingOrigin";
+    "get_status_transaction";
+static constexpr char kMetricLabelValueOperator[] = "operator";
+static constexpr char kMetricLabelValueCoordinator[] = "coordinator";
+static constexpr char kMetricLabelKeyReportingOrigin[] = "reporting_origin";
+static constexpr char kMetricLabelTransactionPhase[] = "transaction_phase";
+static constexpr char kMetricLabelTransactionStatus[] = "transaction_status";
 
 // Metric names
-static constexpr char kMetricNameTotalRequest[] = "TotalRequest";
-static constexpr char kMetricNameClientError[] = "ClientErrors";
-static constexpr char kMetricNameServerError[] = "ServerErrors";
+static constexpr char kMetricNameRequests[] =
+    "google.scp.pbs.frontend.requests";
+static constexpr char kMetricNameClientErrors[] =
+    "google.scp.pbs.frontend.client_errors";
+static constexpr char kMetricNameServerErrors[] =
+    "google.scp.pbs.frontend.server_errors";
+static constexpr char kMetricNameMemoryUsage[] =
+    "google.scp.pbs.health.memory_usage";
+static constexpr char kMetricNameFileSystemStorageUsage[] =
+    "google.scp.pbs.health.filesystem_storage_usage";
 
 // TODO: This must be configurable.
 static constexpr int kMaxToken = 1;

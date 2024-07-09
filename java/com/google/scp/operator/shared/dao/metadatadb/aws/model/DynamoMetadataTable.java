@@ -55,6 +55,7 @@ public final class DynamoMetadataTable {
   private static final String OUTPUT_DOMAIN_BLOB_BUCKET = "OutputDomainBlobBucket";
   private static final String POSTBACK_URL = "PostbackUrl";
   private static final String ATTRIBUTION_REPORT_TO = "AttributionReportTo";
+  private static final String REPORTING_SITE = "ReportingSite";
   private static final String DEBUG_PRIVACY_BUDGET_LIMIT = "DebugPrivacyBudgetLimit";
   private static final String JOB_PARAMETERS = "JobParameters";
 
@@ -158,12 +159,28 @@ public final class DynamoMetadataTable {
                         (builder, optionalValue) ->
                             optionalValue.ifPresent(builder::setPostbackUrl)))
         .addAttribute(
-            String.class,
+            EnhancedType.optionalOf(String.class),
             attribute ->
                 attribute
                     .name(ATTRIBUTION_REPORT_TO)
-                    .getter(CreateJobRequest::getAttributionReportTo)
-                    .setter(CreateJobRequest.Builder::setAttributionReportTo))
+                    .attributeConverter(OptionalStringAttributeConverter.create())
+                    .getter(
+                        attributeValue ->
+                            optionalFromProtoField(attributeValue.getAttributionReportTo()))
+                    .setter(
+                        (builder, optionalValue) ->
+                            optionalValue.ifPresent(builder::setAttributionReportTo)))
+        .addAttribute(
+            EnhancedType.optionalOf(String.class),
+            attribute ->
+                attribute
+                    .name(REPORTING_SITE)
+                    .attributeConverter(OptionalStringAttributeConverter.create())
+                    .getter(
+                        attributeValue -> optionalFromProtoField(attributeValue.getReportingSite()))
+                    .setter(
+                        (builder, optionalValue) ->
+                            optionalValue.ifPresent(builder::setReportingSite)))
         .addAttribute(
             EnhancedType.optionalOf(Integer.class),
             attribute ->
