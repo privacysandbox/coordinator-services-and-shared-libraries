@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <aws/core/Aws.h>
 #include <gtest/gtest.h>
 
 #include <atomic>
@@ -23,6 +22,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include <aws/core/Aws.h>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/common/global_logger/src/global_logger.h"
@@ -107,7 +108,6 @@ using std::this_thread::sleep_for;
 static constexpr char kRegion[] = "us-east-1";
 static constexpr char kLocalHost[] = "http://127.0.0.1";
 static constexpr char kReportingOrigin[] = "test.com";
-// TODO(b/241857324): pick available ports randomly.
 static constexpr char kLocalstackPort[] = "4566";
 static constexpr char kTransactionSecret[] = "transaction_secret";
 
@@ -169,7 +169,9 @@ static TestPbsConfig BuildTestPbsConfig(const string& pbs1_port,
   return config;
 }
 
-static string CreateUrl(string host, string port) { return host + ":" + port; }
+static string CreateUrl(string host, string port) {
+  return host + ":" + port;
+}
 
 static AsyncContext<ConsumeBudgetTransactionRequest,
                     ConsumeBudgetTransactionResponse>
@@ -288,8 +290,7 @@ static void EnsureBothPBSServersAreTakingClientRequests(
     // Flip the retry to false so that the request flows would exit.
     should_retry_request = false;
     // Wait until requests are done.
-    while (request_flow_exited_count != 2) {
-    }
+    while (request_flow_exited_count != 2) {}
     throw exception;
   }
 }
@@ -750,10 +751,6 @@ TEST_F(PBSIntegrationTestForTwoServers,
   EXPECT_EQ(timestamp_phase_pair2.second, TransactionExecutionPhase::Notify);
 
   // Wait for transaction timeout
-  // TODO: Make Transaction Cache Entry lifetime configurable. This reduces
-  // the sleep time here. b/277647896. Wait until transaction expires. Wait
-  // time should be atleast Transaction Timeout (5 seconds) + 2 * Transaction
-  // Cache Lifetime (60 seconds)
   sleep_for(seconds(66));
 
   // Expect that the transaction resolved on PBS2 by taking to PBS1

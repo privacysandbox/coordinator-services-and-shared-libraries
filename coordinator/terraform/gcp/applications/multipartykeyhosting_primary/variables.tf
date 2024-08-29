@@ -214,7 +214,6 @@ variable "key_storage_service_base_url" {
   type        = string
 }
 
-// TODO(b/275758643)
 variable "key_storage_service_cloudfunction_url" {
   description = "Cloud function url for peer coordinator."
   type        = string

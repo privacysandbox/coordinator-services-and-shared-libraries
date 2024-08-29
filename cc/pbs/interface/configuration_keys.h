@@ -53,6 +53,10 @@ static constexpr char kPrivacyBudgetServiceExternalExposedHostPort[] =
 static constexpr char kPrivacyBudgetServiceHealthPort[] =
     "google_scp_pbs_health_port";
 static constexpr char kAuthServiceEndpoint[] = "google_scp_pbs_auth_endpoint";
+// This is the AWS endpoint used on GCP to authenticate requests that come from
+// AWS PBS to GCP PBS via DNS.
+static constexpr char kAlternateAuthServiceEndpoint[] =
+    "google_scp_pbs_alternate_auth_endpoint";
 static constexpr char kEnableBatchBudgetCommandsPerDayConfigName[] =
     "google_scp_pbs_enable_batch_budget_commands_per_day";
 static constexpr char kDisallowNewTransactionRequests[] =

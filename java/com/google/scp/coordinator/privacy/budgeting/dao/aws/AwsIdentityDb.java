@@ -29,11 +29,7 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.StaticAttributeTags;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.StaticImmutableTableSchema;
 
-/**
- * Retrieves identity information for handling requests.
- *
- * <p>TODO(b/233384982) Add a IdentityDb interface that this implements
- */
+/** Retrieves identity information for handling requests. */
 public final class AwsIdentityDb {
 
   private final DynamoDbTable<AdTechIdentity> identityTable;

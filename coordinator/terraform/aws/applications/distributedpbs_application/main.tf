@@ -198,6 +198,8 @@ module "beanstalk_environment" {
     aws_sns_topic.pbs,
     module.beanstalk_storage
   ]
+
+  enable_imds_v2 = var.enable_imds_v2
 }
 
 # Topic is used for alarms such that messages are not sensitive data.

@@ -110,4 +110,5 @@ module "job_service" {
 
   # OTel Metrics
   allowed_otel_metrics = var.allowed_otel_metrics
+  min_log_level        = var.min_log_level
 }

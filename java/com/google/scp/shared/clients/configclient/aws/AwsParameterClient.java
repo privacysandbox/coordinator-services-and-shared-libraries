@@ -127,8 +127,6 @@ public final class AwsParameterClient implements ParameterClient {
     DescribeTagsResponse response = ec2Client.describeTags(request);
     logger.info(String.format("Received tags: %s", response.toString()));
     if (response.tags().size() != 1) {
-      // TODO(b/197900057): throw checked exception, currently Suppliers.memoize prevent that, but
-      // with custom functional interface it may be resolved.
       throw new IllegalStateException(
           String.format(
               "Could not find tag '%s' associated with instance %s.",

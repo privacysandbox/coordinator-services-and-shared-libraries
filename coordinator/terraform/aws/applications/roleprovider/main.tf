@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This module is for each party in multi party environment.
 module "singlepartyroleprovider" {
   source = "../../modules/keymanagementroleprovider"
 

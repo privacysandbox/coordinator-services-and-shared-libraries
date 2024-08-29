@@ -19,6 +19,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "cc/core/interface/metrics_def.h"
+#include "cc/core/telemetry/src/common/metric_utils.h"
 #include "core/async_executor/mock/mock_async_executor.h"
 #include "core/async_executor/src/async_executor.h"
 #include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
@@ -27,9 +29,11 @@
 #include "core/interface/async_context.h"
 #include "core/interface/partition_interface.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "core/telemetry/mock/in_memory_metric_router.h"
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/logging_utils.h"
 #include "core/transaction_manager/src/error_codes.h"
+#include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "pbs/partition/src/error_codes.h"
 #include "pbs/transactions/src/consume_budget_command.h"
 #include "public/core/test/interface/execution_result_matchers.h"
@@ -67,6 +71,7 @@ using google::scp::pbs::ConsumeBudgetCommandRequestInfo;
 static constexpr char kPartitionsBucketName[] = "partitions";
 
 namespace google::scp::pbs::test {
+
 class PBSPartitionTest : public testing::Test {
  protected:
   std::shared_ptr<AsyncExecutor> async_executor_;
@@ -74,6 +79,8 @@ class PBSPartitionTest : public testing::Test {
   std::shared_ptr<MockMetricClient> metric_client_provider_;
   std::shared_ptr<MockConfigProvider> config_provider_;
   std::shared_ptr<MockNoSQLDatabaseProvider> nosql_database_provider_;
+  // For testing OTel metrics
+  std::shared_ptr<core::InMemoryMetricRouter> metric_router_;
 
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
   GetSampleTransactionPhaseRequestContext(const TransactionRequest& request,
@@ -125,6 +132,9 @@ class PBSPartitionTest : public testing::Test {
     config_provider_ = std::make_shared<MockConfigProvider>();
     nosql_database_provider_ = std::make_shared<MockNoSQLDatabaseProvider>();
 
+    // Initialize OTel for testing
+    metric_router_ = std::make_shared<core::InMemoryMetricRouter>();
+
     EXPECT_SUCCESS(async_executor_->Init());
     EXPECT_SUCCESS(blob_store_provider_->Init());
     EXPECT_SUCCESS(metric_client_provider_->Init());
@@ -144,6 +154,7 @@ class PBSPartitionTest : public testing::Test {
     dependencies_.blob_store_provider_for_checkpoints = blob_store_provider_;
     dependencies_.config_provider = config_provider_;
     dependencies_.metric_client = metric_client_provider_;
+    dependencies_.metric_router = metric_router_;
     dependencies_.nosql_database_provider_for_background_operations =
         nosql_database_provider_;
     dependencies_.nosql_database_provider_for_live_traffic =
@@ -318,7 +329,7 @@ TEST_F(PBSPartitionTest, MultiPartitionLoadUnloadIsSuccessful) {
   EXPECT_SUCCESS(partition2->Load());
   EXPECT_SUCCESS(partition3->Load());
 
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 1000; ++i) {
     auto request1 = GetSampleTransactionRequestContext();
     EXPECT_SUCCESS(partition1->ExecuteRequest(request1));
     auto request2 = GetSampleTransactionRequestContext();
@@ -413,7 +424,7 @@ TEST_F(PBSPartitionTest, PartitionUnloadDuringLiveTrafficIsSuccessful) {
     std::atomic<size_t> transactions_unsuccessful = 0;
     std::atomic<size_t> transaction_phase_unsuccessful = 0;
 
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 20; ++i) {
       traffic_pumps.emplace_back([&]() {
         while (traffic_pumps_running) {
           // Send a new transaction
@@ -496,4 +507,80 @@ TEST_F(PBSPartitionTest, PartitionUnloadDuringLiveTrafficIsSuccessful) {
     }
   }
 }
+
+TEST_F(PBSPartitionTest, OTelReturnsCorrectActiveTransactionsCount) {
+  ASSERT_SUCCESS(partition_->Init());
+  ASSERT_SUCCESS(partition_->Load());
+
+  int transaction_count = 4;
+  for (int i = 0; i < transaction_count; ++i) {
+    ASSERT_SUCCESS(partition_->ExecuteRequest(dummy_transaction_request_));
+  }
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      active_transactions_metric_point_data = core::GetMetricPointData(
+          google::scp::core::kMetricNameActiveTransactions, {}, data);
+  ASSERT_TRUE(active_transactions_metric_point_data.has_value());
+
+  auto active_transactions_last_value_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::LastValuePointData>(
+          active_transactions_metric_point_data.value()));
+  EXPECT_EQ(std::get<int64_t>(active_transactions_last_value_point_data.value_),
+            transaction_count)
+      << "Expected active_transactions_last_value_point_data.value_ to be "
+      << transaction_count << " (size_t)";
+
+  EXPECT_SUCCESS(partition_->Unload());
+}
+
+TEST_F(PBSPartitionTest, OTelReturnsCorrectReceivedTransactionsCount) {
+  ASSERT_SUCCESS(partition_->Init());
+  ASSERT_SUCCESS(partition_->Load());
+
+  ASSERT_SUCCESS(partition_->ExecuteRequest(dummy_transaction_request_));
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      received_transactions_metric_point_data = core::GetMetricPointData(
+          google::scp::core::kMetricNameReceivedTransactions, {}, data);
+  ASSERT_TRUE(received_transactions_metric_point_data.has_value());
+
+  auto received_transactions_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          received_transactions_metric_point_data.value()));
+  EXPECT_EQ(std::get<int64_t>(received_transactions_sum_point_data.value_), 1)
+      << "Expected received_transactions_sum_point_data.value_ to be " << 1
+      << " (int64_t)";
+
+  EXPECT_SUCCESS(partition_->Unload());
+}
+
+TEST_F(PBSPartitionTest, OTelRetrievesCorrectPartitionIdLabel) {
+  ASSERT_SUCCESS(partition_->Init());
+  ASSERT_SUCCESS(partition_->Load());
+
+  ASSERT_SUCCESS(partition_->ExecuteRequest(dummy_transaction_request_));
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  auto metric_labels_from_data = core::GetMetricAttributes(
+      google::scp::core::kMetricNameActiveTransactions, data);
+
+  ASSERT_TRUE(metric_labels_from_data.has_value());
+  ASSERT_TRUE(metric_labels_from_data->find(
+                  google::scp::core::kMetricLabelPartitionId) !=
+              metric_labels_from_data->end());
+  EXPECT_EQ(std::get<std::string>(metric_labels_from_data->at(
+                google::scp::core::kMetricLabelPartitionId)),
+            ToString(partition_->GetPartitionId()));
+
+  EXPECT_SUCCESS(partition_->Unload());
+}
+
 }  // namespace google::scp::pbs::test

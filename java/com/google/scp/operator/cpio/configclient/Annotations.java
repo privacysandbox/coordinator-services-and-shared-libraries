@@ -42,9 +42,6 @@ public final class Annotations {
    *
    * <p>In the future, coordinator services may be hosted in multiple regions at which point this
    * configuration value may become obsolete.
-   *
-   * <p>TODO(b/221319893): The interface provided by this annotation should match that of {@link
-   * AdtechRegionBinding}
    */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
@@ -63,9 +60,6 @@ public final class Annotations {
    *
    * <p>In the future, coordinator services may be hosted in multiple regions at which point this
    * configuration value may become obsolete.
-   *
-   * <p>TODO(b/221319893): The interface provided by this annotation should match that of {@link
-   * AdtechRegionBinding}
    */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
@@ -75,10 +69,6 @@ public final class Annotations {
   /**
    * Cloud Region where key management (including KMS keys) and privacy budget services are hosted
    * by coordinator A. Must be provided as a string e.g. "us-west-2"
-   *
-   * <p>TODO(b/221319893): Provide standardized interface for providing these values.
-   *
-   * @see CoordinatorARegionBinding
    */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
@@ -88,10 +78,6 @@ public final class Annotations {
   /**
    * Cloud Region where key management (including KMS keys) and privacy budget services are hosted
    * by coordinator B. Must be provided as a string e.g. "us-west-2"
-   *
-   * <p>TODO(b/221319893): Provide standardized interface for providing these values.
-   *
-   * @see CoordinatorARegionBinding
    */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})

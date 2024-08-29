@@ -20,6 +20,7 @@ pkg_filegroup(
     srcs = [
         "//coordinator/terraform/gcp/modules/allowedusergroup",
         "//coordinator/terraform/gcp/modules/bazel",
+        "//coordinator/terraform/gcp/modules/cloud-nat",
         "//coordinator/terraform/gcp/modules/domain_a_records",
         "//coordinator/terraform/gcp/modules/encryptionkeyservice",
         "//coordinator/terraform/gcp/modules/keydb",

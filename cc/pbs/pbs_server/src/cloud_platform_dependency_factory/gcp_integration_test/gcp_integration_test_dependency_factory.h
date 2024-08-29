@@ -38,6 +38,11 @@ class GcpIntegrationTestDependencyFactory : public GcpDependencyFactory {
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
 
+  std::unique_ptr<core::AuthorizationProxyInterface>
+  ConstructAwsAuthorizationProxyClient(
+      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
+
   std::unique_ptr<core::NoSQLDatabaseProviderInterface>
   ConstructNoSQLDatabaseClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,

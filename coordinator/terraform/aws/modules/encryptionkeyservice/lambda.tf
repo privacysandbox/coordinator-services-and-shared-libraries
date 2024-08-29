@@ -50,7 +50,7 @@ resource "aws_lambda_function" "get_encryption_key_lambda" {
 
   role = module.lambda_roles.trustedparty_lambda_role_arn
 
-  # TODO(b/297923272): Remove DISABLE_ACTIVATION_TIME
+  # TODO: Remove DISABLE_ACTIVATION_TIME
   environment {
     variables = {
       KEYSTORE_TABLE_NAME     = var.dynamo_keydb.name

@@ -49,8 +49,8 @@ struct PrivateKeyFetchingRequest {
 
 /// Type of encryption key and how it is split.
 enum class EncryptionKeyType {
-  /// Single-coordinator managed key using a Tink hybrid key.
-  kSinglePartyHybridKey = 0,
+  /// Unknown key type. Not supported.
+  kUnknown = 0,
   /// Multi-coordinator using a Tink hybrid key, split using XOR with random
   /// data.
   kMultiPartyHybridEvenKeysplit = 1,

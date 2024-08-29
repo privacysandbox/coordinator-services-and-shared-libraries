@@ -26,6 +26,7 @@
 #include "core/interface/partition_types.h"
 #include "core/interface/remote_transaction_manager_interface.h"
 #include "core/interface/transaction_manager_interface.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/interface/budget_key_provider_interface.h"
 #include "pbs/interface/pbs_partition_interface.h"
@@ -59,6 +60,8 @@ class PBSPartition : public PBSPartitionInterface {
     std::shared_ptr<core::ConfigProviderInterface> config_provider;
     /// @brief For metrics that partitions generates
     std::shared_ptr<cpio::MetricClientInterface> metric_client;
+    /// @brief MetricRouter instance for OTel metrics
+    std::shared_ptr<core::MetricRouter> metric_router;
     /// @brief For Transaction Resolution operations that need to talk to remote
     /// PBS
     std::shared_ptr<core::RemoteTransactionManagerInterface>
@@ -96,6 +99,8 @@ class PBSPartition : public PBSPartitionInterface {
   core::ExecutionResult GetTransactionManagerStatus(
       const core::GetTransactionManagerStatusRequest& request,
       core::GetTransactionManagerStatusResponse& response) noexcept override;
+
+  core::PartitionId GetPartitionId() const;
 
  protected:
   /**

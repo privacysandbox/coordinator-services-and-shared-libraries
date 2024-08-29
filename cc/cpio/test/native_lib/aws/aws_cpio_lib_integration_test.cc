@@ -90,7 +90,6 @@ using std::this_thread::sleep_for;
 namespace {
 constexpr char kLocalHost[] = "http://127.0.0.1";
 constexpr char kLocalstackContainerName[] = "cpio_integration_test_localstack";
-// TODO(b/241857324): pick available ports randomly.
 constexpr char kLocalstackPort[] = "8888";
 constexpr char kParameterName[] = "test_parameter_name";
 constexpr char kParameterValue[] = "test_parameter_value";

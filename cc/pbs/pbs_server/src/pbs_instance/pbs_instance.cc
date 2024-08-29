@@ -273,8 +273,6 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
       pbs_instance_config_.journal_partition_name, async_executor_,
       blob_storage_provider_for_journal_service_, metric_client_,
       config_provider_);
-  // TODO: b/297262889 Make a distinction between the live-traffic and
-  // background NoSQL operations.
   budget_key_provider_ = make_shared<BudgetKeyProvider>(
       async_executor_, journal_service_, nosql_database_provider_,
       metric_client_, config_provider_);
@@ -284,7 +282,7 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
       async_executor_, transaction_command_serializer_, journal_service_,
       remote_transaction_manager_,
       pbs_instance_config_.transaction_manager_capacity, metric_client_,
-      config_provider_);
+      metric_router_, config_provider_);
 
   pass_thru_authorization_proxy_ = make_shared<PassThruAuthorizationProxy>();
 
@@ -296,12 +294,12 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
   http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
-      authorization_proxy_, metric_client_, config_provider_,
-      http2_server_options);
+      authorization_proxy_, /*aws_authorization_proxy=*/nullptr, metric_client_,
+      config_provider_, http2_server_options);
   health_http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       1 /* one thread needed */, async_executor_,
-      pass_thru_authorization_proxy_,
+      pass_thru_authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
       nullptr /* metric_client, no metric recording for health http server */,
       config_provider_, http2_server_options);
 

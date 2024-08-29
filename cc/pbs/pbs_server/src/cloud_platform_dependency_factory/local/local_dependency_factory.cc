@@ -35,6 +35,8 @@
 #include "local_metric_client.h"
 #include "local_token_provider_cache.h"
 
+namespace google::scp::pbs {
+
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::AuthorizationProxyInterface;
 using google::scp::core::BlobStorageProviderInterface;
@@ -50,15 +52,6 @@ using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::Uuid;
 using google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
-using std::make_shared;
-using std::make_unique;
-using std::move;
-using std::shared_ptr;
-using std::string;
-using std::unique_ptr;
-using std::vector;
-
-namespace google::scp::pbs {
 
 static constexpr char kLocalDependencyProvider[] = "kLocalDependencyProvider";
 
@@ -77,35 +70,42 @@ ExecutionResult LocalDependencyFactory::ReadConfigurations() {
   return SuccessExecutionResult();
 }
 
-unique_ptr<core::TokenProviderCacheInterface>
+std::unique_ptr<core::TokenProviderCacheInterface>
 LocalDependencyFactory::ConstructAuthorizationTokenProviderCache(
-    shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    shared_ptr<core::HttpClientInterface> http_client) noexcept {
-  return make_unique<LocalTokenProviderCache>();
+    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
+  return std::make_unique<LocalTokenProviderCache>();
 }
 
-unique_ptr<AuthorizationProxyInterface>
+std::unique_ptr<AuthorizationProxyInterface>
 LocalDependencyFactory::ConstructAuthorizationProxyClient(
-    shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::HttpClientInterface> http_client) noexcept {
-  return make_unique<LocalAuthorizationProxy>();
+    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
+  return std::make_unique<LocalAuthorizationProxy>();
 }
 
-unique_ptr<BlobStorageProviderInterface>
+std::unique_ptr<AuthorizationProxyInterface>
+LocalDependencyFactory::ConstructAwsAuthorizationProxyClient(
+    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
+  return nullptr;
+}
+
+std::unique_ptr<BlobStorageProviderInterface>
 LocalDependencyFactory::ConstructBlobStorageClient(
-    shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
     core::AsyncPriority async_execution_priority,
     core::AsyncPriority io_async_execution_priority) noexcept {
-  return make_unique<MockBlobStorageProvider>();
+  return std::make_unique<MockBlobStorageProvider>();
 }
 
 void InitializeInMemoryDatabase(
-    unique_ptr<MockNoSQLDatabaseProvider>& nosql_database_provider,
-    const vector<core::PartitionId>& partition_ids) {
+    std::unique_ptr<MockNoSQLDatabaseProvider>& nosql_database_provider,
+    const std::vector<core::PartitionId>& partition_ids) {
   nosql_database_provider->InitializeTable("budget", "Budget_Key", "Timeframe");
-  vector<std::string> partition_ids_strings;
+  std::vector<std::string> partition_ids_strings;
   for (auto& partition_id : partition_ids) {
     partition_ids_strings.push_back(ToString(partition_id));
   }
@@ -114,20 +114,20 @@ void InitializeInMemoryDatabase(
       "partition_lock_table", "LockId", partition_ids_strings);
 }
 
-unique_ptr<NoSQLDatabaseProviderInterface>
+std::unique_ptr<NoSQLDatabaseProviderInterface>
 LocalDependencyFactory::ConstructNoSQLDatabaseClient(
-    shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
     core::AsyncPriority async_execution_priority,
     core::AsyncPriority io_async_execution_priority) noexcept {
   // Share the in-memory database for all the nosql database clients. This
   // allows multiple PBS instances to be run in a test case.
   static auto in_memory_database =
-      make_shared<MockNoSQLDatabaseProvider::InMemoryDatabase>();
+      std::make_shared<MockNoSQLDatabaseProvider::InMemoryDatabase>();
   auto nosql_database_provider =
-      make_unique<MockNoSQLDatabaseProvider>(in_memory_database);
+      std::make_unique<MockNoSQLDatabaseProvider>(in_memory_database);
   InitializeInMemoryDatabase(nosql_database_provider, partition_ids_);
-  return move(nosql_database_provider);
+  return std::move(nosql_database_provider);
 }
 
 std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
@@ -147,38 +147,38 @@ LocalDependencyFactory::ConstructBudgetConsumptionHelper(
       std::move(*spanner_connection));
 }
 
-unique_ptr<cpio::MetricClientInterface>
+std::unique_ptr<cpio::MetricClientInterface>
 LocalDependencyFactory::ConstructMetricClient(
-    shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
         instance_client_provider) noexcept {
-  return make_unique<LocalMetricClient>();
+  return std::make_unique<LocalMetricClient>();
 }
 
-unique_ptr<cpio::client_providers::InstanceClientProviderInterface>
+std::unique_ptr<cpio::client_providers::InstanceClientProviderInterface>
 LocalDependencyFactory::ConstructInstanceMetadataClient(
-    shared_ptr<core::HttpClientInterface> http1_client,
-    shared_ptr<core::HttpClientInterface> http2_client,
-    shared_ptr<core::AsyncExecutorInterface> async_executor,
-    shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
+    std::shared_ptr<core::HttpClientInterface> http1_client,
+    std::shared_ptr<core::HttpClientInterface> http2_client,
+    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
+    std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
         auth_token_provider) noexcept {
-  return make_unique<LocalInstanceClientProvider>();
+  return std::make_unique<LocalInstanceClientProvider>();
 }
 
-unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
+std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
 LocalDependencyFactory::ConstructInstanceAuthorizer(
-    shared_ptr<core::HttpClientInterface> http1_client) noexcept {
+    std::shared_ptr<core::HttpClientInterface> http1_client) noexcept {
   return nullptr;
 }
 
-unique_ptr<pbs::PrivacyBudgetServiceClientInterface>
+std::unique_ptr<pbs::PrivacyBudgetServiceClientInterface>
 LocalDependencyFactory::ConstructRemoteCoordinatorPBSClient(
-    shared_ptr<core::HttpClientInterface> http_client,
-    shared_ptr<core::TokenProviderCacheInterface>
+    std::shared_ptr<core::HttpClientInterface> http_client,
+    std::shared_ptr<core::TokenProviderCacheInterface>
         auth_token_provider_cache) noexcept {
-  return make_unique<PrivacyBudgetServiceClient>(
+  return std::make_unique<PrivacyBudgetServiceClient>(
       reporting_origin_, remote_coordinator_endpoint_, http_client,
       auth_token_provider_cache);
 }

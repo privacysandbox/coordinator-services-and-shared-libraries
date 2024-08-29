@@ -471,11 +471,21 @@ variable "collector_startup_script" {
 }
 
 ################################################################################
-# OTel metrics Variables
+# OTel related variables
 ################################################################################
 
 variable "allowed_otel_metrics" {
   description = "Set of otel metrics to be exported."
   type        = set(string)
   default     = []
+}
+
+variable "min_log_level" {
+  description = "Minimum log level to export. No logs will be exported if it's empty string."
+  type        = string
+  default     = ""
+  validation {
+    condition     = contains(["", "INFO", "WARN", "ERROR"], var.min_log_level)
+    error_message = "The values should be one of ['', 'INFO', 'WARN', 'ERROR']."
+  }
 }

@@ -64,6 +64,9 @@ class InMemoryMetricExporter final
   bool is_shutdown() const noexcept;
 
  private:
+  // Boolean that specifies whether metrics should be printed to the console.
+  bool is_otel_print_data_to_console_enabled_;
+
   std::ostream& sout_;
   bool is_shutdown_;
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics>
@@ -72,8 +75,6 @@ class InMemoryMetricExporter final
   opentelemetry::sdk::metrics::AggregationTemporality aggregation_temporality_;
   std::unique_ptr<opentelemetry::exporter::metrics::OStreamMetricExporter>
       o_stream_metric_exporter_;
-  // Boolean that specifies whether metrics should be printed to the console.
-  bool is_otel_print_data_to_console_enabled_;
 };
 
 }  // namespace google::scp::core

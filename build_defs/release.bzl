@@ -128,7 +128,7 @@ def gcs_package_release(
         release_bucket: Gcs bucket to which the release the artifact.
         release_key: Gcs key for the release artifact.
         artifact_base_name: base name of the artifact. The base name should include a "{VERSION}" substring which will be
-            replaced with the version argument. e.g. "scp-singleparty-trustedparty-{VERSION}.tgz".
+            replaced with the version argument. e.g. "scp-multiparty-trustedparty-{VERSION}.tgz".
         gcloud_sdk: Path to google cloud sdk for linux.
     """
 

@@ -217,10 +217,10 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "TotalRequest", "ReportingOrigin", "Operator", "ComponentName", "FrontEndService", "MethodName", "BeginTransaction", { "region" : "${var.region}" }],
-              [".", "ServerErrors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
-              [".", "TotalRequest", ".", ".", ".", ".", ".", "EndTransaction", { "region" : "${var.region}" }],
-              [".", "ServerErrors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "begin_transaction", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.requests", ".", ".", ".", ".", ".", "end_transaction", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -238,7 +238,7 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "TotalRequest", "ReportingOrigin", "Operator", "ComponentName", "FrontEndService", "MethodName", "GetStatusTransaction", { "region" : "${var.region}" }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "get_status_transaction", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -256,12 +256,12 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "TotalRequest", "ReportingOrigin", "Operator", "ComponentName", "FrontEndService", "MethodName", "CommitTransaction", { "region" : "${var.region}" }],
-              ["...", "NotifyTransaction", { "region" : "${var.region}" }],
-              [".", "ServerErrors", ".", ".", ".", ".", ".", "PrepareTransaction", { "region" : "${var.region}" }],
-              [".", "TotalRequest", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
-              [".", "ServerErrors", ".", ".", ".", ".", ".", "CommitTransaction", { "region" : "${var.region}" }],
-              ["...", "NotifyTransaction", { "region" : "${var.region}" }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "commit_transaction", { "region" : "${var.region}" }],
+              ["...", "notify_transaction", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", "prepare_transaction", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.requests", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", "commit_transaction", { "region" : "${var.region}" }],
+              ["...", "notify_transaction", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -279,9 +279,9 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "TotalRequest", "ReportingOrigin", "Operator", "ComponentName", "FrontEndService", "MethodName", "AbortTransaction", { "region" : "${var.region}" }],
-              [".", "ServerErrors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
-              [".", "TotalRequest", ".", "Coordinator", ".", ".", ".", ".", { "region" : "${var.region}", "visible" : false }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "abort_transaction", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.requests", ".", "coordinator", ".", ".", ".", ".", { "region" : "${var.region}", "visible" : false }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -477,8 +477,7 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
               "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbBudgetKeyTableWriteCapacityRatio${var.custom_alarm_label}",
               "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbBudgetKeyTableReadCapacityRatio${var.custom_alarm_label}",
               "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbReportingOriginTableWriteCapacityRatio${var.custom_alarm_label}",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbReportingOriginTableReadCapacityRatio${var.custom_alarm_label}",
-              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPBSAuthorizationV2TableWriteCapacityRatio${var.custom_alarm_label}",
+              "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbReportingOriginTableReadCapacityRatio${var.custom_alarm_label}", "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPBSAuthorizationV2TableWriteCapacityRatio${var.custom_alarm_label}",
               "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPBSAuthorizationV2TableReadCapacityRatio${var.custom_alarm_label}",
               "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPartitionLockTableReadCapacityRatio${var.custom_alarm_label}",
               "arn:aws:cloudwatch:${var.region}:${var.account_id}:alarm:InfoDynamodbPartitionLockTableWriteCapacityRatio${var.custom_alarm_label}"
@@ -552,7 +551,7 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "TotalRequest", "ReportingOrigin", "Coordinator", "ComponentName", "FrontEndService", "MethodName", "AbortTransaction", { "region" : "${var.region}" }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "coordinator", "ComponentName", "frontend_service", "MethodName", "abort_transaction", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -570,8 +569,8 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "TotalRequest", "ReportingOrigin", "Coordinator", "ComponentName", "FrontEndService", "MethodName", "GetStatusTransaction", { "region" : "${var.region}" }],
-              [".", "ClientErrors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "coordinator", "ComponentName", "frontend_service", "MethodName", "get_status_transaction", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.client_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,

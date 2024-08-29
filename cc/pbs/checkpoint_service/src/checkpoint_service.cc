@@ -281,8 +281,8 @@ void CheckpointService::CreateComponents() noexcept {
       async_executor_, budget_key_provider_);
   transaction_manager_ = make_shared<TransactionManager>(
       async_executor_, transaction_command_serializer_, journal_service_,
-      remote_transaction_manager_, 100000, metric_client_, config_provider_,
-      partition_id_);
+      remote_transaction_manager_, 100000, metric_client_,
+      /*metric_router=*/nullptr, config_provider_, partition_id_);
 }
 
 ExecutionResult CheckpointService::Bootstrap() noexcept {

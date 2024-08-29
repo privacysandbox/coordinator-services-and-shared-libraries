@@ -149,7 +149,11 @@ locals {
     {
       name  = "google_scp_transaction_manager_skip_duplicate_transaction_in_recovery"
       value = "true"
-    }
+    },
+    {
+      name  = "google_scp_pbs_relaxed_consistency_enabled"
+      value = "true"
+    },
   ])
 }
 
@@ -202,12 +206,11 @@ resource "google_project_iam_member" "pbs_tag_iam_viewer" {
 # `name` can be specified for a specific cos stable OS version
 # `family` can be specified for the latest cos stable OS.
 # See https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/compute_image.
-## IMPORTANT: Here we have pinned `cos-105-17412-101-17` which has LTS due to the upcoming change from
+## IMPORTANT: Here we have pinned `cos-105-17412-370-67` which has LTS due to the upcoming change from
 ## fluentd to fluent-bit. Preliminary testing shows enabling fluent-bit will break PBS logs. Migration
 ## must occur before the deprecation of cos-105-LTS (March 2025).
-## TODO: b/287134997
 data "google_compute_image" "pbs_container_vm_image" {
-  name    = "cos-105-17412-101-17"
+  name    = "cos-105-17412-370-67"
   project = "cos-cloud"
 }
 

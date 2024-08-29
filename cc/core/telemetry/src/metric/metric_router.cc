@@ -17,6 +17,8 @@
 #include <string>
 #include <utility>
 
+#include "absl/strings/string_view.h"
+#include "core/interface/metrics_def.h"
 #include "core/telemetry/src/common/telemetry_configuration.h"
 #include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
 #include "opentelemetry/metrics/provider.h"
@@ -27,6 +29,8 @@
 #include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 
 namespace google::scp::core {
+
+static constexpr absl::string_view kTransactionManager = "TransactionManager";
 
 MetricRouter::MetricRouter(
     std::shared_ptr<ConfigProviderInterface> config_provider,
@@ -49,6 +53,47 @@ void MetricRouter::SetupMetricRouter(
       std::move(meter_context));
 
   opentelemetry::metrics::Provider::SetMeterProvider(std::move(u_provider));
+}
+
+std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+MetricRouter::GetActiveTransactionsInstrument() {
+  SetupTransactionManagerMetricInstruments();
+  return metric_instruments_.active_transactions_instrument;
+}
+
+std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+MetricRouter::GetReceivedTransactionsInstrument() {
+  SetupTransactionManagerMetricInstruments();
+  return metric_instruments_.received_transactions_instrument;
+}
+
+std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+MetricRouter::GetFinishedTransactionsInstrument() {
+  SetupTransactionManagerMetricInstruments();
+  return metric_instruments_.finished_transactions_instrument;
+}
+
+void MetricRouter::SetupTransactionManagerMetricInstruments() {
+  absl::MutexLock lock(&metric_instruments_mutex_);
+
+  if (transaction_manager_meter_) {
+    return;
+  }
+
+  transaction_manager_meter_ =
+      opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+          kTransactionManager);
+
+  metric_instruments_.active_transactions_instrument =
+      transaction_manager_meter_->CreateInt64ObservableGauge(
+          kMetricNameActiveTransactions,
+          "Number of currently active transactions");
+  metric_instruments_.received_transactions_instrument =
+      transaction_manager_meter_->CreateUInt64Counter(
+          kMetricNameReceivedTransactions, "Number of received transactions");
+  metric_instruments_.finished_transactions_instrument =
+      transaction_manager_meter_->CreateUInt64Counter(
+          kMetricNameFinishedTransactions, "Number of finished transactions");
 }
 
 std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>

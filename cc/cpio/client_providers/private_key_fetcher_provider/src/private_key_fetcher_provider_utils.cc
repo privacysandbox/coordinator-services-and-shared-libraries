@@ -72,7 +72,6 @@ constexpr char kEncryptionKeysLabel[] = "keys";
 constexpr char kResourceNameLabel[] = "name";
 constexpr char kEncryptionKeyType[] = "encryptionKeyType";
 constexpr char kMultiPartyEnum[] = "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT";
-constexpr char kSinglePartyEnum[] = "SINGLE_PARTY_HYBRID_KEY";
 constexpr char kPublicKeysetHandle[] = "publicKeysetHandle";
 constexpr char kPublicKeyMaterial[] = "publicKeyMaterial";
 constexpr char kExpirationTime[] = "expirationTime";
@@ -196,8 +195,6 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseEncryptionKeyType(
 
   if (it.value() == kMultiPartyEnum) {
     key_type = EncryptionKeyType::kMultiPartyHybridEvenKeysplit;
-  } else if (it.value() == kSinglePartyEnum) {
-    key_type = EncryptionKeyType::kSinglePartyHybridKey;
   } else {
     return FailureExecutionResult(
         SC_PRIVATE_KEY_FETCHER_PROVIDER_INVALID_ENCRYPTION_KEY_TYPE);

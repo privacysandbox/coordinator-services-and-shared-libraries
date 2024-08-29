@@ -30,6 +30,7 @@ cc_library(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
+        "//cc/core/authorization_service/src:core_authorization_service",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
@@ -39,5 +40,6 @@ cc_library(
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_absl//absl/strings",
+        "@nlohmann_json//:lib",
     ],
 )

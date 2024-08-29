@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "load_balancer_ip" {
-  value = module.lb-http_serverless_negs.external_ip
+  value = google_compute_global_address.key_storage.address
 }
 
 output "key_storage_cloudfunction_url" {

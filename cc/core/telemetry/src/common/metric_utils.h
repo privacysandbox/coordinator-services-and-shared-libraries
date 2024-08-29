@@ -16,17 +16,57 @@
 #define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_METRIC_UTILS
 
 #include <optional>
-#include <string>
 #include <vector>
 
+#include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
 namespace google::scp::core {
 
+/*
+ * Simplified overview of OpenTelemetry metric data structure
+ *
+ * ResourceMetrics
+ *     ├─ Resource
+ *     └─ std::vector<ScopeMetrics>
+ *                     ├─ InstrumentationScope
+ *                     └─ std::vector<MetricData>
+ *                                     ├─ InstrumentDescriptor
+ *                                     └─ std::vector<PointDataAttributes>
+ *                                                     ├─ PointAttributes
+ *                                                     └─ PointType
+ */
+
+/**
+ * @brief Get a PointType metric point data from a ResourceMetrics metric data
+ * source matching the exact instrument name and containing the metric
+ * attributes supplied as a subset.
+ *
+ * @param name Instrument name to be matched.
+ * @param dimensions Metric attributes to be matched as subset.
+ * @param data Source of metric data.
+ * @return opentelemetry::sdk::metrics::PointType, normally;
+ *         std::nullopt, if a match cannot be found.
+ */
 std::optional<opentelemetry::sdk::metrics::PointType> GetMetricPointData(
-    const std::string& name,
+    absl::string_view name,
     const opentelemetry::sdk::common::OrderedAttributeMap& dimensions,
-    const std::vector<opentelemetry::sdk::metrics::ResourceMetrics>& data);
+    absl::Span<const opentelemetry::sdk::metrics::ResourceMetrics> data);
+
+/**
+ * @brief Get the OrderedAttributeMap metric attributes from a ResourceMetrics
+ * metric data source matching the exact instrument name.
+ *
+ * @param name Instrument name to be matched.
+ * @param data Source of metric data.
+ * @return opentelemetry::sdk::common::OrderedAttributeMap, normally;
+ *         std::nullopt, if a match cannot be found.
+ */
+std::optional<opentelemetry::sdk::common::OrderedAttributeMap>
+GetMetricAttributes(
+    absl::string_view name,
+    absl::Span<const opentelemetry::sdk::metrics::ResourceMetrics> data);
 
 }  // namespace google::scp::core
 

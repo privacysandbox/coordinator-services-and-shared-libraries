@@ -16,29 +16,29 @@
 
 #pragma once
 
-#include <nghttp2/asio_http2_server.h>
-
 #include <atomic>
 #include <memory>
 #include <string>
 #include <thread>
 #include <utility>
 
+#include <nghttp2/asio_http2_server.h>
+
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_server/src/http2_request.h"
+#include "cc/core/http2_server/src/http2_response.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/authorization_proxy_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/http_request_route_resolver_interface.h"
+#include "cc/core/interface/http_request_router_interface.h"
 #include "cc/core/interface/http_server_interface.h"
-#include "core/common/concurrent_map/src/concurrent_map.h"
-#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/http_request_route_resolver_interface.h"
-#include "core/interface/http_request_router_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "http2_request.h"
-#include "http2_response.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::core {
 
@@ -86,6 +86,7 @@ class Http2Server : public HttpServerInterface {
       std::string& host_address, std::string& port, size_t thread_pool_size,
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
+      std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client =
           nullptr,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
@@ -96,6 +97,7 @@ class Http2Server : public HttpServerInterface {
         thread_pool_size_(thread_pool_size),
         is_running_(false),
         authorization_proxy_(authorization_proxy),
+        aws_authorization_proxy_(aws_authorization_proxy),
         metric_client_(metric_client),
         config_provider_(config_provider),
         aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs),
@@ -115,6 +117,7 @@ class Http2Server : public HttpServerInterface {
       std::string& host_address, std::string& port, size_t thread_pool_size,
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
+      std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
       std::shared_ptr<HttpRequestRouterInterface>& request_router,
       std::shared_ptr<HttpRequestRouteResolverInterface>&
           request_route_resolver,
@@ -122,8 +125,8 @@ class Http2Server : public HttpServerInterface {
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       Http2ServerOptions options = Http2ServerOptions())
       : Http2Server(host_address, port, thread_pool_size, async_executor,
-                    authorization_proxy, metric_client, config_provider,
-                    options) {
+                    authorization_proxy, aws_authorization_proxy, metric_client,
+                    config_provider, options) {
     request_router_ = request_router;
     request_route_resolver_ = request_route_resolver;
   }
@@ -332,6 +335,8 @@ class Http2Server : public HttpServerInterface {
 
   /// An instance to the authorization proxy.
   std::shared_ptr<AuthorizationProxyInterface> authorization_proxy_;
+
+  std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy_;
 
   /// Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;

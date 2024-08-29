@@ -64,7 +64,6 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
             .build();
 
     keyDb.createKey(newEncryptionKey);
-    // TODO(b/206030473): Figure out where exactly signing should happen.
     return newEncryptionKey;
   }
 

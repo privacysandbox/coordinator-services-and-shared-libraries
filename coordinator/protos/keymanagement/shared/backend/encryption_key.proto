@@ -34,10 +34,8 @@ message EncryptionKey {
   // keyset). Not set when returning Private Key.
   string public_key_material = 3;
 
-
   // Key data payload. The meaning of this field depends on keyType.
-  // If keyType is the empty string, then this acts as json-encoded private key
-  // data in the single-party protocol. Is empty when returning Public Keys.
+  // keyType cannot be empty as an unknown key type is not supported.
   //
   // If keyType is non-empty, it is the private keyset data handle belonging to
   // this coordinator, in the multi-party protocol. The type of handle is
@@ -60,7 +58,8 @@ message EncryptionKey {
   // Date in epoch milliseconds when Key is created
   int64 creation_time = 7;
 
-  // Date in epoch milliseconds when the key becomes active and available for encryption.
+  // Date in epoch milliseconds when the key becomes active and available for
+  // encryption.
   int64 activation_time = 12;
 
   // Date in epoch milliseconds when Key expires
@@ -74,8 +73,6 @@ message EncryptionKey {
   // as a collection of KeySplitData.
   repeated KeySplitData key_split_data = 10;
 
-  // String representation of the type of key split - if empty it is assumed to
-  // be a legacy type single party key (and the key data is in
-  // jsonEncodedKeyset).
+  // String representation of the type of key split.
   string key_type = 11;
 }

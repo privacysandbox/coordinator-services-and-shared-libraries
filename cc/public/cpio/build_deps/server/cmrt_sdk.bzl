@@ -47,7 +47,6 @@ def cmrt_sdk(
         "queue_service": queue_service_configs,
     }
 
-    # TODO(b/279231627): Currently we don't support GCP auto-scaling.
     if platform == "aws":
         sdk_servers = dict(sdk_servers.items() + {"auto_scaling_service": {}}.items())
 

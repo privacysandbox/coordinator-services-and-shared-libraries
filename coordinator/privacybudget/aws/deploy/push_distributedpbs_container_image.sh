@@ -23,7 +23,8 @@
 #
 # `./push_distributedpbs_container_image.sh help` for usage instructions.
 
-set -euo pipefail
+set -eux
+set -o pipefail
 
 function push_pbs_container_image() {
     docker_repository_name=$1
@@ -41,7 +42,7 @@ function push_pbs_container_image() {
     # Validate that repository exists
     aws ecr describe-repositories \
     --region $aws_region \
-    --repository-names "$docker_repository_name" 1> /dev/null || \
+    --repository-names "$docker_repository_name" || \
     (echo "" && \
     echo "ERROR: Repository [$docker_repository_name] does not exist for account $aws_account_id in region $aws_region" && \
     exit 1)
@@ -49,13 +50,13 @@ function push_pbs_container_image() {
     # Remove all previously loaded pbs container images if any exist
     if [ $(docker images -f "reference=$default_pbs_image_repo" -aq | wc -l) -gt 0 ]; then
         # Let's try to remove it, but not fail if this does not succeed
-        docker rmi -f $(docker images -f "reference=$default_pbs_image_repo" -aq) > /dev/null 2> /dev/null
+        docker rmi -f $(docker images -f "reference=$default_pbs_image_repo" -aq) || true
     fi
 
     # Remove all previously loaded tagged images if any exist
     if [ $(docker images -f "reference=$container_registry" -aq | wc -l) -gt 0 ]; then
         # Let's try to remove it, but not fail if this does not succeed
-        docker rmi -f $(docker images -f "reference=$container_registry" -aq) > /dev/null 2> /dev/null
+        docker rmi -f $(docker images -f "reference=$container_registry" -aq) || true
     fi
 
     # Load the PBS container image

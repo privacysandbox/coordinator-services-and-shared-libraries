@@ -19,6 +19,9 @@
 namespace google::scp::core {
 // AWS/GCP cloud region name
 static constexpr char kCloudServiceRegion[] = "google_scp_core_cloud_region";
+// AWS cloud region name for cross cloud PBS (hence alternate in the name).
+static constexpr char kAlternateCloudServiceRegion[] =
+    "google_scp_alternate_region";
 // GCP Project Id (Not project name)
 static constexpr char kGcpProjectId[] = "google_scp_gcp_project_id";
 // GCP Cloud Spanner
@@ -37,6 +40,8 @@ static constexpr char kAggregatedMetricIntervalMs[] =
     "google_scp_aggregated_metric_interval_ms";
 static constexpr char kHTTPServerRequestRoutingEnabled[] =
     "google_scp_http_server_request_routing_enabled";
+static constexpr char kHttpServerDnsRoutingEnabled[] =
+    "google_scp_http_server_dns_routing_enabled";
 static constexpr char kPBSJournalInputStreamEnableBatchReadJournals[] =
     "google_scp_pbs_journal_input_stream_enable_batch_read_journals";
 static constexpr char kPBSJournalInputStreamNumberOfJournalsPerBatch[] =

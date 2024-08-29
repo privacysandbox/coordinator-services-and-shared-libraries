@@ -16,37 +16,39 @@
 
 
 class DynamoDbTableMock:
-    def __init__(self):
-        self.item = None
-        self.get_item_key = None
 
-    """Set the value that the get_item function will return"""
+  def __init__(self):
+    self.item = None
+    self.get_item_key = None
 
-    def mock_override_get_item_return(self, item):
-        self.item = item
+  """Set the value that the get_item function will return"""
 
-    """Get the last Key that get_item was called with"""
+  def mock_override_get_item_return(self, item):
+    self.item = item
 
-    def mock_get_last_get_item_key(self):
-        return self.get_item_key
+  """Get the last Key that get_item was called with"""
 
-    """Public boto 3 function called from actual code"""
+  def mock_get_last_get_item_key(self):
+    return self.get_item_key
 
-    def get_item(self, Key={}):
-        self.get_item_key = Key
-        return self.item
+  """Public boto 3 function called from actual code"""
+
+  def get_item(self, Key={}):
+    self.get_item_key = Key
+    return self.item
 
 
 class DynamoDbResourceMock:
-    def __init__(self, table_mock):
-        self.table_mock = table_mock
 
-    def Table(self, table_name):
-        return self.table_mock
+  def __init__(self, table_mock):
+    self.table_mock = table_mock
+
+  def Table(self, table_name):
+    return self.table_mock
 
 
 """Public boto 3 function called from actual code"""
 
 
 def resource(name):
-    pass
+  pass

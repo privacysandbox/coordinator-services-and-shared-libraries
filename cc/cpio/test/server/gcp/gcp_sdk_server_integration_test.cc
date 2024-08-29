@@ -70,7 +70,6 @@ using std::vector;
 
 namespace {
 constexpr char kLocalHost[] = "http://127.0.0.1";
-// TODO(b/241857324): pick available ports randomly.
 constexpr char kGcpPort[] = "4566";
 constexpr char kSdkPort[] = "8888";
 

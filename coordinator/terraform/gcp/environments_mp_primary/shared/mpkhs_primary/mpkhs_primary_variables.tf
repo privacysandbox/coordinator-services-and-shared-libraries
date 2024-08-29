@@ -207,7 +207,6 @@ variable "key_storage_service_base_url" {
   type        = string
 }
 
-// TODO(b/275758643)
 variable "key_storage_service_cloudfunction_url" {
   description = "Cloud function url for peer coordinator."
   type        = string
@@ -303,7 +302,7 @@ variable "get_public_key_service_zip" {
 variable "encryption_key_service_zip" {
   description = <<-EOT
           Encryption key service cloud function path. If not provided defaults to locally built zip file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/singlepartykeyhosting:all`.
+        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting:all`.
       EOT
   type        = string
   default     = ""

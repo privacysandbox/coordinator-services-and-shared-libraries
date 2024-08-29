@@ -95,9 +95,6 @@ ExecutionResult BudgetKeyProvider::Init() noexcept {
         core::kDefaultAggregatedMetricIntervalMs;
   }
 
-  // TODO: b/297077044 to avoid this. Construction of this should come from a
-  // factory, and otherwise we cannot mock this causing tests to fail for any
-  // changes to AggregateMetric class.
   budget_key_count_metric_ = MetricUtils::RegisterAggregateMetric(
       async_executor_, metric_client_, kMetricNameBudgetKeyCount,
       kMetricComponentNameAndPartitionNamePrefixForBudgetKey +
@@ -115,7 +112,6 @@ ExecutionResult BudgetKeyProvider::Init() noexcept {
 }
 
 ExecutionResult BudgetKeyProvider::Run() noexcept {
-  // TODO: b/297077044 to avoid this if case
   if (budget_key_count_metric_) {
     RETURN_IF_FAILURE(budget_key_count_metric_->Run());
   }

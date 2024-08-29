@@ -24,7 +24,6 @@ pkg_files(
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:EncryptionKeyServiceLambdaDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PublicKeyApiGatewayHandlerDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/service/aws:KeyStorageServiceLambdaDeploy",
-        "//java/com/google/scp/coordinator/pbsprober/service/aws:PrivacyBudgetProberHandlerLambdaDeploy",
         "//python/privacybudget/aws/pbs_auth_handler:pbs_auth_handler_lambda_zipper",
         "//python/privacybudget/aws/pbs_synthetic:pbs_heartbeat_pkg",
         "//python/mpkhs/aws/privatekey_synthetic:privatekey_heartbeat_pkg",

@@ -173,7 +173,7 @@ variable "key_id_type" {
 variable "public_key_service_jar" {
   description = <<-EOT
           Public key service lambda path. If not provided defaults to locally built jar file.
-        Build with `bazel build //coordinator/terraform/aws/modules/singlepartykeymanagement:all`.
+        Build with `bazel build //coordinator/terraform/aws/modules/multipartykeymanagement:all`.
       EOT
   type        = string
 }
@@ -181,7 +181,7 @@ variable "public_key_service_jar" {
 variable "encryption_key_service_jar" {
   description = <<-EOT
         Private key service lambda path. If not provided defaults to locally built jar file.
-        Build with `bazel build //coordinator/terraform/aws/modules/singlepartykeymanagement:all`.
+        Build with `bazel build //coordinator/terraform/aws/modules/multipartykeymanagement:all`.
       EOT
   type        = string
 }

@@ -29,6 +29,7 @@ def verify_request(url, headers):
   Arguments:
     url: string, URL to send the request to.
     headers: dict, adds optional headers to request.
+
   Raises:
     Exception: If any problem parsing response we raise an exception.
   """
@@ -44,10 +45,7 @@ def verify_request(url, headers):
   session.mount("https://", HTTP20Adapter())
   response = session.get(url, headers=headers)
 
-  if (
-      not response.status_code
-      or response.status_code != 403
-  ):
+  if not response.status_code or response.status_code != 403:
     try:
       logger.error(f"Response: {response.text}")
     finally:

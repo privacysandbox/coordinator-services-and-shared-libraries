@@ -72,7 +72,6 @@ import javax.inject.Inject;
 @NotThreadSafe
 public final class JobClientImpl implements JobClient {
 
-  // TODO: change to cloud logger
   private static final Logger logger = Logger.getLogger(JobClientImpl.class.getName());
 
   // Defined by the privacy budgeting manager:
@@ -94,9 +93,6 @@ public final class JobClientImpl implements JobClient {
   private boolean pollForJob = false;
   private Clock clock;
 
-  // TODO: we can also put the JobQueueItem in the job to avoid keeping a cache,
-  // sub-modules (JobQueue and JobMetadataDb) are thread-safe, removing job cache
-  // makes this class thread-safe.
   private ConcurrentHashMap<String, JobQueueItem> cache = new ConcurrentHashMap<>();
 
   /** Creates a new instance of the {@code JobClientImpl} class. */
@@ -472,7 +468,6 @@ public final class JobClientImpl implements JobClient {
             .filter(validator -> !validator.validate(job, jobKeyString))
             .findFirst();
     if (failedValidator.isPresent()) {
-      // TODO(b/203221111): add monitoring and alerting for failed validations
       logger.warning(
           String.format(
               "Job '%s' failed validation step '%s'.",
@@ -576,9 +571,6 @@ public final class JobClientImpl implements JobClient {
    * Converts between the {@link
    * com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest} and
    * {@link com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo}.
-   *
-   * <p>TODO: Added for backwards compatibility and to be removed when CreateJobRequest shared model
-   * no longer needs to be populated.
    */
   private RequestInfo convertToRequestInfo(CreateJobRequest createJobRequest) {
     return RequestInfo.newBuilder()

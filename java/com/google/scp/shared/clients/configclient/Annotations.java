@@ -30,8 +30,6 @@ public final class Annotations {
    *
    * <p><b>Internally Bound<b> annotation, external consumers of the core libraries should use
    * {@link ApplicationRegionBindingOverride}
-   *
-   * <p>TODO(b/221319893): Should the standard interface for this be a Region or a string?
    */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
@@ -42,8 +40,6 @@ public final class Annotations {
    * Forces the value of {@link ApplicationRegionBinding} -- if empty ApplicationRegionBinding will
    * default to the region provided by the EC2 Metadata service. Provided as a string e.g.
    * "us-west-2"
-   *
-   * <p>TODO(b/221319893): Provide standardized interface for providing these values.
    */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})

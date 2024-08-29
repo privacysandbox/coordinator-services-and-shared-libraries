@@ -27,9 +27,12 @@ module "frontendservice_cloudfunction_alarms" {
   function_name           = local.function_name
   service_prefix          = "${var.environment} Frontend Service"
 
-  eval_period_sec           = var.alarm_eval_period_sec
-  error_5xx_threshold       = var.cloudfunction_5xx_threshold
-  execution_time_max        = var.cloudfunction_max_execution_time_max
+  eval_period_sec = var.alarm_eval_period_sec
+  // This will alert if 5xx errors amount in frontend service cloudfunction is greater than threshold.
+  error_5xx_threshold = var.cloudfunction_5xx_threshold
+  // This will alert if execution time in frontend service cloudfunction is greater than threshold.
+  execution_time_max = var.cloudfunction_max_execution_time_max
+  // This will alert if errors amount in frontend service cloudfunction is greater than threshold.
   execution_error_threshold = var.cloudfunction_error_threshold
   duration_sec              = var.alarm_duration_sec
 }

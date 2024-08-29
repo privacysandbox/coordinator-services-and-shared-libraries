@@ -17,11 +17,19 @@ package com.google.scp.shared.api.util;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -30,15 +38,19 @@ import java.time.Duration;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.protocol.HttpContext;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import software.amazon.awssdk.services.sts.model.StsException;
 
 @RunWith(JUnit4.class)
 public class HttpClientWrapperTest {
+
   @Test
   public void execute_succeeds() throws Exception {
     HttpClientWrapper httpClient = HttpClientWrapper.builder().build();
@@ -91,7 +103,7 @@ public class HttpClientWrapperTest {
     HttpClientWrapper httpClient =
         HttpClientWrapper.builder()
             .setMaxAttempt(maxAttempts)
-            .setRetryOnExceptions(ImmutableSet.of(IOException.class))
+            .setRetryExceptions(ImmutableSet.of(IOException.class))
             .build();
     TestHandler testHandler = new TestHandler();
     testHandler.setToThrowException(true);
@@ -101,28 +113,13 @@ public class HttpClientWrapperTest {
   }
 
   @Test
-  public void execute_withNonRetriableException_noRetries() {
-    int maxAttempts = 3;
-    HttpClientWrapper httpClient =
-        HttpClientWrapper.builder()
-            .setMaxAttempt(maxAttempts)
-            .setRetryOnExceptions(ImmutableSet.of(IllegalStateException.class))
-            .build();
-    TestHandler testHandler = new TestHandler();
-    testHandler.setToThrowException(true);
-
-    assertThrows(IOException.class, () -> callServer(httpClient, testHandler));
-    assertThat(testHandler.calledCount).isEqualTo(1);
-  }
-
-  @Test
   public void execute_retriesUntilSuccess() throws Exception {
     int statusCodeToRetry = 500;
     int maxAttempts = 5;
     HttpClientWrapper httpClient =
         HttpClientWrapper.builder()
             .setMaxAttempt(maxAttempts)
-            .setRetryOnExceptions(ImmutableSet.of(IOException.class))
+            .setRetryExceptions(ImmutableSet.of(IOException.class))
             .setRetryOnStatusCodes(ImmutableSet.of(statusCodeToRetry))
             .build();
     TestHandler testHandler = new TestHandler(statusCodeToRetry, -1, -1, 200, statusCodeToRetry);
@@ -189,6 +186,40 @@ public class HttpClientWrapperTest {
 
     assertThat(response.statusCode()).isEqualTo(503);
     assertThat(testHandler.calledCount).isEqualTo(6);
+  }
+
+  @Test
+  public void execute_failure_unauthorizedAwsStsException()
+      throws IOException, InterruptedException, Exception {
+    CloseableHttpClient httpClientMock = mock(CloseableHttpClient.class);
+    Retry simpleRetry =
+        RetryRegistry.of(RetryConfig.custom().maxAttempts(2).build()).retry("httpClient");
+    when(httpClientMock.execute(any()))
+        .thenThrow(StsException.builder().statusCode(HttpStatus.SC_UNAUTHORIZED).build());
+
+    HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClientMock, simpleRetry);
+    TestHandler testHandler = new TestHandler();
+    HttpClientResponse response = callServer(httpClientWrapper, testHandler);
+
+    assertThat(response.statusCode()).isEqualTo(HttpStatus.SC_UNAUTHORIZED);
+    verify(httpClientMock, times(2)).execute(any());
+  }
+
+  @Test
+  public void execute_failure_forbiddenAwsStsException()
+      throws IOException, InterruptedException, Exception {
+    CloseableHttpClient httpClientMock = mock(CloseableHttpClient.class);
+    Retry simpleRetry =
+        RetryRegistry.of(RetryConfig.custom().maxAttempts(2).build()).retry("httpClient");
+    when(httpClientMock.execute(any()))
+        .thenThrow(StsException.builder().statusCode(HttpStatus.SC_FORBIDDEN).build());
+
+    HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClientMock, simpleRetry);
+    TestHandler testHandler = new TestHandler();
+    HttpClientResponse response = callServer(httpClientWrapper, testHandler);
+
+    assertThat(response.statusCode()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+    verify(httpClientMock, times(2)).execute(any());
   }
 
   private HttpClientResponse callServer(HttpClientWrapper client, TestHandler testHandler)

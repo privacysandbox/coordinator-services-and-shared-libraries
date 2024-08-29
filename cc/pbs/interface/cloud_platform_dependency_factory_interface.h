@@ -83,6 +83,14 @@ class CloudPlatformDependencyFactoryInterface
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::HttpClientInterface> http_client) noexcept = 0;
 
+  // Constructs an AWS Client to talk to the authentication endpoint. This is
+  // only used on GCP to authenticate requests that come from AWS PBS to GCP PBS
+  // via DNS.
+  virtual std::unique_ptr<core::AuthorizationProxyInterface>
+  ConstructAwsAuthorizationProxyClient(
+      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<core::HttpClientInterface> http_client) noexcept = 0;
+
   /**
    * @brief Construct a Blob Storage client for PBS to use AWS S3/GCP
    * CloudStorage/Azure Storage, etc.

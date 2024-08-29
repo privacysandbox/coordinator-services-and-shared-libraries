@@ -29,7 +29,6 @@ public final class HybridDecryptionCipher {
   private final HybridDecrypt hybridDecrypt;
 
   // Empty byte array to indicate that there's no Associated Data
-  // TODO(b/199187471) find out if this will be populated
   static final byte[] CONTEXT_INFO = new byte[] {};
 
   public static HybridDecryptionCipher of(HybridDecrypt hybridDecrypt) {

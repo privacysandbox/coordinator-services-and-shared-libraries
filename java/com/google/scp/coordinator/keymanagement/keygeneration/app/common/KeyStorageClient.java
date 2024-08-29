@@ -22,9 +22,6 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 /**
  * Interface for a client to communicate with the Key Storage Service to send and store {@link
  * EncryptionKey} key splits and receive signatures in response.
- *
- * <p>TODO(b/242759135): Align on whether service or backend models should be returned by this
- * client.
  */
 public interface KeyStorageClient {
 

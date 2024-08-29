@@ -100,7 +100,7 @@ resource "aws_iam_role_policy_attachment" "allowed-assume-role-policy-attachment
 resource "aws_s3_bucket" "heartbeat-canary" {
   bucket = "${var.environment}-${var.heartbeat_name}-canary"
 
-  # TODO(b/264315810): Remove once AWS provider is upgraded to 4.9.0+.
+  # TODO: Remove once AWS provider is upgraded to 4.9.0+.
   lifecycle {
     ignore_changes = [
       grant,
@@ -185,12 +185,12 @@ resource "aws_s3_object" "canary_function_zip" {
 resource "aws_synthetics_canary" "heartbeat" {
   depends_on           = [aws_s3_object.canary_function_zip]
   name                 = "${local.heartbeat_name_prefix}-${var.environment}"
-  artifact_s3_location = "s3://${aws_s3_bucket.heartbeat-canary.id}/"
+  artifact_s3_location = "s3://${aws_s3_bucket.heartbeat-canary.id}"
   execution_role_arn   = aws_iam_role.canary-role.arn
   handler              = var.heartbeat_handler
   s3_bucket            = aws_s3_bucket.heartbeat-canary.id
   s3_key               = aws_s3_object.canary_function_zip.key
-  runtime_version      = "syn-python-selenium-2.0"
+  runtime_version      = "syn-python-selenium-4.0"
 
   run_config {
     timeout_in_seconds = var.heartbeat_timeout_sec

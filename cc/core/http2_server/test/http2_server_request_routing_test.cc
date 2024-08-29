@@ -110,8 +110,9 @@ class Http2RequestRouterTest : public testing::Test {
 
     http_server_ = std::make_shared<MockHttp2ServerWithOverrides>(
         host_address_, port_, thread_pool_size, async_executor_,
-        mock_authorization_proxy, request_router, request_route_resolver,
-        mock_metric_client, mock_config_provider_);
+        mock_authorization_proxy, /*aws_authorization_proxy=*/nullptr,
+        request_router, request_route_resolver, mock_metric_client,
+        mock_config_provider_);
     // real HandleHttpRequest should not be invoked.
     http_server_->handle_http2_request_mock_ = [&](auto&, auto&) {};
 

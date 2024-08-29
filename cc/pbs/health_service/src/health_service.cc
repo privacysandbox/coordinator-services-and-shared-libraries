@@ -107,7 +107,7 @@ namespace google::scp::pbs {
 // static
 void HealthService::ObserveMemoryUsageCallback(
     opentelemetry::metrics::ObserverResult observer_result,
-    HealthService* self_ptr) {
+    absl::Nonnull<HealthService*> self_ptr) {
   auto observer = std::get<opentelemetry::nostd::shared_ptr<
       opentelemetry::metrics::ObserverResultT<int64_t>>>(observer_result);
   observer->Observe(*(self_ptr->GetMemoryUsagePercentage()));
@@ -116,7 +116,7 @@ void HealthService::ObserveMemoryUsageCallback(
 // static
 void HealthService::ObserveFileSystemStorageUsageCallback(
     opentelemetry::metrics::ObserverResult observer_result,
-    HealthService* self_ptr) {
+    absl::Nonnull<HealthService*> self_ptr) {
   auto observer = std::get<opentelemetry::nostd::shared_ptr<
       opentelemetry::metrics::ObserverResultT<int64_t>>>(observer_result);
   observer->Observe(

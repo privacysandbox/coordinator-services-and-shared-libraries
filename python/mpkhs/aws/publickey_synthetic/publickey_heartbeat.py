@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import json
 import http.client
+import json
+import os
 import urllib.parse
-from aws_synthetics.selenium import synthetics_webdriver as syn_webdriver
 from aws_synthetics.common import synthetics_logger as logger
+from aws_synthetics.selenium import synthetics_webdriver as syn_webdriver
 
 # UPDATE THE URL TO PROBE
 _URL_TO_PROBE = os.environ.get("URL_TO_PROBE")
@@ -31,6 +31,7 @@ def verify_request(method, url, post_data=None, headers={}):
     url: string, URL to send the request to.
     post_data: string, (Optional) Any data needed post to make "POST" request.
     headers: dict, (Optional) adds optional headers to request.
+
   Raises:
     Exception: If any problem parsing response we raise an exception.
   """
@@ -42,7 +43,8 @@ def verify_request(method, url, post_data=None, headers={}):
     headers["User-Agent"] = user_agent
 
   logger.info(
-      f"Making request with Method: '{method}' URL: {url}: Data: {json.dumps(post_data)} Headers: {json.dumps(headers)}"
+      f"Making request with Method: '{method}' URL: {url}: Data:"
+      f" {json.dumps(post_data)} Headers: {json.dumps(headers)}"
   )
 
   if parsed_url.scheme == "https":

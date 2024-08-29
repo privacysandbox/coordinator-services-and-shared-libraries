@@ -28,6 +28,7 @@ resource "google_monitoring_metric_descriptor" "jobclient_job_validation_failure
 }
 
 resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_alert" {
+  // This alarm will be triggered if validation failures is over the threshold.
   count        = var.alarms_enabled ? 1 : 0
   display_name = "${var.environment} Job Client Validation Failure Alert"
   combiner     = "OR"
@@ -52,11 +53,10 @@ resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_aler
 
 resource "google_monitoring_metric_descriptor" "jobclient_job_client_error_metric" {
   display_name = "Job Client Errors"
-  description  = "Custom metric for errors in the job client."
-
-  type        = "custom.googleapis.com/scp/jobclient/${var.environment}/jobclienterror"
-  metric_kind = "GAUGE"
-  value_type  = "DOUBLE"
+  description  = "Custom metric for errors in the job client. See ErrorReason.java for more details"
+  type         = "custom.googleapis.com/scp/jobclient/${var.environment}/jobclienterror"
+  metric_kind  = "GAUGE"
+  value_type   = "DOUBLE"
 
   labels {
     key = "ErrorReason"
@@ -64,6 +64,7 @@ resource "google_monitoring_metric_descriptor" "jobclient_job_client_error_metri
 }
 
 resource "google_monitoring_alert_policy" "jobclient_job_client_error_alert" {
+  // This alarm will be triggered if job client error is over the threshold.
   count        = var.alarms_enabled ? 1 : 0
   display_name = "${var.environment} Job Client Errors Alert"
   combiner     = "OR"
@@ -88,11 +89,10 @@ resource "google_monitoring_alert_policy" "jobclient_job_client_error_alert" {
 
 resource "google_monitoring_metric_descriptor" "worker_job_error_metric" {
   display_name = "Worker Job Errors"
-  description  = "Custom metric for errors with worker job handling."
-
-  type        = "custom.googleapis.com/scp/worker/${var.environment}/workerjoberror"
-  metric_kind = "GAUGE"
-  value_type  = "DOUBLE"
+  description  = "Custom metric for unexpected errors with worker job handling."
+  type         = "custom.googleapis.com/scp/worker/${var.environment}/workerjoberror"
+  metric_kind  = "GAUGE"
+  value_type   = "DOUBLE"
 
   labels {
     key = "Type"
@@ -100,6 +100,7 @@ resource "google_monitoring_metric_descriptor" "worker_job_error_metric" {
 }
 
 resource "google_monitoring_alert_policy" "worker_job_error_alert" {
+  // This alarm will be triggered if worker job error is over the threshold.
   count        = var.alarms_enabled ? 1 : 0
   display_name = "${var.environment} Worker Job Errors Alert"
   combiner     = "OR"

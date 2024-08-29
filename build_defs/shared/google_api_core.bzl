@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "lambda_version" {
-  value = module.pbsprober.lambda_version
-}
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-output "lambda_assumed_role" {
-  value = module.pbsprober.lambda_assumed_role
-}
-
-output "pbsprober_lambda_principal_role_arn" {
-  value = module.pbsprober.pbsprober_lambda_principal_role_arn
-}
-
-output "pbsprober_lambda_principal_role_id" {
-  value = module.pbsprober.pbsprober_lambda_principal_role_id
-}
+def google_api_core():
+    maybe(
+        http_archive,
+        name = "google_api_core",
+        sha256 = "fa65e42bcafdb5cf25d019ef2fbb612fd4268378e0cfdd333622fdeea353134f",
+        strip_prefix = "python-api-core-2.19.1",
+        url = "https://github.com/googleapis/python-api-core/archive/refs/tags/v2.19.1.tar.gz",
+    )

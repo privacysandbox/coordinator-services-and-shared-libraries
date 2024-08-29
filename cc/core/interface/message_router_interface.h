@@ -57,8 +57,6 @@ class MessageRouterInterface : public ServiceInterface {
       const std::shared_ptr<AsyncContext<TRequest, TResponse>>&
           context) noexcept = 0;
 
-  // TODO(b/229794047): Figures out a better way to store the request_type to
-  // have a better performance.
   /**
    * @brief Subscribes the action function for the specific request type.
    *

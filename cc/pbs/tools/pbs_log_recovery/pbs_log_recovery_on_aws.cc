@@ -204,7 +204,7 @@ int main(int argc, char* argv[]) {
   auto transaction_manager = make_shared<TransactionManager>(
       async_executor, transaction_command_serializer, journal_service,
       remote_transaction_manager, 10000000, mock_metric_client,
-      mock_config_provider);
+      /*metric_router=*/nullptr, mock_config_provider);
   assert(transaction_manager->Init().Successful());
 
   atomic<bool> recovery_done(false);

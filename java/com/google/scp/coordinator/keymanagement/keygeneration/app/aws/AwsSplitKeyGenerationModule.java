@@ -163,7 +163,6 @@ public final class AwsSplitKeyGenerationModule extends AbstractModule {
     return new ServiceManager(ImmutableList.of(sqsKeyGenerationService));
   }
 
-  // TODO(b/239625240): Use centralized annotation once available.
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
   @Retention(RetentionPolicy.RUNTIME)

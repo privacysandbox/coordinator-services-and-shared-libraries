@@ -106,7 +106,7 @@ module "vpc" {
     module.encryptionkeyservice.lambda_principal_role_arn,
   ]
 
-  # TODO(b/243725548): Traffic to services such as KMS, SQS and SSM are
+  # TODO: Traffic to services such as KMS, SQS and SSM are
   # accessed thru the public internet instead of the VPC endpoints.
   enable_kms_vpc_endpoint    = false
   kms_keys_arns              = []

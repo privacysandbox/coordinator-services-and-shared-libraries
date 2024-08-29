@@ -12,18 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">= 4.36"
+    }
+  }
+}
+
 locals {
   egress_internet_tag = "egress-internet"
 }
 
-# Dedicated VPC network.
-module "vpc_network" {
-  source  = "terraform-google-modules/network/google"
-  version = "~> 4.0"
-
-  project_id   = var.project_id
-  network_name = "${var.environment}-network"
-
+resource "google_compute_network" "network" {
+  name         = "${var.environment}-network"
+  project      = var.project_id
+  routing_mode = "GLOBAL"
   # Unlike AWS, concept of private/public subnets do not translate well to GCP
   # because routes to internet gateway are managed at the VPC network level.
   # Such that the route either exists for all subnets or not. GCP provides more
@@ -32,33 +37,45 @@ module "vpc_network" {
   #
   # Subnets will be created within the 10.128.0.0/9 range. Each subnet is /20
   # with 4096 addresses.
-  auto_create_subnetworks = true # Don't need all subnets, but auto-create simplifies TF config.
-  subnets                 = []   # Required argument.
-
+  #
+  # Don't need all subnets, but auto-create simplifies TF config.
+  auto_create_subnetworks = true
   # Routes for each subnet are automatically created. Delete the default internet
   # gateway route and replace it with one restricted to the
   # `egress_internet_tag`.
-  delete_default_internet_gateway_routes = true
-  routes = [
-    {
-      name              = "${var.environment}-egress-internet"
-      description       = "Route to the Internet."
-      destination_range = "0.0.0.0/0"
-      tags              = local.egress_internet_tag
-      next_hop_internet = "true"
-    },
-  ]
+  delete_default_routes_on_create = true
+}
+moved {
+  from = module.vpc_network.module.vpc.google_compute_network.network
+  to   = google_compute_network.network
+}
+
+# for_each is used as this resource moved from a module that used for_each.
+# Despite there being a single instance, this enables the moved block to work.
+resource "google_compute_route" "egress_internet" {
+  for_each         = toset(["${var.environment}-egress-internet"])
+  name             = each.key
+  project          = var.project_id
+  network          = google_compute_network.network.name
+  description      = "Route to the Internet."
+  dest_range       = "0.0.0.0/0"
+  tags             = [local.egress_internet_tag]
+  next_hop_gateway = "default-internet-gateway"
+}
+moved {
+  from = module.vpc_network.module.routes.google_compute_route.route
+  to   = google_compute_route.egress_internet
 }
 
 # Cloud NAT to provide internet to VMs without external IPs.
+# For tooling compatibility, we avoid using external modules. As this module
+# uses "for_each", we vendor the module as moving all resources is impractical.
 module "vpc_nat" {
-  source  = "terraform-google-modules/cloud-nat/google"
-  version = "~> 1.2"
-
+  source   = "../cloud-nat"
   for_each = var.regions
 
   project_id    = var.project_id
-  network       = module.vpc_network.network_self_link
+  network       = google_compute_network.network.id
   region        = each.value
   create_router = true
   router        = "${var.environment}-router"

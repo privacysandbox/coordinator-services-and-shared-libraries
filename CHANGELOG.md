@@ -1,5 +1,77 @@
 # Changelog
 
+## [1.10.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.9.0...v1.10.0) (2024-08-16)
+
+### Manual Deployment Steps Required
+ - [AWS only] Steps to migrate from Launch Configuration to Launch Templates for PBS
+   1. In the AWS console, navigate to EC2 > Settings > Data Protection & Security > IMDS Defaults and set the following values:
+    - Set Instance Metadata service to "Enabled"
+    - Set Metadata version to "V2 only (token required)"
+    - Set Access to tags in metadata to "Enabled"
+    - Set Metadata response hop limits to "2"
+   2. Run `terraform apply`
+   3. On success, in `<name>.auto.tfvars`, set a new variable `enable_imds_v2` to `true`
+   4. Run `terraform apply`
+   5. In the AWS console, navigate to EC2 > Auto Scaling Groups. Confirm that the Elastic Beanstalk auto scaling group is using a Launch Template. It should be visible under the Launch Template / Configuration column.
+ - [GCP only] The provider definition has been removed from the allowed operator group module. If using Application Default Credentials, the provider may need to be manually configured at the root module level. For details, see -
+      https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_identity_group.
+
+### Changes
+
+  - Fixed OTel exporter timeout and interval
+  - Refactored OTel metric names and labels
+  - [AWS only] Adjusted request throttling for AWS Auth Function from 10000 to 2300
+  - [AWS only] Fixed AWS "PBS Transactions" Dashboard
+  - [AWS only] Migrated PBS EC2 instances from using Launch Configurations to Launch Templates
+  - [GCP only] Added LOG_EXECUTION_ID to cloudfunction environment to avoid terraform plan changes on repeated terraform applies
+  - [GCP only] Enabled Public Access Prevention for Cloud Storage
+  - [GCP only] Forced provider update during PBS deployment
+  - [GCP only] Migrated PBS loadbalancer cert from SSL to CertManager
+  - [GCP only] Updated GCP secret manager module to new provider API
+  - [GCP only] Updated mpkhs coordinator README on resolving edge case error
+
+### Rollback steps
+
+  - [GCP only] Terraform module usage was refactored. In case of rollback, the following commands must be run manually:
+    - *mpkhs_primary*
+      ```
+      terraform state mv module.multipartykeyhosting_primary.module.vpc.google_compute_route.egress_internet module.multipartykeyhosting_primary.module.vpc.module.vpc_network.module.routes.google_compute_route.route
+      terraform state mv module.multipartykeyhosting_primary.module.vpc.google_compute_network.network module.multipartykeyhosting_primary.module.vpc.module.vpc_network.module.vpc.google_compute_network.network
+      ```
+    - *mpkhs_secondary*
+      ```
+      terraform state mv module.multipartykeyhosting_secondary.module.vpc.google_compute_route.egress_internet module.multipartykeyhosting_secondary.module.vpc.module.vpc_network.module.routes.google_compute_route.route
+      terraform state mv module.multipartykeyhosting_secondary.module.vpc.google_compute_network.network module.multipartykeyhosting_secondary.module.vpc.module.vpc_network.module.vpc.google_compute_network.network
+      terraform state mv module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_backend_service.key_storage 'module.multipartykeyhosting_secondary.module.keystorageservice.module.lb-http_serverless_negs.google_compute_backend_service.default["default"]'
+      terraform state mv module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_global_address.key_storage 'module.multipartykeyhosting_secondary.module.keystorageservice.module.lb-http_serverless_negs.google_compute_global_address.default[0]'
+      terraform state mv 'module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_global_forwarding_rule.https[0]' 'module.multipartykeyhosting_secondary.module.keystorageservice.module.lb-http_serverless_negs.google_compute_global_forwarding_rule.https[0]'
+      terraform state mv 'module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_managed_ssl_certificate.key_storage[0]' 'module.multipartykeyhosting_secondary.module.keystorageservice.module.lb-http_serverless_negs.google_compute_managed_ssl_certificate.default[0]'
+      terraform state mv 'module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_target_https_proxy.key_storage[0]' 'module.multipartykeyhosting_secondary.module.keystorageservice.module.lb-http_serverless_negs.google_compute_target_https_proxy.default[0]'
+      terraform state mv module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_url_map.key_storage 'module.multipartykeyhosting_secondary.module.keystorageservice.module.lb-http_serverless_negs.google_compute_url_map.default[0]'
+      ```
+    - *distributedpbs_application*
+      ```
+      terraform state mv module.distributedpbs_application.google_compute_router.pbs module.distributedpbs_application.module.vpc_nat.google_compute_router.router[0]
+      terraform state mv module.distributedpbs_application.random_string.nat module.distributedpbs_application.module.vpc_nat.random_string.name_suffix
+      terraform state mv module.distributedpbs_application.google_compute_router_nat.pbs module.distributedpbs_application.module.vpc_nat.google_compute_router_nat.main
+      ```
+    - *allowedoperatorgroup*
+      ```
+      terraform state mv module.allowedoperatorgroup.module.allowed_user_group.google_cloud_identity_group.group module.allowedoperatorgroup.module.allowed_user_group.module.group.google_cloud_identity_group.group
+      terraform state mv module.allowedoperatorgroup.module.allowed_user_group.google_cloud_identity_group_membership.owners module.allowedoperatorgroup.module.allowed_user_group.module.group.google_cloud_identity_group_membership.owners
+      terraform state mv module.allowedoperatorgroup.module.allowed_user_group.google_cloud_identity_group_membership.managers module.allowedoperatorgroup.module.allowed_user_group.module.group.google_cloud_identity_membership.managers
+      terraform state mv module.allowedoperatorgroup.module.allowed_user_group.google_cloud_identity_group_membership.members module.allowedoperatorgroup.module.allowed_user_group.module.group.google_cloud_identity_group_membership.members
+      ```
+  - [GCP only] Migrating PBS loadbalancer cert from Classic Load Balancer SSL cert to CertManager does not require any config changes, however to rollback
+     1. Detach the certificate map from the PBS target proxy `gcloud compute target-https-proxies update <environment>-pbs-proxy --clear-certificate-map`
+     2. Deploy the previous stable release
+
+  - [AWS only] A patch to the PBS Elastic Beanstalk Environment terraform from the v1.9.0 source code will be required for successful rollback:
+     1. Remove `coordinator/terraform/aws/modules/distributedpbs_beanstalk_environment/files/autoscaling-launch.config`
+     2. Delete the data block `data "local_file" "autoscaling_launch_config"` (Line 104-106)
+     3. Delete the source block `data.local_file.autoscaling_launch_config.content` (Line 139-142)
+     4. Rebuild the `multiparty_coordinator_tar` and deploy.
+
 ## [1.9.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.8.1...v1.9.0) (2024-06-27)
 
 ### Changes

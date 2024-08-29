@@ -116,8 +116,8 @@ class HttpServerLoadTest : public testing::Test {
 
     http_server_ = make_shared<Http2Server>(
         host_, port_, 10 /* http server thread pool size */,
-        async_executor_for_server_, authorization_proxy, metric_client_,
-        config_provider_);
+        async_executor_for_server_, authorization_proxy,
+        /*aws_authorization_proxy=*/nullptr, metric_client_, config_provider_);
 
     string path = "/v1/test";
     core::HttpHandler handler =

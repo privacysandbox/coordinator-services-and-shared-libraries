@@ -14,7 +14,7 @@
 
 output "network" {
   description = "The created network self-link."
-  value       = module.vpc_network.network_self_link
+  value       = google_compute_network.network.self_link
 }
 
 output "egress_internet_tag" {

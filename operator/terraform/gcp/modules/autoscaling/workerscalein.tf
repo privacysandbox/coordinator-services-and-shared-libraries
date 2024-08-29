@@ -64,6 +64,7 @@ resource "google_cloudfunctions2_function" "worker_scale_in_cloudfunction" {
       MANAGED_INSTANCE_GROUP_NAME = google_compute_region_instance_group_manager.worker_instance_group.name
       TERMINATION_WAIT_TIMEOUT    = var.termination_wait_timeout_sec
       ASG_INSTANCES_TTL           = var.asg_instances_table_ttl_days
+      LOG_EXECUTION_ID            = true
     }
   }
 

@@ -16,10 +16,12 @@
 
 #include "transaction_manager.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <functional>
 #include <list>
+#include <map>
 #include <memory>
 #include <string>
 #include <thread>
@@ -30,6 +32,8 @@
 #include "core/interface/partition_types.h"
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "opentelemetry/metrics/provider.h"
+#include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
@@ -66,6 +70,49 @@ static constexpr size_t kShutdownWaitIntervalMilliseconds = 100;
 static constexpr char kTransactionManager[] = "TransactionManager";
 
 namespace google::scp::core {
+
+namespace {
+
+void IncrementActiveTransactionsCount(
+    std::atomic<size_t>& active_transactions_count,
+    std::atomic<size_t>& max_transactions_since_observed,
+    absl::Mutex& transaction_counts_mutex) {
+  absl::MutexLock lock(&transaction_counts_mutex);
+  ++active_transactions_count;
+  max_transactions_since_observed.store(
+      std::max(max_transactions_since_observed.load(),
+               active_transactions_count.load()));
+}
+
+void DecrementActiveTransactionsCount(
+    std::atomic<size_t>& active_transactions_count,
+    std::atomic<size_t>& max_transactions_since_observed,
+    absl::Mutex& transaction_counts_mutex) {
+  absl::MutexLock lock(&transaction_counts_mutex);
+  --active_transactions_count;
+  max_transactions_since_observed.store(
+      std::max(max_transactions_since_observed.load(),
+               active_transactions_count.load()));
+}
+
+}  // namespace
+
+// static
+void TransactionManager::ObserveActiveTransactionsCallback(
+    opentelemetry::metrics::ObserverResult observer_result,
+    absl::Nonnull<TransactionManager*> self_ptr) {
+  auto observer = std::get<opentelemetry::nostd::shared_ptr<
+      opentelemetry::metrics::ObserverResultT<int64_t>>>(observer_result);
+
+  std::map<std::string, std::string> metric_labels = {
+      {kMetricLabelPartitionId, ToString(self_ptr->partition_id_)}};
+
+  absl::MutexLock lock(&(self_ptr->transaction_counts_mutex_));
+  observer->Observe(self_ptr->max_transactions_since_observed_.load(),
+                    metric_labels);
+  self_ptr->max_transactions_since_observed_.store(0);
+}
+
 ExecutionResult TransactionManager::RegisterAggregateMetric(
     shared_ptr<AggregateMetricInterface>& metrics_instance,
     const string& name) noexcept {
@@ -95,6 +142,7 @@ TransactionManager::TransactionManager(
     shared_ptr<RemoteTransactionManagerInterface>& remote_transaction_manager,
     size_t max_concurrent_transactions,
     const shared_ptr<MetricClientInterface>& metric_client,
+    std::shared_ptr<MetricRouter> metric_router,
     shared_ptr<ConfigProviderInterface> config_provider,
     const PartitionId& partition_id)
     : TransactionManager(
@@ -102,8 +150,8 @@ TransactionManager::TransactionManager(
           make_shared<TransactionEngine>(
               async_executor, transaction_command_serializer, journal_service,
               remote_transaction_manager, metric_client, config_provider),
-          max_concurrent_transactions, metric_client, config_provider,
-          partition_id) {}
+          max_concurrent_transactions, metric_client, metric_router,
+          config_provider, partition_id) {}
 
 ExecutionResult TransactionManager::Init() noexcept {
   if (max_concurrent_transactions_ <= 0) {
@@ -124,12 +172,14 @@ ExecutionResult TransactionManager::Init() noexcept {
     aggregated_metric_interval_ms_ = kDefaultAggregatedMetricIntervalMs;
   }
 
-  RegisterAggregateMetric(active_transactions_metric_,
-                          kMetricNameActiveTransaction);
-  auto execution_result = active_transactions_metric_->Init();
-  if (!execution_result.Successful()) {
-    return execution_result;
+  if (metric_router_) {
+    metric_router_->GetActiveTransactionsInstrument()->AddCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &TransactionManager::ObserveActiveTransactionsCallback),
+        this);
   }
+
+  RETURN_IF_FAILURE(InitMetricClientInterface());
 
   return transaction_engine_->Init();
 }
@@ -189,14 +239,25 @@ ExecutionResult TransactionManager::Execute(
   // This must be incremented first before checking if the component has started
   // because of a race between transactions entering the component and someone
   // stopping the component.
-  active_transactions_count_++;
+  IncrementActiveTransactionsCount(active_transactions_count_,
+                                   max_transactions_since_observed_,
+                                   transaction_counts_mutex_);
 
   if (!started_) {
-    active_transactions_count_--;
+    DecrementActiveTransactionsCount(active_transactions_count_,
+                                     max_transactions_since_observed_,
+                                     transaction_counts_mutex_);
     return FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_NOT_STARTED);
   }
 
   function<void()> task = [this, transaction_context]() mutable {
+    if (metric_router_) {
+      std::map<std::string, std::string> metric_labels = {
+          {kMetricLabelPartitionId, ToString(partition_id_)}};
+      metric_router_->GetReceivedTransactionsInstrument()->Add(1,
+                                                               metric_labels);
+    }
+
     active_transactions_metric_->Increment(kMetricEventReceivedTransaction);
 
     // To avoid circular dependency we create a copy. We need to decrement
@@ -209,12 +270,23 @@ ExecutionResult TransactionManager::Execute(
           transaction_context.response = transaction_engine_context.response;
           transaction_context.result = transaction_engine_context.result;
           transaction_context.Finish();
+
+          if (metric_router_) {
+            std::map<std::string, std::string> metric_labels = {
+                {kMetricLabelPartitionId, ToString(partition_id_)}};
+            metric_router_->GetFinishedTransactionsInstrument()->Add(
+                1, metric_labels);
+          }
+
           active_transactions_metric_->Increment(
               kMetricEventFinishedTransaction);
+
           // This should be decremented at the end because of race between
           // transactions leaving the component and someone stopping the
           // component and discarding the component object
-          active_transactions_count_--;
+          DecrementActiveTransactionsCount(active_transactions_count_,
+                                           max_transactions_since_observed_,
+                                           transaction_counts_mutex_);
         };
 
     auto execution_result =
@@ -228,7 +300,9 @@ ExecutionResult TransactionManager::Execute(
   auto execution_result =
       async_executor_->Schedule(task, AsyncPriority::Normal);
   if (!execution_result.Successful()) {
-    active_transactions_count_--;
+    DecrementActiveTransactionsCount(active_transactions_count_,
+                                     max_transactions_since_observed_,
+                                     transaction_counts_mutex_);
   }
   return execution_result;
 }
@@ -244,15 +318,27 @@ ExecutionResult TransactionManager::ExecutePhase(
   // This must be incremented first before checking if the component has started
   // because of a race between transactions entering the component and someone
   // stopping the component.
-  active_transactions_count_++;
+  IncrementActiveTransactionsCount(active_transactions_count_,
+                                   max_transactions_since_observed_,
+                                   transaction_counts_mutex_);
 
   if (!started_) {
-    active_transactions_count_--;
+    DecrementActiveTransactionsCount(active_transactions_count_,
+                                     max_transactions_since_observed_,
+                                     transaction_counts_mutex_);
     return FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_NOT_STARTED);
   }
 
   function<void()> task = [this, transaction_phase_context]() mutable {
+    if (metric_router_) {
+      std::map<std::string, std::string> metric_labels = {
+          {kMetricLabelPartitionId, ToString(partition_id_)}};
+      metric_router_->GetReceivedTransactionsInstrument()->Add(1,
+                                                               metric_labels);
+    }
+
     active_transactions_metric_->Increment(kMetricEventReceivedTransaction);
+
     // To avoid circular dependency we create a copy. We need to decrement
     // the active transactions.
     auto transaction_engine_context = transaction_phase_context;
@@ -264,12 +350,23 @@ ExecutionResult TransactionManager::ExecutePhase(
               transaction_engine_context.response;
           transaction_phase_context.result = transaction_engine_context.result;
           transaction_phase_context.Finish();
+
+          if (metric_router_) {
+            std::map<std::string, std::string> metric_labels = {
+                {kMetricLabelPartitionId, ToString(partition_id_)}};
+            metric_router_->GetFinishedTransactionsInstrument()->Add(
+                1, metric_labels);
+          }
+
           active_transactions_metric_->Increment(
               kMetricEventFinishedTransaction);
+
           // This should be decremented at the end because of race between
           // transactions leaving the component and someone stopping the
           // component and discarding the component object
-          active_transactions_count_--;
+          DecrementActiveTransactionsCount(active_transactions_count_,
+                                           max_transactions_since_observed_,
+                                           transaction_counts_mutex_);
         };
 
     auto execution_result =
@@ -283,7 +380,9 @@ ExecutionResult TransactionManager::ExecutePhase(
   auto execution_result =
       async_executor_->Schedule(task, AsyncPriority::Normal);
   if (!execution_result.Successful()) {
-    active_transactions_count_--;
+    DecrementActiveTransactionsCount(active_transactions_count_,
+                                     max_transactions_since_observed_,
+                                     transaction_counts_mutex_);
   }
   return execution_result;
 }
@@ -301,26 +400,36 @@ ExecutionResult TransactionManager::Checkpoint(
 ExecutionResult TransactionManager::GetTransactionStatus(
     AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>&
         get_transaction_status_context) noexcept {
-  active_transactions_count_++;
+  IncrementActiveTransactionsCount(active_transactions_count_,
+                                   max_transactions_since_observed_,
+                                   transaction_counts_mutex_);
   if (!started_) {
-    active_transactions_count_--;
+    DecrementActiveTransactionsCount(active_transactions_count_,
+                                     max_transactions_since_observed_,
+                                     transaction_counts_mutex_);
     return FailureExecutionResult(errors::SC_TRANSACTION_MANAGER_NOT_STARTED);
   }
 
   auto execution_result =
       transaction_engine_->GetTransactionStatus(get_transaction_status_context);
-  active_transactions_count_--;
+  DecrementActiveTransactionsCount(active_transactions_count_,
+                                   max_transactions_since_observed_,
+                                   transaction_counts_mutex_);
   return execution_result;
 }
 
 ExecutionResult TransactionManager::GetTransactionManagerStatus(
     const GetTransactionManagerStatusRequest& request,
     GetTransactionManagerStatusResponse& response) noexcept {
-  active_transactions_count_++;
+  IncrementActiveTransactionsCount(active_transactions_count_,
+                                   max_transactions_since_observed_,
+                                   transaction_counts_mutex_);
   // Ensure that we do not report incorrect pending transaction count when the
   // service is initializing.
   if (!started_) {
-    active_transactions_count_--;
+    DecrementActiveTransactionsCount(active_transactions_count_,
+                                     max_transactions_since_observed_,
+                                     transaction_counts_mutex_);
     return FailureExecutionResult(
         errors::SC_TRANSACTION_MANAGER_STATUS_CANNOT_BE_OBTAINED);
   }
@@ -330,7 +439,17 @@ ExecutionResult TransactionManager::GetTransactionManagerStatus(
   // as needed in future.
   response.pending_transactions_count =
       transaction_engine_->GetPendingTransactionCount();
-  active_transactions_count_--;
+  DecrementActiveTransactionsCount(active_transactions_count_,
+                                   max_transactions_since_observed_,
+                                   transaction_counts_mutex_);
   return SuccessExecutionResult();
 }
+
+ExecutionResult TransactionManager::InitMetricClientInterface() {
+  RegisterAggregateMetric(active_transactions_metric_,
+                          kMetricNameActiveTransactions);
+  auto execution_result = active_transactions_metric_->Init();
+  return execution_result;
+}
+
 }  // namespace google::scp::core

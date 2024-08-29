@@ -22,7 +22,6 @@ pkg_filegroup(
         "//coordinator/terraform/aws/environments_mp_primary/shared/adtechmanagement_application:adtechmanagement_shared",
         "//coordinator/terraform/aws/environments_mp_primary/shared/distributedpbs_application:distributedpbs_application_shared",
         "//coordinator/terraform/aws/environments_mp_primary/shared/distributedpbs_base:distributedpbs_base_shared",
-        "//coordinator/terraform/aws/environments_mp_primary/shared/distributedpbs_prober:distributedpbs_prober_shared",
         "//coordinator/terraform/aws/environments_mp_primary/shared/domainrecords:domain_records_shared",
         "//coordinator/terraform/aws/environments_mp_primary/shared/mpkhs_primary:mpkhs_primary_shared",
         "//coordinator/terraform/aws/environments_mp_primary/shared/roleprovider:role_provider_shared",

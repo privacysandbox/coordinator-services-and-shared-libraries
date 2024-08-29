@@ -193,7 +193,8 @@ class PartitionIntegrationTest : public testing::Test {
         make_shared<PassThruAuthorizationProxyAsync>(async_executor_);
     http_server_ = make_shared<Http2Server>(
         pbs_endpoint_host_, pbs_port_, 10 /* http server thread pool size */,
-        async_executor_, authorization_proxy, request_router_,
+        async_executor_, authorization_proxy,
+        /*aws_authorization_proxy=*/nullptr, request_router_,
         request_route_resolver_, metric_client_, config_provider_,
         Http2ServerOptions());
     auto transaction_request_router =

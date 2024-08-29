@@ -207,6 +207,7 @@ module "worker_service" {
 
   # OpenTelemetry
   allowed_otel_metrics = var.allowed_otel_metrics
+  min_log_level        = var.min_log_level
 }
 
 module "operator_alarm_sns_topic" {

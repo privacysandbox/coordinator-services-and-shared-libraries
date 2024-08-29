@@ -183,7 +183,8 @@ class RequestForwardingIntegrationTest : public testing::Test {
         make_shared<PassThruAuthorizationProxy>();
     http_server_ = make_shared<Http2Server>(
         pbs_endpoint_host_, pbs_port_, 5 /* http server thread pool size */,
-        async_executor_, authorization_proxy, request_router_,
+        async_executor_, authorization_proxy,
+        /*aws_authorization_proxy=*/nullptr, request_router_,
         request_route_resolver_, metric_client_, config_provider_,
         Http2ServerOptions());
     auto transaction_request_router =

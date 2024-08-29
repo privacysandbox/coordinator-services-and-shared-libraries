@@ -25,7 +25,8 @@
 #
 # `./push_distributedpbs_container_image.sh help` for usage instructions.
 
-set -euo pipefail
+set -eux
+set -o pipefail
 
 function push_pbs_container_image() {
     local default_pbs_image_repo
@@ -34,7 +35,7 @@ function push_pbs_container_image() {
     container_registry="$gcp_region-docker.pkg.dev"
 
     # Validate that repository exists
-    gcloud artifacts repositories describe "$artifact_registry_name" --project "$gcp_project_id" --location "$gcp_region" 2> /dev/null || \
+    gcloud artifacts repositories describe "$artifact_registry_name" --project "$gcp_project_id" --location "$gcp_region" || \
     (echo "" && \
     echo "ERROR: Repository [$artifact_registry_name] does not exist for project $gcp_project_id in region $gcp_region" && \
     exit 1)
@@ -42,13 +43,13 @@ function push_pbs_container_image() {
     # Remove all previously loaded pbs container images if any exist
     if [ $(docker images -f "reference=$default_pbs_image_repo" -aq | wc -l) -gt 0 ]; then
         # Let's try to remove it, but not fail if this does not succeed
-        docker rmi -f $(docker images -f "reference=$default_pbs_image_repo" -aq) > /dev/null 2> /dev/null
+        docker rmi -f $(docker images -f "reference=$default_pbs_image_repo" -aq) || true
     fi
 
     # Remove all previously loaded tagged images if any exist
     if [ $(docker images -f "reference=$container_registry" -aq | wc -l) -gt 0 ]; then
         # Let's try to remove it, but not fail if this does not succeed
-        docker rmi -f $(docker images -f "reference=$container_registry" -aq) > /dev/null 2> /dev/null
+        docker rmi -f $(docker images -f "reference=$container_registry" -aq) || true
     fi
 
     # Load the PBS container image

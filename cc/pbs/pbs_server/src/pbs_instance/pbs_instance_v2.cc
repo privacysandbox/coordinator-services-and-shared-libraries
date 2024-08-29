@@ -410,14 +410,16 @@ ExecutionResult PBSInstanceV2::ConstructDependencies() noexcept {
   http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
-      authorization_proxy_, request_router_, request_route_resolver_,
-      metric_client_, config_provider_, http2_server_options);
+      authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
+      request_router_, request_route_resolver_, metric_client_,
+      config_provider_, http2_server_options);
   health_http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       1 /* one thread needed */, async_executor_,
-      pass_thru_authorization_proxy_,
+      pass_thru_authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
       nullptr /* metric_client, no metric recording for health http server */,
       config_provider_, http2_server_options);
+
   health_service_ = make_shared<HealthService>(
       health_http_server_, config_provider_, async_executor_, metric_client_);
   auto consume_budget_command_factory =

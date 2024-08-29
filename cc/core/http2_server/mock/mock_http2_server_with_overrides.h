@@ -30,18 +30,20 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
       std::string& host_address, std::string& port,
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
+      std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
           nullptr)
-      : core::Http2Server(host_address, port, 2 /* thread_pool_size */,
-                          async_executor, authorization_proxy, metric_client,
-                          config_provider) {}
+      : Http2Server(host_address, port, 2 /* thread_pool_size */,
+                    async_executor, authorization_proxy,
+                    aws_authorization_proxy, metric_client, config_provider) {}
 
   // Construct HTTP Server with Request Routing capabilities.
   MockHttp2ServerWithOverrides(
       std::string& host_address, std::string& port, size_t thread_pool_size,
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
+      std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
       std::shared_ptr<HttpRequestRouterInterface>& request_router,
       std::shared_ptr<HttpRequestRouteResolverInterface>&
           request_route_resolver,
@@ -49,8 +51,8 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       Http2ServerOptions options = Http2ServerOptions())
       : Http2Server(host_address, port, thread_pool_size, async_executor,
-                    authorization_proxy, metric_client, config_provider,
-                    options) {
+                    authorization_proxy, aws_authorization_proxy, metric_client,
+                    config_provider, options) {
     request_router_ = request_router;
     request_route_resolver_ = request_route_resolver;
   }

@@ -39,8 +39,7 @@ are symlinked files that should not be modified.
 
 1. Edit service configurations in [example.auto.tfvars](./example.auto.tfvars) -
    an example configuration file to deploy an operator service, such as the
-   following. Remove coordinator_b_assume_role_parameter if using a single party
-   coordinator configuration.
+   following.
 
     ```sh
     coordinator_a_assume_role_parameter = "arn:aws:iam::<CoordinatorAAccount>:role/<CoordinatorARole>"

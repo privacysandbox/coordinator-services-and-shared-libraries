@@ -23,6 +23,7 @@
 #include <system_error>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "core/interface/async_context.h"
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/config_provider_interface.h"
@@ -30,6 +31,7 @@
 #include "core/interface/transaction_manager_interface.h"
 #include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/observer_result.h"
 #include "pbs/interface/budget_key_provider_interface.h"
@@ -65,12 +67,12 @@ class HealthService : public core::ServiceInterface {
   /// Callback to be used with an OTel ObservableInstrument.
   static void ObserveMemoryUsageCallback(
       opentelemetry::metrics::ObserverResult observer_result,
-      HealthService* self_ptr);
+      absl::Nonnull<HealthService*> self_ptr);
 
   /// Callback to be used with an OTel ObservableInstrument.
   static void ObserveFileSystemStorageUsageCallback(
       opentelemetry::metrics::ObserverResult observer_result,
-      HealthService* self_ptr);
+      absl::Nonnull<HealthService*> self_ptr);
 
   HealthService() {}
 

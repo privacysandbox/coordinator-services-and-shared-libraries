@@ -17,7 +17,7 @@
 resource "aws_cloudwatch_metric_alarm" "job_queue_old_message_alarm" {
   count                     = var.worker_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_job_queue_old_message_alarm"
-  alarm_description         = "SQS messages that have not completed processing in ${var.job_queue_old_message_threshold_sec} seconds"
+  alarm_description         = "This alarm will be triggered if the job is not completed processing in ${var.job_queue_old_message_threshold_sec} seconds."
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.job_queue_old_message_threshold_sec

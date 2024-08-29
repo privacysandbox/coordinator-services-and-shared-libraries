@@ -18,10 +18,10 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 # See instructions at
 # https://github.com/open-telemetry/opentelemetry-cpp/blob/main/INSTALL.md#incorporating-into-an-existing-bazel-project
 
-# v1.15.0 release
-# https://github.com/open-telemetry/opentelemetry-cpp/releases/tag/v1.15.0
-DEFAULT_OPENTELEMETRY_CPP_VERSION = "1.15.0"
-DEFAULT_OPENTELEMETRY_CPP_SHA_256 = "69b0fef380658e15be9d817bfcb32e3f5de96da652bcdce77b4e750ed8beddee"
+# v1.16.1 release
+# https://github.com/open-telemetry/opentelemetry-cpp/releases/tag/v1.16.1
+DEFAULT_OPENTELEMETRY_CPP_VERSION = "1.16.1"
+DEFAULT_OPENTELEMETRY_CPP_SHA_256 = "b8a78bb2a3a78133dbb08bcd04342f4b1e03cb4a19079b8416d408d905fffc37"
 
 # Loads io_opentelemetry_cpp
 def opentelemetry_cpp(cpp_version = DEFAULT_OPENTELEMETRY_CPP_VERSION, cpp_hash = DEFAULT_OPENTELEMETRY_CPP_SHA_256):

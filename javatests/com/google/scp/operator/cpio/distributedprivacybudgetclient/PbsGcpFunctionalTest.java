@@ -38,6 +38,7 @@ import com.google.scp.coordinator.privacy.budgeting.utils.gcp.PbsTestEnv.Pbs2End
 import com.google.scp.coordinator.privacy.budgeting.utils.gcp.PbsTestUtils;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClient.PrivacyBudgetClientException;
 import com.google.scp.shared.api.util.HttpClientWithInterceptor;
+import com.google.scp.shared.aws.util.AwsAuthTokenInterceptor;
 import com.google.scp.shared.gcp.util.GcpHttpInterceptorUtil;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -49,6 +50,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.testcontainers.containers.Network;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 
 public final class PbsGcpFunctionalTest {
   @Rule public final Acai acai = new Acai(PbsGcpFunctionalTest.TestEnv.class);
@@ -63,6 +68,9 @@ public final class PbsGcpFunctionalTest {
   private PrivacyBudgetClientImpl pbs1PrivacyBudgetClient;
   private PrivacyBudgetClientImpl pbs2PrivacyBudgetClient;
 
+  private PrivacyBudgetClientImpl pbs1AwsPrivacyBudgetClient;
+  private PrivacyBudgetClientImpl pbs2AwsPrivacyBudgetClient;
+
   @Before
   public void setup() {
     this.pbs1PrivacyBudgetClient =
@@ -75,6 +83,22 @@ public final class PbsGcpFunctionalTest {
             new HttpClientWithInterceptor(
                 GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT)),
             pbs2Endpoint);
+
+    AwsCredentialsProvider credsProvider =
+        StaticCredentialsProvider.create(AwsBasicCredentials.create("hello", "world"));
+    this.pbs1AwsPrivacyBudgetClient =
+        new PrivacyBudgetClientImpl(
+            new HttpClientWithInterceptor(
+                new AwsAuthTokenInterceptor(
+                    Region.US_WEST_1, PbsTestUtils.DUMMY_AUTH_ENDPOINT, credsProvider)),
+            pbs1Endpoint);
+    this.pbs2AwsPrivacyBudgetClient =
+        new PrivacyBudgetClientImpl(
+            new HttpClientWithInterceptor(
+                new AwsAuthTokenInterceptor(
+                    Region.US_WEST_1, PbsTestUtils.DUMMY_AUTH_ENDPOINT, credsProvider)),
+            pbs2Endpoint);
+
     transactionRequest = generateTransactionRequest();
   }
 
@@ -99,6 +123,26 @@ public final class PbsGcpFunctionalTest {
   }
 
   @Test
+  public void performActionBeginFromAwsSuccess() throws PrivacyBudgetClientException {
+    Transaction pbs1Transaction =
+        generateTransaction(
+            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.BEGIN, transactionRequest);
+    ExecutionResult pbs1ExecutionResult =
+        pbs1AwsPrivacyBudgetClient.performActionBegin(pbs1Transaction);
+
+    Transaction pbs2Transaction =
+        generateTransaction(
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.BEGIN, transactionRequest);
+    ExecutionResult pbs2ExecutionResult =
+        pbs2AwsPrivacyBudgetClient.performActionBegin(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertThat(pbs2ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs2ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+  }
+
+  @Test
   public void performActionPrepareSuccess() throws PrivacyBudgetClientException {
     Transaction pbs1Transaction =
         generateTransaction(
@@ -111,6 +155,67 @@ public final class PbsGcpFunctionalTest {
             pbs2Endpoint, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
     ExecutionResult pbs2ExecutionResult =
         pbs2PrivacyBudgetClient.performActionPrepare(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertThat(pbs2ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs2ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+
+    PbsTestConfig pbsTestConfig = PbsTestConfig.builder().build();
+    ResultSet pbs1ResultSet =
+        pbs1DataClient
+            .readOnlyTransaction()
+            .executeQuery(Statement.of("SELECT * FROM " + pbsTestConfig.pbs1BudgetKeyTableName()));
+    ResultSet pbs2ResultSet =
+        pbs2DataClient
+            .readOnlyTransaction()
+            .executeQuery(Statement.of("SELECT * FROM " + pbsTestConfig.pbs2BudgetKeyTableName()));
+
+    final Set<String> budgetKeys =
+        new HashSet<>(
+            Arrays.asList(
+                "dummy-reporting-origin.com/budgetkey1", "dummy-reporting-origin.com/budgetkey2"));
+    Set<String> pbs1BudgetKeysActual = new HashSet<>();
+    Set<String> pbs2BudgetKeysActual = new HashSet<>();
+    final String timeFrame = "19";
+    final String valueJson = "{\"TokenCount\":\"1 1 1 1 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\"}";
+
+    int pbs1ResultSize = 0;
+    while (pbs1ResultSet.next()) {
+      pbs1BudgetKeysActual.add(pbs1ResultSet.getString(0));
+      assertEquals(pbs1ResultSet.getString(1), timeFrame);
+      assertEquals(pbs1ResultSet.getJson(2), valueJson);
+      pbs1ResultSize += 1;
+    }
+    assertTrue(budgetKeys.containsAll(pbs1BudgetKeysActual));
+    assertEquals(pbs1ResultSize, 2);
+
+    int pbs2ResultSize = 0;
+    while (pbs2ResultSet.next()) {
+      pbs2BudgetKeysActual.add(pbs2ResultSet.getString(0));
+      assertEquals(pbs2ResultSet.getString(1), timeFrame);
+      assertEquals(pbs2ResultSet.getJson(2), valueJson);
+      pbs2ResultSize += 1;
+    }
+    assertTrue(budgetKeys.containsAll(pbs2BudgetKeysActual));
+    assertEquals(pbs2ResultSize, 2);
+
+    deleteAllRowsFromPbsTables(pbsTestConfig);
+  }
+
+  @Test
+  public void performActionPrepareFromAwsSuccess() throws PrivacyBudgetClientException {
+    Transaction pbs1Transaction =
+        generateTransaction(
+            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
+    ExecutionResult pbs1ExecutionResult =
+        pbs1AwsPrivacyBudgetClient.performActionPrepare(pbs1Transaction);
+
+    Transaction pbs2Transaction =
+        generateTransaction(
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
+    ExecutionResult pbs2ExecutionResult =
+        pbs2AwsPrivacyBudgetClient.performActionPrepare(pbs2Transaction);
 
     assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
     assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
@@ -217,6 +322,63 @@ public final class PbsGcpFunctionalTest {
   }
 
   @Test
+  public void performActionPrepareFromAwsBudgetExhausted() throws PrivacyBudgetClientException {
+    Transaction pbs1Transaction =
+        generateTransaction(
+            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
+    ExecutionResult pbs1ExecutionResult =
+        pbs1AwsPrivacyBudgetClient.performActionPrepare(pbs1Transaction);
+
+    Transaction pbs2Transaction =
+        generateTransaction(
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
+    ExecutionResult pbs2ExecutionResult =
+        pbs2AwsPrivacyBudgetClient.performActionPrepare(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertThat(pbs2ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs2ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertTrue(pbs1Transaction.getExhaustedPrivacyBudgetUnits().isEmpty());
+    assertTrue(pbs2Transaction.getExhaustedPrivacyBudgetUnits().isEmpty());
+
+    ExecutionResult pbs1ExecutionResultBudgetExhausted =
+        pbs1AwsPrivacyBudgetClient.performActionPrepare(pbs1Transaction);
+    ExecutionResult pbs2ExecutionResultBudgetExhausted =
+        pbs2AwsPrivacyBudgetClient.performActionPrepare(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResultBudgetExhausted.executionStatus())
+        .isEqualTo(ExecutionStatus.FAILURE);
+    assertThat(pbs1ExecutionResultBudgetExhausted.statusCode()).isEqualTo(StatusCode.UNKNOWN);
+    assertThat(pbs2ExecutionResultBudgetExhausted.executionStatus())
+        .isEqualTo(ExecutionStatus.FAILURE);
+    assertThat(pbs2ExecutionResultBudgetExhausted.statusCode()).isEqualTo(StatusCode.UNKNOWN);
+
+    final PrivacyBudgetUnit privacyBudgetUnit1 =
+        PrivacyBudgetUnit.builder()
+            .privacyBudgetKey("budgetkey1")
+            .reportingWindow(Instant.parse("1970-01-20T04:49:20.799Z"))
+            .build();
+    final PrivacyBudgetUnit privacyBudgetUnit2 =
+        PrivacyBudgetUnit.builder()
+            .privacyBudgetKey("budgetkey2")
+            .reportingWindow(Instant.parse("1970-01-20T04:49:20.845Z"))
+            .build();
+    final ReportingOriginToPrivacyBudgetUnits exhaustedBudgetUnitsByOrigin =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setReportingOrigin("dummy-reporting-origin.com")
+            .setPrivacyBudgetUnits(ImmutableList.of(privacyBudgetUnit1, privacyBudgetUnit2))
+            .build();
+    assertThat(pbs1Transaction.getExhaustedPrivacyBudgetUnits())
+        .contains(exhaustedBudgetUnitsByOrigin);
+    assertThat(pbs2Transaction.getExhaustedPrivacyBudgetUnits())
+        .contains(exhaustedBudgetUnitsByOrigin);
+
+    PbsTestConfig pbsTestConfig = PbsTestConfig.builder().build();
+    deleteAllRowsFromPbsTables(pbsTestConfig);
+  }
+
+  @Test
   public void performActionCommitSuccess() throws PrivacyBudgetClientException {
     Transaction pbs1Transaction =
         generateTransaction(
@@ -226,9 +388,29 @@ public final class PbsGcpFunctionalTest {
 
     Transaction pbs2Transaction =
         generateTransaction(
-            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.COMMIT, transactionRequest);
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.COMMIT, transactionRequest);
     ExecutionResult pbs2ExecutionResult =
-        pbs1PrivacyBudgetClient.performActionCommit(pbs2Transaction);
+        pbs2PrivacyBudgetClient.performActionCommit(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertThat(pbs2ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs2ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+  }
+
+  @Test
+  public void performActionCommitFromAwsSuccess() throws PrivacyBudgetClientException {
+    Transaction pbs1Transaction =
+        generateTransaction(
+            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.COMMIT, transactionRequest);
+    ExecutionResult pbs1ExecutionResult =
+        pbs1AwsPrivacyBudgetClient.performActionCommit(pbs1Transaction);
+
+    Transaction pbs2Transaction =
+        generateTransaction(
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.COMMIT, transactionRequest);
+    ExecutionResult pbs2ExecutionResult =
+        pbs2AwsPrivacyBudgetClient.performActionCommit(pbs2Transaction);
 
     assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
     assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
@@ -246,9 +428,29 @@ public final class PbsGcpFunctionalTest {
 
     Transaction pbs2Transaction =
         generateTransaction(
-            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.NOTIFY, transactionRequest);
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.NOTIFY, transactionRequest);
     ExecutionResult pbs2ExecutionResult =
-        pbs1PrivacyBudgetClient.performActionNotify(pbs2Transaction);
+        pbs2PrivacyBudgetClient.performActionNotify(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertThat(pbs2ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs2ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+  }
+
+  @Test
+  public void performActionNotifyFromAwsSuccess() throws PrivacyBudgetClientException {
+    Transaction pbs1Transaction =
+        generateTransaction(
+            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.NOTIFY, transactionRequest);
+    ExecutionResult pbs1ExecutionResult =
+        pbs1AwsPrivacyBudgetClient.performActionNotify(pbs1Transaction);
+
+    Transaction pbs2Transaction =
+        generateTransaction(
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.NOTIFY, transactionRequest);
+    ExecutionResult pbs2ExecutionResult =
+        pbs2AwsPrivacyBudgetClient.performActionNotify(pbs2Transaction);
 
     assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
     assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
@@ -266,9 +468,29 @@ public final class PbsGcpFunctionalTest {
 
     Transaction pbs2Transaction =
         generateTransaction(
-            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.ABORT, transactionRequest);
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.ABORT, transactionRequest);
     ExecutionResult pbs2ExecutionResult =
-        pbs1PrivacyBudgetClient.performActionAbort(pbs2Transaction);
+        pbs2PrivacyBudgetClient.performActionAbort(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertThat(pbs2ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs2ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+  }
+
+  @Test
+  public void performActionAbortFromAwsSuccess() throws PrivacyBudgetClientException {
+    Transaction pbs1Transaction =
+        generateTransaction(
+            pbs1Endpoint, TRANSACTION_ID, TransactionPhase.ABORT, transactionRequest);
+    ExecutionResult pbs1ExecutionResult =
+        pbs1AwsPrivacyBudgetClient.performActionAbort(pbs1Transaction);
+
+    Transaction pbs2Transaction =
+        generateTransaction(
+            pbs2Endpoint, TRANSACTION_ID, TransactionPhase.ABORT, transactionRequest);
+    ExecutionResult pbs2ExecutionResult =
+        pbs2AwsPrivacyBudgetClient.performActionAbort(pbs2Transaction);
 
     assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
     assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
@@ -283,8 +505,26 @@ public final class PbsGcpFunctionalTest {
     ExecutionResult pbs1ExecutionResult = pbs1PrivacyBudgetClient.performActionEnd(pbs1Transaction);
 
     Transaction pbs2Transaction =
+        generateTransaction(pbs2Endpoint, TRANSACTION_ID, TransactionPhase.END, transactionRequest);
+    ExecutionResult pbs2ExecutionResult = pbs2PrivacyBudgetClient.performActionEnd(pbs2Transaction);
+
+    assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+    assertThat(pbs2ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
+    assertThat(pbs2ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);
+  }
+
+  @Test
+  public void performActionEndFromAwsSuccess() throws PrivacyBudgetClientException {
+    Transaction pbs1Transaction =
         generateTransaction(pbs1Endpoint, TRANSACTION_ID, TransactionPhase.END, transactionRequest);
-    ExecutionResult pbs2ExecutionResult = pbs1PrivacyBudgetClient.performActionEnd(pbs2Transaction);
+    ExecutionResult pbs1ExecutionResult =
+        pbs1AwsPrivacyBudgetClient.performActionEnd(pbs1Transaction);
+
+    Transaction pbs2Transaction =
+        generateTransaction(pbs2Endpoint, TRANSACTION_ID, TransactionPhase.END, transactionRequest);
+    ExecutionResult pbs2ExecutionResult =
+        pbs2AwsPrivacyBudgetClient.performActionEnd(pbs2Transaction);
 
     assertThat(pbs1ExecutionResult.executionStatus()).isEqualTo(ExecutionStatus.SUCCESS);
     assertThat(pbs1ExecutionResult.statusCode()).isEqualTo(StatusCode.OK);

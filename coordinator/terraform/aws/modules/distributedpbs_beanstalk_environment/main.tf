@@ -101,10 +101,6 @@ data "local_file" "cloudwatch_agent_config" {
   filename = "${path.module}/files/cloudwatch-agent.config"
 }
 
-data "local_file" "autoscaling_launch_config" {
-  filename = "${path.module}/files/autoscaling-launch.config"
-}
-
 resource "random_uuid" "files" {
   keepers = {
     for filename in fileset(path.module, "files/*") :
@@ -134,11 +130,6 @@ data "archive_file" "version_bundle" {
   source {
     content  = data.local_file.cloudwatch_agent_config.content
     filename = ".ebextensions/cloudwatch-agent.config"
-  }
-
-  source {
-    content  = data.local_file.autoscaling_launch_config.content
-    filename = ".ebextensions/ec2-launch-template.config"
   }
 
   # These settings are only added if domain management is ENABLED
@@ -521,6 +512,22 @@ resource "aws_elastic_beanstalk_environment" "beanstalk_app_environment" {
   # to prevent terraform from picking up changes incorrectly on terraform
   # apply after the initial creation.
   # https://github.com/hashicorp/terraform-provider-aws/issues/1471
+
+  dynamic "setting" {
+    for_each = (var.enable_imds_v2 ? [
+      {
+        namespace = "aws:autoscaling:launchconfiguration"
+        name      = "DisableIMDSv1"
+        value     = var.enable_imds_v2
+      },
+    ] : [])
+    content {
+      namespace = setting.value["namespace"]
+      name      = setting.value["name"]
+      value     = setting.value["value"]
+      resource  = ""
+    }
+  }
 
   setting {
     namespace = "aws:autoscaling:launchconfiguration"

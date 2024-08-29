@@ -99,26 +99,26 @@ public final class KeyGenerationArgs {
   /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
   @Parameter(
-      names = "--test-encoded-keyset-handle",
+      names = "--encoded-keyset-handle",
       description =
           "The encoded keyset handle to use for encryption."
               + " This is an optional parameter to use to override the default behavior.")
-  private String testEncodedKeysetHandle = "";
+  private String encodedKeysetHandle = "";
 
   /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
   @Parameter(
-      names = "--test-peer-coordinator-encoded-keyset-handle",
+      names = "--peer-coordinator-encoded-keyset-handle",
       description =
           "The encoded keyset handle for the peer coordinator to use for encryption."
               + " This is an optional parameter to use to override the default behavior.")
-  private String testPeerCoordinatorEncodedKeysetHandle = "";
+  private String peerCoordinatorEncodedKeysetHandle = "";
 
   @Beta
   @Parameter(
-      names = "--test-use-default-parameters-on-gcp",
+      names = "--use-default-parameters-on-gcp",
       description = "Whether or not the default parameters should be used on GCP.")
-  private boolean testUseDefaultParametersOnGcp = false;
+  private boolean useDefaultParametersOnGcp = false;
 
   public String getKmsKeyUri() {
     return kmsKeyUri;
@@ -190,18 +190,18 @@ public final class KeyGenerationArgs {
 
   /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
-  public Optional<String> getTestEncodedKeysetHandle() {
-    return Optional.ofNullable(testEncodedKeysetHandle).filter(s -> !s.isEmpty());
+  public Optional<String> getEncodedKeysetHandle() {
+    return Optional.ofNullable(encodedKeysetHandle).filter(s -> !s.isEmpty());
   }
 
   /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
-  public Optional<String> getTestPeerCoordinatorEncodedKeysetHandle() {
-    return Optional.ofNullable(testPeerCoordinatorEncodedKeysetHandle).filter(s -> !s.isEmpty());
+  public Optional<String> getPeerCoordinatorEncodedKeysetHandle() {
+    return Optional.ofNullable(peerCoordinatorEncodedKeysetHandle).filter(s -> !s.isEmpty());
   }
 
   @Beta
-  public boolean getTestUseDefaultParametersOnGcp() {
-    return testUseDefaultParametersOnGcp;
+  public boolean getUseDefaultParametersOnGcp() {
+    return useDefaultParametersOnGcp;
   }
 }

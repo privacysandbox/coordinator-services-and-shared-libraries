@@ -27,7 +27,10 @@ py_test(
         "functions_framework.py",
         "google/cloud.py",
     ],
-    deps = [requirement("publicsuffixlist")],
+    deps = [
+        requirement("publicsuffixlist"),
+        requirement("google-api-core"),
+    ],
 )
 
 pkg_files(

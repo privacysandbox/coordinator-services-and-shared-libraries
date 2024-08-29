@@ -30,7 +30,8 @@
 #
 # `./deploy_distributedpbs.sh help` for usage instructions.
 
-set -euo pipefail
+set -eux
+set -o pipefail
 
 ecr_repository_name=''
 

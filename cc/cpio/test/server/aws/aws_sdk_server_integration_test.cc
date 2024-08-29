@@ -112,7 +112,6 @@ constexpr char kSdkServerImageName[] =
     "bazel/cc/cpio/test/server/aws:test_aws_sdk_server_container";
 
 constexpr char kRegion[] = "us-east-1";
-// TODO(b/241857324): pick available ports randomly.
 constexpr char kLocalstackPort[] = "4566";
 constexpr char kSdkPort[] = "8888";
 

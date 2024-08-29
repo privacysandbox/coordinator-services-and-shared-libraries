@@ -13,5 +13,5 @@
 # limitations under the License.
 
 output "group_id" {
-  value = module.group.id
+  value = google_cloud_identity_group.group.group_key[0].id
 }

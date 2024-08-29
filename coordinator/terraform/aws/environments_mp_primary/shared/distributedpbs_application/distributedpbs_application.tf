@@ -127,4 +127,6 @@ module "distributedpbs_application" {
   pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold     = var.pbs_authorization_v2_table_read_capacity_alarm_ratio_threshold
   pbs_authorization_v2_table_write_capacity_alarm_ratio_eval_periods = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_eval_periods
   pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold    = var.pbs_authorization_v2_table_write_capacity_alarm_ratio_threshold
+
+  enable_imds_v2 = var.enable_imds_v2
 }

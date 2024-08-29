@@ -236,8 +236,6 @@ void AwsMetricClientProvider::OnPutMetricDataAsyncCallback(
     return;
   }
 
-  // TODO(b/240477800): map HttpErrorCodes to local errors. For cloudwatch,
-  // watch out HttpResponseCode::REQUEST_ENTITY_TOO_LARGE.
   auto result = CloudWatchErrorConverter::ConvertCloudWatchError(
       outcome.GetError().GetErrorType(), outcome.GetError().GetMessage());
   SCP_ERROR_CONTEXT(kAwsMetricClientProvider, metric_requests_vector.back(),

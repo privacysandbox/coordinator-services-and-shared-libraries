@@ -207,14 +207,14 @@ public final class KeyGenerationModule extends AbstractModule {
 
     install(
         new GcpSplitKeyGenerationTasksModule(
-            args.getTestEncodedKeysetHandle(), args.getTestPeerCoordinatorEncodedKeysetHandle()));
+            args.getEncodedKeysetHandle(), args.getPeerCoordinatorEncodedKeysetHandle()));
 
     // Data layer bindings
     install(new SpannerKeyDbModule());
 
     // Client Bindings
     install(new GcpCoordinatorClientConfigModule());
-    if (args.getTestUseDefaultParametersOnGcp()) {
+    if (args.getUseDefaultParametersOnGcp()) {
       install(new DefaultParameterModule());
     } else {
       install(new GcpParameterModule());

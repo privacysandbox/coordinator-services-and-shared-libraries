@@ -25,6 +25,26 @@ locals {
   lb_ip2 = "35.191.0.0/16"
 }
 
+# Get the hosted zone. This must already exist.
+data "google_dns_managed_zone" "dns_zone" {
+  name    = replace(var.parent_domain_name, ".", "-")
+  project = var.parent_domain_project
+
+  lifecycle {
+    # Parent domain name should not be empty
+    precondition {
+      condition     = var.parent_domain_name != "" && var.parent_domain_project != ""
+      error_message = "Domain management is enabled with an empty parent_domain_name or parent_domain_project."
+    }
+  }
+}
+
+# Method to generate new cert name when domain changes
+resource "random_id" "pbs_cert_manager" {
+  byte_length = 5
+  prefix      = "${var.environment}-pbs-cert-manager-"
+}
+
 # Setup the firewall rule for health-check and LB incoming traffic
 resource "google_compute_firewall" "load_balancer_firewall" {
   project     = var.project_id
@@ -224,6 +244,9 @@ resource "google_compute_target_https_proxy" "pbs_loadbalancer_proxy" {
   ssl_certificates = [
     google_compute_managed_ssl_certificate.pbs_loadbalancer[0].id
   ]
+
+  certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].id}"
+
 }
 
 # Map IP address and loadbalancer proxy
@@ -232,7 +255,7 @@ resource "google_compute_global_forwarding_rule" "pbs_loadbalancer_config" {
   name       = "${var.environment}-pbs-frontend-configuration"
   ip_address = var.pbs_ip_address
   port_range = "443"
-  target = (var.enable_domain_management ? google_compute_target_https_proxy.pbs_loadbalancer_proxy[0].id
+  target = (var.enable_domain_management ? google_compute_target_https_proxy.pbs_loadbalancer_proxy[0].self_link
   : google_compute_target_tcp_proxy.pbs_loadbalancer_proxy[0].id)
 }
 
@@ -252,4 +275,58 @@ resource "google_compute_managed_ssl_certificate" "pbs_loadbalancer" {
   managed {
     domains = [var.pbs_domain]
   }
+}
+
+resource "google_certificate_manager_certificate" "pbs_loadbalancer_cert" {
+  count       = var.enable_domain_management ? 1 : 0
+  project     = var.project_id
+  name        = random_id.pbs_cert_manager.hex
+  description = "Certificate Manager cert for PBS"
+  labels = {
+    env = "${var.environment}"
+  }
+  managed {
+    domains = compact([
+      google_certificate_manager_dns_authorization.gcp_pbs_instance[0].domain,
+    ])
+
+    dns_authorizations = compact([
+      google_certificate_manager_dns_authorization.gcp_pbs_instance[0].id,
+    ])
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "google_certificate_manager_dns_authorization" "gcp_pbs_instance" {
+  count       = var.enable_domain_management ? 1 : 0
+  name        = "gcp-pbs-dns"
+  description = "DNS Authorization for GCP PBS domain validation"
+  domain      = var.pbs_domain
+}
+
+resource "google_certificate_manager_certificate_map" "pbs_loadbalancer_map" {
+  count       = var.enable_domain_management ? 1 : 0
+  name        = "${random_id.pbs_cert_manager.hex}-map"
+  description = "Certificate Map PBS"
+}
+
+resource "google_certificate_manager_certificate_map_entry" "default" {
+  count        = var.enable_domain_management ? 1 : 0
+  name         = "${random_id.pbs_cert_manager.hex}-map-entry"
+  description  = "PBS Certificate Map entry"
+  map          = google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].name
+  certificates = [google_certificate_manager_certificate.pbs_loadbalancer_cert[0].id]
+  matcher      = "PRIMARY"
+}
+
+resource "google_dns_record_set" "pbs_dns_auth_record_set" {
+  count        = var.enable_domain_management ? 1 : 0
+  project      = var.parent_domain_project
+  name         = google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record.0.name
+  type         = google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record.0.type
+  ttl          = 60
+  managed_zone = data.google_dns_managed_zone.dns_zone.name
+  rrdatas      = [google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record.0.data]
 }

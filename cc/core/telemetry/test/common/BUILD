@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_cc//cc:defs.bzl", "cc_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:scp_internal_pkg"])
 
-java_library(
-    name = "model",
-    srcs = glob(["*.java"]),
+cc_test(
+    name = "metric_utils_test",
+    size = "small",
+    srcs = [
+        "metric_utils_test.cc",
+    ],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
-        "//java/external:autovalue",
-        "//java/external:autovalue_annotations",
-        "//java/external:jackson_annotations",
-        "//java/external:jackson_core",
-        "//java/external:jackson_databind",
+        "//cc:cc_base_include_dir",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest_main",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )

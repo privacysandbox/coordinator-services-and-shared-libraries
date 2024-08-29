@@ -1,1 +1,2 @@
 publicsuffixlist==0.10.*
+google-api-core==2.19.1

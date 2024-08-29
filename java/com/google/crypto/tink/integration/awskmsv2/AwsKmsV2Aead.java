@@ -34,8 +34,6 @@ import software.amazon.awssdk.utils.BinaryUtils;
  *
  * <p>Based heavily on
  * https://github.com/google/tink/blob/master/java_src/src/main/java/com/google/crypto/tink/integration/awskms/AwsKmsAead.java
- *
- * <p>TODO(b/188813845): Upstream this to Tink.
  */
 public final class AwsKmsV2Aead implements Aead {
   private final KmsClient kmsClient;

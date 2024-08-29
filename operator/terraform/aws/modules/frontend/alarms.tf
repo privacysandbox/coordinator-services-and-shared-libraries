@@ -22,7 +22,7 @@
 resource "aws_cloudwatch_metric_alarm" "get_job_lambda_error_alarm" {
   count               = var.frontend_alarms_enabled ? 1 : 0
   alarm_name          = "${var.environment}_${var.region}_get_job_lambda_error_alarm"
-  alarm_description   = "Lambda errors over ${var.frontend_lambda_error_threshold}%"
+  alarm_description   = "This alarm will be triggered if getJob lambda errors over ${var.frontend_lambda_error_threshold}%"
   comparison_operator = "GreaterThanThreshold"
   #Number of 'period' to evaluate for the alarm
   evaluation_periods        = 1
@@ -44,7 +44,7 @@ resource "aws_cloudwatch_metric_alarm" "get_job_lambda_error_alarm" {
 resource "aws_cloudwatch_metric_alarm" "create_job_lambda_error_alarm" {
   count               = var.frontend_alarms_enabled ? 1 : 0
   alarm_name          = "${var.environment}_${var.region}_create_job_lambda_error_alarm"
-  alarm_description   = "Lambda errors over ${var.frontend_lambda_error_threshold}%"
+  alarm_description   = "This alarm will be triggered if createJob lambda errors over ${var.frontend_lambda_error_threshold}%"
   comparison_operator = "GreaterThanThreshold"
   #Number of 'period' to evaluate for the alarm
   evaluation_periods        = 1
@@ -67,7 +67,7 @@ resource "aws_cloudwatch_metric_alarm" "create_job_lambda_error_alarm" {
 resource "aws_cloudwatch_metric_alarm" "get_job_key_lambda_max_duration_alarm" {
   count                     = var.frontend_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_get_job_key_lambda_max_duration_alarm"
-  alarm_description         = "Lambda duration over ${var.frontend_lambda_max_duration_threshold}ms"
+  alarm_description         = "This alarm will be triggered if getJob lambda duration over ${var.frontend_lambda_max_duration_threshold}ms"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.frontend_lambda_max_duration_threshold
@@ -88,7 +88,7 @@ resource "aws_cloudwatch_metric_alarm" "get_job_key_lambda_max_duration_alarm" {
 resource "aws_cloudwatch_metric_alarm" "create_job_key_lambda_max_duration_alarm" {
   count                     = var.frontend_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_create_job_key_lambda_max_duration_alarm"
-  alarm_description         = "Lambda duration over ${var.frontend_lambda_max_duration_threshold}ms"
+  alarm_description         = "This alarm will be triggered if createJob lambda duration over ${var.frontend_lambda_max_duration_threshold}ms"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.frontend_lambda_max_duration_threshold
@@ -157,7 +157,7 @@ resource "aws_cloudwatch_metric_alarm" "create_job_key_lambda_max_throttles_alar
 resource "aws_cloudwatch_metric_alarm" "frontend_api_max_latency_alarm" {
   count               = var.frontend_alarms_enabled ? 1 : 0
   alarm_name          = "${var.environment}_${var.region}_frontend_api_max_latency_alarm"
-  alarm_description   = "Max latency over ${var.frontend_api_max_latency_ms}ms"
+  alarm_description   = "This alarm will be triggered if frontend API max latency is over ${var.frontend_api_max_latency_ms}ms. Latency measures the time between API gateway receives the request to return a response."
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "Latency"
@@ -178,7 +178,7 @@ resource "aws_cloudwatch_metric_alarm" "frontend_api_max_latency_alarm" {
 resource "aws_cloudwatch_metric_alarm" "frontend_api_5xx_alarm" {
   count                     = var.frontend_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_frontend_api_5xx_alarm"
-  alarm_description         = "5xx errors over ${var.frontend_5xx_threshold}%"
+  alarm_description         = "This alarm will be triggered if 5xx errors is over ${var.frontend_5xx_threshold}%. Based on AWS official doc, 5XX Error measures 'The number of server-side errors captured in a given period.'"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.frontend_5xx_threshold
@@ -200,7 +200,7 @@ resource "aws_cloudwatch_metric_alarm" "frontend_api_5xx_alarm" {
 resource "aws_cloudwatch_metric_alarm" "frontend_api_4xx_alarm" {
   count                     = var.frontend_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_frontend_api_4xx_alarm"
-  alarm_description         = "4xx errors over ${var.frontend_4xx_threshold}%"
+  alarm_description         = "This alarm will be triggered if 4xx errors is over ${var.frontend_4xx_threshold}%. Based on AWS official doc, 4XX Error measures 'The number of client-side errors captured in a given period.'"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.frontend_4xx_threshold
@@ -225,7 +225,7 @@ resource "aws_cloudwatch_metric_alarm" "frontend_api_4xx_alarm" {
 resource "aws_cloudwatch_metric_alarm" "change_handler_latency_alarm" {
   count                     = var.frontend_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_change_handler_latency_alarm"
-  alarm_description         = "Max latency over ${var.change_handler_max_latency_ms}ms"
+  alarm_description         = "This alarm will be triggered if max latency is over ${var.change_handler_max_latency_ms}ms. Based on the AWS official doc, this metric measures 'the time between when a stream receives the record and when the event source mapping sends the event to the function.'"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.change_handler_max_latency_ms
@@ -251,7 +251,7 @@ resource "aws_cloudwatch_metric_alarm" "change_handler_latency_alarm" {
 resource "aws_cloudwatch_metric_alarm" "change_handler_dlq_alarm" {
   count                     = var.frontend_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_change_handler_dlq_alarm"
-  alarm_description         = "Dlq mgs sent over ${var.change_handler_dlq_threshold}%"
+  alarm_description         = "The alarm will be triggered if change handler dead letter queue messages received greater than threshold."
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.change_handler_dlq_threshold

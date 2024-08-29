@@ -48,7 +48,7 @@ variable "key_generation_image" {
 }
 
 variable "multiparty" {
-  description = "If true, uses multiparty Key Generation Instance else single party."
+  description = "If true, uses multiparty Key Generation Instance."
   type        = bool
 }
 

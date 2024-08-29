@@ -50,7 +50,11 @@ run_on_exit() {
     else
         echo "Done :("
     fi
-    docker rm -f $container_name > /dev/null 2> /dev/null
+
+    # Remove all previously loaded pbs container images if any exist
+    #
+    # Let's try to remove it, but not fail if this does not succeed
+    docker rm -f $container_name || true
 }
 
 # Make sure run_on_exit runs even when we encounter errors

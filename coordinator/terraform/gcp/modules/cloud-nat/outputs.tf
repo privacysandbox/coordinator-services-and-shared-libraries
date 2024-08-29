@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:mappings.bzl", "pkg_files")
+output "name" {
+  description = "Name of the Cloud NAT"
+  value       = local.name
+}
 
-package(default_visibility = ["//visibility:public"])
+output "nat_ip_allocate_option" {
+  description = "NAT IP allocation mode"
+  value       = local.nat_ip_allocate_option
+}
 
-pkg_files(
-    name = "distributedpbs_prober_shared",
-    srcs = glob(
-        ["*"],
-        exclude = ["BUILD"],
-    ),
-    prefix = "distributedpbs_prober",
-)
+output "region" {
+  description = "Cloud NAT region"
+  value       = google_compute_router_nat.main.region
+}
+
+output "router_name" {
+  description = "Cloud NAT router name"
+  value       = local.router
+}

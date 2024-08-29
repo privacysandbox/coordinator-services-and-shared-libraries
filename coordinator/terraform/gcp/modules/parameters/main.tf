@@ -12,10 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">= 4.83"
+    }
+  }
+}
+
 resource "google_secret_manager_secret" "coordinator_parameter" {
   secret_id = format("scp-%s-%s", var.environment, var.parameter_name)
   replication {
-    automatic = true
+    auto {}
   }
 }
 

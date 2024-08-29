@@ -112,15 +112,19 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
       pbs_instance_config_.http2_server_private_key_file_path,
       pbs_instance_config_.http2_server_certificate_file_path);
 
+  std::shared_ptr<core::AuthorizationProxyInterface> aws_authorization_proxy =
+      cloud_platform_dependency_factory_->ConstructAwsAuthorizationProxyClient(
+          async_executor_, http2_client_);
   http_server_ = std::make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
-      authorization_proxy_, metric_client_, config_provider_,
-      http2_server_options);
+      authorization_proxy_, aws_authorization_proxy, metric_client_,
+      config_provider_, http2_server_options);
 
   health_http_server_ = std::make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       /*thread_pool_size=*/1, async_executor_, pass_thru_authorization_proxy_,
+      aws_authorization_proxy,
       /*metric_client=*/nullptr, config_provider_, http2_server_options);
 
   health_service_ = std::make_shared<HealthService>(

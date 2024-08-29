@@ -38,7 +38,7 @@ class MockTransactionManager : public core::TransactionManager {
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client)
       : TransactionManager(
             async_executor, transaction_engine, max_concurrent_transactions,
-            metric_client,
+            metric_client, /*metric_router=*/nullptr,
             std::make_shared<config_provider::mock::MockConfigProvider>()) {}
 
   virtual ExecutionResult RegisterAggregateMetric(

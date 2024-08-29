@@ -58,7 +58,7 @@ resource "aws_apigatewayv2_stage" "api_gateway_stage" {
     logging_level            = "INFO"
     # Will be 0 if not defined. These are the max values
     throttling_burst_limit = 5000
-    throttling_rate_limit  = 10000
+    throttling_rate_limit  = 2300
   }
 
   access_log_settings {

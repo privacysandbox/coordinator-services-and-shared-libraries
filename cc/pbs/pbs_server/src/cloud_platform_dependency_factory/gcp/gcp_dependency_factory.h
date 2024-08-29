@@ -19,10 +19,14 @@
 #include <memory>
 #include <string>
 
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
+#include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 #include "opentelemetry/sdk/resource/resource.h"
-#include "pbs/interface/cloud_platform_dependency_factory_interface.h"
 
 namespace google::scp::pbs {
+
 class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  public:
   GcpDependencyFactory(
@@ -38,6 +42,11 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
 
   std::unique_ptr<core::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
+      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
+
+  std::unique_ptr<core::AuthorizationProxyInterface>
+  ConstructAwsAuthorizationProxyClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
 
@@ -110,6 +119,8 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   std::string budget_key_table_name_;
   std::string partition_lock_table_name_;
   std::string auth_service_endpoint_;
+  std::string alternate_auth_service_endpoint_;
+  std::string alternate_cloud_service_region_;
 
   // Reporting origin information of this coordinator for the other remote
   // coordinator.

@@ -45,10 +45,7 @@ public final class EncryptionKeyConverter {
           encryptionKey) {
     String name = PRIVATE_KEY_RESOURCE_COLLECTION + encryptionKey.getKeyId();
 
-    ImmutableList<KeyData> keyData =
-        encryptionKey.getKeySplitDataList().isEmpty()
-            ? getSinglePartyKeyData(encryptionKey)
-            : getSplitKeyData(encryptionKey);
+    ImmutableList<KeyData> keyData = getSplitKeyData(encryptionKey);
 
     var encryptionKeyBuilder =
         EncryptionKey.newBuilder()
@@ -94,18 +91,5 @@ public final class EncryptionKeyConverter {
               return keyDataBuilder.build();
             })
         .collect(ImmutableList.toImmutableList());
-  }
-
-  /** Constructs key data for legacy keys. */
-  private static ImmutableList<KeyData> getSinglePartyKeyData(
-      com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
-              .EncryptionKey
-          encryptionKey) {
-    var keyData =
-        KeyData.newBuilder()
-            .setKeyEncryptionKeyUri(encryptionKey.getKeyEncryptionKeyUri())
-            .setKeyMaterial(encryptionKey.getJsonEncodedKeyset())
-            .build();
-    return ImmutableList.of(keyData);
   }
 }

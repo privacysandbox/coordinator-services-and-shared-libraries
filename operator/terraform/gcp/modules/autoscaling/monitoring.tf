@@ -27,14 +27,18 @@ module "autoscaling_cloudfunction_alarms" {
   function_name           = google_cloudfunctions2_function.worker_scale_in_cloudfunction.name
   service_prefix          = "${var.environment} Autoscaling Cloud Function"
 
-  eval_period_sec           = var.alarm_eval_period_sec
-  error_5xx_threshold       = var.cloudfunction_5xx_threshold
-  execution_time_max        = var.cloudfunction_max_execution_time_ms
+  eval_period_sec = var.alarm_eval_period_sec
+  // This will alert if 5xx errors amount in autoscaling cloudfunction is greater than threshold.
+  error_5xx_threshold = var.cloudfunction_5xx_threshold
+  // This will alert if execution time in autoscaling cloudfunction is greater than threshold.
+  execution_time_max = var.cloudfunction_max_execution_time_ms
+  // This will alert if errors amount in autoscaling cloudfunction is greater than threshold.
   execution_error_threshold = var.cloudfunction_error_threshold
   duration_sec              = var.alarm_duration_sec
 }
 
 resource "google_monitoring_alert_policy" "autoscaling_max_instances_alarm" {
+  // The alarm will be triggered if the number of instances is more than threshold.
   count        = var.alarms_enabled ? 1 : 0
   display_name = "${var.environment} Autoscaling Instance Count Too High"
   combiner     = "OR"

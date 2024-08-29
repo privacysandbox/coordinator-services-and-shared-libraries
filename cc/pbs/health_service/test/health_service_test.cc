@@ -188,7 +188,6 @@ class HealthServiceTest : public ::testing::Test {
     config_provider_mock_ = make_shared<NiceMock<ConfigProviderMock>>();
     metric_client_mock_ = make_shared<MockMetricClient>();
     http_server_ = make_shared<MockHttp2Server>();
-    // TODO: b/297077044 Metric needs a real executor until this is implemented.
     async_executor_ =
         make_shared<AsyncExecutor>(2 /* thread count */, 10000 /* queue cap */);
     EXPECT_SUCCESS(async_executor_->Init());
@@ -441,11 +440,6 @@ TEST_F(HealthServiceTest, ShouldFailHealthCheckIfFilesystemInfoCantBeRead) {
 }
 
 TEST_F(HealthServiceTest, OTelReturnsCorrectMemoryUsageInfo) {
-  const std::map<std::string, std::string> empty_label_kv = {};
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(empty_label_kv)));
-
   health_service_.SetMemInfoFilePath(
       "cc/pbs/health_service/test/files/ninety_six_percent_meminfo_file.txt");
 
@@ -454,24 +448,19 @@ TEST_F(HealthServiceTest, OTelReturnsCorrectMemoryUsageInfo) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       memory_usage_metric_point_data = core::GetMetricPointData(
-          google::scp::pbs::kMetricNameMemoryUsage, dimensions, data);
+          google::scp::pbs::kMetricNameMemoryUsage, {}, data);
   ASSERT_TRUE(memory_usage_metric_point_data.has_value());
 
   auto memory_usage_last_value_point_data =
       std::move(std::get<opentelemetry::sdk::metrics::LastValuePointData>(
           memory_usage_metric_point_data.value()));
-  ASSERT_EQ(std::get<int64_t>(memory_usage_last_value_point_data.value_), 96)
+  EXPECT_EQ(std::get<int64_t>(memory_usage_last_value_point_data.value_), 96)
       << "Expected memory_usage_last_value_point_data.value_ to be 96 "
          "(int64_t)";
 }
 
 TEST_F(HealthServiceTest,
        OTelReturnsCorrectInstanceFileSystemStorageUsageInfo) {
-  const std::map<std::string, std::string> empty_label_kv = {};
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(empty_label_kv)));
-
   space_info fs_space_info;
   fs_space_info.capacity = 100;
   fs_space_info.available = 75;
@@ -482,14 +471,14 @@ TEST_F(HealthServiceTest,
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       filesystem_storage_usage_metric_point_data = core::GetMetricPointData(
-          google::scp::pbs::kMetricNameFileSystemStorageUsage, dimensions,
+          google::scp::pbs::kMetricNameFileSystemStorageUsage, {},
           data);
   ASSERT_TRUE(filesystem_storage_usage_metric_point_data.has_value());
 
   auto filesystem_storage_usage_last_value_point_data =
       std::move(std::get<opentelemetry::sdk::metrics::LastValuePointData>(
           filesystem_storage_usage_metric_point_data.value()));
-  ASSERT_EQ(
+  EXPECT_EQ(
       std::get<int64_t>(filesystem_storage_usage_last_value_point_data.value_),
       25)
       << "Expected "

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ################################################################################
-# TODO(b/243975243): This section should be removed and use the default VPC provided by AWS
+# TODO: This section should be removed and use the default VPC provided by AWS
 # VPC, Subnets, Security Groups
 ################################################################################
 

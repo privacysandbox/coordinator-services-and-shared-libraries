@@ -12,23 +12,98 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-provider "google-beta" {
-  billing_project       = var.project_id
-  user_project_override = true
+terraform {
+  required_providers {
+    google = ">= 4.36.0"
+  }
 }
 
-module "group" {
-  source  = "terraform-google-modules/group/google"
-  version = "~> 0.1"
+data "google_organization" "org" {
+  count  = var.customer_id == "" ? 1 : 0
+  domain = var.organization_domain
+}
 
-  id           = "${var.group_name}@${var.organization_domain}"
-  display_name = var.group_name
-  description  = "${var.group_name} Google Group via Terraform"
-  # Only use the domain if the customer id is not specified
-  domain               = var.customer_id != "" ? "" : var.organization_domain
-  owners               = var.owners
-  managers             = var.managers
-  members              = var.members
+locals {
+  customer_id = var.customer_id != "" ? var.customer_id : data.google_organization.org[0].directory_customer_id
+}
+
+resource "google_cloud_identity_group" "group" {
+  display_name         = var.group_name
+  description          = "${var.group_name} Google Group via Terraform"
+  parent               = "customers/${local.customer_id}"
   initial_group_config = var.initial_group_config
-  customer_id          = var.customer_id
+
+  group_key {
+    id = "${var.group_name}@${var.organization_domain}"
+  }
+
+  labels = {
+    "cloudidentity.googleapis.com/groups.discussion_forum" = ""
+  }
+}
+moved {
+  from = module.group.google_cloud_identity_group.group
+  to   = google_cloud_identity_group.group
+}
+
+resource "google_cloud_identity_group_membership" "owners" {
+  for_each = toset(var.owners)
+
+  group = google_cloud_identity_group.group.id
+
+  preferred_member_key {
+    id = each.key
+  }
+
+  # MEMBER role must be specified. The order of roles should not be changed.
+  roles {
+    name = "OWNER"
+  }
+  roles {
+    name = "MEMBER"
+  }
+}
+moved {
+  from = module.group.google_cloud_identity_group_membership.owners
+  to   = google_cloud_identity_group_membership.owners
+}
+
+resource "google_cloud_identity_group_membership" "managers" {
+  for_each = toset(var.managers)
+
+  group = google_cloud_identity_group.group.id
+
+  preferred_member_key {
+    id = each.key
+  }
+
+  # MEMBER role must be specified. The order of roles should not be changed.
+  roles {
+    name = "MEMBER"
+  }
+  roles {
+    name = "MANAGER"
+  }
+}
+moved {
+  from = module.group.google_cloud_identity_group_membership.managers
+  to   = google_cloud_identity_group_membership.managers
+}
+
+resource "google_cloud_identity_group_membership" "members" {
+  for_each = toset(var.members)
+
+  group = google_cloud_identity_group.group.id
+
+  preferred_member_key {
+    id = each.key
+  }
+
+  roles {
+    name = "MEMBER"
+  }
+}
+moved {
+  from = module.group.google_cloud_identity_group_membership.members
+  to   = google_cloud_identity_group_membership.members
 }

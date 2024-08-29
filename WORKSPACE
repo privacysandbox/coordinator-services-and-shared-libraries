@@ -401,8 +401,6 @@ container_pull(
     name = "cc_base",
     registry = "gcr.io",
     repository = "distroless/cc",
-    # Using SHA-256 for reproducibility.
-    # TODO: use digest instead of tag, currently it's not working.
     tag = "latest",
 )
 
@@ -411,8 +409,6 @@ container_pull(
     name = "static_base",
     registry = "gcr.io",
     repository = "distroless/static",
-    # Using SHA-256 for reproducibility.
-    # TODO: use digest instead of tag, currently it's not working.
     tag = "latest",
 )
 

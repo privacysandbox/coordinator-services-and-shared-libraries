@@ -19,6 +19,7 @@ locals {
 }
 
 resource "google_monitoring_alert_policy" "job_queue_undelivered_message_too_old_alert" {
+  // The alarm will be triggered if the job oldest age is greater than threshold.
   count        = var.alarms_enabled ? 1 : 0
   display_name = "${var.environment} Job Queue Message Too Old"
   combiner     = "OR"

@@ -70,6 +70,7 @@ resource "google_cloudfunctions2_function" "frontend_service_cloudfunction" {
       PUBSUB_SUBSCRIPTION_ID = var.job_queue_sub
       JOB_METADATA_TTL       = var.job_metadata_table_ttl_days
       JOB_VERSION            = var.job_version
+      LOG_EXECUTION_ID       = true
     }
   }
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#TODO(b/240608110) Switch to environment
+# TODO: Switch to environment
 variable "environment_prefix" {
   description = "Value used to prefix the name of the created resources."
   type        = string

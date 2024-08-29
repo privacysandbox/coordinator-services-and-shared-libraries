@@ -53,6 +53,9 @@ processors:
     send_batch_size: 1
   batch/metrics:
     timeout: 60s
+  batch/logging:
+    timeout: 60s
+    send_batch_size: 1
   resource:
     attributes:
     - key: "custom_namespace"
@@ -68,6 +71,11 @@ processors:
       include:
         match_type: strict
         metric_names: \$${file:/etc/otelcol-contrib/metrics.yaml}
+  filter/logs:
+    logs:
+      include:
+        severity_number:
+          min: ${min_log_level}
 exporters:
   googlecloud:
     metric:
@@ -75,6 +83,8 @@ exporters:
         # configures all resources to be passed on to GCP
         # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/googlecloudexporter/README.md
         - regex: .*
+    log:
+      default_log_name: /gcp/aggregate-service/logs/${environment_name}
 service:
   pipelines:
     traces:
@@ -84,6 +94,10 @@ service:
     metrics:
       receivers: [otlp]
       processors: [resource, batch/metrics, filter/metrics]
+      exporters: [googlecloud]
+    logs:
+      receivers: [otlp]
+      processors: [resource, batch/logging, filter/logs]
       exporters: [googlecloud]
 COLLECTOR_CONFIG
 systemctl start otelcol-contrib.service

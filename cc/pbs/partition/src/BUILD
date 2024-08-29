@@ -34,6 +34,7 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/journal_service/src:core_journal_service_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/budget_key_provider/src:pbs_budget_key_provider_lib",

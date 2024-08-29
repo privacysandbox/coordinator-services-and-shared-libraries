@@ -16,67 +16,64 @@
 
 #include "http2_server.h"
 
-#include <nghttp2/asio_http2_server.h>
-
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <nghttp2/asio_http2_server.h>
+
 #include "absl/strings/str_cat.h"
 #include "core/authorization_proxy/src/error_codes.h"
+#include "core/authorization_service/src/error_codes.h"
 #include "core/common/concurrent_map/src/error_codes.h"
 #include "core/common/uuid/src/uuid.h"
+#include "core/http2_server/src/error_codes.h"
 #include "core/interface/configuration_keys.h"
 #include "core/interface/errors.h"
 #include "core/interface/metrics_def.h"
+#include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "http2_utils.h"
+#include "nlohmann/json.hpp"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/type_def.h"
 #include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 
-using absl::StrCat;
-using boost::asio::ssl::context;
-using boost::system::error_code;
-using boost::system::errc::success;
-using google::scp::core::common::ConcurrentMap;
-using google::scp::core::common::kZeroUuid;
-using google::scp::core::common::Uuid;
-using google::scp::core::errors::GetErrorHttpStatusCode;
-using google::scp::core::errors::HttpStatusCode;
-using google::scp::cpio::AggregateMetric;
-using google::scp::cpio::AggregateMetricInterface;
-using google::scp::cpio::kCountSecond;
-using google::scp::cpio::MetricDefinition;
-using google::scp::cpio::MetricLabels;
-using google::scp::cpio::MetricLabelsBase;
-using google::scp::cpio::MetricName;
-using google::scp::cpio::MetricUnit;
-using nghttp2::asio_http2::server::configure_tls_context_easy;
-using nghttp2::asio_http2::server::request;
-using nghttp2::asio_http2::server::response;
-using std::bind;
-using std::make_pair;
-using std::make_shared;
-using std::move;
-using std::set;
-using std::shared_ptr;
-using std::static_pointer_cast;
-using std::string;
-using std::thread;
-using std::vector;
-using std::placeholders::_1;
-using std::placeholders::_2;
+#include "http2_utils.h"
+
+namespace google::scp::core {
+namespace {
+
+using ::boost::asio::ssl::context;
+using ::boost::system::error_code;
+using ::boost::system::errc::success;
+using ::google::scp::core::common::ConcurrentMap;
+using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::core::common::Uuid;
+using ::google::scp::core::errors::GetErrorHttpStatusCode;
+using ::google::scp::core::errors::HttpStatusCode;
+using ::google::scp::core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
+using ::google::scp::core::utils::Base64Decode;
+using ::google::scp::core::utils::PadBase64Encoding;
+using ::google::scp::cpio::AggregateMetric;
+using ::google::scp::cpio::AggregateMetricInterface;
+using ::google::scp::cpio::kCountSecond;
+using ::google::scp::cpio::MetricDefinition;
+using ::google::scp::cpio::MetricLabels;
+using ::google::scp::cpio::MetricLabelsBase;
+using ::google::scp::cpio::MetricName;
+using ::google::scp::cpio::MetricUnit;
+using ::nghttp2::asio_http2::server::configure_tls_context_easy;
+using ::nghttp2::asio_http2::server::request;
+using ::nghttp2::asio_http2::server::response;
 
 static constexpr char kHttp2Server[] = "Http2Server";
-
 static constexpr size_t kConnectionReadTimeoutInSeconds = 90;
 
-static const set<HttpStatusCode> kHttpStatusCode4xxMap = {
+static const std::set<HttpStatusCode> kHttpStatusCode4xxMap = {
     HttpStatusCode::BAD_REQUEST,
     HttpStatusCode::UNAUTHORIZED,
     HttpStatusCode::FORBIDDEN,
@@ -94,7 +91,7 @@ static const set<HttpStatusCode> kHttpStatusCode4xxMap = {
     HttpStatusCode::MISDIRECTED_REQUEST,
     HttpStatusCode::TOO_MANY_REQUESTS};
 
-static const set<HttpStatusCode> kHttpStatusCode5xxMap = {
+static const std::set<HttpStatusCode> kHttpStatusCode5xxMap = {
     HttpStatusCode::INTERNAL_SERVER_ERROR,
     HttpStatusCode::NOT_IMPLEMENTED,
     HttpStatusCode::BAD_GATEWAY,
@@ -102,24 +99,53 @@ static const set<HttpStatusCode> kHttpStatusCode5xxMap = {
     HttpStatusCode::GATEWAY_TIMEOUT,
     HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED};
 
-namespace google::scp::core {
+// Checks if the x-auth-token contains a field that only an AWS token would
+// contain to decide whether to use the AWS authorization proxy. This is to
+// authenticate requests that come from AWS PBS to GCP PBS via DNS.
+bool UseAwsAuthorizationProxy(
+    const AuthorizationMetadata& authorization_metadata) {
+  ExecutionResultOr<std::string> padded_token =
+      PadBase64Encoding(authorization_metadata.authorization_token);
+  if (!padded_token.Successful()) {
+    return false;
+  }
+
+  std::string token;
+  if (ExecutionResult execution_result = Base64Decode(*padded_token, token);
+      !execution_result.Successful()) {
+    return false;
+  }
+  nlohmann::json json_token;
+  try {
+    json_token = nlohmann::json::parse(token);
+  } catch (...) {
+    return false;
+  }
+  static constexpr absl::string_view kAmzDate = "amz_date";
+  return json_token.contains(kAmzDate);
+}
+
+}  // namespace
+
 ExecutionResult Http2Server::MetricInit() noexcept {
-  auto metric_name = make_shared<MetricName>(kMetricNameHttpRequest);
-  auto metric_unit = make_shared<MetricUnit>(kCountSecond);
-  auto metric_info = make_shared<MetricDefinition>(metric_name, metric_unit);
+  auto metric_name = std::make_shared<MetricName>(kMetricNameHttpRequest);
+  auto metric_unit = std::make_shared<MetricUnit>(kCountSecond);
+  auto metric_info =
+      std::make_shared<MetricDefinition>(metric_name, metric_unit);
   MetricLabelsBase label_base(kHttp2Server);
   metric_info->labels =
-      make_shared<MetricLabels>(label_base.GetMetricLabelsBase());
-  vector<string> event_list = {kMetricEventHttpUnableToResolveRoute,
-                               kMetricEventHttp2xxLocal,
-                               kMetricEventHttp4xxLocal,
-                               kMetricEventHttp5xxLocal,
-                               kMetricEventHttp2xxForwarded,
-                               kMetricEventHttp4xxForwarded,
-                               kMetricEventHttp5xxForwarded};
-  http_request_metrics_ = make_shared<AggregateMetric>(
+      std::make_shared<MetricLabels>(label_base.GetMetricLabelsBase());
+  std::vector<std::string> event_list = {kMetricEventHttpUnableToResolveRoute,
+                                         kMetricEventHttp2xxLocal,
+                                         kMetricEventHttp4xxLocal,
+                                         kMetricEventHttp5xxLocal,
+                                         kMetricEventHttp2xxForwarded,
+                                         kMetricEventHttp4xxForwarded,
+                                         kMetricEventHttp5xxForwarded};
+  http_request_metrics_ = std::make_shared<AggregateMetric>(
       async_executor_, metric_client_, metric_info,
-      aggregated_metric_interval_ms_, make_shared<vector<string>>(event_list));
+      aggregated_metric_interval_ms_,
+      std::make_shared<std::vector<std::string>>(event_list));
   return http_request_metrics_->Init();
 }
 
@@ -202,7 +228,7 @@ ExecutionResult Http2Server::Run() noexcept {
     }
   }
 
-  vector<string> paths;
+  std::vector<std::string> paths;
   auto execution_result = resource_handlers_.Keys(paths);
   if (!execution_result.Successful()) {
     return execution_result;
@@ -211,9 +237,10 @@ ExecutionResult Http2Server::Run() noexcept {
   for (const auto& path : paths) {
     // TODO: here we are binding a universal handler, and the real
     // handler is looked up again inside it. Ideally, we can do the look up
-    // here, and pass the result to bind(), to save runtime cost.
-    http2_server_.handle(path,
-                         bind(&Http2Server::OnHttp2Request, this, _1, _2));
+    // here, and pass the result to std::bind(), to save runtime cost.
+    http2_server_.handle(
+        path, std::bind(&Http2Server::OnHttp2Request, this,
+                        std::placeholders::_1, std::placeholders::_2));
   }
 
   http2_server_.read_timeout(
@@ -273,8 +300,8 @@ ExecutionResult Http2Server::RegisterResourceHandler(
         errors::SC_HTTP2_SERVER_CANNOT_REGISTER_HANDLER);
   }
   auto verb_to_handler_map =
-      make_shared<ConcurrentMap<HttpMethod, HttpHandler>>();
-  auto path_to_map_pair = make_pair(path, verb_to_handler_map);
+      std::make_shared<ConcurrentMap<HttpMethod, HttpHandler>>();
+  auto path_to_map_pair = std::make_pair(path, verb_to_handler_map);
 
   auto execution_result =
       resource_handlers_.Insert(path_to_map_pair, verb_to_handler_map);
@@ -286,14 +313,14 @@ ExecutionResult Http2Server::RegisterResourceHandler(
     }
   }
 
-  auto verb_to_handler_pair = make_pair(http_method, handler);
+  auto verb_to_handler_pair = std::make_pair(http_method, handler);
   return verb_to_handler_map->Insert(verb_to_handler_pair, handler);
 }
 
 void Http2Server::OnHttp2Request(const request& request,
                                  const response& response) noexcept {
   auto parent_activity_id = Uuid::GenerateUuid();
-  auto http2Request = make_shared<NgHttp2Request>(request);
+  auto http2Request = std::make_shared<NgHttp2Request>(request);
   auto request_endpoint_type = RequestTargetEndpointType::Unknown;
   if (!IsRequestForwardingEnabled()) {
     request_endpoint_type = RequestTargetEndpointType::Local;
@@ -304,10 +331,11 @@ void Http2Server::OnHttp2Request(const request& request,
   // throughout the lifetime of this context and subsequent child contexts.
   AsyncContext<NgHttp2Request, NgHttp2Response> http2_context(
       http2Request,
-      bind(&Http2Server::OnHttp2Response, this, _1, request_endpoint_type),
+      std::bind(&Http2Server::OnHttp2Response, this, std::placeholders::_1,
+                request_endpoint_type),
       parent_activity_id, http2Request->id);
-  http2_context.response = make_shared<NgHttp2Response>(response);
-  http2_context.response->headers = make_shared<core::HttpHeaders>();
+  http2_context.response = std::make_shared<NgHttp2Response>(response);
+  http2_context.response->headers = std::make_shared<core::HttpHeaders>();
 
   SCP_DEBUG_CONTEXT(kHttp2Server, http2_context, "Received a http2 request");
 
@@ -319,7 +347,7 @@ void Http2Server::OnHttp2Request(const request& request,
   }
 
   // Check if path is registered
-  shared_ptr<ConcurrentMap<HttpMethod, HttpHandler>> resource_handler;
+  std::shared_ptr<ConcurrentMap<HttpMethod, HttpHandler>> resource_handler;
   execution_result = resource_handlers_.Find(
       http2_context.request->handler_path, resource_handler);
   if (!execution_result.Successful()) {
@@ -364,21 +392,24 @@ void Http2Server::RouteOrHandleHttp2Request(
 
     if (!endpoint_info->is_local_endpoint) {
       // Rebind the callback with the updated request target type
-      http2_context.callback = bind(&Http2Server::OnHttp2Response, this, _1,
-                                    RequestTargetEndpointType::Remote);
+      http2_context.callback =
+          std::bind(&Http2Server::OnHttp2Response, this, std::placeholders::_1,
+                    RequestTargetEndpointType::Remote);
       // Perform routing when request data is obtained on the connection. If the
       // connection is closed, do OnHttp2CleanupRoutedRequest.
       http2_context.request->SetOnRequestBodyDataReceivedCallback(
-          bind(&Http2Server::OnHttp2RequestDataObtainedRoutedRequest, this,
-               http2_context, *endpoint_info, _1));
+          std::bind(&Http2Server::OnHttp2RequestDataObtainedRoutedRequest, this,
+                    http2_context, *endpoint_info, std::placeholders::_1));
       http2_context.response->SetOnCloseCallback(
-          bind(&Http2Server::OnHttp2CleanupOfRoutedRequest, this,
-               http2_context.request->id, http2_context.request->id, _1));
+          std::bind(&Http2Server::OnHttp2CleanupOfRoutedRequest, this,
+                    http2_context.request->id, http2_context.request->id,
+                    std::placeholders::_1));
       return;
     }
     // Rebind the callback with the updated request target type
-    http2_context.callback = bind(&Http2Server::OnHttp2Response, this, _1,
-                                  RequestTargetEndpointType::Local);
+    http2_context.callback =
+        std::bind(&Http2Server::OnHttp2Response, this, std::placeholders::_1,
+                  RequestTargetEndpointType::Local);
     // Local endpoint handling continues below.
   }
 
@@ -397,13 +428,13 @@ void Http2Server::OnHttp2RequestDataObtainedRoutedRequest(
 
   // Typecast to avoid copying data when constructing a new context.
   AsyncContext<HttpRequest, HttpResponse> routing_context(
-      static_pointer_cast<HttpRequest>(http2_context.request),
+      std::static_pointer_cast<HttpRequest>(http2_context.request),
       std::bind(&Http2Server::OnRoutingResponseReceived, this, http2_context,
-                _1),
+                std::placeholders::_1),
       http2_context);
   // The target path should reflect the forwarding endpoint.
-  routing_context.request->path = make_shared<string>(
-      StrCat(*endpoint_info.uri, http2_context.request->handler_path));
+  routing_context.request->path = std::make_shared<std::string>(
+      absl::StrCat(*endpoint_info.uri, http2_context.request->handler_path));
 
   auto execution_result = request_router_->RouteRequest(routing_context);
   if (!execution_result.Successful()) {
@@ -438,13 +469,13 @@ void Http2Server::HandleHttp2Request(
   // authorization token in parallel. If the authorization fails, the response
   // will be sent immediately, if it is successful the flow will proceed.
 
-  auto sync_context = make_shared<Http2SynchronizationContext>();
+  auto sync_context = std::make_shared<Http2SynchronizationContext>();
   sync_context->pending_callbacks = 2;  // 1 for authorization, 1 for body data.
   sync_context->http2_context = http2_context;
   sync_context->http_handler = http_handler;
   sync_context->failed = false;
 
-  auto context_pair = make_pair(http2_context.request->id, sync_context);
+  auto context_pair = std::make_pair(http2_context.request->id, sync_context);
   auto execution_result = active_requests_.Insert(context_pair, sync_context);
   if (!execution_result.Successful()) {
     http2_context.result = execution_result;
@@ -452,7 +483,7 @@ void Http2Server::HandleHttp2Request(
     return;
   }
 
-  auto authorization_request = make_shared<AuthorizationProxyRequest>();
+  auto authorization_request = std::make_shared<AuthorizationProxyRequest>();
   auto& headers = http2_context.request->headers;
 
   if (headers) {
@@ -478,14 +509,32 @@ void Http2Server::HandleHttp2Request(
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_context(authorization_request,
-                            bind(&Http2Server::OnAuthorizationCallback, this,
-                                 _1, http2_context.request->id, sync_context),
+                            std::bind(&Http2Server::OnAuthorizationCallback,
+                                      this, std::placeholders::_1,
+                                      http2_context.request->id, sync_context),
                             http2_context);
+
+  std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy_to_use =
+      authorization_proxy_;
+
+  bool dns_routing_enabled = false;
+  if (config_provider_ != nullptr &&
+      config_provider_->Get(kHttpServerDnsRoutingEnabled, dns_routing_enabled)
+          .Successful() &&
+      dns_routing_enabled) {
+    if (aws_authorization_proxy_ != nullptr &&
+        UseAwsAuthorizationProxy(
+            authorization_context.request->authorization_metadata)) {
+      authorization_proxy_to_use = aws_authorization_proxy_;
+      SCP_DEBUG_CONTEXT(kHttp2Server, http2_context,
+                        "Switching to AWS Authorization Proxy.");
+    }
+  }
 
   operation_dispatcher_.Dispatch<
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>>(
       authorization_context,
-      [authorization_proxy = authorization_proxy_](
+      [authorization_proxy = authorization_proxy_to_use](
           AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
               authorization_context) {
         return authorization_proxy->Authorize(authorization_context);
@@ -510,28 +559,31 @@ void Http2Server::HandleHttp2Request(
   // 3. Connection is terminated (response.on_closed is invoked)
   //
   http2_context.request->SetOnRequestBodyDataReceivedCallback(
-      bind(&Http2Server::OnHttp2PendingCallback, this, _1,
-           http2_context.request->id));
+      std::bind(&Http2Server::OnHttp2PendingCallback, this,
+                std::placeholders::_1, http2_context.request->id));
   http2_context.response->SetOnCloseCallback(
-      bind(&Http2Server::OnHttp2Cleanup, this, http2_context.request->id,
-           http2_context.request->id, _1));
+      std::bind(&Http2Server::OnHttp2Cleanup, this, http2_context.request->id,
+                http2_context.request->id, std::placeholders::_1));
 }
 
 void Http2Server::OnAuthorizationCallback(
     AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
         authorization_context,
     Uuid& request_id,
-    const shared_ptr<Http2SynchronizationContext>& sync_context) noexcept {
+    const std::shared_ptr<Http2SynchronizationContext>& sync_context) noexcept {
   if (!authorization_context.result.Successful()) {
     SCP_DEBUG_CONTEXT(kHttp2Server, authorization_context,
                       "Authorization failed.");
   } else {
+    sync_context->http2_context.request->auth_context
+        .authorized_domain = std::make_shared<std::string>(
+        authorization_context.request->authorization_metadata.claimed_identity);
     if (adtech_site_authorized_domain_enabled_) {
       sync_context->http2_context.request->auth_context.authorized_domain =
           authorization_context.response->authorized_metadata.authorized_domain;
     } else {
       sync_context->http2_context.request->auth_context.authorized_domain =
-          make_shared<std::string>(
+          std::make_shared<std::string>(
               authorization_context.request->authorization_metadata
                   .claimed_identity);
     }
@@ -544,7 +596,7 @@ void Http2Server::OnHttp2PendingCallback(
     ExecutionResult callback_execution_result,
     const Uuid& request_id) noexcept {
   // Lookup the sync context
-  shared_ptr<Http2SynchronizationContext> sync_context;
+  std::shared_ptr<Http2SynchronizationContext> sync_context;
   auto execution_result = active_requests_.Find(request_id, sync_context);
   if (!execution_result.Successful()) {
     // TODO: Log this.
@@ -575,10 +627,10 @@ void Http2Server::OnHttp2PendingCallback(
       sync_context->http2_context.parent_activity_id;
   http_context.activity_id = sync_context->http2_context.activity_id;
   http_context.correlation_id = sync_context->http2_context.correlation_id;
-  http_context.request =
-      static_pointer_cast<HttpRequest>(sync_context->http2_context.request);
-  http_context.response =
-      static_pointer_cast<HttpResponse>(sync_context->http2_context.response);
+  http_context.request = std::static_pointer_cast<HttpRequest>(
+      sync_context->http2_context.request);
+  http_context.response = std::static_pointer_cast<HttpResponse>(
+      sync_context->http2_context.response);
   http_context.callback =
       [this, http2_context = sync_context->http2_context](
           AsyncContext<HttpRequest, HttpResponse>& http_context) mutable {
@@ -603,7 +655,7 @@ void Http2Server::OnHttp2PendingCallback(
  * @param endpoint_type
  */
 static void IncrementHttpResponseMetric(
-    shared_ptr<AggregateMetricInterface> metric,
+    std::shared_ptr<AggregateMetricInterface> metric,
     errors::HttpStatusCode error_code,
     Http2Server::RequestTargetEndpointType endpoint_type) {
   // Unknown state happens when the routing is enabled and the request route

@@ -182,8 +182,6 @@ public class DynamoMetadataDbTest {
             .build();
   }
 
-  // TODO: abstract this into a testing module like {@link
-  // com.google.scp.coordinator.keymanagement.testutils.KeyDbIntegrationTestModule}
   private void createTable() {
     CreateTableRequest request =
         CreateTableRequest.builder()

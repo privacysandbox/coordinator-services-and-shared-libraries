@@ -63,6 +63,7 @@ resource "google_storage_bucket" "mpkhs_secondary_package_bucket" {
   name                        = local.package_bucket_name
   location                    = var.mpkhs_secondary_package_bucket_location
   uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
 }
 
 # Cloud KMS encryption ring and key encryption key (KEK)

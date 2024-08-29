@@ -28,10 +28,13 @@ cc_test(
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
         "//cc/core/test/utils:utils_lib",
         "//cc/pbs/partition/src:pbs_partition_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )

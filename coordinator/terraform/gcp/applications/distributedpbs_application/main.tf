@@ -158,6 +158,8 @@ module "pbs_lb" {
 
   enable_domain_management       = var.enable_domain_management
   pbs_domain                     = local.pbs_domain
+  parent_domain_name             = var.parent_domain_name
+  parent_domain_project          = var.parent_domain_project
   pbs_ip_address                 = local.pbs_ip_address
   pbs_auth_cloudfunction_name    = module.pbs_auth.pbs_auth_cloudfunction_name
   pbs_managed_instance_group_url = module.pbs_managed_instance_group_environment.pbs_instance_group_url
@@ -189,16 +191,44 @@ resource "google_compute_subnetwork" "mig_subnetwork" {
   private_ip_google_access = true
 }
 
-# Cloud NAT to provide internet to VMs without external IPs.
-module "vpc_nat" {
-  source  = "terraform-google-modules/cloud-nat/google"
-  version = "~> 1.2"
+# Cloud router with NAT to provide internet to VMs without external IPs.
+resource "google_compute_router" "pbs" {
+  name    = "${var.environment}-pbs-router"
+  project = var.project
+  region  = var.region
+  network = google_compute_network.vpc_default_network.id
 
-  project_id    = var.project
-  network       = google_compute_network.vpc_default_network.self_link
-  region        = var.region
-  create_router = true
-  router        = "${var.environment}-pbs-router"
+  bgp {
+    asn = 64514
+  }
+}
+moved {
+  from = module.vpc_nat.google_compute_router.router[0]
+  to   = google_compute_router.pbs
+}
+
+resource "random_string" "nat" {
+  length  = 6
+  upper   = false
+  special = false
+}
+moved {
+  from = module.vpc_nat.random_string.name_suffix
+  to   = random_string.nat
+}
+
+resource "google_compute_router_nat" "pbs" {
+  name    = "cloud-nat-${random_string.nat.result}"
+  project = var.project
+  region  = var.region
+  router  = google_compute_router.pbs.name
+
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+  nat_ip_allocate_option             = "AUTO_ONLY"
+}
+moved {
+  from = module.vpc_nat.google_compute_router_nat.main
+  to   = google_compute_router_nat.pbs
 }
 
 resource "google_compute_firewall" "ingress_instance_firewall" {

@@ -21,9 +21,6 @@ namespace google::scp::pbs {
 // elsewhere. This is swapped instead of an AsyncExecutor to get
 // Sync behavior on NoSQLDatabaseProvider for LeasableLock. Once we have support
 // for Sync API on NoSQLDatabaseProvider, this will be removed.
-// TODO: b/279493757 Add Sync API for
-// GCPSpanner/Dynamo/NoSQLDatabaseProviderInterface
-//
 /**
  * @brief Synchronous blocking Executor. Any task scheduled on this would
  * execute on the scheduling (calling) thread itself, i.e. no async operation is

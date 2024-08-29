@@ -75,7 +75,9 @@ java_test(
         "//java/com/google/scp/shared/api/util",
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",
+        "//java/external:aws_sts",
         "//java/external:google_truth",
         "//java/external:mockito",
+        "//java/external:resilience4j_retry",
     ],
 )

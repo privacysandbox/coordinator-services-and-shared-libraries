@@ -277,9 +277,6 @@ ExecutionResult PBSInstanceMultiPartition::ConstructDependencies() noexcept {
   auth_token_provider_cache_ =
       platform_dependency_factory_->ConstructAuthorizationTokenProviderCache(
           async_executor_, io_async_executor_, http1_client_);
-  // TODO: b/279493757 Add Support for Synchronous API on NoSQLDatabaseProvider.
-  // SynchronousExecutor is a temporary solution only. SynchronousExecutor does
-  // not need Init(), Run() and Stop().
   nosql_database_provider_for_leasable_lock_ =
       platform_dependency_factory_->ConstructNoSQLDatabaseClient(
           make_shared<SynchronousExecutor>(),
@@ -394,12 +391,13 @@ ExecutionResult PBSInstanceMultiPartition::ConstructDependencies() noexcept {
   http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
-      authorization_proxy_, request_router_, request_route_resolver_,
-      metric_client_, config_provider_, http2_server_options);
+      authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
+      request_router_, request_route_resolver_, metric_client_,
+      config_provider_, http2_server_options);
   health_http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       1 /* one thread needed */, async_executor_,
-      pass_thru_authorization_proxy_,
+      pass_thru_authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
       nullptr /* metric_client, no metric recording for health http server */,
       config_provider_, http2_server_options);
   health_service_ = make_shared<HealthService>(

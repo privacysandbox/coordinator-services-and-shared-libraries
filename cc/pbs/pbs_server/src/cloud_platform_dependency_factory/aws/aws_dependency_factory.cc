@@ -219,6 +219,13 @@ AwsDependencyFactory::ConstructAuthorizationProxyClient(
           cloud_service_region_, config_provider_));
 }
 
+unique_ptr<AuthorizationProxyInterface>
+AwsDependencyFactory::ConstructAwsAuthorizationProxyClient(
+    shared_ptr<core::AsyncExecutorInterface> async_executor,
+    shared_ptr<core::HttpClientInterface> http_client) noexcept {
+  return nullptr;
+}
+
 unique_ptr<BlobStorageProviderInterface>
 AwsDependencyFactory::ConstructBlobStorageClient(
     shared_ptr<core::AsyncExecutorInterface> async_executor,

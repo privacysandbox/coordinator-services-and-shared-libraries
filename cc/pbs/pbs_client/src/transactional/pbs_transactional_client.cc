@@ -110,7 +110,7 @@ PrivacyBudgetServiceTransactionalClient::
       transaction_manager_(make_shared<TransactionManager>(
           async_executor_, transaction_command_serializer_, journal_service_,
           remote_transaction_manager_, max_concurrent_transactions_,
-          metric_client_, config_provider_)) {
+          metric_client_, /*metric_router_=*/nullptr, config_provider_)) {
   auto mock_metric_client =
       dynamic_pointer_cast<MockMetricClient>(metric_client_);
   ON_CALL(*mock_metric_client, PutMetrics).WillByDefault([&](auto context) {

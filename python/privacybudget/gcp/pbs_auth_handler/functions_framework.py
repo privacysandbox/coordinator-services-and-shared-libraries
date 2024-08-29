@@ -16,5 +16,5 @@
 
 
 def http(function):
-    # Just a dummy decorator
-    return function
+  # Just a dummy decorator
+  return function

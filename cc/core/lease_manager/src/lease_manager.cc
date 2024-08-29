@@ -145,9 +145,6 @@ void LeaseManager::LeaseEnforcerThreadFunction() {
       NotifyLeaseObtainer(true /* obtain lease */);
     }
 
-    // TODO b/280466468 Ensure lease obtainer is acknowledging
-    // notification, otherwise terminate the process.
-
     if (IsLeaseRefreshTakingLong()) {
       terminate_process_function_();
     }
@@ -217,7 +214,6 @@ ExecutionResult LeaseManager::Run() noexcept {
     sleep_for(milliseconds(kSleepDurationMs));
   }
 
-  // TODO: Set high priority for threads.
   return SuccessExecutionResult();
 }
 

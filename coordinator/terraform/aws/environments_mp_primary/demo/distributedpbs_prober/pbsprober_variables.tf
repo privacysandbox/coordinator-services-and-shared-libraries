@@ -1,1 +1,0 @@
-../../shared/distributedpbs_prober/pbsprober_variables.tf

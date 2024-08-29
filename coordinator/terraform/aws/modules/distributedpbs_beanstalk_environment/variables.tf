@@ -139,6 +139,12 @@ variable "application_environment_variables" {
   default     = {}
 }
 
+variable "enable_imds_v2" {
+  description = "Whether to enable IMDSv2 for the environment."
+  type        = bool
+  nullable    = false
+}
+
 variable "enable_vpc" {
   description = "Whether to use a VPC for the environment."
   type        = bool

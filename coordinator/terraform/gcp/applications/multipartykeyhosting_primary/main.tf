@@ -62,6 +62,7 @@ resource "google_storage_bucket" "mpkhs_primary_package_bucket" {
   name                        = local.package_bucket_name
   location                    = var.mpkhs_primary_package_bucket_location
   uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
 }
 
 resource "google_monitoring_notification_channel" "alarm_email" {
@@ -284,7 +285,6 @@ module "key_storage_service_base_url" {
   parameter_value = var.key_storage_service_base_url
 }
 
-// TODO(b/275758643)
 module "key_storage_service_cloudfunction_url" {
   source          = "../../modules/parameters"
   environment     = var.environment

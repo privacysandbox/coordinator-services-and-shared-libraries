@@ -237,8 +237,9 @@ module "worker" {
   target_cpu_utilization    = var.target_cpu_utilization
   collector_startup_script  = var.collector_startup_script
 
-  # OTel Metrics
+  # OTel Variables
   allowed_otel_metrics = var.allowed_otel_metrics
+  min_log_level        = var.min_log_level
 }
 
 module "autoscaling" {

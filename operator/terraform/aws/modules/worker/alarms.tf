@@ -24,6 +24,7 @@ ALARM(${aws_cloudwatch_composite_alarm.worker_job_error_composite_alarm[0].alarm
 }
 
 resource "aws_cloudwatch_metric_alarm" "job_client_error_alarm" {
+  // Error specified in var.job_client_error_reasons from ErrorReason.java will create an alarm.
   for_each                  = var.worker_alarms_enabled ? toset(var.job_client_error_reasons) : []
   alarm_name                = "${var.environment}_${var.region}_${each.key}_job_client_alarm"
   alarm_description         = "Job client exception alarm for ${each.key}"
@@ -44,6 +45,7 @@ resource "aws_cloudwatch_metric_alarm" "job_client_error_alarm" {
 }
 
 resource "aws_cloudwatch_composite_alarm" "job_client_error_composite_alarm" {
+  // This is the composite alarm for job_client_error.
   count             = var.worker_alarms_enabled ? 1 : 0
   alarm_name        = "${var.environment}_${var.region}_job_client_composite_alarm"
   alarm_description = "Job client exception composite alarm"
@@ -54,6 +56,7 @@ resource "aws_cloudwatch_composite_alarm" "job_client_error_composite_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "job_validation_failure_alarm" {
+  // Error specified in var.job_validation_types will create an alarm.
   for_each                  = var.worker_alarms_enabled ? toset(var.job_validation_types) : []
   alarm_name                = "${var.environment}_${var.region}_${each.key}_job_validation_failure_alarm"
   alarm_description         = "Job validation failure alarm for ${each.key}"
@@ -74,6 +77,7 @@ resource "aws_cloudwatch_metric_alarm" "job_validation_failure_alarm" {
 }
 
 resource "aws_cloudwatch_composite_alarm" "job_validation_failure_composite_alarm" {
+  // This is the composite alarm for var.job_validation_types
   count             = var.worker_alarms_enabled ? 1 : 0
   alarm_name        = "${var.environment}_${var.region}_job_validation_failure_composite_alarm"
   alarm_description = "Job validation failure composite alarm"
@@ -85,6 +89,7 @@ resource "aws_cloudwatch_composite_alarm" "job_validation_failure_composite_alar
 }
 
 resource "aws_cloudwatch_metric_alarm" "worker_job_error_metric" {
+  // Error specified in var.worker_alarm_metric_dimensions will create an alarm.
   for_each                  = var.worker_alarms_enabled ? toset(var.worker_alarm_metric_dimensions) : []
   alarm_name                = "${var.environment}_${var.region}_${each.key}_worker_job_alarm"
   alarm_description         = "General job processing exception alarm"
@@ -105,6 +110,7 @@ resource "aws_cloudwatch_metric_alarm" "worker_job_error_metric" {
 }
 
 resource "aws_cloudwatch_composite_alarm" "worker_job_error_composite_alarm" {
+  // This is the composite alarm for var.job_validation_types
   count             = var.worker_alarms_enabled ? 1 : 0
   alarm_name        = "${var.environment}_${var.region}_worker_job_error_composite_alarm"
   alarm_description = "Worker job error alarm composite alarm"
@@ -116,6 +122,7 @@ resource "aws_cloudwatch_composite_alarm" "worker_job_error_composite_alarm" {
 }
 
 resource "aws_cloudwatch_composite_alarm" "worker_composite_alarm" {
+  // This is the composite alarm for job_client_error_composite_alarm, job_validation_failure_composite_alarm and worker_job_error_composite_alarm.
   count             = var.worker_alarms_enabled ? 1 : 0
   alarm_name        = "${var.environment}_${var.region}_worker_service_composite_alarm"
   alarm_description = "Entire worker service composite alarm"

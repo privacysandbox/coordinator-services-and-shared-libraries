@@ -126,6 +126,7 @@ module "operator_service" {
 
   # OpenTelemetry
   allowed_otel_metrics = var.allowed_otel_metrics
+  min_log_level        = var.min_log_level
 }
 
 # Used by Terraform to treat any existing resources belonging to formerly known

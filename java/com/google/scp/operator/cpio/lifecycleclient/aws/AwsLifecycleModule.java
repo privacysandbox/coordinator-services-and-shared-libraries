@@ -66,7 +66,6 @@ public final class AwsLifecycleModule extends LifecycleModule {
       SdkHttpClient httpClient,
       RetryPolicy retryPolicy,
       @AutoScalingEndpointOverrideBinding URI endpointOverride,
-      // TODO(b/202524864): rename annotation to adtech region
       @ApplicationRegionBinding String region) {
     AutoScalingClientBuilder clientBuilder =
         AutoScalingClient.builder()

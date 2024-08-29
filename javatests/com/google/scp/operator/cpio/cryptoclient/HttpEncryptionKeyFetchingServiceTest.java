@@ -19,7 +19,6 @@ package com.google.scp.operator.cpio.cryptoclient;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.api.model.Code.PERMISSION_DENIED;
-import static com.google.scp.shared.api.model.Code.UNKNOWN;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -88,7 +87,7 @@ public final class HttpEncryptionKeyFetchingServiceTest {
     assertThat(exception).hasCauseThat().isInstanceOf(ServiceException.class);
     ServiceException e = (ServiceException) exception.getCause();
     assertThat(e.getMessage()).contains(getForbiddenResponse());
-    assertThat(e.getErrorCode()).isEqualTo(UNKNOWN); // Due to absence of code field in JSON
+    assertThat(e.getErrorCode()).isEqualTo(PERMISSION_DENIED);
     assertThat(e.getErrorReason()).contains("");
   }
 

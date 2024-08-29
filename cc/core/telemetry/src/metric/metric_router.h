@@ -17,7 +17,9 @@
 #include <memory>
 #include <string>
 
+#include "absl/synchronization/mutex.h"
 #include "cc/core/interface/config_provider_interface.h"
+#include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/meter_provider.h"
 #include "opentelemetry/metrics/observer_result.h"
@@ -35,6 +37,29 @@ namespace google::scp::core {
 
 class MetricRouter {
  public:
+  // OTel metric Instruments owned by MetricRouter. This is needed when a PBS
+  // component cannot own these Instruments itself due to object lifetime
+  // constraints.
+  struct MetricInstruments {
+    // TransactionManager
+    //
+    // The OpenTelemetry Instrument for the number of active transactions.
+    //
+    // Reports the maximum number of concurrent active transactions since
+    // metric is last observed, because the real-time number of active
+    // transactions fluctuates too quickly to be useful.
+    std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+        active_transactions_instrument;
+
+    // The OpenTelemetry Instrument for the number of received transactions.
+    std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+        received_transactions_instrument;
+
+    // The OpenTelemetry Instrument for the number of finished transactions.
+    std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+        finished_transactions_instrument;
+  };
+
   // Create a MetricRouter with a Periodic Reader, given a Resource and a
   // cloud-specific Exporter
   explicit MetricRouter(
@@ -43,6 +68,18 @@ class MetricRouter {
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
 
+  // TransactionManager
+  std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+  GetActiveTransactionsInstrument();
+
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+  GetReceivedTransactionsInstrument();
+
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+  GetFinishedTransactionsInstrument();
+
+  std::shared_ptr<opentelemetry::metrics::Meter> transaction_manager_meter_;
+
  protected:
   MetricRouter() = default;
 
@@ -50,6 +87,12 @@ class MetricRouter {
   void SetupMetricRouter(
       opentelemetry::sdk::resource::Resource resource,
       std::shared_ptr<opentelemetry::sdk::metrics::MetricReader> metric_reader);
+
+  void SetupTransactionManagerMetricInstruments();
+
+  MetricInstruments metric_instruments_;
+
+  mutable absl::Mutex metric_instruments_mutex_;
 
  private:
   static std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>

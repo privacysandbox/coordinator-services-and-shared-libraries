@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "coordinator_assume_role_arns" {
-  description = "Map of assumed role ARNs. Key = principal. Value = assumed role ARN"
+  description = "Map of assumed role ARNs for each party. Key = principal. Value = assumed role ARN"
   value       = module.singlepartyroleprovider.coordinator_assume_role_arns
 }
 

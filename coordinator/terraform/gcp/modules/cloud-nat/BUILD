@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "lambda_version" {
-  value = module.pbsprober.lambda_version
-}
+load("@rules_pkg//:mappings.bzl", "pkg_files")
 
-output "lambda_assumed_role" {
-  value = module.pbsprober.lambda_assumed_role
-}
+package(default_visibility = ["//visibility:public"])
 
-output "pbsprober_lambda_principal_role_arn" {
-  value = module.pbsprober.pbsprober_lambda_principal_role_arn
-}
-
-output "pbsprober_lambda_principal_role_id" {
-  value = module.pbsprober.pbsprober_lambda_principal_role_id
-}
+pkg_files(
+    name = "cloud-nat",
+    srcs = glob(
+        ["*"],
+        exclude = [
+            "BUILD",
+        ],
+    ),
+    prefix = "cloud-nat",
+)

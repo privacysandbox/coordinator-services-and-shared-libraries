@@ -43,8 +43,6 @@ public final class KeyStorageService {
   /**
    * Handles a request to save a key, returning an {@link EncryptionKey} after populating the
    * signature field.
-   *
-   * <p>TODO(b/206030473): Implement signing. Currently returns the key without signatures.
    */
   public EncryptionKey createKey(CreateKeyRequest request) throws ServiceException {
     try {
@@ -70,7 +68,6 @@ public final class KeyStorageService {
                   "Invalid keySplitEncryptionType (%s)", request.getKeySplitEncryptionType()));
       }
 
-      // TODO(b/206030473): this will eventually also populate with signatures
       return EncryptionKeyConverter.toApiEncryptionKey(storedKey);
     } catch (IllegalArgumentException ex) {
       throw new ServiceException(INVALID_ARGUMENT, INVALID_ARGUMENT.name(), ex.getMessage(), ex);

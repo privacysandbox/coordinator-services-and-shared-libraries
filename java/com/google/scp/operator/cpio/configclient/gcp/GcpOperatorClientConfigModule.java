@@ -62,8 +62,6 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
   @Singleton
   GoogleCredentials provideCoordinatorBCredentials(GcpOperatorClientConfig config)
       throws IOException {
-    // For single party solution, we will not have coordinatorB details, so use default
-    // credentials. These are not used for single party solution.
     if (config.useLocalCredentials() || config.coordinatorBWipProvider().isEmpty()) {
       return GoogleCredentials.getApplicationDefault();
     }

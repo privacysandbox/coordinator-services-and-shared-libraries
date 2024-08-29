@@ -152,6 +152,7 @@ ExecutionResult PBSPartition::Init() noexcept {
       journal_service_, partition_dependencies_.remote_transaction_manager,
       partition_transaction_manager_capacity_,
       partition_dependencies_.metric_client,
+      partition_dependencies_.metric_router,
       partition_dependencies_.config_provider, partition_id_);
 
   INIT_PBS_PARTITION_COMPONENT(journal_service_);
@@ -365,6 +366,10 @@ ExecutionResult PBSPartition::GetTransactionManagerStatus(
   IncrementRequestCount();
 
   return transaction_manager_->GetTransactionManagerStatus(request, response);
+}
+
+core::PartitionId PBSPartition::GetPartitionId() const {
+  return partition_id_;
 }
 
 }  // namespace google::scp::pbs

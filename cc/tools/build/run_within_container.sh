@@ -14,7 +14,8 @@
 # limitations under the License.
 
 
-set -euo pipefail
+set -eux
+set -o pipefail
 
 eval "$(cat $(bazel info workspace)/cc/tools/build/build_container_params.bzl | tr -d ' ')"
 build_container_tag="$CC_BUILD_CONTAINER_TAG"
@@ -71,7 +72,10 @@ run_on_exit() {
     echo "Done :("
   fi
 
-  docker rm -f $run_version > /dev/null 2> /dev/null &
+  # Remove all previously loaded pbs container images if any exist
+  #
+  # Let's try to remove it, but not fail if this does not succeed
+  docker rm -f $run_version || true &
 }
 
 # Make sure run_on_exit runs even when we encounter errors

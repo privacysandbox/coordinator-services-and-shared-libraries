@@ -83,7 +83,7 @@ check_permissions() {
 # describe-enclaves says there is a running enclave
 watch_enclave() {
   while true ; do
-    # TODO(b/205058644): Investigate alternative health check mechanisms that
+    # TODO: Investigate alternative health check mechanisms that
     # can provide a better signal than "describe-enclaves" (e.g. /streamz
     # polling)
     local result=$(nitro-cli describe-enclaves | jq '.[0].State' -r)

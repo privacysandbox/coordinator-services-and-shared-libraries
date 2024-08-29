@@ -93,7 +93,7 @@ function deploy_pbs_application() {
   echo "pbs_service_account_email = \"$pbs_service_account_email\"" >> $generated_version_tf_vars_file
   echo "pbs_image_tag             = \"$version_tag\"" >> $generated_version_tf_vars_file
 
-  terraform -chdir=$environment_dir/distributedpbs_application init -input=false
+  terraform -chdir=$environment_dir/distributedpbs_application init --upgrade -input=false
 
   if [ "$auto_approve" = true ]; then
       if [ "$use_tf_plan" = true ]; then

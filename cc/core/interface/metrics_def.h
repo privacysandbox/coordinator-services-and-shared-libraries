@@ -52,15 +52,30 @@ static constexpr char kMetricEventJournalOutputCountWriteJournalFailureCount[] =
 /**
  * @brief
  * Transaction Manager Metrics
- *  Metric Name: kMetricNameActiveTransaction
+ *  Metric Name: kMetricNameActiveTransactions
+ *      Labels: kMetricLabelPartitionId
  *      Events: kMetricEventReceivedTransaction
  *      Events: kMetricEventFinishedTransaction
+ *
+ *  Metric Name: kMetricNameReceivedTransactions
+ *
+ *  Metric Name: kMetricNameFinishedTransactions
  */
 
 static constexpr char
     kMetricComponentNameAndPartitionNamePrefixForTransactionManager[] =
         "TransactionManager for Partition ";
-static constexpr char kMetricNameActiveTransaction[] = "ActiveTransaction";
+static constexpr char kMetricNameActiveTransactions[] =
+    "google.scp.core.transaction_manager.active_transactions";
+static constexpr char kMetricNameReceivedTransactions[] =
+    "google.scp.core.transaction_manager.received_transactions";
+static constexpr char kMetricNameFinishedTransactions[] =
+    "google.scp.core.transaction_manager.finished_transactions";
+
+static constexpr char kMetricLabelPartitionId[] = "partition_id";
+
+// TODO: Remove the following metric events used by MetricClient once OTel
+// reaches feature parity.
 static constexpr char kMetricEventReceivedTransaction[] = "ReceivedTransaction";
 static constexpr char kMetricEventFinishedTransaction[] = "FinishedTransaction";
 

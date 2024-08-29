@@ -132,11 +132,11 @@ FrontEndService::FrontEndService(
       "Frontend Service v1", "1.0");
 
   total_request_counter_ = meter_->CreateUInt64Counter(
-      "totalRequests", "Total number of requests received");
+      kMetricNameRequests, "Total number of requests received");
   client_error_counter_ = meter_->CreateUInt64Counter(
-      "clientErrors", "Number of client errors (4xx status codes)");
+      kMetricNameClientErrors, "Number of client errors (4xx status codes)");
   server_error_counter_ = meter_->CreateUInt64Counter(
-      "serverErrors", "Number of server errors (5xx status codes)");
+      kMetricNameServerErrors, "Number of server errors (5xx status codes)");
 }
 
 FrontEndService::FrontEndService(

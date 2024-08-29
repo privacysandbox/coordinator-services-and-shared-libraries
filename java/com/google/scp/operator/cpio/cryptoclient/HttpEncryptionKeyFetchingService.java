@@ -22,6 +22,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptedPrivateKeyResponseProto.GetEncryptedPrivateKeyResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
+import com.google.scp.shared.api.exception.ServiceException;
+import com.google.scp.shared.api.model.Code;
 import com.google.scp.shared.api.util.ErrorUtil;
 import com.google.scp.shared.api.util.HttpClientWrapper;
 import java.io.IOException;
@@ -78,9 +80,24 @@ public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetc
 
       if (response.statusCode() != 200) {
         var errorResponse = ErrorUtil.parseErrorResponse(responseBody);
-        var exception = ErrorUtil.toServiceException(errorResponse);
-
         var message = "Received error from private key vending service";
+
+        ServiceException exception = null;
+        if (errorResponse.getCode() == Code.UNKNOWN.getRpcStatusCode()
+            && response.statusCode() != 500) {
+          // For UNKNOWN rpc status:
+          // Assign Code for HTTP status code if exists
+          Code errorCode = null;
+          try {
+            errorCode = Code.fromHttpStatusCode(response.statusCode());
+          } catch (IllegalArgumentException e) {
+            errorCode = Code.UNKNOWN;
+          }
+          exception = new ServiceException(errorCode, message, responseBody);
+        } else {
+          exception = ErrorUtil.toServiceException(errorResponse);
+        }
+
         logger.error(message, exception);
         throw new EncryptionKeyFetchingServiceException(message, exception);
       } else {

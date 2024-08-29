@@ -213,6 +213,15 @@ public enum Code {
     throw new IllegalArgumentException("Unknown RPC status code: " + internalCode);
   }
 
+  public static Code fromHttpStatusCode(int statusCode) {
+    for (Code code : Code.values()) {
+      if (code.getHttpStatusCode() == statusCode) {
+        return code;
+      }
+    }
+    throw new IllegalArgumentException("Unknown HTTP status code: " + statusCode);
+  }
+
   public int getRpcStatusCode() {
     return rpcStatusCode;
   }

@@ -56,8 +56,6 @@ class MessageRouter : public MessageRouterInterface<google::protobuf::Any,
                             const AsyncAction& action) noexcept override;
 
  private:
-  // TODO(b/229794047): Figures out a better way to store the request_type to
-  // have a better performance.
   common::ConcurrentMap<std::string, AsyncAction> actions_;
 };
 }  // namespace google::scp::core

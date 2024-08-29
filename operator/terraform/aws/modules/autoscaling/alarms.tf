@@ -22,7 +22,7 @@
 resource "aws_cloudwatch_metric_alarm" "asg_capacity_lambda_error_alarm" {
   count               = var.enable_autoscaling && var.worker_alarms_enabled ? 1 : 0
   alarm_name          = "${var.environment}_${var.region}_asg_capacity_lambda_error_alarm"
-  alarm_description   = "Lambda errors over threshold of ${var.asg_capacity_lambda_error_threshold}"
+  alarm_description   = "This alarm will be triggered if the error count of the autoscaling group capacity lambda is greater than the threshold of ${var.asg_capacity_lambda_error_threshold}."
   comparison_operator = "GreaterThanThreshold"
   #Number of 'period' to evaluate for the alarm
   evaluation_periods        = 1
@@ -45,7 +45,7 @@ resource "aws_cloudwatch_metric_alarm" "asg_capacity_lambda_error_alarm" {
 resource "aws_cloudwatch_metric_alarm" "asg_capacity_lambda_max_duration_alarm" {
   count                     = var.enable_autoscaling && var.worker_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_asg_capacity_lambda_duration_alarm"
-  alarm_description         = "Lambda duration over the duration threshold of ${var.asg_capacity_lambda_duration_threshold}ms"
+  alarm_description         = "The alarm will be triggered if event processing time spent by the autoscaling group lambda is more than the duration threshold of ${var.asg_capacity_lambda_duration_threshold}ms"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.asg_capacity_lambda_duration_threshold
@@ -67,7 +67,7 @@ resource "aws_cloudwatch_metric_alarm" "asg_capacity_lambda_max_duration_alarm" 
 resource "aws_cloudwatch_metric_alarm" "terminated_instance_lambda_error_alarm" {
   count               = var.enable_autoscaling && var.worker_alarms_enabled ? 1 : 0
   alarm_name          = "${var.environment}_${var.region}_terminated_instance_lambda_error_alarm"
-  alarm_description   = "Lambda errors over threshold of ${var.terminated_instance_lambda_error_threshold}"
+  alarm_description   = "This alarm will be triggered if the error of the terminated instance lambda is greater than the threshold of ${var.terminated_instance_lambda_error_threshold}."
   comparison_operator = "GreaterThanThreshold"
   #Number of 'period' to evaluate for the alarm
   evaluation_periods        = 1
@@ -90,7 +90,7 @@ resource "aws_cloudwatch_metric_alarm" "terminated_instance_lambda_error_alarm" 
 resource "aws_cloudwatch_metric_alarm" "terminated_instance_lambda_max_duration_alarm" {
   count                     = var.enable_autoscaling && var.worker_alarms_enabled ? 1 : 0
   alarm_name                = "${var.environment}_${var.region}_terminated_instance_lambda_duration_alarm"
-  alarm_description         = "Lambda duration over ${var.terminated_instance_lambda_duration_threshold}ms"
+  alarm_description         = "This alarm will be triggered if the amount of time the terminated instance lambda spend is greater than threshold."
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   threshold                 = var.terminated_instance_lambda_duration_threshold
@@ -115,6 +115,7 @@ resource "aws_cloudwatch_metric_alarm" "terminated_instance_lambda_max_duration_
 resource "aws_cloudwatch_metric_alarm" "asg_max_instances_alarm" {
   count               = var.enable_autoscaling && var.worker_alarms_enabled ? 1 : 0
   alarm_name          = "${var.environment}_${var.region}_asg_max_instance_alarm"
+  alarm_description   = "This alarm will be triggered if the number of instances that the Auto Scaling group attempts to maintain is greater than the threshold."
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   threshold           = ceil(var.max_ec2_instances * var.asg_max_instances_alarm_ratio)

@@ -8,5 +8,4 @@
 #   region: Region of cloud function
 #   custom domain: list of custom domain to be supported as audience for calling the API. It should be in '["aud1", "aud2"]' form
 set -eu
-#TODO: b/258850312
 gcloud alpha run services update $1 --custom-audiences $3 --region=$2 --labels time-created=$(date '+%s')

@@ -23,6 +23,7 @@ import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -35,6 +36,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import software.amazon.awssdk.services.sts.model.StsException;
 
 /** Wrapper class to create HttpClient with interceptor, supporting exponential retry strategy. */
 public class HttpClientWrapper {
@@ -73,7 +75,7 @@ public class HttpClientWrapper {
     return new HttpClientWrapper.Builder().build();
   }
 
-  private HttpClientWrapper(CloseableHttpClient httpClient, Retry retryConfig) {
+  public HttpClientWrapper(CloseableHttpClient httpClient, Retry retryConfig) {
     this.httpClient = httpClient;
     this.retryConfig = retryConfig;
   }
@@ -87,6 +89,21 @@ public class HttpClientWrapper {
   public <T extends HttpRequestBase> HttpClientResponse execute(T request) throws IOException {
     try {
       return Retry.decorateCheckedSupplier(retryConfig, () -> executeRequest(request)).apply();
+    } catch (StsException e) {
+      String errorMessage =
+          e.awsErrorDetails() != null
+              ? e.awsErrorDetails().errorMessage()
+              : "Unknown error message";
+      if (e.statusCode() == HttpStatus.SC_UNAUTHORIZED) {
+        return HttpClientResponse.create(
+            HttpStatus.SC_UNAUTHORIZED, errorMessage, Collections.emptyMap());
+      } else if (e.statusCode() == HttpStatus.SC_FORBIDDEN) {
+        return HttpClientResponse.create(
+            HttpStatus.SC_FORBIDDEN, errorMessage, Collections.emptyMap());
+      }
+
+      // Other exception will be rethrown as IOException
+      throw new IOException(e);
     } catch (Throwable throwable) {
       throw new IOException(throwable);
     }
@@ -113,14 +130,14 @@ public class HttpClientWrapper {
       Optional<HttpRequestInterceptor> interceptor,
       Optional<IntervalFunction> intervalFunction,
       Optional<Integer> maxAttempts,
-      Optional<ImmutableSet<Class<? extends Throwable>>> retryOnExceptions,
+      Optional<ImmutableSet<Class<? extends Throwable>>> retryExceptions,
       Optional<Set<Integer>> retryOnStatusCodes) {
     HttpClientBuilder httpClientBuilder =
         HttpClients.custom().disableAutomaticRetries(); // Retries are handled separately.
     interceptor.ifPresent(
         httpInterceptor -> httpClientBuilder.addInterceptorFirst(httpInterceptor));
     RetryConfig retryConfig =
-        buildRetryConfig(intervalFunction, maxAttempts, retryOnExceptions, retryOnStatusCodes);
+        buildRetryConfig(intervalFunction, maxAttempts, retryExceptions, retryOnStatusCodes);
 
     return new HttpClientWrapper(
         httpClientBuilder.build(), RetryRegistry.of(retryConfig).retry("httpClient"));
@@ -129,19 +146,34 @@ public class HttpClientWrapper {
   private static RetryConfig buildRetryConfig(
       Optional<IntervalFunction> intervalFunction,
       Optional<Integer> maxAttempts,
-      Optional<ImmutableSet<Class<? extends Throwable>>> retryOnExceptions,
+      Optional<ImmutableSet<Class<? extends Throwable>>> retryExceptions,
       Optional<Set<Integer>> retryOnStatusCodes) {
     RetryConfig.Builder<HttpClientResponse> retryConfigBuilder = RetryConfig.custom();
     retryConfigBuilder.intervalFunction(intervalFunction.orElse(DEFAULT_INTERVAL_FUNCTION));
     retryConfigBuilder.maxAttempts(maxAttempts.orElse(DEFAULT_MAX_ATTEMPTS));
+    retryConfigBuilder.retryOnException(HttpClientWrapper::retryOnExceptionPredicate);
     ImmutableSet<Class<? extends Throwable>> exceptionsToRetryOn =
-        retryOnExceptions.orElse(DEFAULT_EXCEPTIONS_TO_RETRY_ON);
+        retryExceptions.orElse(DEFAULT_EXCEPTIONS_TO_RETRY_ON);
     retryConfigBuilder.retryExceptions(
         exceptionsToRetryOn.toArray(new Class[exceptionsToRetryOn.size()]));
     Set<Integer> statusCodesToRetryOn = retryOnStatusCodes.orElse(DEFAULT_STATUS_CODES_TO_RETRY_ON);
     retryConfigBuilder.retryOnResult(
         response -> statusCodesToRetryOn.contains(response.statusCode()));
     return retryConfigBuilder.build();
+  }
+
+  private static boolean retryOnExceptionPredicate(Throwable e) {
+    // If the HTTP error code is UNAUTHORIZED or FORBIDDEN in StsException, this
+    // likely means that the client is not able to get auth token from AWS STS.
+    // Don't retry in this case.
+    if (e instanceof StsException) {
+      StsException stsException = (StsException) e;
+      return stsException.statusCode() != HttpStatus.SC_UNAUTHORIZED
+          && stsException.statusCode() != HttpStatus.SC_FORBIDDEN;
+    }
+
+    // Otherwise, retry
+    return true;
   }
 
   /** Builder class for {@link HttpClientWrapper} */
@@ -178,8 +210,8 @@ public class HttpClientWrapper {
       return this;
     }
 
-    /** Sets the exceptions to retry on. */
-    public Builder setRetryOnExceptions(ImmutableSet<Class<? extends Throwable>> retryExceptions) {
+    /** Sets the exceptions to retry. */
+    public Builder setRetryExceptions(ImmutableSet<Class<? extends Throwable>> retryExceptions) {
       this.retryExceptions = retryExceptions;
       return this;
     }

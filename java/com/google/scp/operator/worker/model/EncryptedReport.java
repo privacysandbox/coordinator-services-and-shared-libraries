@@ -32,7 +32,6 @@ public abstract class EncryptedReport {
   public abstract ByteSource payload();
 
   /** The optional key used for hybrid decryption */
-  // TODO(b/196647643) Change this field from UUID to string.
   public abstract Optional<String> decryptionKeyId();
 
   @AutoValue.Builder
