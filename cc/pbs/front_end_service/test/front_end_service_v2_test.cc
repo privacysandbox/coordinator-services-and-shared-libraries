@@ -17,36 +17,38 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 
+#include "absl/strings/string_view.h"
 #include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/http2_server/mock/mock_http2_server.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/http_server_interface.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/mock/instrument_mock.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/metric_initialization.h"
 #include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/consume_budget_interface.h"
+#include "cc/pbs/interface/type_def.h"
 #include "cc/pbs/partition_request_router/mock/mock_transaction_request_router.h"
 #include "cc/pbs/transactions/mock/mock_consume_budget_command_factory.h"
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 #include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
-#include "core/interface/http_types.h"
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
-#include "core/telemetry/mock/in_memory_metric_reader.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
-#include "core/telemetry/src/common/telemetry_configuration.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "opentelemetry/metrics/meter.h"
-#include "opentelemetry/metrics/provider.h"
-#include "opentelemetry/sdk/metrics/meter_provider.h"
-#include "pbs/front_end_service/src/front_end_utils.h"
-#include "pbs/interface/type_def.h"
 
 namespace google::scp::pbs {
 
@@ -54,10 +56,8 @@ using ::google::scp::core::AsyncContext;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::HttpRequest;
 using ::google::scp::core::HttpResponse;
-using ::google::scp::core::MockCounter;
 using ::google::scp::cpio::AggregateMetricInterface;
 using ::google::scp::cpio::MockAggregateMetric;
-using ::opentelemetry::metrics::Counter;
 
 class FrontEndServiceV2Peer {
  public:
@@ -127,7 +127,6 @@ using ::google::scp::core::HttpHandler;
 using ::google::scp::core::HttpHeaders;
 using ::google::scp::core::HttpMethod;
 using ::google::scp::core::HttpServerInterface;
-using ::google::scp::core::kDefaultAggregatedMetricIntervalMs;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
@@ -135,15 +134,10 @@ using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS;
-using ::google::scp::core::http2_server::mock::MockHttp2Server;
 using ::google::scp::cpio::MetricClientInterface;
 using ::google::scp::cpio::MockMetricClient;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
-using ::google::scp::pbs::partition_request_router::mock::
-    MockTransactionRequestRouter;
-using ::google::scp::pbs::transactions::mock::MockConsumeBudgetCommandFactory;
 using ::testing::_;
-using ::testing::ElementsAre;
 using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -360,9 +354,7 @@ TEST(FrontEndServiceV2Test, TestBeginTransaction) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           total_request_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result.Successful())
@@ -430,13 +422,10 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithEmptyHeader) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           client_error_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(client_error_sum_point_data.value_), 1)
+  ASSERT_EQ(std::get<int64_t>(client_error_sum_point_data.value_), 1)
       << "Expected client_error_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_FALSE(execution_result.Successful())
@@ -566,9 +555,7 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           total_request_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result)
@@ -683,13 +670,10 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           server_error_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(server_error_sum_point_data.value_), 1)
+  ASSERT_EQ(std::get<int64_t>(server_error_sum_point_data.value_), 1)
       << "Expected server_error_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result)
@@ -763,9 +747,7 @@ TEST(FrontEndServiceV2Test, TestCommitTransaction) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           total_request_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result.Successful())
@@ -830,9 +812,7 @@ TEST(FrontEndServiceV2Test, TestNotifyTransaction) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           total_request_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result.Successful())
@@ -896,9 +876,7 @@ TEST(FrontEndServiceV2Test, TestAbortTransaction) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           total_request_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result.Successful())
@@ -962,9 +940,7 @@ TEST(FrontEndServiceV2Test, TestEndTransaction) {
       std::get<opentelemetry::sdk::metrics::SumPointData>(
           total_request_metric_point_data.value());
 
-  ASSERT_EQ(
-      opentelemetry::nostd::get<int64_t>(total_request_sum_point_data.value_),
-      1)
+  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
       << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result.Successful())
@@ -984,7 +960,7 @@ TEST(FrontEndServiceV2Test, TestRegisterResourceHandlerIsCalled) {
   std::shared_ptr<MockHttpServerInterface> http2_server =
       std::make_shared<MockHttpServerInterface>();
   EXPECT_CALL(*http2_server, RegisterResourceHandler(HttpMethod::POST, _, _))
-      .Times(6)
+      .Times(8)
       .WillRepeatedly(Return(SuccessExecutionResult()));
   EXPECT_CALL(*http2_server, RegisterResourceHandler(HttpMethod::GET, _, _))
       .Times(1)

@@ -22,9 +22,6 @@ cc_library(
         [
             "mock_metric_client.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/metric_client",

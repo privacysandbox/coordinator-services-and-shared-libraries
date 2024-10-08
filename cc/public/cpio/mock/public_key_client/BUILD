@@ -23,9 +23,6 @@ cc_library(
         [
             "mock_public_key_client.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/public_key_client",

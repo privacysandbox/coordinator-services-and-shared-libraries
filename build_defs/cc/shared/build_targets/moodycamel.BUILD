@@ -25,7 +25,4 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
 )

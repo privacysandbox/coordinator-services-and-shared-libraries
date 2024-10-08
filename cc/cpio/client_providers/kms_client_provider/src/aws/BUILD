@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         ":nontee_aws_kms_client_provider_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
@@ -45,9 +42,6 @@ cc_library(
     name = "tee_aws_kms_client_provider_lib",
     srcs = [
         ":tee_aws_kms_client_provider_srcs",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

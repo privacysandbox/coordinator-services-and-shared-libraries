@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystem;
@@ -53,6 +54,30 @@ public class FSBlobStorageClient implements BlobStorageClient {
   public InputStream getBlob(DataLocation location, Optional<String> accountIdentity)
       throws BlobStorageClientException {
     return getBlob(location);
+  }
+
+  @Override
+  public InputStream getBlobRange(DataLocation location, int startOffset, int length)
+      throws BlobStorageClientException {
+    BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+
+    Long fileSize = this.getBlobSize(location);
+    int rangeEnd = startOffset + length - 1;
+    if (startOffset < 0 || length < 1 || rangeEnd >= fileSize) {
+      throw new BlobStorageClientException(
+          "Specified byte range outside of blob size: " + fileSize);
+    }
+
+    try (InputStream fis =
+        Files.newInputStream(fileSystem.getPath(blobLocation.bucket(), blobLocation.key()))) {
+      byte[] buff = new byte[length];
+      fis.skip(startOffset);
+      fis.read(buff);
+
+      return new ByteArrayInputStream(buff);
+    } catch (IOException e) {
+      throw new BlobStorageClientException(e);
+    }
   }
 
   @Override

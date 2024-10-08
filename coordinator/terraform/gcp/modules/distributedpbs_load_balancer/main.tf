@@ -119,6 +119,7 @@ resource "google_compute_backend_service" "pbs_auth_loadbalancer_backend" {
   log_config {
     enable = true
   }
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 }
 
 # Backend service that maps to the PBS managed instance group for the load balancer to use
@@ -143,6 +144,7 @@ resource "google_compute_backend_service" "pbs_backend_service" {
   log_config {
     enable = true
   }
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 }
 
 resource "google_compute_health_check" "pbs_health_check" {
@@ -177,11 +179,10 @@ resource "google_compute_health_check" "pbs_health_check" {
 }
 
 # The URL map creates the HTTP(S) LB
-resource "google_compute_url_map" "pbs_load_balancer" {
+resource "google_compute_url_map" "pbs_load_balancer_managed" {
   count   = var.enable_domain_management ? 1 : 0
   name    = "${var.environment}-pbs-lb"
   project = var.project_id
-
   host_rule {
     hosts        = ["*"]
     path_matcher = "${var.environment}-allowed"
@@ -207,7 +208,9 @@ resource "google_compute_url_map" "pbs_load_balancer" {
     path_rule {
       paths = [
         "/v1/transactions:begin",
+        "/v1/transactions:health-check",
         "/v1/transactions:prepare",
+        "/v1/transactions:consume-budget",
         "/v1/transactions:commit",
         "/v1/transactions:notify",
         "/v1/transactions:abort",
@@ -227,7 +230,7 @@ resource "google_compute_url_map" "pbs_load_balancer" {
 }
 
 # Proxy to loadbalancer. TCP without custom domain
-resource "google_compute_target_tcp_proxy" "pbs_loadbalancer_proxy" {
+resource "google_compute_target_tcp_proxy" "pbs_loadbalancer_proxy_managed" {
   project         = var.project_id
   count           = var.enable_domain_management ? 0 : 1
   name            = "${var.environment}-pbs-proxy"
@@ -235,18 +238,17 @@ resource "google_compute_target_tcp_proxy" "pbs_loadbalancer_proxy" {
 }
 
 # Proxy to loadbalancer. HTTPS with custom domain
-resource "google_compute_target_https_proxy" "pbs_loadbalancer_proxy" {
+resource "google_compute_target_https_proxy" "pbs_loadbalancer_proxy_managed" {
   project = var.project_id
   count   = var.enable_domain_management ? 1 : 0
   name    = "${var.environment}-pbs-proxy"
-  url_map = google_compute_url_map.pbs_load_balancer[0].id
+  url_map = google_compute_url_map.pbs_load_balancer_managed[0].id
 
   ssl_certificates = [
     google_compute_managed_ssl_certificate.pbs_loadbalancer[0].id
   ]
 
   certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].id}"
-
 }
 
 # Map IP address and loadbalancer proxy
@@ -255,8 +257,9 @@ resource "google_compute_global_forwarding_rule" "pbs_loadbalancer_config" {
   name       = "${var.environment}-pbs-frontend-configuration"
   ip_address = var.pbs_ip_address
   port_range = "443"
-  target = (var.enable_domain_management ? google_compute_target_https_proxy.pbs_loadbalancer_proxy[0].self_link
-  : google_compute_target_tcp_proxy.pbs_loadbalancer_proxy[0].id)
+  target = (var.enable_domain_management ? google_compute_target_https_proxy.pbs_loadbalancer_proxy_managed[0].self_link
+  : google_compute_target_tcp_proxy.pbs_loadbalancer_proxy_managed[0].id)
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 }
 
 # Creates SSL cert for given domain. Terraform does not wait for SSL cert to be provisioned before the `apply` operation
@@ -299,11 +302,43 @@ resource "google_certificate_manager_certificate" "pbs_loadbalancer_cert" {
   }
 }
 
+
+resource "google_certificate_manager_certificate" "pbs_loadbalancer_alternate_cert" {
+  count       = (var.enable_domain_management == true && var.pbs_tls_alternate_names != null) ? 1 : 0
+  project     = var.project_id
+  name        = "alternate-${random_id.pbs_cert_manager.hex}"
+  description = "Certificate Manager cert for PBS alternate domains"
+  labels = {
+    env = "${var.environment}"
+  }
+
+  managed {
+    domains = compact(
+      [for index, item in var.pbs_tls_alternate_names : google_certificate_manager_dns_authorization.pbs_alternate_instance[index].domain]
+    )
+
+    dns_authorizations = compact(
+      [for index, item in var.pbs_tls_alternate_names : google_certificate_manager_dns_authorization.pbs_alternate_instance[index].id]
+    )
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "google_certificate_manager_dns_authorization" "gcp_pbs_instance" {
   count       = var.enable_domain_management ? 1 : 0
   name        = "gcp-pbs-dns"
   description = "DNS Authorization for GCP PBS domain validation"
   domain      = var.pbs_domain
+}
+
+resource "google_certificate_manager_dns_authorization" "pbs_alternate_instance" {
+  count       = (var.enable_domain_management == true && var.pbs_tls_alternate_names != null) ? length(var.pbs_tls_alternate_names) : 0
+  name        = "pbs-alternate-${count.index}-dns"
+  description = "DNS Authorization for GCP PBS domain validation"
+  domain      = var.pbs_tls_alternate_names[count.index]
 }
 
 resource "google_certificate_manager_certificate_map" "pbs_loadbalancer_map" {
@@ -319,6 +354,15 @@ resource "google_certificate_manager_certificate_map_entry" "default" {
   map          = google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].name
   certificates = [google_certificate_manager_certificate.pbs_loadbalancer_cert[0].id]
   matcher      = "PRIMARY"
+}
+
+resource "google_certificate_manager_certificate_map_entry" "pbs_alternate_dns_map_entry" {
+  count        = (var.enable_domain_management == true && var.pbs_tls_alternate_names != null) ? length(var.pbs_tls_alternate_names) : 0
+  name         = "${random_id.pbs_cert_manager.hex}-${count.index}-map-entry"
+  description  = "Alternate PBS Certificate Map entry"
+  map          = google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].name
+  certificates = [google_certificate_manager_certificate.pbs_loadbalancer_alternate_cert[0].id]
+  hostname     = var.pbs_tls_alternate_names[count.index]
 }
 
 resource "google_dns_record_set" "pbs_dns_auth_record_set" {

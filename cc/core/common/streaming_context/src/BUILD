@@ -19,9 +19,6 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "streaming_context_errors_lib",
     hdrs = ["error_codes.h"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
     ],

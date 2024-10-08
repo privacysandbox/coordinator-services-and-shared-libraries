@@ -24,9 +24,6 @@ cc_library(
             "**/*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
@@ -40,6 +37,7 @@ cc_library(
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_absl//absl/strings",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
         "@nlohmann_json//:lib",
     ],
 )

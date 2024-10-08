@@ -20,9 +20,6 @@ cc_test(
     name = "pbs_partition_test",
     size = "small",
     srcs = ["pbs_partition_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",

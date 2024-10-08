@@ -20,9 +20,6 @@ cc_test(
     name = "public_key_client_provider_test",
     size = "small",
     srcs = ["public_key_client_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/http2_client/mock:http2_client_mock",
@@ -41,9 +38,6 @@ cc_test(
     name = "public_key_client_utils_test",
     size = "small",
     srcs = ["public_key_client_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

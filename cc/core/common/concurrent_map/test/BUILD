@@ -20,9 +20,6 @@ cc_test(
     name = "concurrent_map_test",
     size = "small",
     srcs = ["concurrent_map_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/auto_expiry_concurrent_map/mock:auto_expiry_concurrent_map_mock",

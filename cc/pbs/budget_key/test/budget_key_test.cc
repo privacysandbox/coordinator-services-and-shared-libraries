@@ -107,7 +107,7 @@ TEST(BudgetKeyTest, InitShouldSubscribe) {
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalServiceWithOverrides>(
       bucket_name, partition_name, async_executor, blob_storage_provider,
-      mock_metric_client, mock_config_provider);
+      mock_metric_client, /*metric_router=*/nullptr, mock_config_provider);
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
 
@@ -115,8 +115,8 @@ TEST(BudgetKeyTest, InitShouldSubscribe) {
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider,
-                       mock_aggregate_metric);
+                       mock_metric_client, /*metric_router=*/nullptr,
+                       mock_config_provider, mock_aggregate_metric);
 
   OnLogRecoveredCallback callback;
   EXPECT_EQ(mock_journal_service->GetSubscribersMap().Find(budget_key.GetId(),
@@ -166,8 +166,8 @@ TEST(BudgetKeyTest, GetBudget) {
     BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                          journal_service, nosql_database_provider,
                          budget_key_manager, budget_key_transaction_protocol,
-                         mock_metric_client, mock_config_provider,
-                         mock_aggregate_metric);
+                         mock_metric_client, /*metric_router=*/nullptr,
+                         mock_config_provider, mock_aggregate_metric);
     GetBudgetRequest request = {.time_bucket = reporting_time};
     AsyncContext<GetBudgetRequest, GetBudgetResponse> get_budget_context(
         make_shared<GetBudgetRequest>(move(request)), [](auto& context) {});
@@ -202,8 +202,8 @@ TEST(BudgetKeyTest, LoadBudgetKey) {
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider,
-                       mock_aggregate_metric);
+                       mock_metric_client, /*metric_router=*/nullptr,
+                       mock_config_provider, mock_aggregate_metric);
 
   AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>
       load_budget_key_context;
@@ -531,7 +531,7 @@ TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackValidLog) {
   mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
   auto mock_journal_service = make_shared<MockJournalServiceWithOverrides>(
       bucket_name, partition_name, async_executor, blob_storage_provider,
-      mock_metric_client, mock_config_provider);
+      mock_metric_client, /*metric_router=*/nullptr, mock_config_provider);
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
@@ -599,7 +599,8 @@ TEST(BudgetKeyTest, CheckpointNoTimeframeManager) {
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider, nullptr,
                        budget_key_transaction_protocol, mock_metric_client,
-                       mock_config_provider, mock_aggregate_metric);
+                       /*metric_router=*/nullptr, mock_config_provider,
+                       mock_aggregate_metric);
   auto logs = make_shared<list<CheckpointLog>>();
   EXPECT_SUCCESS(budget_key.Checkpoint(logs));
   EXPECT_EQ(logs->size(), 1);
@@ -628,8 +629,8 @@ TEST(BudgetKeyTest, CanUnload) {
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider,
-                       mock_aggregate_metric);
+                       mock_metric_client, /*metric_router=*/nullptr,
+                       mock_config_provider, mock_aggregate_metric);
 
   mock_budget_key_timeframe_manager->can_unload_mock = []() {
     return FailureExecutionResult(123);
@@ -659,8 +660,8 @@ TEST(BudgetKeyTest, Checkpoint) {
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider,
-                       mock_aggregate_metric);
+                       mock_metric_client, /*metric_router=*/nullptr,
+                       mock_config_provider, mock_aggregate_metric);
 
   auto logs = make_shared<list<CheckpointLog>>();
   EXPECT_SUCCESS(budget_key.Checkpoint(logs));
@@ -710,8 +711,8 @@ TEST(BudgetKeyTest, CheckpointFailureWithTimeframeManager) {
   BudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(), async_executor,
                        journal_service, nosql_database_provider,
                        budget_key_manager, budget_key_transaction_protocol,
-                       mock_metric_client, mock_config_provider,
-                       mock_aggregate_metric);
+                       mock_metric_client, /*metric_router=*/nullptr,
+                       mock_config_provider, mock_aggregate_metric);
 
   mock_budget_key_manager->checkpoint_mock = [](auto&) {
     return FailureExecutionResult(1234);

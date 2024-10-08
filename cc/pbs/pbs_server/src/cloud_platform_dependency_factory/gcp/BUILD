@@ -24,9 +24,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",
@@ -51,6 +48,7 @@ cc_library(
         "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/pbs_client/src:pbs_client_lib",
+        "@com_github_googleapis_google_cloud_cpp//:monitoring",
         "@com_github_googleapis_google_cloud_cpp//:opentelemetry",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",
         "@io_opentelemetry_cpp//sdk/src/resource",

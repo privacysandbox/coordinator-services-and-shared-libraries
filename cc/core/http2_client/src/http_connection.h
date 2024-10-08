@@ -22,10 +22,13 @@
 
 #include <nghttp2/asio_http2_client.h>
 
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/http_client_interface.h"
-#include "core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
 #include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
@@ -44,11 +47,12 @@ class HttpConnection : public ServiceInterface {
    * @param host The remote host for creating the connection.
    * @param service The port of the connection.
    * @param is_https If the connection is https, must be set to true.
+   * @param metric_router An instance of metric router to manage otel metrics.
    * @param http2_read_timeout_in_sec nghttp2 read timeout in second.
    */
   HttpConnection(const std::shared_ptr<AsyncExecutorInterface>& async_executor,
                  const std::string& host, const std::string& service,
-                 bool is_https,
+                 bool is_https, MetricRouter* metric_router,
                  TimeDuration http2_read_timeout_in_sec =
                      kDefaultHttp2ReadTimeoutInSeconds);
 
@@ -87,6 +91,11 @@ class HttpConnection : public ServiceInterface {
    */
   void Reset() noexcept;
 
+  /**
+   * @brief Returns the active client requests for the connections.
+   */
+  size_t ActiveClientRequestsSize() noexcept;
+
  protected:
   /**
    * @brief Executes the http requests and sends it over the wire.
@@ -110,7 +119,9 @@ class HttpConnection : public ServiceInterface {
   void OnRequestResponseClosed(
       common::Uuid& request_id,
       AsyncContext<HttpRequest, HttpResponse>& http_context,
-      uint32_t error_code) noexcept;
+      uint32_t error_code,
+      std::chrono::time_point<std::chrono::steady_clock>
+          submit_request_time) noexcept;
 
   /**
    * @brief Is called when the response is available to the request issuer.
@@ -120,7 +131,9 @@ class HttpConnection : public ServiceInterface {
    */
   void OnResponseCallback(
       AsyncContext<HttpRequest, HttpResponse>& http_context,
-      const nghttp2::asio_http2::client::response& http_response) noexcept;
+      const nghttp2::asio_http2::client::response& http_response,
+      std::chrono::time_point<std::chrono::steady_clock>
+          submit_request_time) noexcept;
 
   /**
    * @brief Is called when the body of the stream is available to be read.
@@ -147,7 +160,7 @@ class HttpConnection : public ServiceInterface {
    * @brief Cancels all the pending callbacks. This is used during connection
    * drop or stop.
    */
-  void CancelPendingCallbacks() noexcept;
+  virtual void CancelPendingCallbacks() noexcept;
 
   /**
    * @brief Converts an http status code to execution result.
@@ -158,35 +171,163 @@ class HttpConnection : public ServiceInterface {
   ExecutionResult ConvertHttpStatusCodeToExecutionResult(
       const errors::HttpStatusCode http_status_code) noexcept;
 
-  /// An instance of the async executor.
+  /**
+   * Increments the counter tracking the number of client connection failures.
+   * Typically called when an error occurs during the client’s attempt to
+   * connect to the server.
+   */
+  void IncrementClientConnectError();
+
+  /**
+   * Increments the counter tracking the number of responses received by the
+   * client. Useful for monitoring how many successful or failed responses were
+   * processed.
+   *
+   * @param http_context The context containing the HTTP request and response
+   * details.
+   */
+  void IncrementClientResponseCounter(
+      const AsyncContext<HttpRequest, HttpResponse>& http_context);
+
+  /**
+   * Records the total duration of a client connection from the time it was
+   * established until the time it was closed. This can be used to track how
+   * long connections stay open.
+   */
+  void RecordClientConnectionDuration();
+
+  /**
+   * Measures and records the latency between when the client sends an HTTP
+   * request and when it receives the first byte of the server's response.
+   * Useful for monitoring network latency and server responsiveness.
+   *
+   * @param http_context The context containing the HTTP request and response
+   * details.
+   */
+  void RecordClientServerLatency(
+      const AsyncContext<HttpRequest, HttpResponse>& http_context,
+      std::chrono::time_point<std::chrono::steady_clock> submit_request_time);
+
+  /**
+   * Records the total time taken from when the client sends an HTTP request
+   * until the entire response has been fully received. This is useful for
+   * measuring overall request duration including server processing time and
+   * data transfer.
+   *
+   * @param http_context The context containing the HTTP request and response
+   * details.
+   */
+  void RecordClientRequestDuration(
+      const AsyncContext<HttpRequest, HttpResponse>& http_context,
+      std::chrono::time_point<std::chrono::steady_clock> submit_request_time);
+
+  /**
+   * Records the size of the request body sent by the client to the server.
+   * Useful for monitoring payload size in outgoing requests.
+   *
+   * @param http_context The context containing the HTTP request and response
+   * details.
+   */
+  void RecordClientRequestBodySize(
+      const AsyncContext<HttpRequest, HttpResponse>& http_context);
+
+  /**
+   * Records the size of the response body received by the client from the
+   * server. Useful for monitoring payload size in incoming responses.
+   *
+   * @param http_context The context containing the HTTP request and response
+   * details.
+   */
+  void RecordClientResponseBodySize(
+      const AsyncContext<HttpRequest, HttpResponse>& http_context);
+
+  // An instance of the async executor.
   const std::shared_ptr<AsyncExecutorInterface> async_executor_;
-  /// The remote host to establish a connection.
+
+  // The remote host to establish a connection.
   std::string host_;
-  /// Indicates the port for connection.
+
+  // Indicates the port for connection.
   std::string service_;
-  /// True if the scheme is https.
+
+  // True if the scheme is https.
   bool is_https_;
 
-  /// http2 read timeout in seconds.
+  // http2 read timeout in seconds.
   TimeDuration http2_read_timeout_in_sec_;
-  /// The asio io_service to provide http functionality.
+
+  // The asio io_service to provide http functionality.
   std::unique_ptr<boost::asio::io_service> io_service_;
-  /// The worker guard to run the io_service_.
+
+  // The worker guard to run the io_service_.
   std::unique_ptr<
       boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>
       work_guard_;
-  /// The worker thread to run the io_service_.
+
+  // The worker thread to run the io_service_.
   std::shared_ptr<std::thread> worker_;
-  /// An instance of the session.
+
+  // An instance of the session.
   std::shared_ptr<nghttp2::asio_http2::client::session> session_;
-  /// The tls configuration.
+
+  // The tls configuration.
   boost::asio::ssl::context tls_context_;
-  /// Indicates if the connection is ready to be used.
+
+  // Indicates if the connection is ready to be used.
   std::atomic<bool> is_ready_;
-  /// Indicates if the connection is dropped.
+
+  // Indicates if the connection is dropped.
   std::atomic<bool> is_dropped_;
   common::ConcurrentMap<common::Uuid, AsyncContext<HttpRequest, HttpResponse>,
                         common::UuidCompare>
       pending_network_calls_;
+
+ private:
+  /**
+   * Initializes the metrics.
+   * @return ExecutionResult The execution result.
+   */
+  ExecutionResult MetricInit() noexcept;
+  // An instance of metric router which will provide APIs to create metrics.
+  MetricRouter* metric_router_;
+
+  // OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  // OpenTelemetry Instrument for client connect errors which happen when
+  // making a connection to the client.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      client_connect_error_counter_;
+
+  // OpenTelemetry Instrument for measuring client-server latency. It is time
+  // from the client request to receiving the first byte of response.
+  std::shared_ptr<opentelemetry::metrics::Histogram<double>>
+      client_server_latency_;
+
+  // OpenTelemetry Instrument for measuring client-request latency. It tracks
+  // the duration of the complete client call, from the client request to
+  // receiving the complete response.
+  std::shared_ptr<opentelemetry::metrics::Histogram<double>>
+      client_request_duration_;
+
+  // OpenTelemetry Instrument for measuring request body size in bytes.
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      client_request_body_size_;
+
+  // OpenTelemetry Instrument for measuring response body size in bytes.
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      client_response_body_size_;
+
+  // OpenTelemetry Instrument for client-server response after the client call.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      client_response_counter_;
+
+  // OpenTelemetry Instrument for measuring connection duration. It tracks the
+  // lifecyle duration of the connection.
+  std::shared_ptr<opentelemetry::metrics::Histogram<double>>
+      client_connection_duration_;
+
+  // Time at creating the connection.
+  std::chrono::time_point<std::chrono::steady_clock> connection_creation_time_;
 };
 }  // namespace google::scp::core

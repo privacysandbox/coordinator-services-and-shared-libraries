@@ -25,9 +25,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     data = [
         "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_aws.tar",
     ],

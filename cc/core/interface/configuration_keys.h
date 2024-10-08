@@ -54,4 +54,6 @@ static constexpr char kSpannerEndpointOverride[] =
     "google_scp_core_spanner_endpoint_override";
 static constexpr char kPBSAdtechSiteAsAuthorizedDomain[] =
     "google_scp_pbs_adtech_site_as_authorized_domain_enabled";
+static constexpr char kOtelServerMetricsEnabled[] =
+    "google_scp_otel_serer_metrics_enabled";
 }  // namespace google::scp::core

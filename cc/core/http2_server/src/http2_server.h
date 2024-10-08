@@ -16,13 +16,13 @@
 
 #pragma once
 
+#include <nghttp2/asio_http2_server.h>
+
 #include <atomic>
 #include <memory>
 #include <string>
 #include <thread>
 #include <utility>
-
-#include <nghttp2/asio_http2_server.h>
 
 #include "cc/core/common/concurrent_map/src/concurrent_map.h"
 #include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
@@ -36,9 +36,21 @@
 #include "cc/core/interface/http_request_route_resolver_interface.h"
 #include "cc/core/interface/http_request_router_interface.h"
 #include "cc/core/interface/http_server_interface.h"
+#include "core/common/concurrent_map/src/concurrent_map.h"
+#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
+#include "core/common/uuid/src/uuid.h"
+#include "core/http2_server/src/http2_request.h"
+#include "core/http2_server/src/http2_response.h"
+#include "core/interface/config_provider_interface.h"
+#include "core/interface/configuration_keys.h"
+#include "core/interface/http_request_route_resolver_interface.h"
+#include "core/interface/http_request_router_interface.h"
+#include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
 #include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::core {
 
@@ -101,6 +113,7 @@ class Http2Server : public HttpServerInterface {
         metric_client_(metric_client),
         config_provider_(config_provider),
         aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs),
+        otel_server_metrics_enabled_(false),
         async_executor_(async_executor),
         operation_dispatcher_(
             async_executor,
@@ -109,8 +122,7 @@ class Http2Server : public HttpServerInterface {
         private_key_file_(*options.private_key_file),
         certificate_chain_file_(*options.certificate_chain_file),
         tls_context_(boost::asio::ssl::context::sslv23),
-        request_routing_enabled_(false),
-        adtech_site_authorized_domain_enabled_(false) {}
+        request_routing_enabled_(false) {}
 
   // Construct HTTP Server with Request Routing capabilities.
   Http2Server(
@@ -158,6 +170,8 @@ class Http2Server : public HttpServerInterface {
     AsyncContext<NgHttp2Request, NgHttp2Response> http2_context;
     /// A copy of the http handler of the request.
     HttpHandler http_handler;
+    /// Time for entry point of the request.
+    std::chrono::time_point<std::chrono::steady_clock> entry_time;
   };
 
   /**
@@ -306,6 +320,14 @@ class Http2Server : public HttpServerInterface {
    */
   bool IsRequestForwardingEnabled() const;
 
+  void RecordServerLatency(const common::Uuid& activity_id,
+                           const common::Uuid& request_id);
+
+  /// Callback to be used with an OTel ObservableInstrument for active requests.
+  static void ObserveActiveRequestsCallback(
+      opentelemetry::metrics::ObserverResult observer_result,
+      Http2Server* self_ptr);
+
   /// The host address to run the http server on.
   std::string host_address_;
 
@@ -347,6 +369,9 @@ class Http2Server : public HttpServerInterface {
   /// The time interval for metrics aggregation.
   TimeDuration aggregated_metric_interval_ms_;
 
+  /// Feature flag for otel server metrics
+  bool otel_server_metrics_enabled_;
+
   /// An instance of the async executor.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
 
@@ -379,5 +404,27 @@ class Http2Server : public HttpServerInterface {
 
   /// @brief enables use of adtech site value as authorized_domain.
   bool adtech_site_authorized_domain_enabled_;
+
+  /// OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  /// OpenTelemetry Instrument for measuring req-response latency.
+  std::unique_ptr<opentelemetry::metrics::Histogram<double>>
+      server_request_duration_;
+
+  /// OpenTelemetry Instrument for active Http server requests.
+  std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+      active_requests_instrument_;
+
+  /// OpenTelemetry Instrument for measuring request body size.
+  std::unique_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      server_request_body_size_;
+
+  /// OpenTelemetry Instrument for measuring response body size.
+  std::unique_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      server_response_body_size_;
+
+  /// OpenTelemetry Instrument for measuring response body size.
+  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>> pbs_transactions_;
 };
 }  // namespace google::scp::core

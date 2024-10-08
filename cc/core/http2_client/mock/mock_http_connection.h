@@ -24,10 +24,7 @@
 namespace google::scp::core::http2_client::mock {
 class MockHttpConnection : public HttpConnection {
  public:
-  MockHttpConnection(
-      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      const std::string& host, const std::string& service, bool is_https)
-      : HttpConnection(async_executor, host, service, is_https) {}
+  using HttpConnection::HttpConnection;
 
   void CancelPendingCallbacks() noexcept {
     HttpConnection::CancelPendingCallbacks();

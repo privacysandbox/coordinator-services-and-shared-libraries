@@ -96,11 +96,58 @@ static constexpr char kBudgetKeyTimeframeManager[] =
     "BudgetKeyTimeframeManager";
 
 namespace google::scp::pbs {
+
 ExecutionResult BudgetKeyTimeframeManager::Init() noexcept {
   auto execution_result = budget_key_timeframe_groups_->Init();
   if (!execution_result.Successful()) {
     return execution_result;
   }
+
+  if (metric_router_) {
+    meter_ = metric_router_->GetOrCreateMeter(kBudgetKeyTimeframeManager);
+
+    budget_key_scheduled_load_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameBudgetKeyScheduledLoads,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameBudgetKeyScheduledLoads,
+                      "Number of scheduled budget key loads");
+                }));
+    budget_key_load_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameBudgetKeyLoads,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameBudgetKeyLoads,
+                      "Number of budget key load-from-DB attempts");
+                }));
+    budget_key_scheduled_unload_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameBudgetKeyScheduledUnloads,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameBudgetKeyScheduledUnloads,
+                      "Number of scheduled budget key unloads");
+                }));
+    budget_key_unload_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameBudgetKeyUnloads,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameBudgetKeyUnloads,
+                      "Number of budget key unload-from-DB attempts");
+                }));
+  }
+
   return journal_service_->SubscribeForRecovery(
       id_, bind(&BudgetKeyTimeframeManager::OnJournalServiceRecoverCallback,
                 this, _1, _2));
@@ -226,6 +273,11 @@ void BudgetKeyTimeframeManager::OnBeforeGarbageCollection(
       make_shared<NoSQLDatabaseValidAttributeValueTypes>(serialized_tokens);
   upsert_database_item_context.request->new_attributes->push_back(
       key_value_pair);
+
+  if (metric_router_) {
+    budget_key_scheduled_unload_instrument_->Add(1);
+  }
+
   budget_key_count_metric_->Increment(kMetricEventUnloadFromDBScheduled);
 
   // Request-level retry is not necessary here. If the request is unsuccessful,
@@ -246,9 +298,19 @@ void BudgetKeyTimeframeManager::OnStoreTimeframeGroupToDBCallback(
     shared_ptr<BudgetKeyTimeframeGroup>& budget_key_timeframe_group,
     function<void(bool)> should_delete_entry) noexcept {
   if (upsert_database_item_context.result != SuccessExecutionResult()) {
+    if (metric_router_) {
+      budget_key_unload_instrument_->Add(
+          1, {{kMetricLabelBudgetKeyUnloadSuccess, false}});
+    }
+
     budget_key_count_metric_->Increment(kMetricEventUnloadFromDBFailed);
     should_delete_entry(false);
     return;
+  }
+
+  if (metric_router_) {
+    budget_key_unload_instrument_->Add(
+        1, {{kMetricLabelBudgetKeyUnloadSuccess, true}});
   }
 
   budget_key_count_metric_->Increment(kMetricEventUnloadFromDBSuccess);
@@ -490,6 +552,10 @@ ExecutionResult BudgetKeyTimeframeManager::LoadTimeframeGroupFromDB(
   get_database_item_context.request->sort_key->attribute_value =
       make_shared<NoSQLDatabaseValidAttributeValueTypes>(time_group);
 
+  if (metric_router_) {
+    budget_key_scheduled_load_instrument_->Add(1);
+  }
+
   budget_key_count_metric_->Increment(kMetricEventLoadFromDBScheduled);
 
   return nosql_database_provider_for_live_traffic_->GetDatabaseItem(
@@ -514,6 +580,11 @@ void BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback(
   if (!get_database_item_context.result.Successful()) {
     if (get_database_item_context.result.status_code !=
         core::errors::SC_NO_SQL_DATABASE_PROVIDER_RECORD_NOT_FOUND) {
+      if (metric_router_) {
+        budget_key_load_instrument_->Add(
+            1, {{kMetricLabelBudgetKeyLoadSuccess, false}});
+      }
+
       budget_key_count_metric_->Increment(kMetricEventLoadFromDBFailed);
       budget_key_timeframe_group->needs_loader = true;
       load_budget_key_timeframe_context.result =
@@ -521,6 +592,11 @@ void BudgetKeyTimeframeManager::OnLoadTimeframeGroupFromDBCallback(
       load_budget_key_timeframe_context.Finish();
       return;
     }
+  }
+
+  if (metric_router_) {
+    budget_key_load_instrument_->Add(
+        1, {{kMetricLabelBudgetKeyLoadSuccess, true}});
   }
 
   budget_key_count_metric_->Increment(kMetricEventLoadFromDBSuccess);
@@ -1023,4 +1099,5 @@ ExecutionResult BudgetKeyTimeframeManager::Checkpoint(
   }
   return SuccessExecutionResult();
 }
+
 }  // namespace google::scp::pbs

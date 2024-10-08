@@ -21,16 +21,19 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <nghttp2/asio_http2_client.h>
 
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/http2_client/src/error_codes.h"
+#include "cc/core/http2_client/src/http_connection.h"
 #include "cc/core/interface/async_context.h"
-#include "core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
 #include "public/core/interface/execution_result.h"
-
-#include "error_codes.h"
-#include "http_connection.h"
 
 namespace google::scp::core {
 /**
@@ -56,6 +59,21 @@ class HttpConnectionPool : public ServiceInterface {
     std::atomic<uint64_t> order_counter;
   };
 
+  /// Callback to be used with an OTel ObservableInstrument for client active
+  /// requests.
+  static void ObserveClientActiveRequestsCallback(
+      opentelemetry::metrics::ObserverResult observer_result,
+      absl::Nonnull<HttpConnectionPool*> self_ptr);
+
+  /// Callback to be used with an OTel ObservableInstrument for client open
+  /// connections.
+  static void ObserveClientOpenConnectionsCallback(
+      opentelemetry::metrics::ObserverResult observer_result,
+      absl::Nonnull<HttpConnectionPool*> self_ptr);
+
+  /// Increments the client address resolution error.
+  void IncrementClientAddressError(absl::string_view uri);
+
  public:
   /**
    * @brief Constructs a new Http Connection Pool object
@@ -66,13 +84,15 @@ class HttpConnectionPool : public ServiceInterface {
    */
   explicit HttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      std::shared_ptr<core::MetricRouter> metric_router,
       size_t max_connections_per_host = kDefaultMaxConnectionsPerHost,
       TimeDuration http2_read_timeout_in_sec =
           kDefaultHttp2ReadTimeoutInSeconds)
       : async_executor_(async_executor),
         max_connections_per_host_(max_connections_per_host),
         http2_read_timeout_in_sec_(http2_read_timeout_in_sec),
-        is_running_(false) {}
+        is_running_(false),
+        metric_router_(metric_router) {}
 
   ExecutionResult Init() noexcept;
   ExecutionResult Run() noexcept;
@@ -129,5 +149,23 @@ class HttpConnectionPool : public ServiceInterface {
   std::atomic<bool> is_running_;
   /// Mutex for recycling connection
   std::mutex connection_lock_;
+
+  /// An instance of metric router which will provide APIs to create metrics.
+  std::shared_ptr<core::MetricRouter> metric_router_;
+
+  /// OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  /// OpenTelemetry Instrument for client active Http requests.
+  std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+      client_active_requests_instrument_;
+
+  /// OpenTelemetry Instrument for client open connections.
+  std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+      client_open_connections_instrument_;
+
+  /// OpenTelemetry Instrument for client address resolution errors.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      client_address_errors_counter_;
 };
 }  // namespace google::scp::core

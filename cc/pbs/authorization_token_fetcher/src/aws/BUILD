@@ -24,9 +24,6 @@ cc_library(
             "**/*.cc",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/authorization_service/src:core_authorization_service",

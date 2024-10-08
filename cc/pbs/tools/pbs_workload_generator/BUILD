@@ -20,9 +20,6 @@ cc_binary(
     name = "pbs_workload_generator",
     testonly = True,
     srcs = glob(["*.cc"]),
-    copts = [
-        "-std=c++17",
-    ],
     data = [
         "multi_coordinator_config.json",
         "single_coordinator_config.json",

@@ -17,5 +17,6 @@ output "load_balancer_ip" {
 }
 
 output "key_storage_cloudfunction_url" {
-  value = google_cloudfunctions2_function.key_storage_cloudfunction.service_config[0].uri
+  description = "The audience claim URL used by the key generation service."
+  value       = google_cloudfunctions2_function.key_storage_cloudfunction.url
 }

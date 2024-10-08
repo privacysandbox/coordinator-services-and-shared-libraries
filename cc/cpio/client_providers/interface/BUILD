@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         ":cpio_client_provider_interface_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -101,9 +98,6 @@ cc_library(
         [
             "type_def.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

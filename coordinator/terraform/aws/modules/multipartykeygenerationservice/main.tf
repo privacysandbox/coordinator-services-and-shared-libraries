@@ -287,3 +287,21 @@ resource "aws_autoscaling_group" "split_key_rotation_group" {
 
   depends_on = [aws_route_table_association.split_key_route_table_assoc]
 }
+
+resource "aws_autoscaling_policy" "split_key_rotation" {
+  name                   = "${var.environment}_${var.asg_name}_policy"
+  autoscaling_group_name = aws_autoscaling_group.split_key_rotation_group.name
+  policy_type            = "TargetTrackingScaling"
+  target_tracking_configuration {
+    target_value = 0.1 // This value can be any value in the open interval (0,1).
+    customized_metric_specification {
+      metric_dimension {
+        name  = "QueueName"
+        value = var.keyjobqueue_name
+      }
+      metric_name = "ApproximateNumberOfMessagesVisible"
+      namespace   = "AWS/SQS"
+      statistic   = "Sum"
+    }
+  }
+}

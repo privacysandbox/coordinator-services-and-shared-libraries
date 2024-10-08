@@ -35,6 +35,7 @@
 #include "cc/core/token_provider_cache/src/auto_refresh_token_provider.h"
 #include "cc/cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
 #include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_provider.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
 #include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "cc/cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
 #include "cc/pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
@@ -44,7 +45,11 @@
 #include "cc/pbs/interface/pbs_client_interface.h"
 #include "cc/pbs/pbs_client/src/pbs_client.h"
 #include "cc/public/cpio/interface/metric_client/type_def.h"
+#include "google/cloud/monitoring/v3/metric_client.h"
+#include "google/cloud/opentelemetry/monitoring_exporter.h"
 #include "google/cloud/opentelemetry/resource_detector.h"
+#include "google/cloud/options.h"
+#include "google/cloud/project.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/sdk/resource/resource_detector.h"
@@ -78,6 +83,7 @@ using ::google::scp::core::nosql_database_provider::GcpSpanner;
 using ::google::scp::cpio::MetricClientOptions;
 using ::google::scp::cpio::client_providers::GcpAuthTokenProvider;
 using ::google::scp::cpio::client_providers::GcpInstanceClientProvider;
+using ::google::scp::cpio::client_providers::GcpInstanceClientUtils;
 using ::google::scp::cpio::client_providers::GcpMetricClientProvider;
 using ::google::scp::cpio::client_providers::MetricBatchingOptions;
 using ::google::scp::pbs::GcpAuthorizationTokenFetcher;
@@ -357,36 +363,81 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
     std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
         instance_client_provider,
     opentelemetry::sdk::resource::Resource resource) noexcept {
-  std::unique_ptr<GrpcAuthConfig> metric_auth_config =
-      std::make_unique<GrpcAuthConfig>(
-          GetConfigValue(std::string(core::kOtelServiceAccountKey),
-                         std::string(core::kOtelServiceAccountValue),
-                         *config_provider_),
-          GetConfigValue(std::string(core::kOtelAudienceKey),
-                         std::string(core::kOtelAudienceValue),
-                         *config_provider_),
-          GetConfigValue(std::string(core::kOtelCredConfigKey),
-                         std::string(core::kOtelCredConfigValue),
-                         *config_provider_));
-  std::unique_ptr<core::TokenFetcher> metric_token_fetcher =
-      std::make_unique<GcpTokenFetcher>();
-  std::unique_ptr<GrpcIdTokenAuthenticator> metric_id_token_authenticator =
-      std::make_unique<GrpcIdTokenAuthenticator>(
-          std::move(metric_auth_config), std::move(metric_token_fetcher));
+  const std::string exporter_config = GetConfigValue(
+      std::string(core::kOtelMetricsExporterKey),
+      std::string(core::kOtelMetricsExporterValue), *config_provider_);
 
-  const std::string exporter_path = GetConfigValue(
-      std::string(core::kOtelExporterOtlpEndpointKey),
-      std::string(core::kOtelExporterOtlpEndpointValue), *config_provider_);
+  if (exporter_config == "otlp") {
+    SCP_INFO(kGcpDependencyProvider, kZeroUuid,
+                "Using value: " + exporter_config +
+                    " for option OTEL_METRICS_EXPORTER.");
+    std::unique_ptr<GrpcAuthConfig> metric_auth_config =
+        std::make_unique<GrpcAuthConfig>(
+            GetConfigValue(std::string(core::kOtelServiceAccountKey),
+                           std::string(core::kOtelServiceAccountValue),
+                           *config_provider_),
+            GetConfigValue(std::string(core::kOtelAudienceKey),
+                           std::string(core::kOtelAudienceValue),
+                           *config_provider_),
+            GetConfigValue(std::string(core::kOtelCredConfigKey),
+                           std::string(core::kOtelCredConfigValue),
+                           *config_provider_));
+    std::unique_ptr<core::TokenFetcher> metric_token_fetcher =
+        std::make_unique<GcpTokenFetcher>();
+    std::unique_ptr<GrpcIdTokenAuthenticator> metric_id_token_authenticator =
+        std::make_unique<GrpcIdTokenAuthenticator>(
+            std::move(metric_auth_config), std::move(metric_token_fetcher));
 
-  opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions exporter_options;
-  exporter_options.endpoint = exporter_path;
+    const std::string exporter_path = GetConfigValue(
+        std::string(core::kOtelExporterOtlpEndpointKey),
+        std::string(core::kOtelExporterOtlpEndpointValue), *config_provider_);
 
-  std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
-      metric_exporter = std::make_unique<OtlpGrpcAuthedMetricExporter>(
-          exporter_options, std::move(metric_id_token_authenticator));
+    opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions
+        exporter_options;
+    exporter_options.endpoint = exporter_path;
 
-  return std::make_unique<MetricRouter>(config_provider_, std::move(resource),
-                                        std::move(metric_exporter));
+    std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter> exporter =
+        std::make_unique<OtlpGrpcAuthedMetricExporter>(
+            exporter_options, std::move(metric_id_token_authenticator));
+
+    return std::make_unique<MetricRouter>(config_provider_, std::move(resource),
+                                          std::move(exporter));
+  } else if (exporter_config == "googlecloud") {
+    SCP_INFO(kGcpDependencyProvider, kZeroUuid,
+                "Using value: " + exporter_config +
+                    " for option OTEL_METRICS_EXPORTER.");
+    auto project_id_or =
+        GcpInstanceClientUtils::GetCurrentProjectId(instance_client_provider);
+    if (!project_id_or.Successful()) {
+      SCP_ERROR(
+          kGcpDependencyProvider, kZeroUuid, project_id_or.result(),
+          "Failed to read current project ID using GcpInstanceClientUtils.");
+      return nullptr;
+    }
+    std::string project_id = project_id_or.value();
+
+    auto project = google::cloud::Project(project_id);
+    auto connection =
+        google::cloud::monitoring_v3::MakeMetricServiceConnection();
+    auto client = google::cloud::monitoring_v3::MetricServiceClient(connection);
+    auto options =
+        google::cloud::Options{}
+            .set<google::cloud::otel_internal::MetricNameFormatterOption>(
+                [](std::string const& s) {
+                  return "custom.googleapis.com/" + s;
+                });
+
+    auto exporter = google::cloud::otel_internal::MakeMonitoringExporter(
+        project, std::move(connection), options);
+
+    return std::make_unique<MetricRouter>(config_provider_, std::move(resource),
+                                          std::move(exporter));
+  }
+
+  SCP_WARNING(kGcpDependencyProvider, kZeroUuid,
+              "Invalid config value: " + exporter_config +
+                  " for option OTEL_METRICS_EXPORTER.");
+  return nullptr;
 }
 
 }  // namespace google::scp::pbs

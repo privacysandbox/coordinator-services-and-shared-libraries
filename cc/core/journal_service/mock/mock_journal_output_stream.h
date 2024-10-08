@@ -22,8 +22,10 @@
 #include <memory>
 #include <string>
 
+#include "absl/base/nullability.h"
 #include "core/interface/blob_storage_provider_interface.h"
 #include "core/journal_service/src/journal_output_stream.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::journal_service::mock {
@@ -34,11 +36,12 @@ class MockJournalOutputStream : public core::JournalOutputStream {
       const std::shared_ptr<std::string>& partition_name,
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
       const std::shared_ptr<BlobStorageClientInterface>&
-          blob_storage_provider_client)
-      : core::JournalOutputStream(
-            bucket_name, partition_name, async_executor,
-            blob_storage_provider_client,
-            std::make_shared<cpio::MockAggregateMetric>()) {}
+          blob_storage_provider_client,
+      std::shared_ptr<core::MetricRouter> metric_router)
+      : core::JournalOutputStream(bucket_name, partition_name, async_executor,
+                                  blob_storage_provider_client,
+                                  std::make_shared<cpio::MockAggregateMetric>(),
+                                  metric_router) {}
 
   std::function<ExecutionResult(
       AsyncContext<journal_service::JournalStreamAppendLogRequest,

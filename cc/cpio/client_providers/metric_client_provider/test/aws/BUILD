@@ -39,9 +39,6 @@ cc_test(
     size = "small",
     srcs =
         ["cloud_watch_error_converter_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -55,9 +52,6 @@ cc_test(
     name = "aws_metric_client_utils_test",
     size = "small",
     srcs = ["aws_metric_client_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -74,9 +68,6 @@ cc_test(
     size = "small",
     timeout = "long",
     srcs = ["aws_metric_client_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

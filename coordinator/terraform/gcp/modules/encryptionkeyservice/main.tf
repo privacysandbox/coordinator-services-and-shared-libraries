@@ -49,7 +49,7 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
   location = var.region
 
   build_config {
-    runtime     = "java11"
+    runtime     = "java17"
     entry_point = "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyServiceHttpFunction"
     source {
       storage_source {
@@ -71,6 +71,7 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
       SPANNER_INSTANCE = var.spanner_instance_name
       SPANNER_DATABASE = var.spanner_database_name
       VERSION          = module.version.version
+      LOG_EXECUTION_ID = "true"
     }
   }
 

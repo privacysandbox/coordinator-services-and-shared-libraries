@@ -22,6 +22,9 @@
 #include "cc/core/interface/http_client_interface.h"
 #include "core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "core/interface/async_executor_interface.h"
+#include "core/telemetry/src/metric/metric_router.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
 #include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
@@ -65,8 +68,10 @@ class HttpClient : public HttpClientInterface {
    * strategy.
    * @param total_retries total retry counts.
    */
-  explicit HttpClient(std::shared_ptr<AsyncExecutorInterface>& async_executor,
-                      HttpClientOptions options = HttpClientOptions());
+  explicit HttpClient(
+      std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      HttpClientOptions options = HttpClientOptions(),
+      std::shared_ptr<core::MetricRouter> metric_router = nullptr);
 
   ExecutionResult Init() noexcept override;
   ExecutionResult Run() noexcept override;
@@ -81,5 +86,11 @@ class HttpClient : public HttpClientInterface {
 
   /// Operation dispatcher
   common::OperationDispatcher operation_dispatcher_;
+
+  /// An instance of metric router which will provide APIs to create metrics.
+  std::shared_ptr<core::MetricRouter> metric_router_;
+
+  /// OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
 };
 }  // namespace google::scp::core

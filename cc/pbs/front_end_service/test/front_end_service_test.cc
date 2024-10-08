@@ -661,8 +661,6 @@ TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
 TEST_F(FrontEndServiceTest, BeginTransactionValidBodySiteAsAuthDomainEnabled) {
   auto mock_metric_client = std::make_shared<MockMetricClient>();
   auto mock_config_provider = std::make_shared<MockConfigProvider>();
-  mock_config_provider->SetBool(
-      "google_scp_pbs_adtech_site_as_authorized_domain_enabled", true);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
   shared_ptr<JournalServiceInterface> journal_service;
@@ -750,113 +748,6 @@ TEST_F(FrontEndServiceTest, BeginTransactionValidBodySiteAsAuthDomainEnabled) {
   http_context.request->headers = std::make_shared<HttpHeaders>();
   http_context.request->auth_context.authorized_domain =
       std::make_shared<string>("https://foo.com");
-  auto pair = std::make_pair(std::string(kTransactionOriginHeader),
-                             std::string("https://origin.foo.com"));
-  http_context.request->headers->insert(pair);
-  EXPECT_EQ(
-      front_end_service.BeginTransaction(http_context),
-      FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
-  auto total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelBeginTransaction, kMetricNameRequests);
-  auto client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelBeginTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-
-  http_context.request->headers->insert(
-      {std::string(kTransactionIdHeader),
-       "3E2A3D09-48ED-A355-D346-AD7DC6CB0909"});
-  http_context.request->headers->insert({std::string(kTransactionSecretHeader),
-                                         std::string("transaction_secret")});
-  EXPECT_EQ(front_end_service.BeginTransaction(http_context),
-            SuccessExecutionResult());
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 2);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  WaitUntil([&]() { return condition.load(); });
-}
-
-TEST_F(FrontEndServiceTest, BeginTransactionValidBodySiteAsAuthDomainDisabled) {
-  auto mock_metric_client = std::make_shared<MockMetricClient>();
-  auto mock_config_provider = std::make_shared<MockConfigProvider>();
-  mock_config_provider->SetBool(
-      "google_scp_pbs_adtech_site_as_authorized_domain_enabled", false);
-  shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<JournalServiceInterface> journal_service;
-  shared_ptr<TransactionCommandSerializerInterface>
-      transaction_command_serializer;
-
-  auto mock_transaction_request_router = GetMockTransactionRequestRouter();
-  std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
-      make_shared<MockAsyncExecutor>();
-
-  atomic<bool> condition = false;
-  EXPECT_CALL(
-      *mock_transaction_request_router,
-      Execute(An<AsyncContext<TransactionRequest, TransactionResponse>&>()))
-      .WillOnce([&](AsyncContext<TransactionRequest, TransactionResponse>&
-                        transaction_context) {
-        EXPECT_EQ(transaction_context.request->commands.size(), 2);
-        EXPECT_NE(transaction_context.request->timeout_time, 0);
-        EXPECT_NE(transaction_context.request->transaction_id.high, 0);
-        EXPECT_NE(transaction_context.request->transaction_id.low, 0);
-        EXPECT_EQ(*transaction_context.request->transaction_secret,
-                  "transaction_secret");
-        EXPECT_EQ(*transaction_context.request->transaction_origin,
-                  "https://origin.foo.com");
-
-        auto command = static_pointer_cast<ConsumeBudgetCommand>(
-            transaction_context.request->commands[0]);
-        EXPECT_EQ(*command->GetBudgetKeyName(),
-                  "https://origin.foo.com/test_key");
-        EXPECT_EQ(command->GetTimeBucket(), 1570864850000000000);
-        EXPECT_EQ(command->GetTokenCount(), 10);
-
-        command = static_pointer_cast<ConsumeBudgetCommand>(
-            transaction_context.request->commands[1]);
-        EXPECT_EQ(*command->GetBudgetKeyName(),
-                  "https://origin.foo.com/test_key_2");
-        EXPECT_EQ(command->GetTimeBucket(), 1576135250000000000);
-        EXPECT_EQ(command->GetTokenCount(), 23);
-        condition = true;
-        return SuccessExecutionResult();
-      });
-
-  std::shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
-      make_shared<MockNoSQLDatabaseProvider>();
-  std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
-      consume_budget_command_factory = GetMockConsumeBudgetCommandFactory();
-
-  std::shared_ptr<HttpServerInterface> http2_server =
-      std::make_shared<MockHttp2Server>();
-  MockFrontEndServiceWithOverrides front_end_service(
-      http2_server, mock_async_executor,
-      std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider);
-
-  front_end_service.Init();
-  front_end_service.InitMetricInstances();
-  string begin_transaction_body_string =
-      GetBeginTransactionHttpRequestBody_Sample();
-  BytesBuffer bytes_buffer;
-  bytes_buffer.bytes =
-      std::make_shared<vector<Byte>>(begin_transaction_body_string.begin(),
-                                     begin_transaction_body_string.end());
-  bytes_buffer.capacity = begin_transaction_body_string.length();
-  bytes_buffer.length = begin_transaction_body_string.length();
-
-  AsyncContext<HttpRequest, HttpResponse> http_context;
-  http_context.request = std::make_shared<HttpRequest>();
-  http_context.request->body = bytes_buffer;
-  http_context.request->headers = std::make_shared<HttpHeaders>();
-  http_context.request->auth_context.authorized_domain =
-      std::make_shared<string>("https://origin.foo.com");
   auto pair = std::make_pair(std::string(kTransactionOriginHeader),
                              std::string("https://origin.foo.com"));
   http_context.request->headers->insert(pair);

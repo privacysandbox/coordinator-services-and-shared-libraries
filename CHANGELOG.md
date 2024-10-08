@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.11.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.10.0...v1.11.0) (2024-10-07)
+
+- **Important note**
+  - **[GCP only]** Path to the auth lambda handler should now be a packaged artifact and `auth_cloud_function_requirements_path` should be removed, example path:
+    ```
+    auth_cloud_function_handler_path = "../../../dist/auth_cloud_function_handler.zip"
+    ```
+
+### Changes
+
+  - Added OTel java libraries and Config Modules
+  - Added new BlobStorageClient API to get blob bytes by range
+  - Changed http status code for an unknown exception to `500` instead of `403`
+  - Cleaned up c++ code base for PBS
+  - Corrected type of `allowed_wip_iam_principals` var in demo.auto.tfvars
+  - Created http connection pool metrics for PBS
+  - Enabled OTel instrumentation for BudgetKeyTimeframeManager and JournalService
+  - Removed use of site enrollment and multi-origin feature flags
+  - Updated PBS client to send trusted service client version in the outgoing request header
+  - Updated container dependencies
+  - [AWS only] Enabled SQS msg queue based autoscaling of Keygeneration EC2 Nitro instances
+  - [AWS only] Tuned Origin Latency Alarm to support minimum QPS and lower latency threshold to align with Android
+  - [AWS only] Updated DNS management terraform for supporting Cross-Cloud PBS
+  - [AWS only] Upgraded AWS lambda function to Python version 3.9
+  - [GCP only] Added new optimized PBS client for simplified transaction protocol
+  - [GCP only] Changed Load Balancing Schema from `EXTERNAL` to `EXTERNAL_MANAGED`
+  - [GCP only] Added option for bucket versioning in AdTech setup
+  - [GCP only] Cleanups in MPKHS Terraform
+  - [GCP only] Packaged PBS Auth cloud function into zip at build time
+  - [GCP only] Removed `kms:Decrypt` permission from key generation service instance
+  - [GCP only] Updated Cloud Function to use Java 17
+  - [GCP only] Updated Key Generation Service to be regional instead of zonal
+  - [GCP only] Updated the minimum GCP Terraform provider version for MPKHS to 5.21
+  - [GPC only] Set default input variables for GCP Terraform
+
 ## [1.10.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.9.0...v1.10.0) (2024-08-16)
 
 ### Manual Deployment Steps Required

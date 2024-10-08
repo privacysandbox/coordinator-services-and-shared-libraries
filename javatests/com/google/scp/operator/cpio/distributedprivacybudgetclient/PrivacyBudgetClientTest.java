@@ -269,7 +269,6 @@ public final class PrivacyBudgetClientTest {
       throws IOException, PrivacyBudgetClientException {
     Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
-    long lastExecTimeStamp = Instant.now().toEpochMilli();
     when(awsHttpClient.executePost(
             eq(PREPARE_PHASE_URI),
             eq(expectedPayload()),
@@ -299,7 +298,6 @@ public final class PrivacyBudgetClientTest {
   public void performAction_unauthenticated() throws IOException, PrivacyBudgetClientException {
     Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
-    long lastExecTimeStamp = Instant.now().toEpochMilli();
     when(awsHttpClient.executePost(
             eq(PREPARE_PHASE_URI),
             eq(expectedPayload()),
@@ -317,7 +315,6 @@ public final class PrivacyBudgetClientTest {
   public void performAction_unauthorized() throws IOException, PrivacyBudgetClientException {
     Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
-    long lastExecTimeStamp = Instant.now().toEpochMilli();
     when(awsHttpClient.executePost(
             eq(PREPARE_PHASE_URI),
             eq(expectedPayload()),
@@ -599,7 +596,7 @@ public final class PrivacyBudgetClientTest {
 
   @Test
   public void performAction_prepare_preConditionNotMet_statusCheck_serverAheadByTwo()
-      throws IOException, PrivacyBudgetClientException {
+      throws IOException {
     Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
     long lastExecTimeStamp = Instant.now().toEpochMilli();
@@ -709,7 +706,7 @@ public final class PrivacyBudgetClientTest {
 
   @Test
   public void performAction_Prepare_Response400_statusCheck_ServerPhaseAheadBy2()
-      throws IOException, PrivacyBudgetClientException {
+      throws IOException {
     Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.PREPARE, transactionRequest);
 
@@ -754,16 +751,6 @@ public final class PrivacyBudgetClientTest {
       throws IOException, PrivacyBudgetClientException {
     Transaction transaction =
         generateTransaction(ENDPOINT, TRANSACTION_ID, TransactionPhase.COMMIT, transactionRequest);
-    long lastExecTimeStamp = Instant.now().toEpochMilli();
-    Map<String, String> responseHeaders =
-        ImmutableMap.of(
-            TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY, String.valueOf(lastExecTimeStamp));
-    HttpClientResponse statusResponse =
-        HttpClientResponse.create(
-            200,
-            "{\"has_failures\":false,\"is_expired\":false,\"last_execution_timestamp\":1682345560947309"
-                + ",\"transaction_execution_phase\":\"NOTIFY\"}",
-            responseHeaders);
     when(awsHttpClient.executePost(
             eq(COMMIT_PHASE_URI),
             eq(expectedPayload()),
@@ -1074,6 +1061,7 @@ public final class PrivacyBudgetClientTest {
         .setTransactionSecret("transaction-secret")
         .setTimeout(Timestamp.from(Instant.now()))
         .setClaimedIdentity("dummy-reporting-site")
+        .setTrustedServicesClientVersion("dummy-version")
         .build();
   }
 
@@ -1089,6 +1077,7 @@ public final class PrivacyBudgetClientTest {
     headers.put("x-gscp-transaction-id", transaction.getId().toString().toUpperCase());
     headers.put("x-gscp-claimed-identity", "dummy-reporting-site");
     headers.put("x-gscp-transaction-secret", "transaction-secret");
+    headers.put("x-trusted-services-client-version", "dummy-version");
     if (transaction.getCurrentPhase() != TransactionPhase.BEGIN) {
       headers.put(
           TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY,

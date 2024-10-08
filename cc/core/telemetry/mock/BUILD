@@ -29,9 +29,6 @@ cc_library(
         "in_memory_metric_reader.h",
         "in_memory_metric_router.h",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -51,9 +48,6 @@ cc_library(
     hdrs = [
         "error_codes.h",
         "instrument_mock.h",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

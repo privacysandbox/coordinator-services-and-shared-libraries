@@ -20,10 +20,13 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Expect;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
 import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
@@ -32,28 +35,44 @@ import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPr
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetServiceException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionEngine.TransactionEngineException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionManager.TransactionManagerException;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionOrchestrator.TransactionOrchestratorException;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import java.time.Instant;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public final class DistributedPrivacyBudgetClientTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final Expect expect = Expect.create();
   @Mock private TransactionManagerImpl transactionManager;
+  @Mock private TransactionOrchestratorImpl transactionOrchestrator;
   private DistributedPrivacyBudgetClientImpl distributedPrivacyBudgetClient;
 
   Instant testInstant = Instant.now();
 
+  private enum EnableNewClientOptions {
+    UNSET,
+    ON,
+    OFF
+  }
+
+  @TestParameter({"UNSET", "OFF"})
+  private EnableNewClientOptions newClientOff;
+
+  @TestParameter private EnableNewClientOptions enableNewClientOptionsAll;
+
   @Before
   public void setUp() {
-    distributedPrivacyBudgetClient = new DistributedPrivacyBudgetClientImpl(transactionManager);
+    distributedPrivacyBudgetClient =
+        new DistributedPrivacyBudgetClientImpl(transactionManager, transactionOrchestrator);
   }
 
   @Test
@@ -74,7 +93,8 @@ public final class DistributedPrivacyBudgetClientTest {
         .thenReturn(ImmutableList.of(exhaustedUnitsByOrigin));
 
     ConsumePrivacyBudgetResponse consumePrivacyBudgetResponse =
-        distributedPrivacyBudgetClient.consumePrivacyBudget(getRequest(1));
+        distributedPrivacyBudgetClient.consumePrivacyBudget(
+            getConsumePrivacyBudgetRequest(1, newClientOff));
 
     verify(transactionManager).execute(argument.capture());
     assertThat(consumePrivacyBudgetResponse).isEqualTo(getExhaustedBudget());
@@ -87,7 +107,8 @@ public final class DistributedPrivacyBudgetClientTest {
         .thenReturn(ImmutableList.<ReportingOriginToPrivacyBudgetUnits>builder().build());
 
     ConsumePrivacyBudgetResponse consumePrivacyBudgetResponse =
-        distributedPrivacyBudgetClient.consumePrivacyBudget(getRequest(1));
+        distributedPrivacyBudgetClient.consumePrivacyBudget(
+            getConsumePrivacyBudgetRequest(1, newClientOff));
 
     verify(transactionManager).execute(argument.capture());
     assertThat(consumePrivacyBudgetResponse).isEqualTo(getNotExhaustedBudget());
@@ -97,7 +118,9 @@ public final class DistributedPrivacyBudgetClientTest {
   public void consumePrivacyBudget_overSizeLimit() {
     assertThrows(
         DistributedPrivacyBudgetClientException.class,
-        () -> distributedPrivacyBudgetClient.consumePrivacyBudget(getRequest(30001)));
+        () ->
+            distributedPrivacyBudgetClient.consumePrivacyBudget(
+                getConsumePrivacyBudgetRequest(30001, enableNewClientOptionsAll)));
   }
 
   @Test
@@ -113,11 +136,104 @@ public final class DistributedPrivacyBudgetClientTest {
     DistributedPrivacyBudgetServiceException exception =
         assertThrows(
             DistributedPrivacyBudgetServiceException.class,
-            () -> distributedPrivacyBudgetClient.consumePrivacyBudget(getRequest(1)));
+            () ->
+                distributedPrivacyBudgetClient.consumePrivacyBudget(
+                    getConsumePrivacyBudgetRequest(1, newClientOff)));
     verify(transactionManager).execute(argument.capture());
     assertThat(exception.getMessage()).isEqualTo(StatusCode.UNKNOWN.name());
     assertThat(exception.getCause().getCause().getMessage())
         .isEqualTo(StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED.name());
+  }
+
+  @Test
+  public void consumePrivacyBudgetNewClient_callsTransactionOrchestrator_success()
+      throws Exception {
+    ConsumePrivacyBudgetRequest consumePrivacyBudgetRequest =
+        getConsumePrivacyBudgetRequest(/* numberOfPbus= */ 3, EnableNewClientOptions.ON);
+    when(transactionOrchestrator.execute(any(TransactionRequest.class)))
+        .thenReturn(ImmutableList.of());
+
+    ConsumePrivacyBudgetResponse consumePrivacyBudgetResponse =
+        distributedPrivacyBudgetClient.consumePrivacyBudget(consumePrivacyBudgetRequest);
+
+    verify(transactionOrchestrator, times(1)).execute(any(TransactionRequest.class));
+    verifyNoInteractions(transactionManager);
+
+    expect.that(consumePrivacyBudgetResponse).isEqualTo(getNotExhaustedBudget());
+  }
+
+  @Test
+  public void consumePrivacyBudgetNewClient_callsTransactionOrchestrator_budgetExhausted()
+      throws Exception {
+    ConsumePrivacyBudgetRequest consumePrivacyBudgetRequest =
+        getConsumePrivacyBudgetRequest(/* numberOfPbus= */ 3, EnableNewClientOptions.ON);
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudget =
+        consumePrivacyBudgetRequest.reportingOriginToPrivacyBudgetUnitsList();
+    when(transactionOrchestrator.execute(any(TransactionRequest.class)))
+        .thenReturn(exhaustedBudget);
+
+    ConsumePrivacyBudgetResponse consumePrivacyBudgetResponse =
+        distributedPrivacyBudgetClient.consumePrivacyBudget(consumePrivacyBudgetRequest);
+
+    verify(transactionOrchestrator, times(1)).execute(any(TransactionRequest.class));
+    verifyNoInteractions(transactionManager);
+
+    expect
+        .that(consumePrivacyBudgetResponse)
+        .isEqualTo(
+            ConsumePrivacyBudgetResponse.builder()
+                .exhaustedPrivacyBudgetUnitsByOrigin(exhaustedBudget)
+                .build());
+  }
+
+  @Test
+  public void
+      consumePrivacyBudgetNewClient_catchesTransactionOrchestratorExceptionWithHealthCheckFailure()
+          throws Exception {
+    ConsumePrivacyBudgetRequest consumePrivacyBudgetRequest =
+        getConsumePrivacyBudgetRequest(/* numberOfPbus= */ 3, EnableNewClientOptions.ON);
+    when(transactionOrchestrator.execute(any(TransactionRequest.class)))
+        .thenThrow(
+            new TransactionOrchestratorException(
+                StatusCode.TRANSACTION_ORCHESTRATOR_HEALTH_CHECK_FAILURE));
+
+    DistributedPrivacyBudgetServiceException distributedPrivacyBudgetServiceException =
+        assertThrows(
+            DistributedPrivacyBudgetServiceException.class,
+            () -> distributedPrivacyBudgetClient.consumePrivacyBudget(consumePrivacyBudgetRequest));
+
+    verifyNoInteractions(transactionManager);
+    expect
+        .that(distributedPrivacyBudgetServiceException.getStatusCode())
+        .isEqualTo(StatusCode.TRANSACTION_ORCHESTRATOR_HEALTH_CHECK_FAILURE);
+    expect
+        .that(distributedPrivacyBudgetServiceException.getCause())
+        .isInstanceOf(TransactionOrchestratorException.class);
+  }
+
+  @Test
+  public void
+      consumePrivacyBudgetNewClient_catchesTransactionOrchestratorExceptionWithConsumeBudgetFailure()
+          throws Exception {
+    ConsumePrivacyBudgetRequest consumePrivacyBudgetRequest =
+        getConsumePrivacyBudgetRequest(/* numberOfPbus= */ 3, EnableNewClientOptions.ON);
+    when(transactionOrchestrator.execute(any(TransactionRequest.class)))
+        .thenThrow(
+            new TransactionOrchestratorException(
+                StatusCode.TRANSACTION_ORCHESTRATOR_CONSUME_BUDGET_FAILURE));
+
+    DistributedPrivacyBudgetServiceException distributedPrivacyBudgetServiceException =
+        assertThrows(
+            DistributedPrivacyBudgetServiceException.class,
+            () -> distributedPrivacyBudgetClient.consumePrivacyBudget(consumePrivacyBudgetRequest));
+
+    verifyNoInteractions(transactionManager);
+    expect
+        .that(distributedPrivacyBudgetServiceException.getStatusCode())
+        .isEqualTo(StatusCode.TRANSACTION_ORCHESTRATOR_CONSUME_BUDGET_FAILURE);
+    expect
+        .that(distributedPrivacyBudgetServiceException.getCause())
+        .isInstanceOf(TransactionOrchestratorException.class);
   }
 
   private ConsumePrivacyBudgetResponse getExhaustedBudget() {
@@ -141,29 +257,47 @@ public final class DistributedPrivacyBudgetClientTest {
         .build();
   }
 
-  private ConsumePrivacyBudgetResponse getNotExhaustedBudget() {
+  private static ConsumePrivacyBudgetResponse getNotExhaustedBudget() {
     return ConsumePrivacyBudgetResponse.builder()
         .exhaustedPrivacyBudgetUnitsByOrigin(
             ImmutableList.<ReportingOriginToPrivacyBudgetUnits>builder().build())
         .build();
   }
 
-  private ConsumePrivacyBudgetRequest getRequest(int count) {
-    var builder = ImmutableList.<PrivacyBudgetUnit>builder();
-    for (int i = 0; i < count; ++i) {
-      var key = String.format("privacybudgetkey-%d", i);
+  private ConsumePrivacyBudgetRequest getConsumePrivacyBudgetRequest(
+      int numberOfPbus, EnableNewClientOptions enableNewClientOptions) {
+    ImmutableList.Builder<PrivacyBudgetUnit> builder = ImmutableList.builder();
+    for (int i = 0; i < numberOfPbus; ++i) {
+      String key = String.format("privacybudgetkey-%d", i);
       builder.add(
           PrivacyBudgetUnit.builder().privacyBudgetKey(key).reportingWindow(testInstant).build());
     }
-    var privacyBudgetUnits = builder.build();
-    var originToBudgetUnitMapping =
+    ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits = builder.build();
+    ReportingOriginToPrivacyBudgetUnits originToBudgetUnitMapping =
         ReportingOriginToPrivacyBudgetUnits.builder()
             .setPrivacyBudgetUnits(privacyBudgetUnits)
             .setReportingOrigin("abc.com")
             .build();
+    ReportingOriginToPrivacyBudgetUnits originToBudgetUnitMapping2 =
+        ReportingOriginToPrivacyBudgetUnits.builder()
+            .setPrivacyBudgetUnits(privacyBudgetUnits)
+            .setReportingOrigin("abc2.com")
+            .build();
+    if (enableNewClientOptions.equals(EnableNewClientOptions.UNSET)) {
+      return ConsumePrivacyBudgetRequest.builder()
+          .claimedIdentity("abc.com")
+          .trustedServicesClientVersion("dummy-version")
+          .reportingOriginToPrivacyBudgetUnitsList(
+              ImmutableList.of(originToBudgetUnitMapping, originToBudgetUnitMapping2))
+          .build();
+    }
+
     return ConsumePrivacyBudgetRequest.builder()
         .claimedIdentity("abc.com")
+        .trustedServicesClientVersion("dummy-version")
         .reportingOriginToPrivacyBudgetUnitsList(ImmutableList.of(originToBudgetUnitMapping))
+        .trustedServicesClientVersion("dummy-version")
+        .enableNewPbsClient(enableNewClientOptions.equals(EnableNewClientOptions.ON))
         .build();
   }
 }

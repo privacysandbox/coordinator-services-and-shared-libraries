@@ -23,12 +23,7 @@ variable "environment" {
 }
 
 variable "auth_cloud_function_handler_path" {
-  description = "The path to where the cloud function handler file is read from."
-  type        = string
-}
-
-variable "auth_cloud_function_requirements_path" {
-  description = "The path to where the cloud function requirements file is read from."
+  description = "The path to where the cloud function handler package(zip) is read from."
   type        = string
 }
 

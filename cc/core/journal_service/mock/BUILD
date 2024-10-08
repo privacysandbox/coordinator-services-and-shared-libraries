@@ -23,12 +23,11 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/public/cpio/utils/metric_aggregation/mock:metric_aggregation_mock",
+        "@com_google_absl//absl/base:nullability",
     ],
 )

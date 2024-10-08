@@ -19,12 +19,14 @@
 #include <list>
 #include <memory>
 
+#include "absl/base/nullability.h"
 #include "core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "core/common/operation_dispatcher/src/retry_strategy.h"
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/journal_service_interface.h"
 #include "core/interface/nosql_database_provider_interface.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/interface/budget_key_interface.h"
 #include "pbs/interface/budget_key_timeframe_manager_interface.h"
@@ -70,12 +72,14 @@ class BudgetKey : public BudgetKeyInterface {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<cpio::AggregateMetricInterface>&
           budget_key_count_metric)
       : BudgetKey(name, id, async_executor, journal_service,
                   nosql_database_provider, nosql_database_provider,
-                  metric_client, config_provider, budget_key_count_metric) {
+                  metric_client, metric_router, config_provider,
+                  budget_key_count_metric) {
     // This construction does not make any distinction between background and
     // live traffic NoSQL operations.
   }
@@ -103,6 +107,7 @@ class BudgetKey : public BudgetKeyInterface {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider_for_live_traffic,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<cpio::AggregateMetricInterface>&
           budget_key_count_metric);
@@ -133,6 +138,7 @@ class BudgetKey : public BudgetKeyInterface {
       const std::shared_ptr<ConsumeBudgetTransactionProtocolInterface>&
           consume_budget_transaction_protocol,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<cpio::AggregateMetricInterface>&
           budget_key_count_metric)
@@ -140,7 +146,7 @@ class BudgetKey : public BudgetKeyInterface {
                   nosql_database_provider, nosql_database_provider,
                   budget_key_timeframe_manager,
                   consume_budget_transaction_protocol, metric_client,
-                  config_provider, budget_key_count_metric) {}
+                  metric_router, config_provider, budget_key_count_metric) {}
 
   /**
    * @brief Constructs a new Budget Key object using customized timeframe
@@ -172,6 +178,7 @@ class BudgetKey : public BudgetKeyInterface {
       const std::shared_ptr<ConsumeBudgetTransactionProtocolInterface>&
           consume_budget_transaction_protocol,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<cpio::AggregateMetricInterface>&
           budget_key_count_metric)
@@ -192,6 +199,7 @@ class BudgetKey : public BudgetKeyInterface {
                                   kBudgetKeyRetryStrategyDelayMs,
                                   kBudgetKeyRetryStrategyTotalRetries)),
         metric_client_(metric_client),
+        metric_router_(metric_router),
         config_provider_(config_provider),
         budget_key_count_metric_(budget_key_count_metric) {}
 
@@ -286,46 +294,56 @@ class BudgetKey : public BudgetKeyInterface {
    */
   core::common::Uuid GetTimeframeManagerId() noexcept;
 
-  /// The name of the current budget key.
+  // The name of the current budget key.
   const std::shared_ptr<BudgetKeyName> name_;
 
-  /// The id of the current budget key.
+  // The id of the current budget key.
   const core::common::Uuid id_;
 
-  /// An instance of the async executor.
+  // An instance of the async executor.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
 
-  /// An instance of the journal service.
+  // An instance of the journal service.
   std::shared_ptr<core::JournalServiceInterface> journal_service_;
 
-  /// An instance to the nosql database provider.
+  // An instance to the nosql database provider.
   std::shared_ptr<core::NoSQLDatabaseProviderInterface>
       nosql_database_provider_for_background_operations_;
 
-  /// An instance to the nosql database provider.
+  // An instance to the nosql database provider.
   std::shared_ptr<core::NoSQLDatabaseProviderInterface>
       nosql_database_provider_for_live_traffic_;
 
-  /// The budget key frame manager.
+  // The budget key frame manager.
   std::shared_ptr<BudgetKeyTimeframeManagerInterface>
       budget_key_timeframe_manager_;
 
-  /// Transaction protocol for budget consumption.
+  // Transaction protocol for budget consumption.
   std::shared_ptr<ConsumeBudgetTransactionProtocolInterface>
       consume_budget_transaction_protocol_;
 
-  /// Transaction protocol for batch budget consumption.
+  // Transaction protocol for batch budget consumption.
   std::shared_ptr<BatchConsumeBudgetTransactionProtocolInterface>
       batch_consume_budget_transaction_protocol_;
 
-  /// Operation dispatcher
+  // Operation dispatcher
   core::common::OperationDispatcher operation_dispatcher_;
-  /// Metric client instance for custom metric recording.
+
+  // Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-  /// An instance of the config provider.
+
+  // Keep a MetricRouter member in order to access MetricRouter-owned OTel
+  // Instruments.
+  //
+  // When null, derived BudgetKeyTimeframeManager does not produce OTel
+  // metrics.
+  absl::Nullable<std::shared_ptr<core::MetricRouter>> metric_router_;
+
+  // An instance of the config provider.
   const std::shared_ptr<core::ConfigProviderInterface> config_provider_;
 
-  /// The aggregate metric instance for budget key counters
+  // The aggregate metric instance for budget key counters
   std::shared_ptr<cpio::AggregateMetricInterface> budget_key_count_metric_;
 };
+
 }  // namespace google::scp::pbs

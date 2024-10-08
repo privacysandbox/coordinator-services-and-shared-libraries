@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "get_public_key_cloudfunction_urls" {
-  value = module.multipartykeyhosting_primary.get_public_key_cloudfunction_urls
-}
-
 output "get_public_key_loadbalancer_ip" {
   value = module.multipartykeyhosting_primary.get_public_key_loadbalancer_ip
 }

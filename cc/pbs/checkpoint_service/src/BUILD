@@ -24,14 +24,12 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/journal_service/src:core_journal_service_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
         "//cc/pbs/budget_key_provider/src:pbs_budget_key_provider_lib",

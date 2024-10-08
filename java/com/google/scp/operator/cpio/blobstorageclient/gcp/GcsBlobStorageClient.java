@@ -43,10 +43,9 @@ import java.util.stream.StreamSupport;
  * GcsBlobStorageClient implements the {@code BlobStorageClient} interface for Gcp (Gcs) cloud
  * storage service.
  */
-// TODO: Add test coverage.
 public final class GcsBlobStorageClient implements BlobStorageClient {
 
-  private Storage client;
+  private final Storage client;
 
   /** Creates an instance of the {@code GcsBlobStorageClient} class. */
   @Inject
@@ -75,6 +74,20 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
     } else {
       throw new BlobStorageClientException("Can't find the GCS object.");
     }
+  }
+
+  @Override
+  public InputStream getBlobRange(DataLocation location, int startOffset, int length)
+      throws BlobStorageClientException {
+    Long blobSize = this.getBlobSize(location);
+    int rangeEnd = startOffset + length - 1;
+    if (startOffset < 0 || length < 1 || rangeEnd >= blobSize) {
+      throw new BlobStorageClientException(
+          "Specified byte range outside of blob size: " + blobSize);
+    }
+
+    return GCSRangedStream.getBlobRange(
+        client, location.blobStoreDataLocation(), startOffset, length);
   }
 
   @Override
@@ -114,9 +127,7 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
       storageClient.createFrom(
           BlobInfo.newBuilder(BlobId.of(blobLocation.bucket(), blobLocation.key())).build(),
           filePath);
-    } catch (StorageException exception) {
-      throw new BlobStorageClientException(exception);
-    } catch (IOException exception) {
+    } catch (StorageException | IOException exception) {
       throw new BlobStorageClientException(exception);
     }
   }

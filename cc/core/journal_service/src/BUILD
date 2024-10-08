@@ -24,9 +24,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/blob_storage_provider/src/common:core_blob_storage_provider_common_lib",
@@ -38,10 +35,12 @@ cc_library(
         "//cc/core/journal_service/interface:core_journal_service_interface_lib",
         "//cc/core/journal_service/src/proto:core_journal_service_proto_lib",
         "//cc/core/logger/src:logger_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
         "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
         "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
+        "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/strings",
     ],
 )

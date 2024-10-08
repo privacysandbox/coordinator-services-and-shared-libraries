@@ -23,9 +23,6 @@ cc_library(
             "**/*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/credentials_provider/src:core_credentials_provider_lib",

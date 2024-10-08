@@ -161,6 +161,7 @@ module "split_key_generation_service" {
   ami_name                = var.key_generation_ami_name_prefix
   ami_owners              = var.key_generation_ami_owners
   keystorage_api_base_url = var.keystorage_api_base_url
+  keyjobqueue_name        = module.key_job_queue.keyjobqueue_queue_name
   keyjobqueue_url         = module.key_job_queue.keyjobqueue_url
   keyjobqueue_arn         = module.key_job_queue.keyjobqueue_arn
   keydb_table_name        = local.keydb_table_name

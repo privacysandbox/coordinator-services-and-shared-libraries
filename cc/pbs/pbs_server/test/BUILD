@@ -22,9 +22,6 @@ cc_test(
     srcs = [
         "pbs_instance_configuration_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/pbs/pbs_server/src/pbs_instance",
@@ -38,9 +35,6 @@ cc_test(
     size = "small",
     srcs = [
         "pbs_instance_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc/core/async_executor/src:core_async_executor_lib",
@@ -61,9 +55,6 @@ cc_test(
     name = "pbs_instance_v2_test",
     srcs = [
         "pbs_instance_v2_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     flaky = 1,
     tags = ["manual"],
@@ -86,9 +77,6 @@ cc_test(
     srcs = [
         "pbs_instance_multi_partition_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     tags = ["manual"],
     deps = [
         "//cc/core/config_provider/src:config_provider_lib",
@@ -108,9 +96,6 @@ cc_test(
     size = "small",
     srcs = [
         "pbs_instance_v3_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc/core/async_executor/src:core_async_executor_lib",

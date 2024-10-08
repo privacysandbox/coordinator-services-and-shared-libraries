@@ -45,7 +45,9 @@ public class DistributedPrivacyBudgetClientModule extends DistributedPrivacyBudg
     bind(TransactionEngine.class).to(TransactionEngineImpl.class);
     bind(TransactionManager.class).to(TransactionManagerImpl.class);
     bind(TransactionPhaseManager.class).to(TransactionPhaseManagerImpl.class);
+    bind(TransactionOrchestrator.class).to(TransactionOrchestratorImpl.class);
   }
+
   /**
    * Full URL (including protocol and api version path fragment) of coordinator A's privacy
    * budgeting service. Do not include trailing slash

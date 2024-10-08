@@ -25,9 +25,6 @@ cc_test(
         "aws_s3_utils_test.cc",
         "mock_s3_client.h",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

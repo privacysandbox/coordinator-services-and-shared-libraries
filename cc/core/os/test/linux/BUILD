@@ -20,9 +20,6 @@ cc_test(
     name = "system_resource_info_provider_linux_test",
     size = "small",
     srcs = ["system_resource_info_provider_linux_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     data = [
         "files/invalid_format_meminfo_file.txt",
         "files/missing_available_meminfo_file.txt",

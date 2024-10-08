@@ -13,7 +13,5 @@
 # limitations under the License.
 
 # Must be updated
-project             = "<project-id>"
-domain_name         = "<your-domain-name>"
-primary_region      = "us-central1"
-primary_region_zone = "us-central1-c"
+project     = "<project-id>"
+domain_name = "<your-domain-name>"

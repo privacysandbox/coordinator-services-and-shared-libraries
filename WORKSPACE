@@ -96,6 +96,18 @@ GOOGLE_GAX_VERSION = "2.20.1"
 
 AUTO_SERVICE_VERSION = "1.0"
 
+JAVA_OTEL_VERSION = "1.38.0"
+
+OTEL_ARTIFACTS = [
+    "com.google.cloud.opentelemetry:exporter-metrics:0.31.0",
+    "io.opentelemetry:opentelemetry-api:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-common:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-metrics:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry.contrib:opentelemetry-gcp-resources:" + JAVA_OTEL_VERSION + "-alpha",
+    "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:" + JAVA_OTEL_VERSION,
+]
+
 maven_install(
     name = "maven",
     artifacts = [
@@ -124,7 +136,7 @@ maven_install(
         "com.google.cloud:google-cloud-kms:2.10.0",
         "com.google.cloud:google-cloud-pubsub:1.122.2",
         "com.google.cloud:google-cloud-storage:2.13.1",
-        "com.google.cloud:google-cloud-spanner:6.34.1",
+        "com.google.cloud:google-cloud-spanner:6.74.1",
         "com.google.cloud:google-cloud-secretmanager:2.7.0",
         "com.google.cloud:google-cloud-compute:1.17.0",
         "com.google.api.grpc:proto-google-cloud-compute-v1:1.17.0",
@@ -199,11 +211,11 @@ maven_install(
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
         "com.google.api:gapic-generator-java:" + GAPIC_GENERATOR_JAVA_VERSION,  # To use generated gRpc Java interface
-        "io.grpc:grpc-netty:1.54.0",
+        "io.grpc:grpc-netty:1.63.0",
         "com.google.crypto.tink:tink:1.11.0",
-        "com.google.crypto.tink:tink-gcpkms:1.9.0",
+        "com.google.crypto.tink:tink-gcpkms:1.10.0",
         "com.google.oauth-client:google-oauth-client:1.34.1",
-    ],
+    ] + OTEL_ARTIFACTS,
     repositories = [
         "https://repo1.maven.org/maven2",
     ],
@@ -234,11 +246,6 @@ load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_jav
 rules_java_dependencies()
 
 rules_java_toolchains()
-
-# Load dependencies for the base workspace.
-load("@com_google_differential_privacy//:differential_privacy_deps.bzl", "differential_privacy_deps")
-
-differential_privacy_deps()
 
 #############
 # PKG Rules #
@@ -309,24 +316,6 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 
 rules_foreign_cc_dependencies()
 
-##########
-# GRPC C #
-##########
-# These dependencies from @com_github_grpc_grpc need to be loaded after the
-# google cloud deps so that the grpc version can be set by the google cloud deps
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-
-grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-
-grpc_extra_deps()
-
-# Java gRPC dependencies must be loaded after gRPC C++
-load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
-
-grpc_java_repositories()
-
 ###################################
 ## OpenTelemetry CPP dependencies #
 ###################################
@@ -352,11 +341,42 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 # Go rules #
 ############
 # Need to be after grpc_extra_deps to share go_register_toolchains.
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies")
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("//build_defs/go:go_repositories.bzl", "go_repositories")
+
+# gazelle:repository_macro build_defs/go/go_repositories.bzl%go_repositories
+go_repositories()
 
 go_rules_dependencies()
 
+go_register_toolchains(version = "1.20")
+
 gazelle_dependencies()
+
+##########
+# GRPC C #
+##########
+# These dependencies from @com_github_grpc_grpc need to be loaded after the
+# google cloud deps so that the grpc version can be set by the google cloud deps
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
+
+# To resolve toolchain compatibility issues, replace grpc_extra_deps and execute
+# its relevant functions individually.
+
+load("@build_bazel_rules_apple//apple:repositories.bzl", "apple_rules_dependencies")
+
+apple_rules_dependencies()
+
+load("@build_bazel_apple_support//lib:repositories.bzl", "apple_support_dependencies")
+
+apple_support_dependencies()
+
+# Java gRPC dependencies must be loaded after gRPC C++
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
+
+grpc_java_repositories()
 
 ###################
 # Container rules #

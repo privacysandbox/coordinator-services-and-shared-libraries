@@ -39,9 +39,16 @@ public abstract class ConsumePrivacyBudgetRequest {
   /** Creates a Builder with values copied over. Used for creating an updated object. */
   public abstract ConsumePrivacyBudgetRequest.Builder toBuilder();
 
+  /** Enable the new PBS client. */
+  public abstract Optional<Boolean> enableNewPbsClient();
+
   /** ad-tech origin where reports will be sent */
   @JsonProperty("claimed_identity")
   public abstract String claimedIdentity();
+
+  /** Version of the trusted services client that is invoking PrivacyBudgetService */
+  @JsonProperty("trusted_services_client_version")
+  public abstract String trustedServicesClientVersion();
 
   /**
    * Optional field for advertisers to set a higher limit for privacy budgets. When this field is
@@ -69,12 +76,18 @@ public abstract class ConsumePrivacyBudgetRequest {
     @JsonProperty("claimed_identity")
     public abstract Builder claimedIdentity(String claimedIdentity);
 
+    @JsonProperty("trusted_services_client_version")
+    public abstract Builder trustedServicesClientVersion(String trustedServicesClientVersion);
+
     @JsonProperty("reporting_origin_to_privacy_budget_unit_list")
     public abstract Builder reportingOriginToPrivacyBudgetUnitsList(
         ImmutableList<ReportingOriginToPrivacyBudgetUnits> reportingOriginToPrivacyBudgetUnitsList);
 
     @JsonProperty("privacy_budget_limit")
     public abstract Builder privacyBudgetLimit(Integer privacyBudgetLimit);
+
+    @JsonProperty("enable_new_pbs_client")
+    public abstract Builder enableNewPbsClient(Boolean enableNewPbsClient);
 
     public abstract ConsumePrivacyBudgetRequest build();
   }

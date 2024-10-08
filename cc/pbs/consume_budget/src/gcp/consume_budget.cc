@@ -351,7 +351,7 @@ BudgetConsumptionHelper::BudgetConsumptionHelper(
     : config_provider_(config_provider),
       async_executor_(async_executor),
       io_async_executor_(io_async_executor),
-      spanner_connection_(spanner_connection) {}
+      spanner_connection_(std::move(spanner_connection)) {}
 
 ExecutionResultOr<std::shared_ptr<cloud::spanner::Connection>>
 BudgetConsumptionHelper::MakeSpannerConnectionForProd(
@@ -413,9 +413,9 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgets(
   // TODO: Check that request is not empty.
   // Return invalid argument
   if (auto schedule_result = io_async_executor_->Schedule(
-          std::bind(
-              &BudgetConsumptionHelper::ConsumeBudgetsSyncAndFinishContext,
-              this, consume_budgets_context),
+          [this, consume_budgets_context]() {
+            ConsumeBudgetsSyncAndFinishContext(consume_budgets_context);
+          },
           google::scp::core::AsyncPriority::Normal);
       !schedule_result.Successful()) {
     // Returns the execution result to the caller without calling FinishContext,

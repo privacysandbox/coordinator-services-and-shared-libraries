@@ -14,6 +14,8 @@
 
 from enum import Enum
 
+import google.api_core.exceptions
+
 """ Mocks for google cloud classes """
 
 """Mock query response object"""
@@ -29,7 +31,7 @@ class QueryResponse:
 
   def one(self):
     if len(self.reponse) != 1:
-      raise Exception("Throwing to mimic the behavior of one()")
+      raise google.api_core.exceptions.NotFound("Throwing to mimic the behavior of one()")
     return self.reponse
 
 

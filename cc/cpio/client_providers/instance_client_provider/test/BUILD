@@ -22,9 +22,6 @@ cc_library(
         "test_instance_client_provider.cc",
         "test_instance_client_provider.h",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",

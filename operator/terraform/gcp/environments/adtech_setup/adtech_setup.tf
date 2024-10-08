@@ -28,8 +28,9 @@ module "adtech_setup" {
   artifact_repo_name     = var.artifact_repo_name
   artifact_repo_location = var.artifact_repo_location
 
-  data_bucket_name     = var.data_bucket_name
-  data_bucket_location = var.data_bucket_location
+  data_bucket_name       = var.data_bucket_name
+  data_bucket_location   = var.data_bucket_location
+  data_bucket_versioning = var.data_bucket_versioning
 
   deploy_sa_role_name = var.deploy_sa_role_name
   worker_sa_role_name = var.worker_sa_role_name

@@ -106,6 +106,71 @@ public final class GcsBlobStorageClientTest {
   }
 
   @Test
+  public void getBlobRange_returnsSpecifiedBytes() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(GCP_BUCKET, "keyname"));
+    gcsBlobStorageClient.putBlob(location, file.toPath());
+
+    InputStream blobRange = gcsBlobStorageClient.getBlobRange(location, 0, 15);
+    String downloadedMessage = new String(blobRange.readAllBytes());
+    assertThat(downloadedMessage).isEqualTo("GCS integration");
+  }
+
+  @Test
+  public void getBlobRange_rangeTowardsTheEndReturnsSpecifiedBytes() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(GCP_BUCKET, "keyname"));
+    gcsBlobStorageClient.putBlob(location, file.toPath());
+
+    InputStream blobRange = gcsBlobStorageClient.getBlobRange(location, 26, 14);
+    String downloadedMessage = new String(blobRange.readAllBytes());
+    assertThat(downloadedMessage).isEqualTo("testcontainers");
+  }
+
+  @Test
+  public void getBlobRange_startOffsetLessThanZeroThrowsException() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(GCP_BUCKET, "keyname"));
+    gcsBlobStorageClient.putBlob(location, file.toPath());
+
+    assertThrows(
+        BlobStorageClientException.class, () -> gcsBlobStorageClient.getBlobRange(location, -1, 4));
+  }
+
+  @Test
+  public void getBlobRange_lengthGreaterThanBlobLengthThrowsException() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(GCP_BUCKET, "keyname"));
+    gcsBlobStorageClient.putBlob(location, file.toPath());
+
+    assertThrows(
+        BlobStorageClientException.class,
+        () -> gcsBlobStorageClient.getBlobRange(location, 0, 100));
+  }
+
+  @Test
+  public void getBlobRange_lengthLessThanOneThrowsException() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(GCP_BUCKET, "keyname"));
+    gcsBlobStorageClient.putBlob(location, file.toPath());
+
+    assertThrows(
+        BlobStorageClientException.class, () -> gcsBlobStorageClient.getBlobRange(location, 0, 0));
+  }
+
+  @Test
+  public void getBlobRange_exceptionOnMissingObject() {
+    assertThrows(
+        BlobStorageClientException.class,
+        () ->
+            gcsBlobStorageClient.getBlobRange(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create(GCP_BUCKET, "NonExistentKey")),
+                0,
+                0));
+  }
+
+  @Test
   public void getBlob_exceptionOnMissingObject() {
     assertThrows(
         BlobStorageClientException.class,

@@ -24,9 +24,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",

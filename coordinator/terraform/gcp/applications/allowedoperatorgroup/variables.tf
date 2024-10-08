@@ -20,16 +20,19 @@ variable "project_id" {
 variable "owners" {
   description = "Google group owners."
   type        = list(string)
+  default     = []
 }
 
 variable "managers" {
   description = "Google group managers."
   type        = list(string)
+  default     = []
 }
 
 variable "members" {
   description = "Google group members."
   type        = list(string)
+  default     = []
 }
 
 variable "organization_domain" {
@@ -45,9 +48,11 @@ variable "group_name_prefix" {
 variable "initial_group_config" {
   description = "Initial configuration options for creating a Group"
   type        = string
+  default     = "EMPTY"
 }
 
 variable "customer_id" {
   description = "Customer ID of the organization to create the group in"
   type        = string
+  default     = ""
 }

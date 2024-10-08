@@ -39,9 +39,6 @@ using ::google::scp::core::AsyncExecutor;
 using ::google::scp::core::AsyncExecutorInterface;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::kGcpProjectId;
-using ::google::scp::core::kSpannerDatabase;
-using ::google::scp::core::kSpannerInstance;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::errors::SC_ASYNC_EXECUTOR_NOT_RUNNING;
@@ -200,8 +197,8 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
                                     std::string(kValueSpannerColumnName)})
           .EmplaceRow(
               "fake-key-name", "0",
-              spanner::Json("{\"TokenCount\":\"1 0 1 1 1 1 1 1 1 1 1 1 1 "
-                            "1 1 1 1 1 1 1 1 1 1 1\"}"))
+              spanner::Json(
+                  R"({"TokenCount":"1 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"})"))
           .Build();
   EXPECT_CALL(*mock_connection_,
               Commit(FieldsAre(_, UnorderedElementsAre(m), _)))
@@ -232,9 +229,8 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
             spanner::Value("fake-key-name")},
            {std::string(kTimeframeSpannerColumnName), spanner::Value("0")},
            {std::string(kValueSpannerColumnName),
-            spanner::Value(
-                spanner::Json("{\"TokenCount\":\"1 1 1 1 1 1 1 1 1 1 1 1 1 "
-                              "1 1 1 1 1 1 1 1 1 1 1\"}"))}})))
+            spanner::Value(spanner::Json(
+                R"({"TokenCount":"1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"})"))}})))
       .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
@@ -259,8 +255,8 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
                                     std::string(kValueSpannerColumnName)})
           .EmplaceRow(
               "fake-key-name", "0",
-              spanner::Json("{\"TokenCount\":\"1 0 1 1 1 1 1 1 1 1 1 1 1 "
-                            "1 1 1 1 1 1 1 1 1 1 1\"}"))
+              spanner::Json(
+                  R"({"TokenCount":"1 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"})"))
           .Build();
   EXPECT_CALL(*mock_connection_,
               Commit(FieldsAre(_, UnorderedElementsAre(m), _)))
@@ -290,9 +286,8 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest, ConsumeBudgetsWithoutBudget) {
             spanner::Value("fake-key-name")},
            {std::string(kTimeframeSpannerColumnName), spanner::Value("0")},
            {std::string(kValueSpannerColumnName),
-            spanner::Value(
-                spanner::Json("{\"TokenCount\":\"1 0 1 1 1 1 1 1 1 1 1 1 1 "
-                              "1 1 1 1 1 1 1 1 1 1 1\"}"))}})))
+            spanner::Value(spanner::Json(
+                R"({"TokenCount":"1 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"})"))}})))
       .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
@@ -341,7 +336,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
            {std::string(kTimeframeSpannerColumnName), spanner::Value("0")},
            {std::string(kValueSpannerColumnName),
             spanner::Value(
-                spanner::Json("{\"TokenCount\": Invalid JSON format"))}})))
+                spanner::Json(R"({"TokenCount": Invalid JSON format")"))}})))
       .WillRepeatedly(Return(google::cloud::spanner::Row()));
 
   spanner::KeySet expected_key_set;
@@ -390,7 +385,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
            {std::string(kTimeframeSpannerColumnName), spanner::Value("0")},
            {std::string(kValueSpannerColumnName),
             spanner::Value(spanner::Json(
-                "{\"TokenCountFake\": \"No TokenCount field\"}"))}})))
+                R"({"TokenCountFake": "No TokenCount field"})"))}})))
       .WillRepeatedly(Return(google::cloud::spanner::Row()));
 
   spanner::KeySet expected_key_set;
@@ -439,7 +434,7 @@ TEST_F(BudgetConsumptionHelperWithLifecycleTest,
            {std::string(kTimeframeSpannerColumnName), spanner::Value("0")},
            {std::string(kValueSpannerColumnName),
             spanner::Value(spanner::Json(
-                "{\"TokenCount\": \"Invalid TokenCount field\"}"))}})))
+                R"({"TokenCount": "Invalid TokenCount field"})"))}})))
       .WillRepeatedly(Return(google::cloud::spanner::Row()));
 
   spanner::KeySet expected_key_set;

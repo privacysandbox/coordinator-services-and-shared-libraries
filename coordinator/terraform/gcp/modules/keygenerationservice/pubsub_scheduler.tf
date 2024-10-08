@@ -36,8 +36,6 @@ resource "google_pubsub_subscription" "key_generation_pubsub_subscription" {
   labels = {
     environment = var.environment
   }
-
-  depends_on = [google_pubsub_topic.key_generation_pubsub_topic]
 }
 
 resource "google_pubsub_subscription_iam_member" "key_generation_subscriber_iam" {
@@ -45,9 +43,6 @@ resource "google_pubsub_subscription_iam_member" "key_generation_subscriber_iam"
   subscription = google_pubsub_subscription.key_generation_pubsub_subscription.name
   role         = "roles/pubsub.subscriber"
   member       = "serviceAccount:${local.key_generation_service_account_email}"
-  depends_on = [
-    google_pubsub_subscription.key_generation_pubsub_subscription
-  ]
 }
 
 resource "google_pubsub_topic_iam_member" "key_generation_viewer_iam" {
@@ -55,9 +50,6 @@ resource "google_pubsub_topic_iam_member" "key_generation_viewer_iam" {
   topic   = google_pubsub_topic.key_generation_pubsub_topic.name
   role    = "roles/pubsub.viewer"
   member  = "serviceAccount:${local.key_generation_service_account_email}"
-  depends_on = [
-    google_pubsub_topic.key_generation_pubsub_topic
-  ]
 }
 
 resource "google_cloud_scheduler_job" "key_generation_cron" {
@@ -70,6 +62,4 @@ resource "google_cloud_scheduler_job" "key_generation_cron" {
     topic_name = format("projects/%s/topics/%s", var.project_id, google_pubsub_topic.key_generation_pubsub_topic.name)
     data       = base64encode("${var.environment}_key_generation_cron_job invoked")
   }
-
-  depends_on = [google_pubsub_topic.key_generation_pubsub_topic]
 }

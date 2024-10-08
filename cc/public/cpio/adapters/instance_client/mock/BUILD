@@ -24,9 +24,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",

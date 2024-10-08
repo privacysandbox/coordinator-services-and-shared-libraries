@@ -73,6 +73,12 @@ variable "data_bucket_location" {
   default     = "us"
 }
 
+variable "data_bucket_versioning" {
+  description = "The versioning option for data bucket. Default is true (enabled)."
+  type        = bool
+  default     = false
+}
+
 variable "deploy_sa_role_name" {
   description = "The custom role name for deploy service account."
   type        = string

@@ -35,9 +35,11 @@ service_account_token_creator_list = ["user:<YourUserEmail>"]
 # deploy_service_account_name = "<YourDeployServiceAccountName>"
 # worker_service_account_name = "<YourWorkerServiceAccountName>"
 
-# Uncomment the below line if you want Terraform to create the
+# Uncomment the below lines if you want Terraform to create the
 # below bucket. "data_bucket_location" defaults to "us".
-# data_bucket_name     = "<YourDataBucketName>"
+# Enabling bucket versioning is recommended and will incur additional cost. Refer to "Pricing notes" for versioning at https://cloud.google.com/storage/pricing
+# data_bucket_versioning = true
+# data_bucket_name       = "<YourDataBucketName>"
 
 # Uncomment the below lines if you want to specify service account customer role names
 # deploy_sa_role_name = "<YourDeploySACustomRole>"

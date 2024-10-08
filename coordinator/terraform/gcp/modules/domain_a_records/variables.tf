@@ -12,16 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "primary_region" {
-  description = "Region where all services will be created."
-  type        = string
-}
-
-variable "primary_region_zone" {
-  description = "Region zone where all services will be created."
-  type        = string
-}
-
 variable "enable_domain_management" {
   description = "Manage domain SSL cert creation and routing for public and encryption key services."
   type        = bool

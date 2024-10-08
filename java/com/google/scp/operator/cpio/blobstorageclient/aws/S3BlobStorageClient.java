@@ -23,16 +23,20 @@ import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientMod
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -97,6 +101,26 @@ public final class S3BlobStorageClient implements BlobStorageClient {
       }
     } catch (SdkException exception) {
       throw new BlobStorageClientException(exception);
+    }
+  }
+
+  @Override
+  public InputStream getBlobRange(DataLocation location, int startOffset, int length)
+      throws BlobStorageClientException {
+    Long blobSize = this.getBlobSize(location);
+    int rangeEnd = startOffset + length - 1;
+    if (startOffset < 0 || length < 1 || rangeEnd >= blobSize) {
+      throw new BlobStorageClientException(
+          "Specified byte range outside of blob size: " + blobSize);
+    }
+
+    try (ResponseInputStream<GetObjectResponse> responseInputStream =
+        S3RangedStream.getBlobRange(
+            client, location.blobStoreDataLocation(), startOffset, rangeEnd)) {
+
+      return new ByteArrayInputStream(responseInputStream.readAllBytes());
+    } catch (IOException e) {
+      throw new BlobStorageClientException(e);
     }
   }
 

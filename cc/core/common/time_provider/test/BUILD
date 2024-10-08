@@ -23,9 +23,6 @@ cc_test(
         [
             "time_provider_test.cc",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -42,9 +39,6 @@ cc_test(
         [
             "stopwatch_test.cc",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",

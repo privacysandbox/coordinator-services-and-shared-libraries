@@ -22,9 +22,6 @@ cc_test(
     srcs = [
         "gcp_cloud_storage_client_provider_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -43,9 +40,6 @@ cc_test(
     size = "small",
     srcs = [
         "gcp_cloud_storage_client_provider_stream_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

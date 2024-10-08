@@ -19,9 +19,6 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "core_authorization_proxy_mock",
     srcs = ["mock_authorization_proxy.h"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

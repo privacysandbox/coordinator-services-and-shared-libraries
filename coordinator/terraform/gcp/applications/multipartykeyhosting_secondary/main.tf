@@ -24,14 +24,6 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.primary_region
-  zone    = var.primary_region_zone
-}
-
-provider "google" {
-  alias   = "secondary"
-  project = var.project_id
-  region  = var.secondary_region
-  zone    = var.secondary_region_zone
 }
 
 locals {
@@ -61,7 +53,7 @@ module "vpc" {
 resource "google_storage_bucket" "mpkhs_secondary_package_bucket" {
   # GCS names are globally unique
   name                        = local.package_bucket_name
-  location                    = var.mpkhs_secondary_package_bucket_location
+  location                    = var.mpkhs_package_bucket_location
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
 }
@@ -182,11 +174,7 @@ module "encryptionkeyservice" {
 module "domain_a_records" {
   source = "../../modules/domain_a_records"
 
-  # Cannot use count arg because this module has a provider defined. This is a terraform limitation.
   enable_domain_management = var.enable_domain_management
-
-  primary_region      = var.primary_region
-  primary_region_zone = var.primary_region_zone
 
   parent_domain_name         = var.parent_domain_name
   parent_domain_name_project = var.parent_domain_name_project
@@ -237,5 +225,4 @@ resource "google_kms_crypto_key_iam_member" "workload_identity_member" {
   crypto_key_id = google_kms_crypto_key.key_encryption_key.id
   role          = "roles/cloudkms.cryptoKeyEncrypter"
   member        = "serviceAccount:${module.workload_identity_pool.wip_verified_service_account}"
-  depends_on    = [module.workload_identity_pool]
 }

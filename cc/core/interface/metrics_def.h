@@ -21,25 +21,37 @@ namespace google::scp::core {
 /**
  * @brief
  * Journal Service Metrics
- *  Metric Name: kMetricNameRecoverCount
+ *  Metric Name: kMetricNameJournalRecoveryTime
+ *
+ *  Metric Name: kMetricNameJournalRecoveryCount
  *      Events: kMetricEventNameLogCount
  *
- *  Metric Name: kMetricNameJournalOutputStream
+ *  Metric Name: kMetricNameJournalScheduledOutputStreamCount
+ *
+ *  Metric Name: kMetricNameJournalOutputStreamCount
  *      Events: kMetricEventJournalOutputCountWriteJournalScheduledCount
  *      Events: kMetricEventJournalOutputCountWriteJournalSuccessCount
  *      Events: kMetricEventJournalOutputCountWriteJournalFailureCount
+ *      Labels: kMetricLabelJournalWriteSuccess
  */
+
+static constexpr char kMetricNameJournalRecoveryTime[] =
+    "google.scp.pbs.journal.recovery_time";
+static constexpr char kMetricNameJournalRecoveryCount[] =
+    "google.scp.pbs.journal.recovery_count";
+static constexpr char kMetricNameJournalScheduledOutputStreamCount[] =
+    "google.scp.pbs.journal.scheduled_output_stream_count";
+static constexpr char kMetricNameJournalOutputStreamCount[] =
+    "google.scp.pbs.journal.output_stream_count";
+
+static constexpr char kMetricLabelJournalWriteSuccess[] = "write_success";
 
 static constexpr char
     kMetricComponentNameAndPartitionNamePrefixForJournalService[] =
         "JournalService for Partition ";
-static constexpr char kMetricNameRecoverExecutionTime[] =
-    "JournalRecoveryExecutionTimeMs";
-static constexpr char kMetricNameRecoverCount[] = "JournalRecoveryCounter";
-static constexpr char kMetricNameJournalOutputStream[] =
-    "JournalOutputStreamCounter";
 static constexpr char kMetricMethodRecover[] = "Recover";
 static constexpr char kMetricMethodOutputStream[] = "OutputStream";
+
 static constexpr char kMetricEventNameLogCount[] = "LogCount";
 static constexpr char
     kMetricEventJournalOutputCountWriteJournalScheduledCount[] =
@@ -66,16 +78,14 @@ static constexpr char
     kMetricComponentNameAndPartitionNamePrefixForTransactionManager[] =
         "TransactionManager for Partition ";
 static constexpr char kMetricNameActiveTransactions[] =
-    "google.scp.core.transaction_manager.active_transactions";
+    "google.scp.pbs.transaction_manager.active_transactions";
 static constexpr char kMetricNameReceivedTransactions[] =
-    "google.scp.core.transaction_manager.received_transactions";
+    "google.scp.pbs.transaction_manager.received_transactions";
 static constexpr char kMetricNameFinishedTransactions[] =
-    "google.scp.core.transaction_manager.finished_transactions";
+    "google.scp.pbs.transaction_manager.finished_transactions";
 
 static constexpr char kMetricLabelPartitionId[] = "partition_id";
 
-// TODO: Remove the following metric events used by MetricClient once OTel
-// reaches feature parity.
 static constexpr char kMetricEventReceivedTransaction[] = "ReceivedTransaction";
 static constexpr char kMetricEventFinishedTransaction[] = "FinishedTransaction";
 

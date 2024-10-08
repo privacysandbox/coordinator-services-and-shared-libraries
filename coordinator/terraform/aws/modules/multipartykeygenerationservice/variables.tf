@@ -56,6 +56,11 @@ variable "keystorage_api_base_url" {
   type        = string
 }
 
+variable "keyjobqueue_name" {
+  description = "Name of Key Generation Queue."
+  type        = string
+}
+
 variable "keyjobqueue_url" {
   description = "Url of Key Generation Queue."
   type        = string
@@ -102,7 +107,7 @@ variable "max_ec2_instances" {
 variable "min_ec2_instances" {
   description = "Lower bound for autoscaling for ec2 instances."
   type        = number
-  default     = 1 //TODO: Change to 0 when auto scaling based on SQS message queue implemented
+  default     = 0
 }
 
 variable "vpc_cidr" {

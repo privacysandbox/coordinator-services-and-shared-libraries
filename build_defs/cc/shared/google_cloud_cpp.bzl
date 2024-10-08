@@ -21,17 +21,17 @@ def import_google_cloud_cpp():
         http_archive,
         name = "com_google_googleapis",
         urls = [
-            "https://storage.googleapis.com/cloud-cpp-community-archive/com_google_googleapis/21c839628513a6b8d6ce99ae6911d4d2094c0767.tar.gz",
-            "https://github.com/googleapis/googleapis/archive/21c839628513a6b8d6ce99ae6911d4d2094c0767.tar.gz",
+            "https://storage.googleapis.com/cloud-cpp-community-archive/com_google_googleapis/4d5f3a731f6e4c9dc925830f405cf8869eacc916.tar.gz",
+            "https://github.com/googleapis/googleapis/archive/4d5f3a731f6e4c9dc925830f405cf8869eacc916.tar.gz",
         ],
-        sha256 = "1e4a8270d73d28d2b276e85eb2af8b956447f1a76823788d625f2c55b06398db",
-        strip_prefix = "googleapis-21c839628513a6b8d6ce99ae6911d4d2094c0767",
+        sha256 = "09d7d33219b630dd7f51bb010c7d32bb6c832fe0c3a7d46ea83a56a34434bd79",
+        strip_prefix = "googleapis-4d5f3a731f6e4c9dc925830f405cf8869eacc916",
         build_file = Label("//build_defs/cc/shared/build_targets:googleapis.BUILD"),
     )
     maybe(
         http_archive,
         name = "com_github_googleapis_google_cloud_cpp",
-        sha256 = "6f58213e2af16326392da84cd8a52af78cb80bc47338eb87e87d14c14c0e6bad",
-        strip_prefix = "google-cloud-cpp-2.25.0",
-        url = "https://github.com/googleapis/google-cloud-cpp/archive/v2.25.0.tar.gz",
+        sha256 = "758e1eca8186b962516c0659b34ce1768ba1c9769cfd998c5bbffb084ad901ff",
+        strip_prefix = "google-cloud-cpp-2.29.0",
+        url = "https://github.com/googleapis/google-cloud-cpp/archive/v2.29.0.tar.gz",
     )

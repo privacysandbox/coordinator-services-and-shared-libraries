@@ -24,9 +24,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],

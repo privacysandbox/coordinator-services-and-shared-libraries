@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         "//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

@@ -20,9 +20,6 @@ cc_test(
     name = "private_key_fetcher_provider_test",
     size = "small",
     srcs = ["private_key_fetcher_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -40,9 +37,6 @@ cc_test(
     name = "private_key_fetcher_provider_utils_test",
     size = "small",
     srcs = ["private_key_fetcher_provider_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

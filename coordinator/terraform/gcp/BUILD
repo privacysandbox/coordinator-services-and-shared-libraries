@@ -31,6 +31,7 @@ pkg_files(
     name = "multiparty_dist_files",
     srcs = [
         "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_container_gcp",
+        "//python/privacybudget/gcp/pbs_auth_handler:auth_cloud_function_handler",
     ],
     prefix = "dist",
 )
@@ -63,7 +64,6 @@ pkg_tar(
         "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_pkg",
         "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_shared_pkg",
         "//coordinator/terraform/gcp/util_scripts:util_scripts_pkg",
-        "//python/privacybudget/gcp/pbs_auth_handler:auth_cloud_function_handler",
     ],
     extension = "tgz",
     strip_prefix = "/",

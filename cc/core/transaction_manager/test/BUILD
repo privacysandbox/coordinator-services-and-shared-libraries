@@ -18,9 +18,6 @@ cc_test(
     name = "transaction_phase_manager_test",
     size = "small",
     srcs = ["transaction_phase_manager_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -38,9 +35,6 @@ cc_test(
         "transaction_engine_remote_test.cc",
         "transaction_engine_local_and_remote_test.cc",
     ]),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -68,9 +62,6 @@ cc_test(
     name = "transaction_manager_test",
     size = "small",
     srcs = ["transaction_manager_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

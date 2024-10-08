@@ -272,10 +272,10 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
       pbs_instance_config_.journal_bucket_name,
       pbs_instance_config_.journal_partition_name, async_executor_,
       blob_storage_provider_for_journal_service_, metric_client_,
-      config_provider_);
+      metric_router_, config_provider_);
   budget_key_provider_ = make_shared<BudgetKeyProvider>(
       async_executor_, journal_service_, nosql_database_provider_,
-      metric_client_, config_provider_);
+      metric_client_, metric_router_, config_provider_);
   transaction_command_serializer_ = make_shared<TransactionCommandSerializer>(
       async_executor_, budget_key_provider_);
   transaction_manager_ = make_shared<TransactionManager>(
@@ -318,7 +318,7 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
   checkpoint_service_ = make_shared<CheckpointService>(
       pbs_instance_config_.journal_bucket_name,
       pbs_instance_config_.journal_partition_name, metric_client_,
-      config_provider_, journal_service_,
+      metric_router_, config_provider_, journal_service_,
       blob_storage_provider_for_checkpoint_service_);
   traffic_forwarder_ =
       make_shared<TCPTrafficForwarderSocat>(*pbs_instance_config_.host_port);

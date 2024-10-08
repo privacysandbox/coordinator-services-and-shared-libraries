@@ -58,7 +58,7 @@ resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
   location = each.key
 
   build_config {
-    runtime     = "java11"
+    runtime     = "java17"
     entry_point = "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PublicKeyServiceHttpFunction"
     source {
       storage_source {
@@ -81,6 +81,7 @@ resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
       SPANNER_DATABASE = var.spanner_database_name
       APPLICATION_NAME = var.application_name
       VERSION          = module.version.version
+      LOG_EXECUTION_ID = "true"
     }
   }
 

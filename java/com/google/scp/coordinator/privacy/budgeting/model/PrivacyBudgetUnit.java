@@ -22,9 +22,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
+import com.google.errorprone.annotations.Immutable;
 import java.time.Instant;
 
 /** Smallest unit that privacy budgeting is tracked for */
+@Immutable
 @AutoValue
 @JsonDeserialize(builder = PrivacyBudgetUnit.Builder.class)
 @JsonSerialize(as = PrivacyBudgetUnit.class)

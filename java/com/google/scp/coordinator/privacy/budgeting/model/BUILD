@@ -22,6 +22,7 @@ java_library(
     deps = [
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
+        "//java/external:error_prone_anntotations",
         "//java/external:guava",
         "//java/external:jackson_annotations",
         "//java/external:jackson_databind",

@@ -166,5 +166,10 @@ resource "google_storage_bucket" "data_bucket" {
   name     = var.data_bucket_name
   location = var.data_bucket_location
 
-  public_access_prevention = "enforced"
+  versioning {
+    enabled = var.data_bucket_versioning
+  }
+
+  public_access_prevention    = "enforced"
+  uniform_bucket_level_access = true
 }

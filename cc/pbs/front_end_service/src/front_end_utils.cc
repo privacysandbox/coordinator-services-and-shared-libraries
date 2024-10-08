@@ -18,12 +18,27 @@
 
 #include <libpsl.h>
 
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <exception>
+#include <string>
+
+#include <google/protobuf/timestamp.pb.h>
+#include <google/protobuf/util/time_util.h>
+#include <nlohmann/json.hpp>
+
 #include "absl/strings/match.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/strip.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
+#include "cc/pbs/front_end_service/src/error_codes.h"
+#include "cc/pbs/interface/front_end_service_interface.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
 

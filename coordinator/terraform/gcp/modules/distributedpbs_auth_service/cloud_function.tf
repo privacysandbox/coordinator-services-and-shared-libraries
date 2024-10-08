@@ -33,31 +33,6 @@ resource "google_service_account" "pbs_auth_svc_account" {
   display_name = "PBS Auth Service Account"
 }
 
-data "local_file" "handler_python_script" {
-  filename = var.auth_cloud_function_handler_path
-}
-
-data "local_file" "handler_requirements_file" {
-  filename = var.auth_cloud_function_requirements_path
-}
-
-# Archives the function handler in a ZIP file
-data "archive_file" "pbs_auth_handler_archive" {
-  type = "zip"
-
-  source {
-    content  = data.local_file.handler_python_script.content
-    filename = "main.py"
-  }
-
-  source {
-    content  = data.local_file.handler_requirements_file.content
-    filename = "requirements.txt"
-  }
-
-  output_path = "${path.module}/files/auth_cloud_function_handler.zip"
-}
-
 resource "random_id" "gcs_bucket_random_part" {
   byte_length = 8
 }
@@ -73,9 +48,9 @@ resource "google_storage_bucket" "pbs_auth_package" {
 
 resource "google_storage_bucket_object" "pbs_auth_package_bucket_object" {
   # Need hash in name so cloudfunction knows to redeploy when code changes
-  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${data.archive_file.pbs_auth_handler_archive.output_md5}"
+  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${filemd5(var.auth_cloud_function_handler_path)}"
   bucket = google_storage_bucket.pbs_auth_package.name
-  source = data.archive_file.pbs_auth_handler_archive.output_path
+  source = var.auth_cloud_function_handler_path
 }
 
 resource "google_cloudfunctions2_function" "pbs_auth_cloudfunction" {

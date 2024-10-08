@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         ":nontee_gcp_kms_client_provider_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/uuid/src:uuid_lib",
@@ -45,9 +42,6 @@ cc_library(
     name = "tee_gcp_kms_client_provider_lib",
     srcs = [
         ":tee_gcp_kms_client_provider_srcs",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

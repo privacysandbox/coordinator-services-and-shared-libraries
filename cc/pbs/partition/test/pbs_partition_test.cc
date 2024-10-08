@@ -522,7 +522,7 @@ TEST_F(PBSPartitionTest, OTelReturnsCorrectActiveTransactionsCount) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       active_transactions_metric_point_data = core::GetMetricPointData(
-          google::scp::core::kMetricNameActiveTransactions, {}, data);
+          core::kMetricNameActiveTransactions, {}, data);
   ASSERT_TRUE(active_transactions_metric_point_data.has_value());
 
   auto active_transactions_last_value_point_data =
@@ -547,7 +547,7 @@ TEST_F(PBSPartitionTest, OTelReturnsCorrectReceivedTransactionsCount) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       received_transactions_metric_point_data = core::GetMetricPointData(
-          google::scp::core::kMetricNameReceivedTransactions, {}, data);
+          core::kMetricNameReceivedTransactions, {}, data);
   ASSERT_TRUE(received_transactions_metric_point_data.has_value());
 
   auto received_transactions_sum_point_data =
@@ -569,15 +569,14 @@ TEST_F(PBSPartitionTest, OTelRetrievesCorrectPartitionIdLabel) {
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
       metric_router_->GetExportedData();
 
-  auto metric_labels_from_data = core::GetMetricAttributes(
-      google::scp::core::kMetricNameActiveTransactions, data);
+  auto metric_labels_from_data =
+      core::GetMetricAttributes(core::kMetricNameActiveTransactions, data);
 
   ASSERT_TRUE(metric_labels_from_data.has_value());
-  ASSERT_TRUE(metric_labels_from_data->find(
-                  google::scp::core::kMetricLabelPartitionId) !=
+  ASSERT_TRUE(metric_labels_from_data->find(core::kMetricLabelPartitionId) !=
               metric_labels_from_data->end());
-  EXPECT_EQ(std::get<std::string>(metric_labels_from_data->at(
-                google::scp::core::kMetricLabelPartitionId)),
+  EXPECT_EQ(std::get<std::string>(
+                metric_labels_from_data->at(core::kMetricLabelPartitionId)),
             ToString(partition_->GetPartitionId()));
 
   EXPECT_SUCCESS(partition_->Unload());

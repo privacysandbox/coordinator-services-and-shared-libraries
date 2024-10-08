@@ -88,7 +88,7 @@ class TransactionManager : public TransactionManagerInterface {
       GetTransactionManagerStatusResponse& response) noexcept override;
 
  protected:
-  /// Callback to be used with an OTel ObservableInstrument.
+  // Callback to be used with an OTel ObservableInstrument.
   static void ObserveActiveTransactionsCallback(
       opentelemetry::metrics::ObserverResult observer_result,
       absl::Nonnull<TransactionManager*> self_ptr);
@@ -128,13 +128,13 @@ class TransactionManager : public TransactionManagerInterface {
                                      // the lifetime of this object
         aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs) {}
 
-  /// Max concurrent transactions count.
+  // Max concurrent transactions count.
   const size_t max_concurrent_transactions_;
 
-  /// Instance of the async executor.
+  // Instance of the async executor.
   std::shared_ptr<AsyncExecutorInterface> async_executor_;
 
-  /// Instance of the transaction engine.
+  // Instance of the transaction engine.
   std::shared_ptr<transaction_manager::TransactionEngineInterface>
       transaction_engine_;
 
@@ -157,38 +157,56 @@ class TransactionManager : public TransactionManagerInterface {
    */
   mutable absl::Mutex transaction_counts_mutex_;
 
-  /// Indicates whether the component has started.
+  // Indicates whether the component has started.
   std::atomic<bool> started_;
 
-  /// Metric client instance for custom metric recording.
+  // Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
-  /// Keep a MetricRouter member in order to access MetricRouter-owned OTel
-  /// Instruments.
-  ///
-  /// When null, this instance of PBS component does not produce OTel metrics.
+  // Keep a MetricRouter member in order to access MetricRouter-owned OTel
+  // Instruments.
+  //
+  // When null, this instance of PBS component does not produce OTel metrics.
   absl::Nullable<std::shared_ptr<MetricRouter>> metric_router_;
 
-  /// The AggregateMetric instance for number of active transactions.
+  // The OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  // The OpenTelemetry Instrument for the number of active transactions.
+  //
+  // Reports the maximum number of concurrent active transactions since
+  // metric is last observed, because the real-time number of active
+  // transactions fluctuates too quickly to be useful.
+  std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+      active_transactions_instrument_;
+
+  // The OpenTelemetry Instrument for the number of received transactions.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      received_transactions_instrument_;
+
+  // The OpenTelemetry Instrument for the number of finished transactions.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      finished_transactions_instrument_;
+
+  // The AggregateMetric instance for number of active transactions.
   std::shared_ptr<cpio::AggregateMetricInterface> active_transactions_metric_;
 
-  /// Configurations for Transaction Manager are obtained from this.
+  // Configurations for Transaction Manager are obtained from this.
   std::shared_ptr<ConfigProviderInterface> config_provider_;
 
-  /// Id of the encapsulating partition (if any). Defaults to a global
-  /// partition.
+  // Id of the encapsulating partition (if any). Defaults to a global
+  // partition.
   core::common::Uuid partition_id_;
 
-  /// Activity Id of the background activities
+  // Activity Id of the background activities
   core::common::Uuid activity_id_;
 
-  /// The time interval for metrics aggregation.
+  // The time interval for metrics aggregation.
   TimeDuration aggregated_metric_interval_ms_;
 
  private:
-  /// Initialize MetricClient.
-  ///
-  /// TODO: Remove MetricClient once OTel reaches feature parity.
+  // Initialize MetricClient.
+  //
   core::ExecutionResult InitMetricClientInterface();
 };
 

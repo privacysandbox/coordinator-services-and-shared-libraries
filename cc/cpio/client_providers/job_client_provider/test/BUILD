@@ -38,9 +38,6 @@ cc_test(
         "job_client_provider_test.cc",
         "job_client_utils_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         ":hello_world_cc_proto",
         "//cc:cc_base_include_dir",

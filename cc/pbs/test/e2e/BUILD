@@ -20,9 +20,6 @@ cc_test(
     name = "pbs_e2e_test",
     size = "small",
     srcs = ["pbs_e2e_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     tags = ["manual"],
     deps = [
         "//cc:cc_base_include_dir",
@@ -46,9 +43,6 @@ cc_test(
     size = "large",
     timeout = "long",
     srcs = ["pbs_integration_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/credentials_provider/mock:core_credentials_provider_mock",

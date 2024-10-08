@@ -18,13 +18,13 @@ variable "project_id" {
 }
 
 variable "wipp_project_id_override" {
-  description = "Override the GCP Project ID in which workload identity pool (wip) and workload identity pool provider (wipp) will be created in."
+  description = "Override the GCP Project ID in which workload identity pool (wip) and workload identity pool provider (wipp) will be created in. The value of `project_id` is used by default."
   type        = string
   default     = null
 }
 
 variable "wip_allowed_service_account_project_id_override" {
-  description = "Override the GCP Project ID in which wip allowed service account will be created in."
+  description = "Override the GCP Project ID in which WIP allowed service account will be created in. The value of `project_id` is used by default."
   type        = string
   default     = null
 }

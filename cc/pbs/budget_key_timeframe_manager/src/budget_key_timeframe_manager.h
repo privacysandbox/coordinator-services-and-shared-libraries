@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 #include "core/common/concurrent_map/src/concurrent_map.h"
 #include "core/common/operation_dispatcher/src/operation_dispatcher.h"
@@ -29,7 +30,10 @@
 #include "core/interface/config_provider_interface.h"
 #include "core/interface/journal_service_interface.h"
 #include "core/interface/nosql_database_provider_interface.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/sync_instruments.h"
 #include "pbs/interface/budget_key_timeframe_manager_interface.h"
 #include "pbs/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
@@ -44,6 +48,7 @@ static constexpr size_t kBudgetKeyTimeframeManagerRetryStrategyTotalRetries =
 static constexpr int kBudgetKeyTimeframeManagerCacheLifetimeSeconds = 120;
 
 namespace google::scp::pbs {
+
 /*! @copydoc BudgetKeyTimeframeManagerInterface
  */
 class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
@@ -56,13 +61,14 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<cpio::AggregateMetricInterface>&
           budget_key_count_metric)
-      : BudgetKeyTimeframeManager(budget_key_name, id, async_executor,
-                                  journal_service, nosql_database_provider,
-                                  nosql_database_provider, metric_client,
-                                  config_provider, budget_key_count_metric) {}
+      : BudgetKeyTimeframeManager(
+            budget_key_name, id, async_executor, journal_service,
+            nosql_database_provider, nosql_database_provider, metric_client,
+            metric_router, config_provider, budget_key_count_metric) {}
 
   BudgetKeyTimeframeManager(
       const std::shared_ptr<std::string>& budget_key_name,
@@ -74,6 +80,7 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider_for_live_traffic,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<cpio::AggregateMetricInterface>&
           budget_key_count_metric)
@@ -102,6 +109,7 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
                 kBudgetKeyTimeframeManagerRetryStrategyDelayMs,
                 kBudgetKeyTimeframeManagerRetryStrategyTotalRetries)),
         metric_client_(metric_client),
+        metric_router_(metric_router),
         config_provider_(config_provider),
         budget_key_count_metric_(budget_key_count_metric) {}
 
@@ -275,39 +283,69 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
                          core::GetDatabaseItemResponse>&
           get_database_item_context) noexcept;
 
-  /// The name of the budget parent key.
+  // The name of the budget parent key.
   const std::shared_ptr<std::string> budget_key_name_;
 
-  /// The id of the budget key timeframe manager.
+  // The id of the budget key timeframe manager.
   const core::common::Uuid id_;
 
-  /// An instance to the async executor.
+  // An instance to the async executor.
   const std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
 
-  /// An instance to the journal service.
+  // An instance to the journal service.
   const std::shared_ptr<core::JournalServiceInterface> journal_service_;
 
-  /// An instance to the nosql database provider.
+  // An instance to the nosql database provider.
   std::shared_ptr<core::NoSQLDatabaseProviderInterface>
       nosql_database_provider_for_background_operations_;
 
-  /// An instance to the nosql database provider.
+  // An instance to the nosql database provider.
   std::shared_ptr<core::NoSQLDatabaseProviderInterface>
       nosql_database_provider_for_live_traffic_;
 
-  /// The concurrent map of the budget key time frame groups.
+  // The concurrent map of the budget key time frame groups.
   std::unique_ptr<core::common::AutoExpiryConcurrentMap<
       TimeGroup, std::shared_ptr<BudgetKeyTimeframeGroup>>>
       budget_key_timeframe_groups_;
 
-  /// Operation dispatcher
+  // Operation dispatcher
   core::common::OperationDispatcher operation_dispatcher_;
-  /// Metric client instance for custom metric recording.
+
+  // Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-  /// An instance of the config provider
+
+  // Keep a MetricRouter member in order to access MetricRouter-owned OTel
+  // Instruments.
+  //
+  // When null, this instance of PBS component does not produce OTel metrics.
+  absl::Nullable<std::shared_ptr<core::MetricRouter>> metric_router_;
+
+  // The OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  // The OpenTelemetry Instrument for counting scheduled budget key loads.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      budget_key_scheduled_load_instrument_;
+
+  // The OpenTelemetry Instrument for counting budget key load-from-DB
+  // attempts.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      budget_key_load_instrument_;
+
+  // The OpenTelemetry Instrument for counting scheduled budget key unloads.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      budget_key_scheduled_unload_instrument_;
+
+  // The OpenTelemetry Instrument for counting budget key unload-from-DB
+  // attempts.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      budget_key_unload_instrument_;
+
+  // An instance of the config provider
   const std::shared_ptr<core::ConfigProviderInterface> config_provider_;
 
-  /// The aggregate metric instance for budget key counters
+  // The aggregate metric instance for budget key counters
   std::shared_ptr<cpio::AggregateMetricInterface> budget_key_count_metric_;
 };
+
 }  // namespace google::scp::pbs

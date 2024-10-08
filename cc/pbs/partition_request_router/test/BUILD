@@ -23,9 +23,6 @@ cc_test(
         "http_request_route_resolver_for_partition_test.cc",
         "transaction_request_router_for_partition_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/transaction_manager/mock:core_transaction_manager_mock",

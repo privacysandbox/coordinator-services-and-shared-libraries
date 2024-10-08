@@ -44,9 +44,14 @@ module "distributedpbs_application" {
   auth_table_write_max_capacity      = var.auth_table_write_max_capacity
   auth_table_write_scale_utilization = var.auth_table_write_scale_utilization
 
-  enable_domain_management = var.enable_domain_management
-  parent_domain_name       = var.parent_domain_name
-  service_subdomain        = var.service_subdomain
+  enable_domain_management          = var.enable_domain_management
+  parent_domain_name                = var.parent_domain_name
+  service_subdomain                 = var.service_subdomain
+  enable_pbs_domain_record_acme     = var.enable_domain_management ? var.enable_pbs_domain_record_acme : false
+  pbs_domain_record_acme            = (var.enable_domain_management && var.enable_pbs_domain_record_acme) ? var.pbs_domain_record_acme : null
+  enable_alternate_pbs_domain       = var.enable_domain_management ? var.enable_alternate_pbs_domain : false
+  pbs_alternate_domain_record_cname = var.enable_domain_management && var.enable_alternate_pbs_domain ? var.pbs_alternate_domain_record_cname : null
+
 
   journal_s3_bucket_force_destroy     = var.journal_s3_bucket_force_destroy
   budget_table_read_capacity          = var.budget_table_read_capacity

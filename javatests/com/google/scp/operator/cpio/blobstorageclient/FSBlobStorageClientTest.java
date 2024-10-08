@@ -89,6 +89,32 @@ public class FSBlobStorageClientTest {
   }
 
   @Test
+  public void getBlobRange_returnsSpecifiedBytes() throws Exception {
+    String getBlobKey = "get-blob";
+    Path blobPath = bucketPath.resolve(getBlobKey);
+    Files.createFile(blobPath);
+    Files.writeString(blobPath, TEST_MESSAGE);
+
+    InputStream blobRange =
+        fsBlobStorageClient.getBlobRange(getDataLocation("/testbucket", getBlobKey), 0, 4);
+    String downloadedMessage = new String(blobRange.readAllBytes());
+    assertThat(downloadedMessage).isEqualTo("test");
+  }
+
+  @Test
+  public void getBlobRange_rangeTowardsTheEndReturnsSpecifiedBytes() throws Exception {
+    String getBlobKey = "get-blob";
+    Path blobPath = bucketPath.resolve(getBlobKey);
+    Files.createFile(blobPath);
+    Files.writeString(blobPath, TEST_MESSAGE);
+
+    InputStream blobRange =
+        fsBlobStorageClient.getBlobRange(getDataLocation("/testbucket", getBlobKey), 8, 3);
+    String downloadedMessage = new String(blobRange.readAllBytes());
+    assertThat(downloadedMessage).isEqualTo("123");
+  }
+
+  @Test
   public void getBlobSizeReturnsExpected() throws IOException, BlobStorageClientException {
     String getBlobKey = "get-blob";
     Path blobPath = bucketPath.resolve(getBlobKey);

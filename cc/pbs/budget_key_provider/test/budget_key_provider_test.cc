@@ -135,8 +135,8 @@ TEST_F(BudgetKeyProviderTest, RunShouldReloadAllUnloadedKeys) {
 
   budget_key_provider_pair->budget_key = make_shared<BudgetKey>(
       budget_key_name, budget_key_id, async_executor_, journal_service_,
-      nosql_database_provider_, mock_metric_client_, mock_config_provider_,
-      mock_aggregate_metric);
+      nosql_database_provider_, mock_metric_client_, /*metric_router=*/nullptr,
+      mock_config_provider_, mock_aggregate_metric);
   budget_key_provider_pair->is_loaded = false;
   auto budget_key_pair = make_pair(*budget_key_name, budget_key_provider_pair);
 
@@ -546,8 +546,8 @@ TEST_F(BudgetKeyProviderTest, OnLogLoadBudgetKeyIntoCacheCallbackFailure) {
 
   budget_key_provider_pair->budget_key = make_shared<BudgetKey>(
       budget_key_name, budget_key_id, async_executor_, journal_service_,
-      nosql_database_provider_, mock_metric_client_, mock_config_provider_,
-      mock_aggregate_metric);
+      nosql_database_provider_, mock_metric_client_, /*metric_router=*/nullptr,
+      mock_config_provider_, mock_aggregate_metric);
   budget_key_provider_pair->is_loaded = false;
   auto budget_key_pair = make_pair(*budget_key_name, budget_key_provider_pair);
 
@@ -594,8 +594,8 @@ TEST_F(BudgetKeyProviderTest, OnLogLoadBudgetKeyIntoCacheCallbackRetry) {
 
   budget_key_provider_pair->budget_key = make_shared<BudgetKey>(
       budget_key_name, budget_key_id, async_executor_, journal_service_,
-      nosql_database_provider_, mock_metric_client_, mock_config_provider_,
-      mock_aggregate_metric);
+      nosql_database_provider_, mock_metric_client_, /*metric_router=*/nullptr,
+      mock_config_provider_, mock_aggregate_metric);
   budget_key_provider_pair->is_loaded = false;
   auto budget_key_pair = make_pair(*budget_key_name, budget_key_provider_pair);
 
@@ -662,8 +662,8 @@ TEST_F(BudgetKeyProviderTest, OnLoadBudgetKeyCallbackFailure) {
 
   budget_key_provider_pair->budget_key = make_shared<BudgetKey>(
       budget_key_name, budget_key_id, async_executor_, journal_service_,
-      nosql_database_provider_, mock_metric_client_, mock_config_provider_,
-      mock_aggregate_metric);
+      nosql_database_provider_, mock_metric_client_, /*metric_router=*/nullptr,
+      mock_config_provider_, mock_aggregate_metric);
   budget_key_provider_pair->is_loaded = false;
   auto budget_key_pair = make_pair(*budget_key_name, budget_key_provider_pair);
 
@@ -712,8 +712,8 @@ TEST_F(BudgetKeyProviderTest, OnLoadBudgetKeyCallbackRetry) {
 
   budget_key_provider_pair->budget_key = make_shared<BudgetKey>(
       budget_key_name, budget_key_id, async_executor_, journal_service_,
-      nosql_database_provider_, mock_metric_client_, mock_config_provider_,
-      mock_aggregate_metric);
+      nosql_database_provider_, mock_metric_client_, /*metric_router=*/nullptr,
+      mock_config_provider_, mock_aggregate_metric);
   budget_key_provider_pair->is_loaded = false;
   auto budget_key_pair = make_pair(*budget_key_name, budget_key_provider_pair);
 

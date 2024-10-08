@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         ":gcp_job_client_provider_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/job_client_provider/src:job_client_provider_lib",

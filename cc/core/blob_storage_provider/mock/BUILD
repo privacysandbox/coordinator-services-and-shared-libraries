@@ -23,9 +23,6 @@ cc_library(
             "**/*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/blob_storage_provider/src/aws:core_blob_storage_provider_aws_lib",

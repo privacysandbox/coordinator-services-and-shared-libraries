@@ -18,11 +18,13 @@ package com.google.scp.coordinator.privacy.budgeting.model;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.Immutable;
 
 /**
  * Class encapsulating a pair of Reporting Origin and a list of {@link PrivacyBudgetUnit} for that
  * specific Reporting Origin
  */
+@Immutable
 @AutoValue
 public abstract class ReportingOriginToPrivacyBudgetUnits {
   public static ReportingOriginToPrivacyBudgetUnits.Builder builder() {

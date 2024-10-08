@@ -51,3 +51,8 @@ output "pbs_spanner_instance_name" {
   value       = module.pbs_storage.pbs_spanner_instance_name
   description = "Name of the PBS Spanner instance."
 }
+
+output "pbs_alternate_instance_domain_record_data" {
+  value       = module.pbs_lb.pbs_alternate_instance_domain_record_data
+  description = "Alternate DNS record data."
+}

@@ -12,12 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_gazelle//:def.bzl", "gazelle")
 load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
+
+# Gazelle is used to import target and create build rule automatically. It supports many
+# languages but this repo only uses it for Golang. To use this tool, please run:
+#
+#   bazel run //go:gazelle
+#
+# The following directive asks gazelle to only process Golang codes
+# gazelle:lang go
+#
+# gazelle:prefix github.com/privacysandbox/coordinator-services-and-shared-libraries
+gazelle(name = "gazelle")
+
+# The following build rule can be used to update WORKSPACE file to include Golang
+# dependency.
+#
+# gazelle(
+#     name = "gazelle-update-repos",
+#     args = [
+#         "-from_file=go/helloworld/go.mod",
+#         "-to_macro=./build_defs/go/go_repositories.bzl%go_dependencies",
+#         "-prune",
+#     ],
+#     command = "update-repos",
+# )
 
 buildifier(
     name = "buildifier_check",
@@ -105,4 +130,11 @@ pkg_tar(
 pkg_files(
     name = "version_file",
     srcs = ["version.txt"],
+)
+
+genrule(
+    name = "generate_version_file",
+    srcs = ["version.txt"],
+    outs = ["version_for_image.txt"],
+    cmd = "cp $< $@",
 )

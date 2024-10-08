@@ -22,9 +22,6 @@ cc_library(
         "//cc/cpio/client_providers/interface:role_credentials_provider_interface.h",
         "//cc/cpio/client_providers/role_credentials_provider/src/gcp:gcp_role_credentials_provider_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

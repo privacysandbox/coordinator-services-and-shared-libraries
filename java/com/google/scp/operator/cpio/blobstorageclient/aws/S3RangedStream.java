@@ -58,7 +58,8 @@ public class S3RangedStream extends InputStream {
    * This function sends GetObjectRequest to retrieve partial data from an S3 object. The partial
    * data range can be specified in start and end parameters.
    */
-  private ResponseInputStream<GetObjectResponse> getBlobRange(long start, long end)
+  public static ResponseInputStream<GetObjectResponse> getBlobRange(
+      S3Client client, BlobStoreDataLocation dataLocation, long start, long end)
       throws BlobStorageClientException {
     try {
       return client.getObject(
@@ -78,7 +79,8 @@ public class S3RangedStream extends InputStream {
    */
   public void checkFileExists() throws BlobStorageClientException {
     // Use try-with-resources to close the stream when exiting.
-    try (ResponseInputStream<GetObjectResponse> rangeResponse = getBlobRange(0, 1)) {
+    try (ResponseInputStream<GetObjectResponse> rangeResponse =
+        getBlobRange(client, dataLocation, 0, 1)) {
     } catch (IOException e) {
       throw new BlobStorageClientException(e);
     }
@@ -89,7 +91,7 @@ public class S3RangedStream extends InputStream {
     // The start and end bytes in http range request are inclusive.
     long httpRangeEnd = currentFileOffset + rangedHttpBufferSize - 1;
     try (ResponseInputStream<GetObjectResponse> rangeResponse =
-        getBlobRange(currentFileOffset, httpRangeEnd)) {
+        getBlobRange(client, dataLocation, currentFileOffset, httpRangeEnd)) {
       // Read the response into a byte buffer.
       buffer = ByteBuffer.wrap(rangeResponse.readAllBytes());
       // The contentRange response syntax is <unit> <range-start>-<range-end>/<size>. For example,

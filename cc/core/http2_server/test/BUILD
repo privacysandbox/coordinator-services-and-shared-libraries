@@ -14,15 +14,14 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
+# For running these tests in parallel use,
+# bazel test  --config=asan -c dbg //cc/core/http2_server/test:http2_server_test --runs_per_test=10 --test_filter=Http2ServerTest.TestServerDurationMetric --jobs=1
 cc_test(
     name = "http2_server_test",
     size = "small",
     srcs = [
         "http2_server_request_routing_test.cc",
         "http2_server_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     data = [
         "//cc/core/http2_server/test/certs:csr.conf",
@@ -37,9 +36,15 @@ cc_test(
         "//cc/core/http2_forwarder/mock:core_http2_forwarder_mock",
         "//cc/core/http2_server/mock:core_http2_server_mock",
         "//cc/core/http2_server/src:core_http2_server_lib",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/mock:telemetry_mock",
+        "//cc/core/telemetry/src/common:telemetry_common",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/mock/metric_client:metric_client_mock",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )
 
@@ -48,9 +53,6 @@ cc_test(
     size = "large",
     srcs = [
         "http2_server_load_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     data = [
         "//cc/core/http2_server/test/certs:csr.conf",

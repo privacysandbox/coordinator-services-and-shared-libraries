@@ -147,6 +147,18 @@ variable "service_subdomain" {
   default     = "mp-pbs"
 }
 
+variable "enable_pbs_domain_record_acme" {
+  description = "Enable acme_challenge update for PBS domain record certificate creation"
+  type        = bool
+  default     = false
+}
+
+variable "pbs_domain_record_acme" {
+  description = "DNS record data for PBS domain record acme_challenge"
+  type        = string
+  default     = null
+}
+
 variable "application_environment_variables" {
   description = "Environment variables to be set for the application running on this environment."
   type        = map(string)
@@ -642,4 +654,20 @@ variable "privacy_budget_dashboard_time_period_seconds" {
   description = "Time period that acts as a window for dashboard metrics. Measured in seconds."
   type        = number
   default     = 60
+}
+
+################################################################################
+# PBS alternate domain
+################################################################################
+
+variable "pbs_alternate_domain_record_cname" {
+  type     = string
+  default  = null
+  nullable = true
+}
+
+variable "enable_alternate_pbs_domain" {
+  type     = bool
+  default  = false
+  nullable = false
 }

@@ -20,9 +20,6 @@ cc_test(
     name = "pbs_client_test",
     size = "small",
     srcs = ["pbs_client_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/credentials_provider/mock:core_credentials_provider_mock",

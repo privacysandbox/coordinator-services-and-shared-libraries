@@ -20,9 +20,6 @@ cc_test(
     name = "async_executor_test",
     size = "small",
     srcs = ["async_executor_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -38,9 +35,6 @@ cc_test(
     name = "single_thread_async_executor_test",
     size = "small",
     srcs = ["single_thread_async_executor_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -56,9 +50,6 @@ cc_test(
     size = "small",
     timeout = "moderate",
     srcs = ["single_thread_priority_async_executor_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     flaky = True,
     deps = [
         "//cc:cc_base_include_dir",
@@ -77,9 +68,6 @@ cc_test(
     srcs = [
         "single_thread_async_executor_benchmark_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -95,9 +83,6 @@ cc_test(
     name = "async_task_test",
     size = "small",
     srcs = ["async_task_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -112,9 +97,6 @@ cc_test(
     name = "async_executor_utils_test",
     size = "small",
     srcs = ["async_executor_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",

@@ -30,6 +30,7 @@ java_library(
         "//java/external:apache_httpcore5",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
+        "//java/external:error_prone_anntotations",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_annotations",

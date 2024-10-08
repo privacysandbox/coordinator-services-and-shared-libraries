@@ -24,15 +24,13 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/budget_key/src:pbs_budget_key_lib",
         "//cc/pbs/budget_key_provider/src/proto:pbs_budget_key_provider_proto_lib",
@@ -40,5 +38,6 @@ cc_library(
         "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
         "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
         "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
+        "@com_google_absl//absl/base:nullability",
     ],
 )

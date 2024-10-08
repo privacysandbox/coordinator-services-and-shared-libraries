@@ -24,20 +24,19 @@ cc_library(
             "**/*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/concurrent_map/src:concurrent_map_lib",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/utils/src:core_utils",
         "@boost//:asio_ssl",
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_github_nghttp2_nghttp2//:nghttp2_asio",
         "@com_google_absl//absl/strings",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )

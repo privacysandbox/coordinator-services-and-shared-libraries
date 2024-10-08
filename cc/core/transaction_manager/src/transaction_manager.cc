@@ -27,13 +27,12 @@
 #include <thread>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "core/interface/configuration_keys.h"
 #include "core/interface/metrics_def.h"
 #include "core/interface/partition_types.h"
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "opentelemetry/metrics/provider.h"
-#include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
@@ -67,7 +66,7 @@ using std::this_thread::sleep_for;
 
 static constexpr size_t kShutdownWaitIntervalMilliseconds = 100;
 
-static constexpr char kTransactionManager[] = "TransactionManager";
+static constexpr absl::string_view kTransactionManager = "TransactionManager";
 
 namespace google::scp::core {
 
@@ -173,7 +172,39 @@ ExecutionResult TransactionManager::Init() noexcept {
   }
 
   if (metric_router_) {
-    metric_router_->GetActiveTransactionsInstrument()->AddCallback(
+    meter_ = metric_router_->GetOrCreateMeter(kTransactionManager);
+
+    active_transactions_instrument_ =
+        metric_router_->GetOrCreateObservableInstrument(
+            kMetricNameActiveTransactions,
+            [&]() -> std::shared_ptr<
+                      opentelemetry::metrics::ObservableInstrument> {
+              return meter_->CreateInt64ObservableGauge(
+                  kMetricNameActiveTransactions,
+                  "Number of currently active transactions");
+            });
+    received_transactions_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameReceivedTransactions,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameReceivedTransactions,
+                      "Number of received transactions");
+                }));
+    finished_transactions_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameFinishedTransactions,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameFinishedTransactions,
+                      "Number of finished transactions");
+                }));
+
+    active_transactions_instrument_->AddCallback(
         reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
             &TransactionManager::ObserveActiveTransactionsCallback),
         this);
@@ -254,8 +285,7 @@ ExecutionResult TransactionManager::Execute(
     if (metric_router_) {
       std::map<std::string, std::string> metric_labels = {
           {kMetricLabelPartitionId, ToString(partition_id_)}};
-      metric_router_->GetReceivedTransactionsInstrument()->Add(1,
-                                                               metric_labels);
+      received_transactions_instrument_->Add(1, metric_labels);
     }
 
     active_transactions_metric_->Increment(kMetricEventReceivedTransaction);
@@ -274,8 +304,7 @@ ExecutionResult TransactionManager::Execute(
           if (metric_router_) {
             std::map<std::string, std::string> metric_labels = {
                 {kMetricLabelPartitionId, ToString(partition_id_)}};
-            metric_router_->GetFinishedTransactionsInstrument()->Add(
-                1, metric_labels);
+            finished_transactions_instrument_->Add(1, metric_labels);
           }
 
           active_transactions_metric_->Increment(
@@ -333,8 +362,7 @@ ExecutionResult TransactionManager::ExecutePhase(
     if (metric_router_) {
       std::map<std::string, std::string> metric_labels = {
           {kMetricLabelPartitionId, ToString(partition_id_)}};
-      metric_router_->GetReceivedTransactionsInstrument()->Add(1,
-                                                               metric_labels);
+      received_transactions_instrument_->Add(1, metric_labels);
     }
 
     active_transactions_metric_->Increment(kMetricEventReceivedTransaction);
@@ -354,8 +382,7 @@ ExecutionResult TransactionManager::ExecutePhase(
           if (metric_router_) {
             std::map<std::string, std::string> metric_labels = {
                 {kMetricLabelPartitionId, ToString(partition_id_)}};
-            metric_router_->GetFinishedTransactionsInstrument()->Add(
-                1, metric_labels);
+            finished_transactions_instrument_->Add(1, metric_labels);
           }
 
           active_transactions_metric_->Increment(

@@ -49,6 +49,19 @@ core::common::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status) {
   return kExecutionStatusToProtoMap.at(status);
 }
 
+std::string ExecutionStatusToString(const ExecutionStatus& status) {
+  switch (status) {
+    case ExecutionStatus::Success:
+      return "Success";
+    case ExecutionStatus::Failure:
+      return "Failure";
+    case ExecutionStatus::Retry:
+      return "Retry";
+    default:
+      return "Unknown";
+  }
+}
+
 core::common::proto::ExecutionResult ExecutionResult::ToProto() {
   core::common::proto::ExecutionResult result_proto;
   result_proto.set_status(ToStatusProto(status));

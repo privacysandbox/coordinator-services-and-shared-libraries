@@ -44,6 +44,12 @@ static constexpr char kMetricEventPartitionLeaseRenewedCount[] =
 /**
  * @brief
  * Budget Key Counter Metrics
+ *  Metric Name: kMetricNameBudgetKeyScheduledLoads
+ *  Metric Name: kMetricNameBudgetKeyLoads
+ *               Labels: kMetricLabelBudgetKeyLoadSuccess
+ *  Metric Name: kMetricNameBudgetKeyScheduledUnloads
+ *  Metric Name: kMetricNameBudgetKeyUnloads
+ *               Labels: kMetricLabelBudgetKeyUnloadSuccess
  *  Metric Name: kMetricNameBudgetKeyCount
  *               Events: kMetricEventLoadFromDBScheduled
  *               Events: kMetricEventLoadFromDBSuccess
@@ -52,10 +58,23 @@ static constexpr char kMetricEventPartitionLeaseRenewedCount[] =
  *               Events: kMetricEventUnloadFromDBSuccess
  *               Events: kMetricEventUnloadFromDBFailed
  */
+static constexpr char kMetricNameBudgetKeyScheduledLoads[] =
+    "google.scp.pbs.budget_key.scheduled_loads";
+static constexpr char kMetricNameBudgetKeyLoads[] =
+    "google.scp.pbs.budget_key.loads";
+static constexpr char kMetricNameBudgetKeyScheduledUnloads[] =
+    "google.scp.pbs.budget_key.scheduled_unloads";
+static constexpr char kMetricNameBudgetKeyUnloads[] =
+    "google.scp.pbs.budget_key.unloads";
+
+static constexpr char kMetricLabelBudgetKeyLoadSuccess[] = "load_success";
+static constexpr char kMetricLabelBudgetKeyUnloadSuccess[] = "unload_success";
+
 static constexpr char kMetricComponentNameAndPartitionNamePrefixForBudgetKey[] =
     "BudgetKeyProvider for Partition ";
 static constexpr char kMetricNameBudgetKeyCount[] = "BudgetKeyCounter";
 static constexpr char kMetricMethodLoadUnload[] = "BudgetKey Load Unload";
+
 static constexpr char kMetricEventLoadFromDBScheduled[] =
     "LoadFromDB Scheduled";
 static constexpr char kMetricEventLoadFromDBSuccess[] = "LoadFromDB Success";

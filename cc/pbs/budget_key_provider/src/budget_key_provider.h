@@ -23,6 +23,7 @@
 #include <string>
 #include <utility>
 
+#include "absl/base/nullability.h"
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 #include "core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "core/common/operation_dispatcher/src/retry_strategy.h"
@@ -31,6 +32,7 @@
 #include "core/interface/journal_service_interface.h"
 #include "core/interface/nosql_database_provider_interface.h"
 #include "core/interface/partition_types.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/budget_key_provider/src/proto/budget_key_provider.pb.h"
 #include "pbs/interface/budget_key_provider_interface.h"
@@ -44,9 +46,10 @@ static constexpr size_t kBudgetKeyProviderRetryStrategyTotalRetries = 12;
 static constexpr int kBudgetKeyProviderCacheLifetimeSeconds = 300;
 
 namespace google::scp::pbs {
-/// Stores budget_key and associated loading status.
+
+// Stores budget_key and associated loading status.
 struct BudgetKeyProviderPair : public core::LoadableObject {
-  /// A pointer to the budget key.
+  // A pointer to the budget key.
   std::shared_ptr<BudgetKeyInterface> budget_key;
 };
 
@@ -60,11 +63,13 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const core::PartitionId& partition_id = core::kGlobalPartitionId)
       : BudgetKeyProvider(async_executor, journal_service,
                           nosql_database_provider, nosql_database_provider,
-                          metric_client, config_provider, partition_id) {
+                          metric_client, metric_router, config_provider,
+                          partition_id) {
     // This construction does not make any distinction between background and
     // live traffic NoSQL operations.
   }
@@ -77,6 +82,7 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider_for_live_traffic,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const core::PartitionId& partition_id = core::kGlobalPartitionId)
       : async_executor_(async_executor),
@@ -100,6 +106,7 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
                                   kBudgetKeyProviderRetryStrategyDelayMs,
                                   kBudgetKeyProviderRetryStrategyTotalRetries)),
         metric_client_(metric_client),
+        metric_router_(metric_router),
         config_provider_(config_provider),
         partition_id_(partition_id),
         activity_id_(core::common::Uuid::GenerateUuid()) {}
@@ -119,13 +126,14 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
       const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
       const std::shared_ptr<core::JournalServiceInterface>& journal_service,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const core::PartitionId& partition_id = core::kGlobalPartitionId)
       : BudgetKeyProvider(
             async_executor, journal_service,
             nullptr /* nosql_provider unused in checkpointing context */,
             nullptr /* nosql_provider unused in checkpointing context */,
-            metric_client, config_provider, partition_id) {}
+            metric_client, metric_router, config_provider, partition_id) {}
 
   ~BudgetKeyProvider();
 
@@ -243,17 +251,17 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
       core::AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>&
           load_budget_key_context) noexcept;
 
-  /// An instance to the async executor.
+  // An instance to the async executor.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
 
-  /// An instance to the journal service.
+  // An instance to the journal service.
   std::shared_ptr<core::JournalServiceInterface> journal_service_;
 
-  /// An instance to the nosql database provider.
+  // An instance to the nosql database provider.
   std::shared_ptr<core::NoSQLDatabaseProviderInterface>
       nosql_database_provider_for_background_operations_;
 
-  /// An instance to the nosql database provider.
+  // An instance to the nosql database provider.
   std::shared_ptr<core::NoSQLDatabaseProviderInterface>
       nosql_database_provider_for_live_traffic_;
 
@@ -265,22 +273,35 @@ class BudgetKeyProvider : public BudgetKeyProviderInterface {
       std::string, std::shared_ptr<BudgetKeyProviderPair>>>
       budget_keys_;
 
-  /// Operation distpatcher
+  // Operation distpatcher
   core::common::OperationDispatcher operation_dispatcher_;
 
-  /// Metric client instance for custom metric recording.
+  // Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
-  /// An instance of the config provider;
+  // Keep a MetricRouter member in order to access MetricRouter-owned OTel
+  // Instruments.
+  //
+  // When null, derived BudgetKeyTimeframeManager does not produce OTel
+  // metrics.
+  absl::Nullable<std::shared_ptr<core::MetricRouter>> metric_router_;
+
+  // An instance of the config provider;
   const std::shared_ptr<core::ConfigProviderInterface> config_provider_;
 
-  /// The aggregate metric instance for counting load/unload of budget keys
+  // The aggregate metric instance for counting load/unload of budget keys
   std::shared_ptr<cpio::AggregateMetricInterface> budget_key_count_metric_;
 
-  /// Encapsulating partition
+  // Encapsulating partition
   const core::PartitionId partition_id_;
 
-  /// Activity ID
+  // Activity ID
   const core::common::Uuid activity_id_;
+
+ private:
+  // Initialize MetricClient.
+  //
+  core::ExecutionResult InitMetricClientInterface();
 };
+
 }  // namespace google::scp::pbs

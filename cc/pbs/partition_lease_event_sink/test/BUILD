@@ -22,9 +22,6 @@ cc_test(
     srcs = [
         "partition_lease_event_sink_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/config_provider/mock:core_config_provider_mock",

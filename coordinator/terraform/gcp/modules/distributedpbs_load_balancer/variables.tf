@@ -30,6 +30,12 @@ variable "project_id" {
   nullable    = false
 }
 
+variable "parent_domain_name" {
+  description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
+  type        = string
+  nullable    = false
+}
+
 variable "enable_domain_management" {
   description = "Whether to enable domain management."
   type        = bool
@@ -38,12 +44,6 @@ variable "enable_domain_management" {
 
 variable "pbs_domain" {
   description = "The domain used for PBS."
-  type        = string
-  nullable    = false
-}
-
-variable "parent_domain_name" {
-  description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string
   nullable    = false
 }
@@ -106,4 +106,10 @@ variable "pbs_instance_allow_ssh" {
   description = "Whether to allow ssh traffic through firewall."
   type        = bool
   nullable    = false
+}
+
+variable "pbs_tls_alternate_names" {
+  description = "PBS Subject Alternative Names for the TLS cert"
+  type        = list(string)
+  nullable    = true
 }

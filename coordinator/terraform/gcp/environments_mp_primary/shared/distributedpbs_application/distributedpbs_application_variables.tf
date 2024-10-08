@@ -136,13 +136,6 @@ variable "auth_cloud_function_handler_path" {
   default     = ""
 }
 
-variable "auth_cloud_function_requirements_path" {
-  description = "The path to where the cloud function requirements file is read from."
-  type        = string
-  nullable    = false
-  default     = ""
-}
-
 variable "pbs_auth_cloudfunction_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
@@ -347,6 +340,13 @@ variable "enable_domain_management" {
   type        = bool
   nullable    = false
   default     = false
+}
+
+variable "pbs_tls_alternate_names" {
+  description = "PBS Subject Alternative Names for the TLS cert"
+  type        = list(string)
+  nullable    = true
+  default     = null
 }
 
 ################################################################################

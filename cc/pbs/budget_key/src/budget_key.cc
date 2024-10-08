@@ -64,6 +64,7 @@ static constexpr Version kCurrentVersion = {.major = 1, .minor = 0};
 static constexpr char kBudgetKey[] = "BudgetKey";
 
 namespace google::scp::pbs {
+
 BudgetKey::BudgetKey(
     const shared_ptr<BudgetKeyName>& name, const Uuid& id,
     const shared_ptr<AsyncExecutorInterface>& async_executor,
@@ -73,6 +74,7 @@ BudgetKey::BudgetKey(
     const shared_ptr<NoSQLDatabaseProviderInterface>&
         nosql_database_provider_for_live_traffic,
     const shared_ptr<MetricClientInterface>& metric_client,
+    std::shared_ptr<core::MetricRouter> metric_router,
     const shared_ptr<ConfigProviderInterface>& config_provider,
     const shared_ptr<cpio::AggregateMetricInterface>& budget_key_count_metric)
     : name_(name),
@@ -89,6 +91,7 @@ BudgetKey::BudgetKey(
                                 kBudgetKeyRetryStrategyDelayMs,
                                 kBudgetKeyRetryStrategyTotalRetries)),
       metric_client_(metric_client),
+      metric_router_(metric_router),
       config_provider_(config_provider),
       budget_key_count_metric_(budget_key_count_metric) {}
 
@@ -174,7 +177,7 @@ ExecutionResult BudgetKey::OnJournalServiceRecoverCallback(
   budget_key_timeframe_manager_ = make_shared<BudgetKeyTimeframeManager>(
       name_, timeframe_manager_id, async_executor_, journal_service_,
       nosql_database_provider_for_background_operations_,
-      nosql_database_provider_for_live_traffic_, metric_client_,
+      nosql_database_provider_for_live_traffic_, metric_client_, metric_router_,
       config_provider_, budget_key_count_metric_);
   consume_budget_transaction_protocol_ =
       make_shared<ConsumeBudgetTransactionProtocol>(
@@ -301,7 +304,7 @@ void BudgetKey::OnLogLoadBudgetKeyCallback(
   budget_key_timeframe_manager_ = make_shared<BudgetKeyTimeframeManager>(
       name_, budget_key_timeframe_manager_id, async_executor_, journal_service_,
       nosql_database_provider_for_background_operations_,
-      nosql_database_provider_for_live_traffic_, metric_client_,
+      nosql_database_provider_for_live_traffic_, metric_client_, metric_router_,
       config_provider_, budget_key_count_metric_);
   consume_budget_transaction_protocol_ =
       make_shared<ConsumeBudgetTransactionProtocol>(
@@ -372,4 +375,5 @@ ExecutionResult BudgetKey::Checkpoint(
   }
   return SuccessExecutionResult();
 }
+
 }  // namespace google::scp::pbs

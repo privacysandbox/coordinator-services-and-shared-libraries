@@ -24,9 +24,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/kms_client_provider/interface/gcp:gcp_kms_client_provider_interface",

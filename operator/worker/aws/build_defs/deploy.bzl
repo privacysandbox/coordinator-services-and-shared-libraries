@@ -40,7 +40,8 @@ def worker_aws_deployment(
         licenses = "//licenses:licenses_tar",
         enable_worker_debug_mode = False,
         uninstall_ssh_server = True,
-        user_rpms = []):
+        user_rpms = [],
+        additional_container_files = []):
     """Creates targets for AWS AMI generation and enclave Docker container.
 
     Assuming the name passed is 'worker', this macro instantiates multiple
@@ -93,8 +94,6 @@ def worker_aws_deployment(
       uninstall_ssh_server: Whether to uninstall SSH server from AMI once
         provisioning is completed (SSH is used for provisioning).
     """
-
-    additional_container_files = []
 
     if test_key:
         additional_container_files.append(test_key)

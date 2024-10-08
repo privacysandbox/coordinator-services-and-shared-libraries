@@ -24,9 +24,6 @@ cc_test(
         "journal_service_test.cc",
         "journal_utils_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],
@@ -40,10 +37,14 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/journal_service/mock:core_journal_service_mock",
         "//cc/core/journal_service/src:core_journal_service_lib",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/mock/metric_client:metric_client_mock",
+        "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )
 
@@ -65,9 +66,6 @@ cc_test(
     name = "journal_input_stream_benchmark_test",
     size = "large",
     srcs = ["journal_input_stream_benchmark_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],

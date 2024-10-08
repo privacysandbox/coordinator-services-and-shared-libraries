@@ -23,14 +23,9 @@ terraform {
   }
 }
 
-provider "google" {
-  project = var.project_id
-  region  = var.primary_region
-  zone    = var.primary_region_zone
-}
-
 # Creates hosted zone with NS records
 resource "google_dns_managed_zone" "hosted_zone" {
+  project = var.project_id
   # Replace periods with dashes due to format restrictions
   name        = replace(var.domain_name, ".", "-")
   dns_name    = "${var.domain_name}."

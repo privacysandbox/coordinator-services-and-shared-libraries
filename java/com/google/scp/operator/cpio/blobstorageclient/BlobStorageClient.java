@@ -48,6 +48,18 @@ public interface BlobStorageClient {
       throws BlobStorageClientException;
 
   /**
+   * Blocking call to retrieve a byte range of a blob object from the storage provider.
+   *
+   * @param location The data location of the blob to retrieve.
+   * @param startOffset The start offset from 0 of the blob bytes.
+   * @param length The number of bytes to read.
+   * @return An {@code InputStream} with the blob contents.
+   * @throws BlobStorageClientException
+   */
+  InputStream getBlobRange(DataLocation location, int startOffset, int length)
+      throws BlobStorageClientException;
+
+  /**
    * Blocking call to retrieve the blob size from the storage provider.
    *
    * @param location The data location of the blob to retrieve.

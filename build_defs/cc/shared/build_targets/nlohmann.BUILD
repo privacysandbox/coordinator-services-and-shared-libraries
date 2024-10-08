@@ -26,8 +26,5 @@ cc_library(
             "include/nlohmann/*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     includes = ["single_include"],
 )

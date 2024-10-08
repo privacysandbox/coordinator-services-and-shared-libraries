@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         ":no_op_initializer_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",

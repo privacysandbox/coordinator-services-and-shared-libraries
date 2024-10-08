@@ -79,6 +79,7 @@ java_library(
         "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
+        "//java/external:gcp_core",
         "//java/external:gcp_storage",
         "//java/external:google_auth_library_oauth2_http",
         "//java/external:google_gax",

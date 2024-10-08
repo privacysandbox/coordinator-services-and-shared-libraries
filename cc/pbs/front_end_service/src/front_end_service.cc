@@ -126,8 +126,7 @@ FrontEndService::FrontEndService(
       metric_client_(metric_client),
       config_provider_(config_provider),
       aggregated_metric_interval_ms_(core::kDefaultAggregatedMetricIntervalMs),
-      generate_batch_budget_consume_commands_per_day_(false),
-      adtech_site_authorized_domain_enabled_(false) {
+      generate_batch_budget_consume_commands_per_day_(false) {
   meter_ = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
       "Frontend Service v1", "1.0");
 
@@ -216,15 +215,6 @@ ExecutionResult FrontEndService::Init() noexcept {
     SCP_INFO(kFrontEndService, kZeroUuid, "Command batching per day is enabled",
              kEnableBatchBudgetCommandsPerDayConfigName,
              generate_batch_budget_consume_commands_per_day_)
-  }
-
-  bool adtech_site_authorized_domain_enabled = false;
-  if (config_provider_ && config_provider_
-                              ->Get(core::kPBSAdtechSiteAsAuthorizedDomain,
-                                    adtech_site_authorized_domain_enabled)
-                              .Successful()) {
-    adtech_site_authorized_domain_enabled_ =
-        adtech_site_authorized_domain_enabled;
   }
 
   execution_result =
@@ -475,17 +465,11 @@ ExecutionResult FrontEndService::BeginTransaction(
   }
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
-  if (adtech_site_authorized_domain_enabled_) {
-    auto transaction_origin = ObtainTransactionOrigin(http_context);
-    execution_result = ParseBeginTransactionRequestBody(
-        *http_context.request->auth_context.authorized_domain,
-        *transaction_origin, http_context.request->body,
-        consume_budget_metadata_list);
-  } else {
-    execution_result = ParseBeginTransactionRequestBody(
-        *http_context.request->auth_context.authorized_domain,
-        http_context.request->body, consume_budget_metadata_list);
-  }
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+  execution_result = ParseBeginTransactionRequestBody(
+      *http_context.request->auth_context.authorized_domain,
+      *transaction_origin, http_context.request->body,
+      consume_budget_metadata_list);
 
   if (!execution_result.Successful()) {
     client_error_metrics_instance->Increment(reporting_origin_metric_label);
@@ -527,30 +511,13 @@ ExecutionResult FrontEndService::BeginTransaction(
         consume_budget_metadata.token_count);
   }
 
-  if (adtech_site_authorized_domain_enabled_) {
-    auto transaction_origin = ObtainTransactionOrigin(http_context);
-    if (generate_batch_budget_consume_commands_per_day_) {
-      transaction_context.request->commands =
-          GenerateConsumeBudgetCommandsWithBatchesPerDay(
-              consume_budget_metadata_list, *transaction_origin,
-              transaction_id);
-    } else {
-      transaction_context.request->commands = GenerateConsumeBudgetCommands(
-          consume_budget_metadata_list, *transaction_origin, transaction_id);
-    }
+  if (generate_batch_budget_consume_commands_per_day_) {
+    transaction_context.request->commands =
+        GenerateConsumeBudgetCommandsWithBatchesPerDay(
+            consume_budget_metadata_list, *transaction_origin, transaction_id);
   } else {
-    if (generate_batch_budget_consume_commands_per_day_) {
-      transaction_context.request->commands =
-          GenerateConsumeBudgetCommandsWithBatchesPerDay(
-              consume_budget_metadata_list,
-              *http_context.request->auth_context.authorized_domain,
-              transaction_id);
-    } else {
-      transaction_context.request->commands = GenerateConsumeBudgetCommands(
-          consume_budget_metadata_list,
-          *http_context.request->auth_context.authorized_domain,
-          transaction_id);
-    }
+    transaction_context.request->commands = GenerateConsumeBudgetCommands(
+        consume_budget_metadata_list, *transaction_origin, transaction_id);
   }
 
   transaction_context.request->is_coordinated_remotely = true;
@@ -558,14 +525,8 @@ ExecutionResult FrontEndService::BeginTransaction(
       make_shared<string>(transaction_secret);
   // Transaction origin during transaction initiation must be the one authorized
   // with the system.
-  if (adtech_site_authorized_domain_enabled_) {
-    transaction_context.request->transaction_origin =
-        ObtainTransactionOrigin(http_context);
-
-  } else {
-    transaction_context.request->transaction_origin =
-        http_context.request->auth_context.authorized_domain;
-  }
+  transaction_context.request->transaction_origin =
+      ObtainTransactionOrigin(http_context);
   transaction_context.request->timeout_time =
       (TimeProvider::GetSteadyTimestampInNanoseconds() +
        milliseconds(kTransactionTimeoutMs))
@@ -970,7 +931,7 @@ ExecutionResult FrontEndService::GetTransactionStatus(
 
   const absl::flat_hash_map<std::string, std::string>
       transaction_status_label_kv = {
-          {kMetricLabelTransactionStatus, kMetricLabelGetStatusTransaction},
+          {kMetricLabelTransactionPhase, kMetricLabelGetStatusTransaction},
           {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
 
   total_request_counter_->Add(1, transaction_status_label_kv);
@@ -1353,7 +1314,7 @@ void FrontEndService::OnGetTransactionStatusCallback(
   http_context.result = get_transaction_status_context.result;
 
   const absl::flat_hash_map<std::string, std::string> transaction_label_kv = {
-      {kMetricLabelTransactionStatus, metric_label},
+      {kMetricLabelTransactionPhase, kMetricLabelGetStatusTransaction},
       {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label}};
 
   if (!get_transaction_status_context.result.Successful()) {

@@ -22,9 +22,6 @@ cc_test(
     srcs = [
         "gcp_queue_client_provider_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -52,7 +49,6 @@ cc_library(
     ],
     copts = [
         "-DTEST_CPIO=1",
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

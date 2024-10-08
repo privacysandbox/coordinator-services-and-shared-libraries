@@ -37,7 +37,7 @@ class MockBudgetKeyProvider : public BudgetKeyProvider {
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
       : BudgetKeyProvider(async_executor, journal_service,
                           nosql_database_provider, metric_client,
-                          config_provider) {
+                          /*metric_router=*/nullptr, config_provider) {
     budget_keys_ = std::make_unique<core::common::AutoExpiryConcurrentMap<
         std::string, std::shared_ptr<BudgetKeyProviderPair>>>(
         100, true /* extend_entry_lifetime_on_access */,

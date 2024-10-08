@@ -14,10 +14,13 @@
 
 #include "core/telemetry/src/metric/metric_router.h"
 
+#include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/strings/string_view.h"
+#include "core/common/uuid/src/uuid.h"
 #include "core/interface/metrics_def.h"
 #include "core/telemetry/src/common/telemetry_configuration.h"
 #include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
@@ -25,12 +28,15 @@
 #include "opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
 #include "opentelemetry/sdk/metrics/meter_context.h"
 #include "opentelemetry/sdk/metrics/meter_context_factory.h"
+#include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/meter_provider_factory.h"
+#include "opentelemetry/sdk/metrics/view/view.h"
+#include "opentelemetry/sdk/metrics/view/view_factory.h"
 #include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 
 namespace google::scp::core {
 
-static constexpr absl::string_view kTransactionManager = "TransactionManager";
+inline constexpr absl::string_view kMetricRouter = "MetricRouter";
 
 MetricRouter::MetricRouter(
     std::shared_ptr<ConfigProviderInterface> config_provider,
@@ -55,47 +61,6 @@ void MetricRouter::SetupMetricRouter(
   opentelemetry::metrics::Provider::SetMeterProvider(std::move(u_provider));
 }
 
-std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
-MetricRouter::GetActiveTransactionsInstrument() {
-  SetupTransactionManagerMetricInstruments();
-  return metric_instruments_.active_transactions_instrument;
-}
-
-std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-MetricRouter::GetReceivedTransactionsInstrument() {
-  SetupTransactionManagerMetricInstruments();
-  return metric_instruments_.received_transactions_instrument;
-}
-
-std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-MetricRouter::GetFinishedTransactionsInstrument() {
-  SetupTransactionManagerMetricInstruments();
-  return metric_instruments_.finished_transactions_instrument;
-}
-
-void MetricRouter::SetupTransactionManagerMetricInstruments() {
-  absl::MutexLock lock(&metric_instruments_mutex_);
-
-  if (transaction_manager_meter_) {
-    return;
-  }
-
-  transaction_manager_meter_ =
-      opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
-          kTransactionManager);
-
-  metric_instruments_.active_transactions_instrument =
-      transaction_manager_meter_->CreateInt64ObservableGauge(
-          kMetricNameActiveTransactions,
-          "Number of currently active transactions");
-  metric_instruments_.received_transactions_instrument =
-      transaction_manager_meter_->CreateUInt64Counter(
-          kMetricNameReceivedTransactions, "Number of received transactions");
-  metric_instruments_.finished_transactions_instrument =
-      transaction_manager_meter_->CreateUInt64Counter(
-          kMetricNameFinishedTransactions, "Number of finished transactions");
-}
-
 std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>
 MetricRouter::CreatePeriodicReader(
     std::shared_ptr<ConfigProviderInterface> config_provider,
@@ -118,6 +83,118 @@ MetricRouter::CreatePeriodicReader(
   return std::make_shared<
       opentelemetry::sdk::metrics::PeriodicExportingMetricReader>(
       std::move(exporter), reader_options);
+}
+
+std::shared_ptr<opentelemetry::metrics::Meter> MetricRouter::GetOrCreateMeter(
+    absl::string_view service_name, absl::string_view version,
+    absl::string_view schema_url) {
+  absl::MutexLock lock(&metric_mutex_);
+  if (auto it = meters_.find(service_name); it != meters_.end()) {
+    return it->second;
+  }
+  auto meter = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+      service_name, version, schema_url);
+  meters_[service_name] = meter;
+  return meter;
+}
+
+std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>
+MetricRouter::GetOrCreateSyncInstrument(
+    absl::string_view metric_name,
+    absl::AnyInvocable<
+        std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>()>
+        instrument_factory) {
+  absl::MutexLock lock(&metric_mutex_);
+  if (auto it = synchronous_instruments_.find(metric_name);
+      it != synchronous_instruments_.end()) {
+    return it->second;
+  }
+
+  // If not found, create the instrument using the factory.
+  auto new_instrument = instrument_factory();
+  synchronous_instruments_[metric_name] = new_instrument;
+  return new_instrument;
+}
+
+std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
+MetricRouter::GetOrCreateObservableInstrument(
+    absl::string_view metric_name,
+    absl::AnyInvocable<
+        std::shared_ptr<opentelemetry::metrics::ObservableInstrument>()>
+        instrument_factory) {
+  absl::MutexLock lock(&metric_mutex_);
+  if (auto it = asynchronous_instruments_.find(metric_name);
+      it != asynchronous_instruments_.end()) {
+    return it->second;
+  }
+
+  // If not found, create the instrument using the factory.
+  auto new_instrument = instrument_factory();
+  asynchronous_instruments_[metric_name] = new_instrument;
+  return new_instrument;
+}
+
+ExecutionResult MetricRouter::CreateHistogramViewForInstrument(
+    absl::string_view metric_name, absl::string_view view_name,
+    InstrumentType instrument_type, const std::vector<double>& boundaries,
+    absl::string_view version, absl::string_view schema,
+    absl::string_view view_description, absl::string_view unit) {
+  auto meter_selector =
+      std::make_unique<opentelemetry::sdk::metrics::MeterSelector>(
+          std::string(metric_name), std::string(version), std::string(schema));
+
+  auto histogram_aggregation_config = std::make_shared<
+      opentelemetry::sdk::metrics::HistogramAggregationConfig>();
+  histogram_aggregation_config->boundaries_ = boundaries;
+
+  std::unique_ptr<opentelemetry::sdk::metrics::View> view =
+      opentelemetry::sdk::metrics::ViewFactory::Create(
+          std::string(view_name), std::string(view_description),
+          std::string(unit),
+          opentelemetry::sdk::metrics::AggregationType::kHistogram,
+          histogram_aggregation_config);
+
+  std::unique_ptr<opentelemetry::sdk::metrics::InstrumentSelector>
+      instrument_selector;
+
+  switch (instrument_type) {
+    case InstrumentType::kCounter:
+      instrument_selector =
+          std::make_unique<opentelemetry::sdk::metrics::InstrumentSelector>(
+              opentelemetry::sdk::metrics::InstrumentType::kCounter,
+              std::string(metric_name), std::string(unit));
+      break;
+    case InstrumentType::kHistogram:
+      instrument_selector =
+          std::make_unique<opentelemetry::sdk::metrics::InstrumentSelector>(
+              opentelemetry::sdk::metrics::InstrumentType::kHistogram,
+              std::string(metric_name), std::string(unit));
+      break;
+    case InstrumentType::kGauge:
+      instrument_selector =
+          std::make_unique<opentelemetry::sdk::metrics::InstrumentSelector>(
+              opentelemetry::sdk::metrics::InstrumentType::kObservableGauge,
+              std::string(metric_name), std::string(unit));
+      break;
+  }
+
+  auto meter_provider = opentelemetry::metrics::Provider::GetMeterProvider();
+  if (!dynamic_cast<opentelemetry::metrics::NoopMeterProvider*>(
+          meter_provider.get())) {
+    std::shared_ptr<opentelemetry::sdk::metrics::MeterProvider> sdk_provider =
+        std::dynamic_pointer_cast<opentelemetry::sdk::metrics::MeterProvider>(
+            meter_provider);
+
+    sdk_provider->AddView(std::move(instrument_selector),
+                          std::move(meter_selector), std::move(view));
+  } else {
+    auto execution_result =
+        FailureExecutionResult(SC_TELEMETRY_METER_PROVIDER_NOT_INITIALIZED);
+    SCP_ERROR(kMetricRouter, google::scp::core::common::kZeroUuid,
+              execution_result, "[OTLP Metric Router] Meter Provider is NOOP.");
+    return execution_result;
+  }
+  return SuccessExecutionResult();
 }
 
 }  // namespace google::scp::core

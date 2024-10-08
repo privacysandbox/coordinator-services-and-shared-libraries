@@ -19,9 +19,6 @@ package(default_visibility = ["//cc:scp_internal_pkg"])
 cc_library(
     name = "aws_blob_storage_client_provider_lib",
     srcs = [":aws_blob_storage_client_provider_srcs"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",

@@ -25,9 +25,6 @@ cc_test(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/lease_manager/mock:core_lease_manager_mock",

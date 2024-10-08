@@ -27,14 +27,9 @@ variable "network" {
   type        = string
 }
 
-variable "zone" {
-  description = "Zone to use for the key generation VM."
+variable "region" {
+  description = "Region to use for the key generation VM."
   type        = string
-}
-
-variable "allow_stopping_for_update" {
-  description = "If true, allows Terraform to stop the key generation instances to update their properties. If you try to update a property that requires stopping the instances without setting this field, the update will fail."
-  type        = bool
 }
 
 variable "egress_internet_tag" {
@@ -45,11 +40,6 @@ variable "egress_internet_tag" {
 variable "key_generation_image" {
   description = "The Key Generation Application docker image."
   type        = string
-}
-
-variable "multiparty" {
-  description = "If true, uses multiparty Key Generation Instance."
-  type        = bool
 }
 
 variable "instance_disk_image" {

@@ -27,9 +27,7 @@ module "multipartykeyhosting_secondary" {
   wipp_project_id_override                        = var.wipp_project_id_override
   wip_allowed_service_account_project_id_override = var.wip_allowed_service_account_project_id_override
   primary_region                                  = var.primary_region
-  primary_region_zone                             = var.primary_region_zone
   secondary_region                                = var.secondary_region
-  secondary_region_zone                           = var.secondary_region_zone
   allowed_operator_user_group                     = var.allowed_operator_user_group
   enable_audit_log                                = var.enable_audit_log
 
@@ -54,10 +52,10 @@ module "multipartykeyhosting_secondary" {
   key_storage_service_cloudfunction_min_instances    = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances    = var.key_storage_service_cloudfunction_max_instances
 
-  mpkhs_secondary_package_bucket_location = var.mpkhs_package_bucket_location
-  spanner_instance_config                 = var.spanner_instance_config
-  spanner_processing_units                = var.spanner_processing_units
-  key_db_retention_period                 = var.key_db_retention_period
+  mpkhs_package_bucket_location = var.mpkhs_package_bucket_location
+  spanner_instance_config       = var.spanner_instance_config
+  spanner_processing_units      = var.spanner_processing_units
+  key_db_retention_period       = var.key_db_retention_period
 
   allowed_wip_iam_principals                   = var.allowed_wip_iam_principals
   allowed_wip_user_group                       = var.allowed_wip_user_group

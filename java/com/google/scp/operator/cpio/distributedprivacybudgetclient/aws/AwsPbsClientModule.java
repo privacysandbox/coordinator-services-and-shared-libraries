@@ -25,6 +25,8 @@ import com.google.scp.operator.cpio.configclient.aws.Annotations.CoordinatorBCre
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClient;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientImpl;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientImplV2;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientV2;
 import com.google.scp.shared.api.util.HttpClientWithInterceptor;
 import com.google.scp.shared.aws.credsprovider.AwsSessionCredentialsProvider;
 import com.google.scp.shared.aws.util.AwsAuthTokenInterceptor;
@@ -86,6 +88,56 @@ public class AwsPbsClientModule extends DistributedPrivacyBudgetClientModule {
         new PrivacyBudgetClientImpl(
             coordinatorAAwsHttpClient, coordinatorAPrivacyBudgetServiceBaseUrl),
         new PrivacyBudgetClientImpl(
+            coordinatorBAwsHttpClient, coordinatorBPrivacyBudgetServiceBaseUrl));
+  }
+
+  @Provides
+  @Singleton
+  public ImmutableList<PrivacyBudgetClientV2> privacyBudgetClientsV2(
+      @CoordinatorAPrivacyBudgetServiceBaseUrl String coordinatorAPrivacyBudgetServiceBaseUrl,
+      @CoordinatorBPrivacyBudgetServiceBaseUrl String coordinatorBPrivacyBudgetServiceBaseUrl,
+      @CoordinatorAPrivacyBudgetServiceAuthEndpoint
+          String coordinatorAPrivacyBudgetServiceAuthEndpoint,
+      @CoordinatorBPrivacyBudgetServiceAuthEndpoint
+          String coordinatorBPrivacyBudgetServiceAuthEndpoint,
+      @AwsCredentialAccessKey String accessKey,
+      @AwsCredentialSecretKey String secretKey,
+      @CoordinatorACredentialsProvider
+          AwsSessionCredentialsProvider coordinatorACredentialsProvider,
+      @CoordinatorBCredentialsProvider
+          AwsSessionCredentialsProvider coordinatorBCredentialsProvider,
+      @CoordinatorARegionBinding Region coordinatorARegion,
+      @CoordinatorBRegionBinding Region coordinatorBRegion) {
+    Optional<AwsCredentialsProvider> staticCredentialProvider = Optional.empty();
+    if (!accessKey.isEmpty() && !secretKey.isEmpty()) {
+      // Doesn't use STS, so requests can't be signed (no session token).
+      // Required for e2e testing.
+      staticCredentialProvider =
+          Optional.of(
+              StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey)));
+    }
+
+    HttpRequestInterceptor coordinatorATokenInterceptor =
+        new AwsAuthTokenInterceptor(
+            coordinatorARegion,
+            coordinatorAPrivacyBudgetServiceAuthEndpoint,
+            staticCredentialProvider.orElse(coordinatorACredentialsProvider));
+    HttpRequestInterceptor coordinatorBTokenInterceptor =
+        new AwsAuthTokenInterceptor(
+            coordinatorBRegion,
+            coordinatorBPrivacyBudgetServiceAuthEndpoint,
+            staticCredentialProvider.orElse(coordinatorBCredentialsProvider));
+
+    HttpClientWithInterceptor coordinatorAAwsHttpClient =
+        new HttpClientWithInterceptor(coordinatorATokenInterceptor);
+
+    HttpClientWithInterceptor coordinatorBAwsHttpClient =
+        new HttpClientWithInterceptor(coordinatorBTokenInterceptor);
+
+    return ImmutableList.of(
+        new PrivacyBudgetClientImplV2(
+            coordinatorAAwsHttpClient, coordinatorAPrivacyBudgetServiceBaseUrl),
+        new PrivacyBudgetClientImplV2(
             coordinatorBAwsHttpClient, coordinatorBPrivacyBudgetServiceBaseUrl));
   }
 }

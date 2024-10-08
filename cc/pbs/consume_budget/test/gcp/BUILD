@@ -19,9 +19,6 @@ cc_test(
     srcs = [
         "consume_budget_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/pbs/consume_budget/src/gcp:consume_budget",

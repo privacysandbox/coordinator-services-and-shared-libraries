@@ -20,9 +20,6 @@ cc_test(
     name = "telemetry_mock_tests",
     size = "small",
     srcs = ["in_memory_metric_exporter_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",

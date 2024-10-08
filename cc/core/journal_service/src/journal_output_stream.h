@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "core/common/concurrent_map/src/concurrent_map.h"
 #include "core/common/concurrent_queue/src/concurrent_queue.h"
 #include "core/common/uuid/src/uuid.h"
@@ -32,11 +33,15 @@
 #include "core/interface/journal_service_interface.h"
 #include "core/journal_service/interface/journal_service_stream_interface.h"
 #include "core/journal_service/src/proto/journal_service.pb.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "google/protobuf/any.pb.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/sync_instruments.h"
 #include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::core {
+
 /*! @copydoc JournalOutputStreamInterface
  */
 class JournalOutputStream
@@ -49,7 +54,8 @@ class JournalOutputStream
       const std::shared_ptr<BlobStorageClientInterface>&
           blob_storage_provider_client,
       const std::shared_ptr<cpio::AggregateMetricInterface>&
-          journal_output_metric);
+          journal_output_metric,
+      std::shared_ptr<core::MetricRouter> metric_router);
 
   ExecutionResult AppendLog(
       AsyncContext<journal_service::JournalStreamAppendLogRequest,
@@ -144,47 +150,65 @@ class JournalOutputStream
           journal_service::JournalStreamAppendLogResponse>>>& flush_batch,
       JournalId journal_id) noexcept;
 
-  /// Mutex to synchronize concurrent batch creations of the pending logs.
+  // Mutex to synchronize concurrent batch creations of the pending logs.
   std::mutex create_batch_of_logs_mutex_;
 
-  /// The current journal id to write the buffers to.
+  // The current journal id to write the buffers to.
   JournalId current_journal_id_;
 
-  /// The current bucket name to write the blob to.
+  // The current bucket name to write the blob to.
   std::shared_ptr<std::string> bucket_name_;
 
-  /// The current partition name to write the blob to.
+  // The current partition name to write the blob to.
   std::shared_ptr<std::string> partition_name_;
 
-  /// Async executor instance.
+  // Async executor instance.
   std::shared_ptr<AsyncExecutorInterface> async_executor_;
 
-  /// Blob storage provider client instance.
+  // Blob storage provider client instance.
   std::shared_ptr<BlobStorageClientInterface> blob_storage_provider_client_;
 
-  /// The aggregate metric instance for journal output count
+  // The aggregate metric instance for journal output count
   std::shared_ptr<cpio::AggregateMetricInterface> journal_output_count_metric_;
 
-  /// The last persisted journal id by the writer.
+  // Keep a MetricRouter member in order to access MetricRouter-owned OTel
+  // Instruments.
+  //
+  // When null, this instance of PBS component does not produce OTel metrics.
+  absl::Nullable<std::shared_ptr<core::MetricRouter>> metric_router_;
+
+  // The OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  // The OpenTelemetry Instrument for scheduled journal output stream count.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      journal_scheduled_output_stream_count_instrument_;
+
+  // The OpenTelemetry Instrument for journal output stream count.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      journal_output_stream_count_instrument_;
+
+  // The last persisted journal id by the writer.
   JournalId last_persisted_journal_id_;
 
-  /// The last successfully flushed journal index is very important for the
-  /// checkpoint service to avoid skipping journal files. If value here
-  /// indicates whether there is a pending write operation exist for the
-  /// associated journal id. True means completed.
+  // The last successfully flushed journal index is very important for the
+  // checkpoint service to avoid skipping journal files. If value here
+  // indicates whether there is a pending write operation exist for the
+  // associated journal id. True means completed.
   core::common::ConcurrentMap<JournalId, std::shared_ptr<bool>>
       journals_to_persist_;
 
-  /// The number of pending logs to be flushed.
+  // The number of pending logs to be flushed.
   std::atomic<size_t> pending_logs_;
 
-  /// Logs queue to create batches from.
+  // Logs queue to create batches from.
   core::common::ConcurrentQueue<
       core::AsyncContext<journal_service::JournalStreamAppendLogRequest,
                          journal_service::JournalStreamAppendLogResponse>>
       logs_queue_;
 
-  /// Parent activity ID for contexts/operations in this class.
+  // Parent activity ID for contexts/operations in this class.
   core::common::Uuid activity_id_;
 };
+
 }  // namespace google::scp::core

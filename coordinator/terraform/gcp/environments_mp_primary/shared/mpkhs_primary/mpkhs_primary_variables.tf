@@ -26,25 +26,19 @@ variable "environment" {
   type        = string
 }
 
-variable "primary_region" {
-  description = "Region where all services will be created."
+variable "allowed_operator_user_group" {
+  description = "Google group of allowed operators to which to give API access."
   type        = string
 }
 
-variable "primary_region_zone" {
-  description = "Region zone where all services will be created."
+variable "primary_region" {
+  description = "Region where all services will be created."
   type        = string
 }
 
 variable "secondary_region" {
   description = "Region where all services will be replicated."
   type        = string
-}
-
-variable "key_generation_allow_stopping_for_update" {
-  description = "If true, allows Terraform to stop the key generation instances to update their properties. If you try to update a property that requires stopping the instances without setting this field, the update will fail."
-  type        = bool
-  default     = false
 }
 
 variable "mpkhs_package_bucket_location" {
@@ -109,19 +103,39 @@ variable "public_key_load_balancer_logs_enabled" {
 variable "key_generation_image" {
   description = "The Key Generation Application docker image."
   type        = string
-  default     = ""
 }
 
 variable "key_generation_count" {
   description = "Number of keys to generate at a time."
   type        = number
   default     = 5
+
+  validation {
+    condition     = var.key_generation_count > 0
+    error_message = "Must be greater than 0."
+  }
 }
 
 variable "key_generation_validity_in_days" {
-  description = "Number of days keys will be valid. Should be greater than generation days for failover validity"
+  description = "Number of days keys will be valid. Should be greater than generation days for failover validity."
   type        = number
   default     = 8
+
+  validation {
+    condition     = var.key_generation_validity_in_days > 0
+    error_message = "Must be greater than 0."
+  }
+}
+
+variable "key_generation_ttl_in_days" {
+  description = "Keys will be deleted from the database this number of days after creation time."
+  type        = number
+  default     = 365
+
+  validation {
+    condition     = var.key_generation_ttl_in_days > 0
+    error_message = "Must be greater than 0."
+  }
 }
 
 variable "key_generation_cron_schedule" {
@@ -137,23 +151,6 @@ variable "key_generation_cron_time_zone" {
   description = "Time zone to be used with cron schedule."
   type        = string
   default     = "America/Los_Angeles"
-}
-
-variable "key_generation_alignment_period" {
-  description = "Alignment period of key generation alert metrics in seconds. This value should match the period of the cron schedule."
-  type        = number
-  # This value should match the period of the cron schedule.
-  # Used for the alignment period of alert metrics.
-  # Max 81,000 seconds due to the max GCP metric-threshold evaluation period
-  # (23 hours, 30 minutes) plus an extra hour to allow fluctuations in
-  # execution time.
-  default = 60 * 60 * 6
-}
-
-variable "key_generation_ttl_in_days" {
-  description = "Keys will be deleted from the database this number of days after creation time."
-  type        = number
-  default     = "365"
 }
 
 variable "instance_disk_image" {
@@ -189,6 +186,27 @@ variable "key_generation_undelivered_messages_threshold" {
   description = "Total Queue Messages greater than this to send alert."
   type        = number
   default     = 1
+}
+
+variable "key_generation_alignment_period" {
+  description = "Alignment period of key generation alert metrics in seconds. This value should match the period of the cron schedule."
+  type        = number
+  # This value should match the period of the cron schedule.
+  # Used for the alignment period of alert metrics.
+  # Max 81,000 seconds due to the max GCP metric-threshold evaluation period
+  # (23 hours, 30 minutes) plus an extra hour to allow fluctuations in
+  # execution time.
+  default = 60 * 60 * 6
+
+  validation {
+    # This value should match the period of the cron schedule.
+    # Used for the alignment period of alert metrics.
+    # Max 81,000 seconds due to the max GCP metric-threshold evaluation period
+    # (23 hours, 30 minutes) plus an extra hour to allow fluctuations in
+    # execution time.
+    condition     = var.key_generation_alignment_period > 0 && var.key_generation_alignment_period < 81000
+    error_message = "Must be between 0 and 81,000 seconds."
+  }
 }
 
 variable "key_gen_instance_force_replace" {
@@ -293,7 +311,7 @@ variable "cloudfunction_timeout_seconds" {
 variable "get_public_key_service_zip" {
   description = <<-EOT
           Get Public key service cloud function path. If not provided defaults to locally built zip file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting:all`.
+        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
       EOT
   type        = string
   default     = ""
@@ -302,7 +320,7 @@ variable "get_public_key_service_zip" {
 variable "encryption_key_service_zip" {
   description = <<-EOT
           Encryption key service cloud function path. If not provided defaults to locally built zip file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting:all`.
+        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
       EOT
   type        = string
   default     = ""
@@ -370,11 +388,6 @@ variable "get_public_key_cloud_cdn_max_ttl_seconds" {
   default     = 604800
 }
 
-variable "allowed_operator_user_group" {
-  description = "Google group of allowed operators to which to give API access."
-  type        = string
-}
-
 ################################################################################
 # Public Key Alarm Variables.
 ################################################################################
@@ -387,37 +400,37 @@ variable "get_public_key_alarm_eval_period_sec" {
 
 variable "get_public_key_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = string
-  default     = "60"
+  type        = number
+  default     = 60
 }
 
 variable "get_public_key_cloudfunction_error_threshold" {
   description = "Error count greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "get_public_key_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "get_public_key_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "get_public_key_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "get_public_key_lb_5xx_threshold" {
   description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
@@ -428,41 +441,41 @@ variable "get_public_key_lb_5xx_threshold" {
 variable "encryptionkeyservice_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation."
   type        = string
-  default     = "360"
+  default     = 360
 }
 
 variable "encryptionkeyservice_cloudfunction_error_threshold" {
   description = "Error count greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "encryptionkeyservice_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "encryptionkeyservice_lb_5xx_threshold" {
   description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "encryptionkeyservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
-  default     = "60"
+  default     = 60
 }

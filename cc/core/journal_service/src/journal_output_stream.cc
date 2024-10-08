@@ -28,6 +28,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "core/blob_storage_provider/src/common/error_codes.h"
 #include "core/common/sized_or_timed_bytes_buffer/src/sized_or_timed_bytes_buffer.h"
 #include "core/common/time_provider/src/time_provider.h"
@@ -60,25 +61,54 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 using std::placeholders::_3;
 
-static constexpr char kJournalOutputStream[] = "JournalOutputStream";
+static constexpr absl::string_view kJournalOutputStream = "JournalOutputStream";
+static constexpr absl::string_view kJournalService = "JournalService";
 
 namespace google::scp::core {
+
 JournalOutputStream::JournalOutputStream(
     const shared_ptr<string>& bucket_name,
     const shared_ptr<string>& partition_name,
     const shared_ptr<AsyncExecutorInterface>& async_executor,
     const shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client,
-    const shared_ptr<AggregateMetricInterface>& journal_output_count_metric)
+    const shared_ptr<AggregateMetricInterface>& journal_output_count_metric,
+    std::shared_ptr<core::MetricRouter> metric_router)
     : current_journal_id_(kInvalidJournalId),
       bucket_name_(bucket_name),
       partition_name_(partition_name),
       async_executor_(async_executor),
       blob_storage_provider_client_(blob_storage_provider_client),
       journal_output_count_metric_(journal_output_count_metric),
+      metric_router_(metric_router),
       last_persisted_journal_id_(kInvalidJournalId),
       pending_logs_(0),
       logs_queue_(INT32_MAX),
       activity_id_(Uuid::GenerateUuid()) {
+  if (metric_router_) {
+    meter_ = metric_router_->GetOrCreateMeter(kJournalService);
+
+    journal_scheduled_output_stream_count_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameJournalScheduledOutputStreamCount,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameJournalScheduledOutputStreamCount,
+                      "Scheduled journal output stream count");
+                }));
+    journal_output_stream_count_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameJournalOutputStreamCount,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameJournalOutputStreamCount,
+                      "Journal output stream count");
+                }));
+  }
+
   // Output activity for log correlation in debugging purposes.
   SCP_DEBUG(kJournalBlobNamePrefix, activity_id_,
             "JournalOutputStream created.");
@@ -228,6 +258,9 @@ ExecutionResult JournalOutputStream::WriteJournalBlob(
   SCP_DEBUG(kJournalOutputStream, activity_id_,
             "Putting blob for batch with ID '%llu'", journal_id);
 
+  if (metric_router_) {
+    journal_scheduled_output_stream_count_instrument_->Add(1);
+  }
   journal_output_count_metric_->Increment(
       kMetricEventJournalOutputCountWriteJournalScheduledCount);
 
@@ -277,9 +310,18 @@ void JournalOutputStream::OnWriteJournalBlobCallback(
                       "Failure in persisting journal [%llu] due to an error in "
                       "PutBlob.",
                       journal_id);
+
+    if (metric_router_) {
+      journal_output_stream_count_instrument_->Add(
+          1, {{kMetricLabelJournalWriteSuccess, false}});
+    }
     journal_output_count_metric_->Increment(
         kMetricEventJournalOutputCountWriteJournalFailureCount);
   } else {
+    if (metric_router_) {
+      journal_output_stream_count_instrument_->Add(
+          1, {{kMetricLabelJournalWriteSuccess, true}});
+    }
     journal_output_count_metric_->Increment(
         kMetricEventJournalOutputCountWriteJournalSuccessCount);
   }

@@ -431,6 +431,27 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
       ret = auth_cloud_function_handler.function_handler(request)
       self.assertEqual(ret[1], 503)
 
+  def test_spanner_other_exception_return_500(self):
+    empty_identity = json.dumps({'email': 'googler@google.com'})
+    id_part = base64.b64encode(empty_identity.encode('utf-8'))
+    token = f'HEADER.{id_part.decode("utf-8")}.SIGNATURE'
+
+    request = Request(
+        headers={
+            'x-gscp-claimed-identity': 'www.domain.com',
+            'Authorization': f'bearer {token}',
+            'x-gscp-enable-per-site-enrollment': 'true',
+        }
+    )
+
+    self._setup_mock_spanner_result(
+        ['https://domain.com'], ValueError,
+    )
+
+    with unittest.mock.patch.dict('os.environ', self._get_env()):
+      ret = auth_cloud_function_handler.function_handler(request)
+      self.assertEqual(ret[1], 500)
+
 
 if __name__ == '__main__':
   unittest.main()

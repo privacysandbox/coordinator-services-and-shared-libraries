@@ -96,9 +96,7 @@ local_deps = deps + [
 cc_library(
     name = "error_codes",
     hdrs = ["error_codes.h"],
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = [
         "//cc/core/interface:errors_lib",
         "//cc/public/core/interface:execution_result",
@@ -108,9 +106,7 @@ cc_library(
 cc_library(
     name = "pbs_instance_configuration",
     hdrs = ["pbs_instance_configuration.h"],
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = [
         ":pbs_instance_logging",
         "//cc/core/common/global_logger/src:global_logger_lib",
@@ -124,9 +120,7 @@ cc_library(
 cc_library(
     name = "pbs_instance_logging",
     hdrs = ["pbs_instance_logging.h"],
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = [
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/common/uuid/src:uuid_lib",
@@ -137,9 +131,7 @@ cc_library(
 cc_library(
     name = "synchronous_executor",
     hdrs = ["synchronous_executor.h"],
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = [
         "//cc/core/interface:interface_lib",
     ],
@@ -149,9 +141,7 @@ cc_library(
     name = "pbs_instance",
     srcs = ["pbs_instance.cc"],
     hdrs = ["pbs_instance.h"],
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = select({
         "//cc:cloud_platform_aws": aws_deps,
         "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,
@@ -170,9 +160,7 @@ cc_library(
     name = "pbs_instance_v2",
     srcs = ["pbs_instance_v2.cc"],
     hdrs = ["pbs_instance_v2.h"],
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = select({
         "//cc:cloud_platform_aws": aws_deps,
         "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,
@@ -191,9 +179,7 @@ cc_library(
     name = "pbs_instance_v3",
     srcs = ["pbs_instance_v3.cc"],
     hdrs = ["pbs_instance_v3.h"],
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = [
         ":error_codes",
         ":pbs_instance_configuration",
@@ -226,9 +212,7 @@ cc_library(
             "pbs_instance_multi_partition_platform_wrapper.h",
         ],
     ),
-    copts = cloud_platform_copts + [
-        "-std=c++17",
-    ],
+    copts = cloud_platform_copts,
     deps = select({
         "//cc:cloud_platform_aws": aws_deps,
         "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,

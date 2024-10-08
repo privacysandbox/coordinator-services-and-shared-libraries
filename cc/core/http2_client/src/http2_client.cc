@@ -18,6 +18,9 @@
 
 #include <memory>
 
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
+
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::RetryStrategy;
 using google::scp::core::common::RetryStrategyType;
@@ -28,14 +31,20 @@ constexpr char kHttpClient[] = "Http2Client";
 
 namespace google::scp::core {
 HttpClient::HttpClient(shared_ptr<AsyncExecutorInterface>& async_executor,
-                       HttpClientOptions options)
+                       HttpClientOptions options,
+                       std::shared_ptr<core::MetricRouter> metric_router)
     : http_connection_pool_(make_unique<HttpConnectionPool>(
-          async_executor, options.max_connections_per_host,
+          async_executor, metric_router, options.max_connections_per_host,
           options.http2_read_timeout_in_sec)),
       operation_dispatcher_(async_executor,
-                            RetryStrategy(options.retry_strategy_options)) {}
+                            RetryStrategy(options.retry_strategy_options)),
+      metric_router_(metric_router) {}
 
 ExecutionResult HttpClient::Init() noexcept {
+  if (metric_router_) {
+    meter_ = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+        "Http Client");
+  }
   return http_connection_pool_->Init();
 }
 

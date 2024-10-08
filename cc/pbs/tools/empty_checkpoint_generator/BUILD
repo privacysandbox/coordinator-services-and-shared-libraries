@@ -21,9 +21,6 @@ cc_binary(
             "*.cc",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],

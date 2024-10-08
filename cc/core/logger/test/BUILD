@@ -18,9 +18,6 @@ cc_test(
     name = "logger_test",
     size = "small",
     srcs = ["logger_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

@@ -36,7 +36,6 @@ module "distributedpbs_application" {
   pbs_spanner_instance_processing_units          = var.pbs_spanner_instance_processing_units
   pbs_spanner_database_deletion_protection       = var.pbs_spanner_database_deletion_protection
   auth_cloud_function_handler_path               = var.auth_cloud_function_handler_path
-  auth_cloud_function_requirements_path          = var.auth_cloud_function_requirements_path
   pbs_auth_cloudfunction_min_instances           = var.pbs_auth_cloudfunction_min_instances
   pbs_auth_cloudfunction_max_instances           = var.pbs_auth_cloudfunction_max_instances
   pbs_auth_cloudfunction_instance_concurrency    = var.pbs_auth_cloudfunction_instance_concurrency
@@ -65,4 +64,5 @@ module "distributedpbs_application" {
   enable_public_ip_address                       = var.enable_public_ip_address
   enable_domain_management                       = var.enable_domain_management
   enable_health_check                            = var.enable_health_check
+  pbs_tls_alternate_names                        = var.pbs_tls_alternate_names
 }

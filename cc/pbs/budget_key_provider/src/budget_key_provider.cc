@@ -85,26 +85,9 @@ static Uuid kBudgetKeyProviderId = {.high = 0xFFFFFFF1, .low = 0x00000002};
 static constexpr char kBudgetKeyProvider[] = "BudgetKeyProvider";
 
 namespace google::scp::pbs {
-ExecutionResult BudgetKeyProvider::Init() noexcept {
-  size_t metric_aggregation_interval_milliseconds;
-  if (!config_provider_
-           ->Get(core::kAggregatedMetricIntervalMs,
-                 metric_aggregation_interval_milliseconds)
-           .Successful()) {
-    metric_aggregation_interval_milliseconds =
-        core::kDefaultAggregatedMetricIntervalMs;
-  }
 
-  budget_key_count_metric_ = MetricUtils::RegisterAggregateMetric(
-      async_executor_, metric_client_, kMetricNameBudgetKeyCount,
-      kMetricComponentNameAndPartitionNamePrefixForBudgetKey +
-          ToString(partition_id_),
-      kMetricMethodLoadUnload, kCountUnit,
-      {kMetricEventLoadFromDBScheduled, kMetricEventLoadFromDBSuccess,
-       kMetricEventLoadFromDBFailed, kMetricEventUnloadFromDBScheduled,
-       kMetricEventUnloadFromDBSuccess, kMetricEventUnloadFromDBFailed},
-      metric_aggregation_interval_milliseconds);
-  RETURN_IF_FAILURE(budget_key_count_metric_->Init());
+ExecutionResult BudgetKeyProvider::Init() noexcept {
+  RETURN_IF_FAILURE(InitMetricClientInterface());
 
   return journal_service_->SubscribeForRecovery(
       kBudgetKeyProviderId,
@@ -356,7 +339,7 @@ ExecutionResult BudgetKeyProvider::OnJournalServiceRecoverCallback(
   auto budget_key = make_shared<BudgetKey>(
       budget_key_name, budget_key_id, async_executor_, journal_service_,
       nosql_database_provider_for_background_operations_,
-      nosql_database_provider_for_live_traffic_, metric_client_,
+      nosql_database_provider_for_live_traffic_, metric_client_, metric_router_,
       config_provider_, budget_key_count_metric_);
 
   if (budget_key_provider_log_1_0.operation_type() ==
@@ -414,7 +397,7 @@ ExecutionResult BudgetKeyProvider::GetBudgetKey(
   budget_key_provider_pair->budget_key = make_shared<BudgetKey>(
       get_budget_key_context.request->budget_key_name, key_id, async_executor_,
       journal_service_, nosql_database_provider_for_background_operations_,
-      nosql_database_provider_for_live_traffic_, metric_client_,
+      nosql_database_provider_for_live_traffic_, metric_client_, metric_router_,
       config_provider_, budget_key_count_metric_);
 
   auto budget_key_pair =
@@ -651,4 +634,28 @@ ExecutionResult BudgetKeyProvider::Checkpoint(
 
   return SuccessExecutionResult();
 }
+
+ExecutionResult BudgetKeyProvider::InitMetricClientInterface() {
+  size_t metric_aggregation_interval_milliseconds;
+  if (!config_provider_
+           ->Get(core::kAggregatedMetricIntervalMs,
+                 metric_aggregation_interval_milliseconds)
+           .Successful()) {
+    metric_aggregation_interval_milliseconds =
+        core::kDefaultAggregatedMetricIntervalMs;
+  }
+
+  budget_key_count_metric_ = MetricUtils::RegisterAggregateMetric(
+      async_executor_, metric_client_, kMetricNameBudgetKeyCount,
+      kMetricComponentNameAndPartitionNamePrefixForBudgetKey +
+          ToString(partition_id_),
+      kMetricMethodLoadUnload, kCountUnit,
+      {kMetricEventLoadFromDBScheduled, kMetricEventLoadFromDBSuccess,
+       kMetricEventLoadFromDBFailed, kMetricEventUnloadFromDBScheduled,
+       kMetricEventUnloadFromDBSuccess, kMetricEventUnloadFromDBFailed},
+      metric_aggregation_interval_milliseconds);
+  auto execution_result = budget_key_count_metric_->Init();
+  return execution_result;
+}
+
 }  // namespace google::scp::pbs

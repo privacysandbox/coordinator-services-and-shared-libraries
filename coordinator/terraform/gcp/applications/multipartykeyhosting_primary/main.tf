@@ -24,13 +24,6 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.primary_region
-  zone    = var.primary_region_zone
-}
-
-provider "google" {
-  alias   = "domain"
-  project = var.project_id
-  region  = var.secondary_region
 }
 
 locals {
@@ -60,7 +53,7 @@ module "vpc" {
 resource "google_storage_bucket" "mpkhs_primary_package_bucket" {
   # GCS names are globally unique
   name                        = local.package_bucket_name
-  location                    = var.mpkhs_primary_package_bucket_location
+  location                    = var.mpkhs_package_bucket_location
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
 }
@@ -97,8 +90,7 @@ module "keygenerationservice" {
   project_id                     = var.project_id
   environment                    = var.environment
   network                        = module.vpc.network
-  zone                           = var.primary_region_zone
-  allow_stopping_for_update      = var.key_generation_allow_stopping_for_update
+  region                         = var.primary_region
   egress_internet_tag            = module.vpc.egress_internet_tag
   key_gen_instance_force_replace = var.key_gen_instance_force_replace
 
@@ -116,7 +108,6 @@ module "keygenerationservice" {
 
   # TEE Args
   instance_disk_image               = var.instance_disk_image
-  multiparty                        = true
   key_generation_tee_restart_policy = var.key_generation_tee_restart_policy
 
   # Monitoring Args
@@ -205,11 +196,7 @@ module "encryptionkeyservice" {
 module "domain_a_records" {
   source = "../../modules/domain_a_records"
 
-  # Cannot use count arg because this module has a provider defined. This is a terraform limitation.
   enable_domain_management = var.enable_domain_management
-
-  primary_region      = var.primary_region
-  primary_region_zone = var.primary_region_zone
 
   parent_domain_name         = var.parent_domain_name
   parent_domain_name_project = var.parent_domain_name_project

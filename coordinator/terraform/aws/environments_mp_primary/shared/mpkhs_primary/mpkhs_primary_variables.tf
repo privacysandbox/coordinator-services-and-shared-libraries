@@ -620,7 +620,7 @@ variable "get_public_key_cloudfront_origin_latency_eval_periods" {
 variable "get_public_key_cloudfront_origin_latency_threshold" {
   description = "Max origin latency to send alarm. Measured in milliseconds. Example: '5000'."
   type        = string
-  default     = "5000"
+  default     = "3000" # Android timeout is 3s with no retries, Chrome is 5s
 }
 
 ################################################################################

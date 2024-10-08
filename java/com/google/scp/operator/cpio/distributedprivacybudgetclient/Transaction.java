@@ -26,6 +26,7 @@ import java.util.UUID;
  * Transaction Is used as a common context between different phases of each transaction. This object
  * will be cached into a map and transaction engine can access it at any time.
  */
+@Deprecated
 public class Transaction {
   private static final int DEFAULT_RETRIES = 5;
   // The current transaction id.

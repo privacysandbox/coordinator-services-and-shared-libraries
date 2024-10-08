@@ -379,21 +379,6 @@ alias(
 )
 
 alias(
-    name = "differential_privacy",
-    actual = "@com_google_differential_privacy//java/main/com/google/privacy/differentialprivacy",
-)
-
-alias(
-    name = "differential_privacy_reference_noise",
-    actual = "@com_google_differential_privacy//java/main/com/google/privacy/differentialprivacy/testing:reference_noise",
-)
-
-alias(
-    name = "differential_privacy_statistical_utils",
-    actual = "@com_google_differential_privacy//java/main/com/google/privacy/differentialprivacy/testing:statistical_utils",
-)
-
-alias(
     name = "tink",
     actual = "@maven//:com_google_crypto_tink_tink",
 )
@@ -711,4 +696,44 @@ alias(
 alias(
     name = "google_oauth_client",
     actual = "@maven//:com_google_oauth_client_google_oauth_client",
+)
+
+alias(
+    name = "error_prone_anntotations",
+    actual = "@maven//:com_google_errorprone_error_prone_annotations",
+)
+
+alias(
+    name = "opentelemetry_api",
+    actual = "@maven//:io_opentelemetry_opentelemetry_api",
+)
+
+alias(
+    name = "opentelemetry_sdk",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk",
+)
+
+alias(
+    name = "opentelemetry_sdk_common",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_common",
+)
+
+alias(
+    name = "opentelemetry_sdk_metrics",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_metrics",
+)
+
+alias(
+    name = "gcp_exporter_metrics",
+    actual = "@maven//:com_google_cloud_opentelemetry_exporter_metrics",
+)
+
+alias(
+    name = "opentelemetry_contrib_gcp_resources",
+    actual = "@maven//:io_opentelemetry_contrib_opentelemetry_gcp_resources",
+)
+
+alias(
+    name = "opentelemetry_sdk_extension_autoconfigure_spi",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_extension_autoconfigure_spi",
 )

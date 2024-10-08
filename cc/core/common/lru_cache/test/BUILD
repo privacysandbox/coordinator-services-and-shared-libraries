@@ -20,9 +20,6 @@ cc_test(
     name = "lru_cache_test",
     size = "small",
     srcs = ["lru_cache_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/common/lru_cache/src:lru_cache_lib",
         "//cc/core/test/utils:utils_lib",

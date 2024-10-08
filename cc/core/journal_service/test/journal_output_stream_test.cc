@@ -20,11 +20,16 @@
 #include <utility>
 #include <vector>
 
+#include "absl/synchronization/notification.h"
+#include "cc/core/interface/metrics_def.h"
+#include "cc/core/telemetry/src/common/metric_utils.h"
 #include "core/async_executor/mock/mock_async_executor.h"
 #include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
 #include "core/journal_service/mock/mock_journal_output_stream.h"
 #include "core/journal_service/src/journal_serialization.h"
+#include "core/telemetry/mock/in_memory_metric_router.h"
 #include "core/test/utils/conditional_wait.h"
+#include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
@@ -46,6 +51,7 @@ using std::string;
 using std::vector;
 
 namespace google::scp::core::test {
+
 TEST(JournalOutputStreamTests, AppendLog) {
   auto bucket_name = make_shared<string>("bucket_name");
   auto partition_name = make_shared<string>("partition_name");
@@ -72,7 +78,8 @@ TEST(JournalOutputStreamTests, AppendLog) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   AsyncContext<JournalStreamAppendLogRequest, JournalStreamAppendLogResponse>
       journal_stream_append_log_context;
@@ -116,7 +123,8 @@ TEST(JournalOutputStreamTests, FlushLogsFailure) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   mock_journal_output_stream.create_new_buffer_mock = []() {
     return FailureExecutionResult(123);
@@ -164,7 +172,8 @@ TEST(JournalOutputStreamTests, FlushLogsSchedulingFailure) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   AsyncContext<JournalStreamAppendLogRequest, JournalStreamAppendLogResponse>
       journal_stream_append_log_context;
@@ -217,7 +226,8 @@ TEST(JournalOutputStreamTests, WriteBatch) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   bool is_called = false;
   mock_journal_output_stream.write_back_mock = [&](auto& flush_batch,
@@ -265,7 +275,8 @@ TEST(JournalOutputStreamTests, WriteBatchWriteBlobFailure) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
   bool is_called = false;
   mock_journal_output_stream.write_journal_blob_mock = [&](auto a, auto b,
                                                            auto c) {
@@ -311,7 +322,8 @@ TEST(JournalOutputStreamTests, GetSerializedLogByteSize) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   AsyncContext<JournalStreamAppendLogRequest, JournalStreamAppendLogResponse>
       journal_stream_append_log_context;
@@ -339,7 +351,8 @@ TEST(JournalOutputStreamTests, SerializeLog) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   AsyncContext<JournalStreamAppendLogRequest, JournalStreamAppendLogResponse>
       journal_stream_append_log_context;
@@ -457,7 +470,8 @@ TEST(JournalOutputStreamTests, WriteJournalBlob) {
         make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
     MockJournalOutputStream mock_journal_output_stream(
-        bucket_name, partition_name, async_executor, storage_client);
+        bucket_name, partition_name, async_executor, storage_client,
+        /*metric_router=*/nullptr);
 
     auto callback = [](ExecutionResult&) {};
     EXPECT_EQ(
@@ -490,7 +504,8 @@ TEST(JournalOutputStreamTests, WriteEmptyJournalBlob) {
       make_shared<MockBlobStorageClient>(move(mock_storage_client));
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   auto callback = [](ExecutionResult& result) { EXPECT_SUCCESS(result); };
   EXPECT_SUCCESS(
@@ -504,22 +519,23 @@ TEST(JournalOutputStreamTests, OnWriteJournalBlobCallback) {
   shared_ptr<BlobStorageClientInterface> storage_client;
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(12345)};
   for (auto result : results) {
-    atomic<bool> condition = false;
+    auto notification = std::make_unique<absl::Notification>();
     auto callback = [&](ExecutionResult& execution_result) {
       EXPECT_THAT(execution_result, ResultIs(result));
-      condition = true;
+      notification->Notify();
     };
     AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context;
     put_blob_context.result = result;
     mock_journal_output_stream.OnWriteJournalBlobCallback(0, callback,
                                                           put_blob_context);
-    WaitUntil([&]() { return condition.load(); });
+    notification->WaitForNotification();
   }
 }
 
@@ -530,7 +546,8 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
   shared_ptr<BlobStorageClientInterface> storage_client;
 
   MockJournalOutputStream mock_journal_output_stream(
-      bucket_name, partition_name, async_executor, storage_client);
+      bucket_name, partition_name, async_executor, storage_client,
+      /*metric_router=*/nullptr);
 
   for (JournalId i = 1; i < 100; ++i) {
     shared_ptr<bool> value;
@@ -612,4 +629,142 @@ TEST(JournalOutputStreamTests, GetLastPersistedJournalId) {
   mock_journal_output_stream.GetPersistedJournalIds().Keys(keys);
   EXPECT_EQ(keys.size(), 0);
 }
+
+TEST(JournalOutputStreamTests,
+     OTelReturnsCorrectJournalScheduledOutputStreamCount) {
+  auto bucket_name = std::make_shared<std::string>("bucket_name");
+  auto partition_name = std::make_shared<std::string>("partition_name");
+  MockAsyncExecutor async_executor_mock;
+  std::shared_ptr<AsyncExecutorInterface> async_executor =
+      std::make_shared<MockAsyncExecutor>(std::move(async_executor_mock));
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
+
+  std::vector<ExecutionResult> results = {SuccessExecutionResult(),
+                                          FailureExecutionResult(123),
+                                          RetryExecutionResult(12345)};
+  for (auto result : results) {
+    BytesBuffer bytes_buffer;
+    bytes_buffer.bytes = std::make_shared<std::vector<Byte>>(1000);
+    bytes_buffer.capacity = 123;
+    bytes_buffer.length = 456;
+    MockBlobStorageClient mock_storage_client;
+    mock_storage_client.put_blob_mock =
+        [&](AsyncContext<PutBlobRequest, PutBlobResponse>& put_blob_context) {
+          return result;
+        };
+    std::shared_ptr<BlobStorageClientInterface> storage_client =
+        std::make_shared<MockBlobStorageClient>(std::move(mock_storage_client));
+
+    MockJournalOutputStream mock_journal_output_stream(
+        bucket_name, partition_name, async_executor, storage_client,
+        metric_router);
+
+    auto callback = [](ExecutionResult&) {};
+    mock_journal_output_stream.WriteJournalBlob(bytes_buffer, 1, callback);
+  }
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      journal_scheduled_output_stream_count_metric_point_data =
+          core::GetMetricPointData(
+              core::kMetricNameJournalScheduledOutputStreamCount, {}, data);
+  ASSERT_TRUE(
+      journal_scheduled_output_stream_count_metric_point_data.has_value());
+
+  auto journal_scheduled_output_stream_count_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          journal_scheduled_output_stream_count_metric_point_data.value()));
+  EXPECT_EQ(std::get<int64_t>(
+                journal_scheduled_output_stream_count_sum_point_data.value_),
+            results.size());
+}
+
+TEST(JournalOutputStreamTests,
+     OTelReturnsCorrectSuccessJournalOutputStreamCount) {
+  auto bucket_name = std::make_shared<std::string>("bucket_name");
+  auto partition_name = std::make_shared<std::string>("partition_name");
+  std::shared_ptr<AsyncExecutorInterface> async_executor;
+  std::shared_ptr<BlobStorageClientInterface> storage_client;
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
+
+  MockJournalOutputStream mock_journal_output_stream(
+      bucket_name, partition_name, async_executor, storage_client,
+      metric_router);
+
+  std::vector<ExecutionResult> results = {SuccessExecutionResult(),
+                                          FailureExecutionResult(123),
+                                          RetryExecutionResult(12345)};
+  for (auto result : results) {
+    auto notification = std::make_unique<absl::Notification>();
+    auto callback = [&](ExecutionResult& execution_result) {
+      notification->Notify();
+    };
+    AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context;
+    put_blob_context.result = result;
+    mock_journal_output_stream.OnWriteJournalBlobCallback(0, callback,
+                                                          put_blob_context);
+    notification->WaitForNotification();
+  }
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      journal_output_stream_count_metric_point_data = core::GetMetricPointData(
+          core::kMetricNameJournalOutputStreamCount,
+          {{core::kMetricLabelJournalWriteSuccess, true}}, data);
+  ASSERT_TRUE(journal_output_stream_count_metric_point_data.has_value());
+
+  auto journal_output_stream_count_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          journal_output_stream_count_metric_point_data.value()));
+  EXPECT_EQ(
+      std::get<int64_t>(journal_output_stream_count_sum_point_data.value_), 1);
+}
+
+TEST(JournalOutputStreamTests,
+     OTelReturnsCorrectFailureJournalOutputStreamCount) {
+  auto bucket_name = std::make_shared<std::string>("bucket_name");
+  auto partition_name = std::make_shared<std::string>("partition_name");
+  std::shared_ptr<AsyncExecutorInterface> async_executor;
+  std::shared_ptr<BlobStorageClientInterface> storage_client;
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
+
+  MockJournalOutputStream mock_journal_output_stream(
+      bucket_name, partition_name, async_executor, storage_client,
+      metric_router);
+
+  std::vector<ExecutionResult> results = {SuccessExecutionResult(),
+                                          FailureExecutionResult(123),
+                                          RetryExecutionResult(12345)};
+  for (auto result : results) {
+    auto notification = std::make_unique<absl::Notification>();
+    auto callback = [&](ExecutionResult& execution_result) {
+      notification->Notify();
+    };
+    AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context;
+    put_blob_context.result = result;
+    mock_journal_output_stream.OnWriteJournalBlobCallback(0, callback,
+                                                          put_blob_context);
+    notification->WaitForNotification();
+  }
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      journal_output_stream_count_metric_point_data = core::GetMetricPointData(
+          core::kMetricNameJournalOutputStreamCount,
+          {{core::kMetricLabelJournalWriteSuccess, false}}, data);
+  ASSERT_TRUE(journal_output_stream_count_metric_point_data.has_value());
+
+  auto journal_output_stream_count_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          journal_output_stream_count_metric_point_data.value()));
+  EXPECT_EQ(
+      std::get<int64_t>(journal_output_stream_count_sum_point_data.value_), 2);
+}
+
 }  // namespace google::scp::core::test

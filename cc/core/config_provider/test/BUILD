@@ -18,9 +18,6 @@ cc_test(
     name = "config_provider_test",
     size = "small",
     srcs = ["config_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     data = ["resources/test_config.json"],
     deps = [
         "//cc:cc_base_include_dir",
@@ -34,9 +31,6 @@ cc_test(
     name = "env_config_provider_test",
     size = "small",
     srcs = ["env_config_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/config_provider/src:config_provider_lib",

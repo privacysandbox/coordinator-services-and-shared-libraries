@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-provider "google" {
-  project = var.parent_domain_name_project
-  region  = var.primary_region
-  zone    = var.primary_region_zone
-}
-
 # Hosted zone must exist with NS records
 # See /applications/project_resources for an example
 data "google_dns_managed_zone" "dns_zone" {
@@ -37,6 +31,7 @@ data "google_dns_managed_zone" "dns_zone" {
 resource "google_dns_record_set" "a" {
   for_each = var.service_domain_to_address_map
 
+  project = var.parent_domain_name_project
   # Name must end with period
   name         = "${each.key}."
   managed_zone = data.google_dns_managed_zone.dns_zone[0].name

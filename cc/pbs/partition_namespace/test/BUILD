@@ -20,9 +20,6 @@ cc_test(
     name = "pbs_partition_namespace_test",
     size = "small",
     srcs = ["pbs_partition_namespace_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/pbs/partition_namespace/src:pbs_partition_namespace_lib",
         "//cc/public/core/test/interface:execution_result_matchers",

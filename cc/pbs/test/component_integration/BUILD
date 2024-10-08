@@ -21,9 +21,6 @@ cc_test(
     size = "large",
     timeout = "long",
     srcs = glob(["*.cc"]),
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],

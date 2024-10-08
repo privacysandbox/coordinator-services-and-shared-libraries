@@ -21,8 +21,10 @@
 #include <string>
 #include <unordered_set>
 
+#include "absl/base/nullability.h"
 #include "core/interface/config_provider_interface.h"
 #include "core/journal_service/src/journal_service.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 #include "public/cpio/utils/metric_aggregation/mock/mock_simple_metric.h"
 
@@ -36,9 +38,11 @@ class MockJournalServiceWithOverrides : public JournalService {
       const std::shared_ptr<BlobStorageProviderInterface>&
           blob_storage_provider,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<ConfigProviderInterface>& config_provider)
       : JournalService(bucket_name, partition_name, async_executor,
-                       blob_storage_provider, metric_client, config_provider) {
+                       blob_storage_provider, metric_client, metric_router,
+                       config_provider) {
     // TODO: Temporary hack to make the tests work. This will be removed when we
     // have a MetricFactory (we can just simply use MockMetricFactory)
     recover_time_metric_ = std::make_shared<cpio::MockSimpleMetric>();

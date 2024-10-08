@@ -223,7 +223,7 @@ TEST_F(TransactionEngineTest, InitShouldSubscribe) {
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalServiceWithOverrides>(
       bucket_name, partition_name, async_executor, blob_storage_provider,
-      mock_metric_client, mock_config_provider);
+      mock_metric_client, /*metric_router=*/nullptr, mock_config_provider);
   shared_ptr<JournalServiceInterface> journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   shared_ptr<TransactionCommandSerializerInterface>

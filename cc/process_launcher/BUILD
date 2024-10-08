@@ -19,9 +19,6 @@ package(default_visibility = ["//visibility:public"])
 cc_binary(
     name = "scp_process_launcher",
     srcs = ["launcher.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/process_launcher/daemonizer/src:daemonizer_lib",

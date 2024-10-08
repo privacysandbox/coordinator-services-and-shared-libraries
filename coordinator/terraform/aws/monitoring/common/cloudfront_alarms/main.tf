@@ -81,24 +81,53 @@ resource "aws_cloudwatch_metric_alarm" "cloudfront_cache_hit_alarm" {
   ok_actions    = [var.sns_topic_arn]
 }
 
-# Origin latency alarm
+# totalQPS > 100 then measure, otherwise ignore
 resource "aws_cloudwatch_metric_alarm" "cloudfront_origin_latency_alarm" {
-  alarm_name          = "Warning${var.cloudfront_alarm_name_prefix}CloudfrontOriginLatency${var.custom_alarm_label}"
-  alarm_description   = "Max origin latency over ${var.cloudfront_origin_latency_threshold}ms"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = var.cloudfront_origin_latency_eval_periods
-  metric_name         = "OriginLatency"
-  namespace           = "AWS/CloudFront"
-  threshold           = var.cloudfront_origin_latency_threshold
-  period              = "60"
-  statistic           = "Maximum"
-  actions_enabled     = true
+  alarm_name                = "Warning${var.cloudfront_alarm_name_prefix}CloudfrontOriginLatency${var.custom_alarm_label}"
+  alarm_description         = "Max origin latency over ${var.cloudfront_origin_latency_threshold}ms with minimum 100 QPS"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = var.cloudfront_origin_latency_eval_periods
+  threshold                 = var.cloudfront_origin_latency_threshold
+  actions_enabled           = true
+  alarm_actions             = [var.sns_topic_arn]
+  ok_actions                = [var.sns_topic_arn]
+  insufficient_data_actions = []
 
-  dimensions = {
-    DistributionId = var.cloudfront_distribution_id
-    Region         = "Global"
+  metric_query {
+    id = "e1"
+    # Setting a minimum request count to remove the noise of low qps. Min 100QPS
+    expression  = "IF(m1>6000,m2,0)"
+    label       = "Minimum QPS Origin Latency Alarm"
+    return_data = "true"
   }
 
-  alarm_actions = [var.sns_topic_arn]
-  ok_actions    = [var.sns_topic_arn]
+  metric_query {
+    id = "m1"
+
+    metric {
+      metric_name = "RequestCount"
+      namespace   = "AWS/CloudFront"
+      period      = "60"
+      stat        = "Sum"
+      unit        = "Count"
+      dimensions = {
+        DistributionId = var.cloudfront_distribution_id
+      }
+    }
+  }
+
+  metric_query {
+    id = "m2"
+
+    metric {
+      metric_name = "OriginLatency"
+      namespace   = "AWS/CloudFront"
+      period      = "60"
+      stat        = "p95"
+      unit        = "Milliseconds"
+      dimensions = {
+        DistributionId = var.cloudfront_distribution_id
+      }
+    }
+  }
 }

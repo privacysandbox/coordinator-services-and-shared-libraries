@@ -20,9 +20,6 @@ cc_test(
     name = "health_service_test",
     size = "small",
     srcs = ["health_service_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     data = [
         "files/five_percent_meminfo_file.txt",
         "files/invalid_format_meminfo_file.txt",

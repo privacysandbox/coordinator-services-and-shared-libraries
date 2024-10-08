@@ -94,16 +94,23 @@ def get_adtech_sites(caller_identity):
       # Get the expected one result or throw
       adtech_sites = results.one()[0]
 
-    if not adtech_sites:
-      return 403
+      if not adtech_sites:
+        return 403
 
     return adtech_sites
-  except google.api_core.exceptions.ServerError as e:
-    print(e)
-    return int(e.code)
-  except Exception as e:
+  # The call to one() will return exactly one result or throw this NotFound exception.
+  except google.api_core.exceptions.NotFound as e:
     print(e)
     return 403
+  except google.api_core.exceptions.GoogleAPICallError as e:
+    print(e)
+    if e.code is not None:
+      return e.code
+    else:
+      return 500
+  except Exception as e:
+    print(e)
+    return 500
 
 
 def convert_claimed_identity_url_to_site(claimed_identity_url):

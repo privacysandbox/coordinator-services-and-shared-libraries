@@ -13,8 +13,8 @@
 # limitations under the License.
 
 output "pbs_auth_audience_url" {
-  description = "The URL by which the cloud function can be invoked."
-  value       = google_cloudfunctions2_function.pbs_auth_cloudfunction.service_config[0].uri
+  description = "The audience claim URL used by clients."
+  value       = google_cloudfunctions2_function.pbs_auth_cloudfunction.url
 }
 
 output "pbs_auth_cloudfunction_name" {

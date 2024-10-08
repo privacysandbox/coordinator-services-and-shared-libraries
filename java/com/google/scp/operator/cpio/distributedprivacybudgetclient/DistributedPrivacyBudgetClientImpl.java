@@ -17,14 +17,13 @@
 package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
 import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionManager.TransactionManagerException;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.TransactionOrchestrator.TransactionOrchestratorException;
 import java.sql.Timestamp;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -35,17 +34,18 @@ import org.slf4j.LoggerFactory;
 public final class DistributedPrivacyBudgetClientImpl implements DistributedPrivacyBudgetClient {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedPrivacyBudgetClientImpl.class);
-  private static final int REQUEST_TIMEOUT_DURATION =
-      Ints.checkedCast(Duration.ofMinutes(1).toMillis());
   private static final int PRIVACY_BUDGET_MAX_ITEM = 30000;
   private static final int TRANSACTION_SECRET_LENGTH = 10;
   private static final int TRANSACTION_TIMEOUT_MINUTES = 5;
   private final TransactionManager transactionManager;
+  private final TransactionOrchestrator transactionOrchestrator;
 
   /** Creates a new instance of the {@code DistributedPrivacyBudgetClientImpl} class. */
   @Inject
-  public DistributedPrivacyBudgetClientImpl(TransactionManager transactionManager) {
+  public DistributedPrivacyBudgetClientImpl(
+      TransactionManager transactionManager, TransactionOrchestrator transactionOrchestrator) {
     this.transactionManager = transactionManager;
+    this.transactionOrchestrator = transactionOrchestrator;
   }
 
   @Override
@@ -59,15 +59,23 @@ public final class DistributedPrivacyBudgetClientImpl implements DistributedPriv
 
     TransactionRequest transactionRequest = buildTransactionRequest(request);
     try {
-      logger.info("Starting distributed privacy budget service for the request: " + request);
-      ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudgetUnitsByOrigin =
-          transactionManager.execute(transactionRequest);
-
+      ImmutableList<ReportingOriginToPrivacyBudgetUnits> exhaustedBudgetUnitsByOrigin;
+      if (request.enableNewPbsClient().orElse(false)) {
+        logger.info(
+            "Starting distributed privacy budget service for the request with new client: "
+                + request);
+        exhaustedBudgetUnitsByOrigin = transactionOrchestrator.execute(transactionRequest);
+      } else {
+        logger.info("Starting distributed privacy budget service for the request: " + request);
+        exhaustedBudgetUnitsByOrigin = transactionManager.execute(transactionRequest);
+      }
       logger.info("Successfully ran distributed privacy budget service.");
       return ConsumePrivacyBudgetResponse.builder()
           .exhaustedPrivacyBudgetUnitsByOrigin(exhaustedBudgetUnitsByOrigin)
           .build();
     } catch (TransactionManagerException e) {
+      throw new DistributedPrivacyBudgetServiceException(e.getStatusCode(), e);
+    } catch (TransactionOrchestratorException e) {
       throw new DistributedPrivacyBudgetServiceException(e.getStatusCode(), e);
     }
   }
@@ -86,14 +94,13 @@ public final class DistributedPrivacyBudgetClientImpl implements DistributedPriv
         TransactionRequest.builder()
             .setTransactionId(UUID.randomUUID())
             .setClaimedIdentity(request.claimedIdentity())
+            .setTrustedServicesClientVersion(request.trustedServicesClientVersion())
             .setReportingOriginToPrivacyBudgetUnitsList(
                 request.reportingOriginToPrivacyBudgetUnitsList())
             .setTimeout(Timestamp.from(expiryTime))
             .setTransactionSecret(generateSecret());
 
-    request
-        .privacyBudgetLimit()
-        .ifPresent(limit -> transactionRequestBuilder.setPrivacyBudgetLimit(limit));
+    request.privacyBudgetLimit().ifPresent(transactionRequestBuilder::setPrivacyBudgetLimit);
     return transactionRequestBuilder.build();
   }
 

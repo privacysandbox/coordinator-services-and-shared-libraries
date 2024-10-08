@@ -24,9 +24,6 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],
@@ -46,6 +43,7 @@ cc_library(
         "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
         "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@com_google_absl//absl/base:nullability",
+        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
     ],
 )

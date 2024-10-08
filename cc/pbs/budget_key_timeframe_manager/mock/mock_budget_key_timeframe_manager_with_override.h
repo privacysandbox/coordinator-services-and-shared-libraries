@@ -22,7 +22,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
 #include "pbs/interface/budget_key_interface.h"
 #include "pbs/interface/budget_key_timeframe_manager_interface.h"
@@ -41,11 +43,12 @@ class MockBudgetKeyTimeframeManager : public BudgetKeyTimeframeManager {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
       : BudgetKeyTimeframeManager(
             budget_key_name, id, async_executor, journal_service,
-            nosql_database_provider, metric_client, config_provider,
-            std::make_shared<cpio::MockAggregateMetric>()) {
+            nosql_database_provider, metric_client, metric_router,
+            config_provider, std::make_shared<cpio::MockAggregateMetric>()) {
     budget_key_timeframe_groups_ = std::make_unique<
         core::common::auto_expiry_concurrent_map::mock::
             MockAutoExpiryConcurrentMap<

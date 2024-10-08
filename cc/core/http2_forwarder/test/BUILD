@@ -20,9 +20,6 @@ cc_test(
     srcs = [
         "http2_forwarder_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     data = [
         "//cc/core/http2_server/test/certs:csr.conf",
     ],

@@ -20,9 +20,6 @@ cc_test(
     name = "aws_role_credentials_provider_test",
     size = "small",
     srcs = glob(["aws_role_credentials_provider_test.cc"]),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -42,9 +39,6 @@ cc_test(
     size = "small",
     srcs =
         ["sts_error_converter_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

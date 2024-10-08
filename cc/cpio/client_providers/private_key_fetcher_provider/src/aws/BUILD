@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         ":aws_private_key_fetcher_provider_srcs",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/http2_client/src:http2_client_lib",

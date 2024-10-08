@@ -23,9 +23,6 @@ cc_test(
         "aws_dynamo_db_client_provider_test.cc",
         "aws_dynamo_db_utils_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

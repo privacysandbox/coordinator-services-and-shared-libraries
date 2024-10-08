@@ -181,7 +181,8 @@ int main(int argc, char* argv[]) {
   shared_ptr<JournalServiceInterface> journal_service =
       make_shared<JournalService>(bucket_name, partition_name, async_executor,
                                   mock_blob_storage_provider,
-                                  mock_metric_client, mock_config_provider);
+                                  mock_metric_client, /*metric_router=*/nullptr,
+                                  mock_config_provider);
 
   assert(journal_service->Init().Successful());
 
@@ -192,7 +193,7 @@ int main(int argc, char* argv[]) {
 
   auto budget_key_provider = make_shared<BudgetKeyProvider>(
       async_executor, journal_service, nosql_database_provider,
-      mock_metric_client, mock_config_provider);
+      mock_metric_client, /*metric_router=*/nullptr, mock_config_provider);
   assert(budget_key_provider->Init().Successful());
 
   shared_ptr<TransactionCommandSerializerInterface>

@@ -20,9 +20,6 @@ cc_test(
     name = "operation_dispatcher_test",
     size = "small",
     srcs = ["operation_dispatcher_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -38,9 +35,6 @@ cc_test(
     name = "retry_strategy_test",
     size = "small",
     srcs = ["retry_strategy_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",

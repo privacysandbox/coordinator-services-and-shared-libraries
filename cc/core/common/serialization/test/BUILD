@@ -31,9 +31,6 @@ cc_test(
     name = "serialization_test",
     size = "small",
     srcs = ["serialization_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         ":test_cc_proto",
         "//cc:cc_base_include_dir",

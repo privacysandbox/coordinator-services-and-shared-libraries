@@ -24,9 +24,6 @@ cc_test(
     name = "pbs_checkpoint_service_test",
     size = "small",
     srcs = TEST_SRCS,
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",

@@ -71,11 +71,12 @@ public class S3BlobStorageClientTest {
   private static final int NUM_BYTES = 16;
   private static final String BUCKET_NAME = AwsHermeticTestHelper.getBucketName();
   private File file;
-  private S3Client s3Client = AwsHermeticTestHelper.createS3Client(localstack);
-  private S3AsyncClient s3AsyncClient = LocalStackAwsClientUtil.createS3AsyncClient(localstack);
-  private S3BlobStorageClient s3BlobStorageClient =
+  private final S3Client s3Client = AwsHermeticTestHelper.createS3Client(localstack);
+  private final S3AsyncClient s3AsyncClient =
+      LocalStackAwsClientUtil.createS3AsyncClient(localstack);
+  private final S3BlobStorageClient s3BlobStorageClient =
       new S3BlobStorageClient(s3Client, s3AsyncClient, false, 0);
-  private S3BlobStorageClient s3BlobStorageClientWithRangedStream =
+  private final S3BlobStorageClient s3BlobStorageClientWithRangedStream =
       new S3BlobStorageClient(s3Client, s3AsyncClient, true, 180000);
 
   @Before
@@ -285,6 +286,70 @@ public class S3BlobStorageClientTest {
     HashCode hashPostUpload = hashFunction.hashBytes(downloadedBytesBuffer);
 
     assertThat(hashPreUpload).isEqualTo(hashPostUpload);
+  }
+
+  @Test
+  public void getBlobRange_returnsSpecifiedBytes() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(BUCKET_NAME, "keyname"));
+    s3BlobStorageClient.putBlob(location, file.toPath());
+
+    InputStream blobRange = s3BlobStorageClient.getBlobRange(location, 0, 11);
+    String downloadedMessage = new String(blobRange.readAllBytes());
+    assertThat(downloadedMessage).isEqualTo("S3 Hermetic");
+  }
+
+  @Test
+  public void getBlobRange_rangeTowardsTheEndReturnsSpecifiedBytes() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(BUCKET_NAME, "keyname"));
+    s3BlobStorageClientWithRangedStream.putBlob(location, file.toPath());
+
+    InputStream blobRange = s3BlobStorageClient.getBlobRange(location, 12, 4);
+    String downloadedMessage = new String(blobRange.readAllBytes());
+    assertThat(downloadedMessage).isEqualTo("Test");
+  }
+
+  @Test
+  public void getBlobRange_startOffsetLessThanZeroThrowsException() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(BUCKET_NAME, "keyname"));
+    s3BlobStorageClientWithRangedStream.putBlob(location, file.toPath());
+
+    assertThrows(
+        BlobStorageClientException.class, () -> s3BlobStorageClient.getBlobRange(location, -1, 4));
+  }
+
+  @Test
+  public void getBlobRange_lengthGreaterThanBlobLengthThrowsException() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(BUCKET_NAME, "keyname"));
+    s3BlobStorageClientWithRangedStream.putBlob(location, file.toPath());
+
+    assertThrows(
+        BlobStorageClientException.class, () -> s3BlobStorageClient.getBlobRange(location, 0, 100));
+  }
+
+  @Test
+  public void getBlobRange_lengthLessThanOneThrowsException() throws Exception {
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(BUCKET_NAME, "keyname"));
+    s3BlobStorageClientWithRangedStream.putBlob(location, file.toPath());
+
+    assertThrows(
+        BlobStorageClientException.class, () -> s3BlobStorageClient.getBlobRange(location, 0, 0));
+  }
+
+  @Test
+  public void getBlobRange_exceptionOnMissingObject() {
+    assertThrows(
+        BlobStorageClientException.class,
+        () ->
+            s3BlobStorageClient.getBlobRange(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create(BUCKET_NAME, "NonExistentKey")),
+                0,
+                10));
   }
 
   @Test

@@ -127,11 +127,13 @@ ExecutionResult PBSPartition::Init() noexcept {
       partition_dependencies_.async_executor,
       partition_dependencies_.blob_store_provider,
       partition_dependencies_.metric_client,
+      partition_dependencies_.metric_router,
       partition_dependencies_.config_provider);
 
   checkpoint_service_ = std::make_shared<CheckpointService>(
       partition_journal_bucket_name_, partition_id_str,
       partition_dependencies_.metric_client,
+      partition_dependencies_.metric_router,
       partition_dependencies_.config_provider, journal_service_,
       partition_dependencies_.blob_store_provider_for_checkpoints);
 
@@ -140,6 +142,7 @@ ExecutionResult PBSPartition::Init() noexcept {
       partition_dependencies_.nosql_database_provider_for_background_operations,
       partition_dependencies_.nosql_database_provider_for_live_traffic,
       partition_dependencies_.metric_client,
+      partition_dependencies_.metric_router,
       partition_dependencies_.config_provider, partition_id_);
 
   std::shared_ptr<TransactionCommandSerializerInterface>

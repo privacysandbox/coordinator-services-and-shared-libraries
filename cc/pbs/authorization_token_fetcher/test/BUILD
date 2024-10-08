@@ -23,9 +23,6 @@ cc_test(
         "aws_authorization_token_fetcher_test.cc",
         "gcp_authorization_token_fetcher_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/curl_client/mock:mock_curl_client",

@@ -14,11 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "http_connection_pool.h"
+#include "cc/core/http2_client/src/http_connection_pool.h"
 
-#include <algorithm>
-#include <csignal>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -26,18 +23,15 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
 #include <nghttp2/asio_http2.h>
-#include <nghttp2/asio_http2_client.h>
 
 #include "cc/core/common/global_logger/src/global_logger.h"
-#include "cc/core/interface/async_context.h"
-#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/http2_client/src/error_codes.h"
+#include "cc/core/http2_client/src/http_client_def.h"
+#include "cc/core/http2_client/src/http_connection.h"
+#include "opentelemetry/metrics/provider.h"
 #include "public/core/interface/execution_result.h"
-
-#include "error_codes.h"
-#include "http_connection.h"
 
 using boost::algorithm::to_lower;
 using boost::system::error_code;
@@ -55,6 +49,48 @@ static constexpr char kHttpConnection[] = "HttpConnection";
 
 namespace google::scp::core {
 ExecutionResult HttpConnectionPool::Init() noexcept {
+  if (metric_router_) {
+    meter_ = metric_router_->GetOrCreateMeter(kHttpConnectionPoolMeter);
+
+    client_active_requests_instrument_ =
+        metric_router_->GetOrCreateObservableInstrument(
+            kClientActiveRequestsMetric,
+            [&]() -> std::shared_ptr<
+                      opentelemetry::metrics::ObservableInstrument> {
+              return meter_->CreateInt64ObservableGauge(
+                  kClientActiveRequestsMetric, "Client active Http requests");
+            });
+
+    client_open_connections_instrument_ =
+        metric_router_->GetOrCreateObservableInstrument(
+            kClientOpenConnectionsMetric,
+            [&]() -> std::shared_ptr<
+                      opentelemetry::metrics::ObservableInstrument> {
+              return meter_->CreateInt64ObservableGauge(
+                  kClientOpenConnectionsMetric, "Client open Http connections");
+            });
+
+    client_address_errors_counter_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kClientAddressErrorsMetric,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kClientAddressErrorsMetric,
+                      "Number of client address resolution errors");
+                }));
+
+    client_active_requests_instrument_->AddCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HttpConnectionPool::ObserveClientActiveRequestsCallback),
+        this);
+    client_open_connections_instrument_->AddCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HttpConnectionPool::ObserveClientOpenConnectionsCallback),
+        this);
+  }
+
   return SuccessExecutionResult();
 }
 
@@ -93,6 +129,7 @@ shared_ptr<HttpConnection> HttpConnectionPool::CreateHttpConnection(
     string host, string service, bool is_https,
     TimeDuration http2_read_timeout_in_sec) {
   return make_shared<HttpConnection>(async_executor_, host, service, is_https,
+                                     metric_router_.get(),
                                      http2_read_timeout_in_sec_);
 }
 
@@ -109,6 +146,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
   string host;
   string service;
   if (host_service_from_uri(ec, scheme, host, service, *uri)) {
+    IncrementClientAddressError(uri->c_str());
     return FailureExecutionResult(errors::SC_HTTP2_CLIENT_INVALID_URI);
   }
 
@@ -210,5 +248,85 @@ void HttpConnectionPool::RecycleConnection(
 
   SCP_DEBUG(kHttpConnection, common::kZeroUuid,
             "Successfully recycled connection %p", connection.get());
+}
+
+void HttpConnectionPool::ObserveClientActiveRequestsCallback(
+    opentelemetry::metrics::ObserverResult observer_result,
+    absl::Nonnull<HttpConnectionPool*> self_ptr) {
+  auto observer = std::get<
+      std::shared_ptr<opentelemetry::metrics::ObserverResultT<int64_t>>>(
+      observer_result);
+
+  std::vector<std::string> keys;
+  auto execution_result = self_ptr->connections_.Keys(keys);
+  if (!execution_result.Successful()) {
+    SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+              "Could not fetch the keys for connections in connection pool");
+    return;
+  }
+
+  int64_t total_active_requests = 0;
+  for (const auto& key : keys) {
+    std::shared_ptr<HttpConnectionPoolEntry> entry;
+    execution_result = self_ptr->connections_.Find(key, entry);
+    if (!execution_result.Successful()) {
+      SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+                "Could not fetch the connection pool entry for key %s",
+                key.c_str());
+      return;
+    }
+
+    for (const std::shared_ptr<HttpConnection>& connection :
+         entry->http_connections) {
+      total_active_requests +=
+          static_cast<int64_t>(connection->ActiveClientRequestsSize());
+    }
+  }
+  observer->Observe(total_active_requests);
+}
+
+void HttpConnectionPool::ObserveClientOpenConnectionsCallback(
+    opentelemetry::metrics::ObserverResult observer_result,
+    absl::Nonnull<HttpConnectionPool*> self_ptr) {
+  auto observer = std::get<
+      std::shared_ptr<opentelemetry::metrics::ObserverResultT<int64_t>>>(
+      observer_result);
+
+  std::vector<std::string> keys;
+  auto execution_result = self_ptr->connections_.Keys(keys);
+  if (!execution_result.Successful()) {
+    SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+              "Could not fetch the keys for connections in connection pool");
+    return;
+  }
+
+  int64_t open_connections = 0;
+  for (const auto& key : keys) {
+    std::shared_ptr<HttpConnectionPoolEntry> entry;
+    execution_result = self_ptr->connections_.Find(key, entry);
+    if (!execution_result.Successful()) {
+      SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+                "Could not fetch the connection pool entry for key %s",
+                key.c_str());
+      return;
+    }
+
+    for (const std::shared_ptr<HttpConnection>& connection :
+         entry->http_connections) {
+      if (connection->IsReady()) {
+        ++open_connections;
+      }
+    }
+  }
+  observer->Observe(open_connections);
+}
+
+void HttpConnectionPool::IncrementClientAddressError(absl::string_view uri) {
+  const absl::flat_hash_map<std::string, std::string>
+      client_address_errors_label_kv = {
+          {std::string(kUriLabel), std::string(uri)}};
+  if (metric_router_) {
+    client_address_errors_counter_->Add(1, client_address_errors_label_kv);
+  }
 }
 }  // namespace google::scp::core

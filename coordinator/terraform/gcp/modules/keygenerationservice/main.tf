@@ -16,7 +16,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.36"
+      version = ">= 5.21"
     }
   }
 }
@@ -52,11 +52,8 @@ resource "google_kms_crypto_key" "key_encryption_key" {
 # Allow key generation service account to encrypt with KEK
 resource "google_kms_key_ring_iam_member" "key_encryption_ring_iam" {
   key_ring_id = google_kms_key_ring.key_encryption_ring.id
-  role        = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-
-  member = "serviceAccount:${local.key_generation_service_account_email}"
-
-  depends_on = [google_kms_crypto_key.key_encryption_key]
+  role        = "roles/cloudkms.cryptoKeyEncrypter"
+  member      = "serviceAccount:${local.key_generation_service_account_email}"
 }
 
 # KeyDB read/write permissions
@@ -104,14 +101,12 @@ resource "null_resource" "key_generation_instance_replace_trigger" {
   }
 }
 
-resource "google_compute_autoscaler" "keygen_autoscaler" {
-  provider = google-beta
-
+resource "google_compute_region_autoscaler" "keygen_autoscaler" {
   project = var.project_id
+  region  = var.region
 
   name   = "keygen-auto-scaler"
-  zone   = var.zone
-  target = google_compute_instance_group_manager.keygen_instance_group.id
+  target = google_compute_region_instance_group_manager.keygen_instance_group.id
 
   autoscaling_policy {
     max_replicas = 1
@@ -121,36 +116,40 @@ resource "google_compute_autoscaler" "keygen_autoscaler" {
 
     metric {
       name                       = "pubsub.googleapis.com/subscription/num_undelivered_messages"
-      filter                     = "resource.type = pubsub_subscription AND resource.label.subscription_id = ${var.environment}-key-generation-subscription"
+      filter                     = "resource.type = pubsub_subscription AND resource.label.subscription_id = ${google_pubsub_subscription.key_generation_pubsub_subscription.name}"
       single_instance_assignment = 100
     }
   }
 
   lifecycle {
     replace_triggered_by = [
-      null_resource.key_generation_instance_replace_trigger
+      # Auto-scaler configuration must be replaced with the instance group.
+      google_compute_region_instance_group_manager.keygen_instance_group.id,
     ]
   }
 }
 
-resource "google_compute_instance_group_manager" "keygen_instance_group" {
+resource "google_compute_region_instance_group_manager" "keygen_instance_group" {
   name               = "${var.environment}-keygen-vm-mig"
   description        = "The managed instance group for Key generation instance."
   base_instance_name = "${var.environment}-keygen"
+  region             = var.region
 
   version {
     instance_template = google_compute_instance_template.key_generation_vm.id
   }
 
   update_policy {
-    minimal_action        = "RESTART"
-    type                  = "OPPORTUNISTIC"
-    max_unavailable_fixed = 1
+    minimal_action = "RESTART"
+    type           = "OPPORTUNISTIC"
+    # Must be at least the number of zones for this group. The default is 3.
+    max_unavailable_fixed = 3
   }
 
   lifecycle {
     replace_triggered_by = [
-      null_resource.key_generation_instance_replace_trigger
+      # Replacing the instance group manager will terminate any running instances.
+      null_resource.key_generation_instance_replace_trigger,
     ]
   }
 }
@@ -176,18 +175,16 @@ resource "google_compute_instance_template" "key_generation_vm" {
     network = var.network
   }
 
-  metadata = merge({
-    coordinator-version        = module.version.version
-    google-logging-enabled     = var.key_generation_logging_enabled
-    google-monitoring-enabled  = var.key_generation_monitoring_enabled
-    scp-environment            = var.environment
-    tee-image-reference        = var.key_generation_image
-    tee-restart-policy         = var.key_generation_tee_restart_policy
-    tee-container-log-redirect = var.key_generation_logging_enabled
-    },
-    var.multiparty ? {
-      tee-impersonate-service-accounts = var.key_generation_tee_allowed_sa
-  } : {})
+  metadata = {
+    coordinator-version              = module.version.version
+    google-logging-enabled           = var.key_generation_logging_enabled
+    google-monitoring-enabled        = var.key_generation_monitoring_enabled
+    scp-environment                  = var.environment
+    tee-image-reference              = var.key_generation_image
+    tee-restart-policy               = var.key_generation_tee_restart_policy
+    tee-container-log-redirect       = var.key_generation_logging_enabled
+    tee-impersonate-service-accounts = var.key_generation_tee_allowed_sa
+  }
 
   labels = {
     # Replace slashes with dashes due to format restrictions
@@ -206,16 +203,15 @@ resource "google_compute_instance_template" "key_generation_vm" {
   }
 
   confidential_instance_config {
-    enable_confidential_compute = var.multiparty
+    enable_confidential_compute = true
   }
 
   shielded_instance_config {
-    enable_secure_boot = var.multiparty
+    enable_secure_boot = true
   }
 
   lifecycle {
-    replace_triggered_by = [
-      null_resource.key_generation_instance_replace_trigger
-    ]
+    # Cannot be destroyed while attached to a managed instance group.
+    create_before_destroy = true
   }
 }

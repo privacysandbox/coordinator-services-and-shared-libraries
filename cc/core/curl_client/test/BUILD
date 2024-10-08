@@ -23,9 +23,6 @@ cc_test(
         [
             "http1_curl_wrapper_test.cc",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/curl_client/src:http1_curl_client_lib",
@@ -44,9 +41,6 @@ cc_test(
         [
             "http1_curl_client_test.cc",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

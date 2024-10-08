@@ -13,7 +13,8 @@
 # limitations under the License.
 
 output "encryption_key_service_cloudfunction_url" {
-  value = google_cloudfunctions2_function.encryption_key_service_cloudfunction.service_config[0].uri
+  description = "The audience claim URL used by clients."
+  value       = google_cloudfunctions2_function.encryption_key_service_cloudfunction.url
 }
 
 output "encryption_key_service_loadbalancer_ip" {

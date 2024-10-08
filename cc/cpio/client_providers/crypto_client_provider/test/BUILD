@@ -20,9 +20,6 @@ cc_test(
     name = "crypto_client_provider_test",
     size = "small",
     srcs = ["crypto_client_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

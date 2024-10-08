@@ -21,9 +21,6 @@ cc_library(
     srcs = [
         "system_resource_info_provider.h",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

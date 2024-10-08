@@ -20,9 +20,6 @@ cc_test(
     name = "pbs_budget_key_resolver_test",
     size = "small",
     srcs = ["budget_key_resolver_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

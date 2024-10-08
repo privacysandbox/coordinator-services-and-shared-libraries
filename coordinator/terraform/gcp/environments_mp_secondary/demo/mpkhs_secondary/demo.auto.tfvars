@@ -16,10 +16,8 @@ environment = "<environment name>"
 project_id  = "<project id>"
 # wipp_project_id_override = <project_id_to_deploy_wip_wipp> # defaults to `project_id` if not set
 # wip_allowed_service_account_project_id_override = <project_id_to_create_wip_allowed_service_account> # defaults to `project_id` if not set
-primary_region        = "us-central1"
-primary_region_zone   = "us-central1-c"
-secondary_region      = "us-west3"
-secondary_region_zone = "us-west3-c"
+primary_region   = "us-central1"
+secondary_region = "us-west3"
 
 encryption_key_service_cloudfunction_memory_mb = 1024
 key_storage_service_cloudfunction_memory_mb    = 1024

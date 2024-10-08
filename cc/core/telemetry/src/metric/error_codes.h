@@ -36,4 +36,8 @@ DEFINE_ERROR_CODE(SC_TELEMETRY_GRPC_CHANNEL_CREATION_FAILED, SC_PBS_TELEMETRY,
                   0x0005, "Grpc channel creation failed",
                   errors::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
+DEFINE_ERROR_CODE(SC_TELEMETRY_METER_PROVIDER_NOT_INITIALIZED, SC_PBS_TELEMETRY,
+                  0x0006, "Meter Provider is not initialized",
+                  errors::HttpStatusCode::INTERNAL_SERVER_ERROR)
+
 }  // namespace google::scp::core

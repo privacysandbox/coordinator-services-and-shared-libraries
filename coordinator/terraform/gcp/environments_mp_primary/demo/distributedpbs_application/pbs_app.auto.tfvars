@@ -161,8 +161,7 @@ pbs_application_environment_variables = [
 ]
 
 # Path to the auth lambda handler and its requirements, relative to this module.
-auth_cloud_function_handler_path      = "../../../dist/pbs_auth_handler/auth_cloud_function_handler.py"
-auth_cloud_function_requirements_path = "../../../dist/pbs_auth_handler/requirements.txt"
+auth_cloud_function_handler_path = "../../../dist/auth_cloud_function_handler.zip"
 
 # This must be updated to the allowed operators group.
 pbs_auth_allowed_principals = ["group:<group-allowed-operators-email>"]

@@ -217,9 +217,9 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "begin_transaction", { "region" : "${var.region}" }],
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "OPERATOR", "ComponentName", "frontend_service", "MethodName", "BEGIN", { "region" : "${var.region}" }],
               [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
-              [".", "google.scp.pbs.frontend.requests", ".", ".", ".", ".", ".", "end_transaction", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.requests", ".", ".", ".", ".", ".", "END", { "region" : "${var.region}" }],
               [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
@@ -238,7 +238,7 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "get_status_transaction", { "region" : "${var.region}" }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "OPERATOR", "ComponentName", "frontend_service", "MethodName", "GET_STATUS", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -256,12 +256,12 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "commit_transaction", { "region" : "${var.region}" }],
-              ["...", "notify_transaction", { "region" : "${var.region}" }],
-              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", "prepare_transaction", { "region" : "${var.region}" }],
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "OPERATOR", "ComponentName", "frontend_service", "MethodName", "COMMMIT", { "region" : "${var.region}" }],
+              ["...", "NOTIFY", { "region" : "${var.region}" }],
+              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", "PREPARE", { "region" : "${var.region}" }],
               [".", "google.scp.pbs.frontend.requests", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
-              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", "commit_transaction", { "region" : "${var.region}" }],
-              ["...", "notify_transaction", { "region" : "${var.region}" }]
+              [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", "COMMIT", { "region" : "${var.region}" }],
+              ["...", "NOTIFY", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -279,9 +279,9 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "operator", "ComponentName", "frontend_service", "MethodName", "abort_transaction", { "region" : "${var.region}" }],
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "OPERATOR", "ComponentName", "frontend_service", "MethodName", "ABORT", { "region" : "${var.region}" }],
               [".", "google.scp.pbs.frontend.server_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }],
-              [".", "google.scp.pbs.frontend.requests", ".", "coordinator", ".", ".", ".", ".", { "region" : "${var.region}", "visible" : false }]
+              [".", "google.scp.pbs.frontend.requests", ".", "COORDINATOR", ".", ".", ".", ".", { "region" : "${var.region}", "visible" : false }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -551,7 +551,7 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "coordinator", "ComponentName", "frontend_service", "MethodName", "abort_transaction", { "region" : "${var.region}" }]
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "COORDINATOR", "ComponentName", "frontend_service", "MethodName", "ABORT", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",
             "stacked" : false,
@@ -569,7 +569,7 @@ resource "aws_cloudwatch_dashboard" "privacy_budget_dashboard" {
           "type" : "metric",
           "properties" : {
             "metrics" : [
-              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "coordinator", "ComponentName", "frontend_service", "MethodName", "get_status_transaction", { "region" : "${var.region}" }],
+              ["${var.environment}-google-scp-pbs", "google.scp.pbs.frontend.requests", "reporting_origin", "COORDINATOR", "ComponentName", "frontend_service", "MethodName", "get_status_transaction", { "region" : "${var.region}" }],
               [".", "google.scp.pbs.frontend.client_errors", ".", ".", ".", ".", ".", ".", { "region" : "${var.region}" }]
             ],
             "view" : "timeSeries",

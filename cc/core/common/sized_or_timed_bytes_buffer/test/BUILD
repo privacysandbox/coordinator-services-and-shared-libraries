@@ -20,9 +20,6 @@ cc_test(
     name = "bytes_buffer_test",
     size = "small",
     srcs = ["sized_or_timed_bytes_buffer_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

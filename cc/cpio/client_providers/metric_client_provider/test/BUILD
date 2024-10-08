@@ -20,9 +20,6 @@ cc_test(
     name = "metric_client_provider_test",
     size = "small",
     srcs = ["metric_client_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -43,9 +40,6 @@ cc_test(
     name = "metric_client_utils_test",
     size = "small",
     srcs = ["metric_client_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

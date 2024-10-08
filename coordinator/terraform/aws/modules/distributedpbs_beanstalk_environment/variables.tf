@@ -57,6 +57,17 @@ variable "pbs_s3_bucket_name" {
   nullable = false
 }
 
+variable "pbs_alternate_domain_record_cname" {
+  type     = string
+  nullable = true
+}
+
+variable "enable_alternate_pbs_domain" {
+  type     = bool
+  default  = false
+  nullable = false
+}
+
 variable "alarm_notification_email" {
   type     = string
   nullable = false
@@ -237,4 +248,16 @@ variable "pbs_s3_bucket_lb_access_logs_id" {
 variable "enable_pbs_lb_access_logs" {
   description = "Wheather to enable PBS ELB access logs."
   type        = bool
+}
+
+variable "enable_pbs_domain_record_acme" {
+  description = "Enable acme_challenge update for PBS domain record certificate creation"
+  type        = bool
+  default     = false
+}
+
+variable "pbs_domain_record_acme" {
+  description = "DNS record data for PBS domain record acme_challenge"
+  type        = string
+  nullable    = true
 }

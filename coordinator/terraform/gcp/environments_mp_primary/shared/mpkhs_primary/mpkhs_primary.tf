@@ -21,14 +21,12 @@
 # be modified for environment-specific customization.
 
 module "multipartykeyhosting_primary" {
-  source                                   = "../../../applications/multipartykeyhosting_primary"
-  environment                              = var.environment
-  project_id                               = var.project_id
-  primary_region                           = var.primary_region
-  primary_region_zone                      = var.primary_region_zone
-  secondary_region                         = var.secondary_region
-  key_generation_allow_stopping_for_update = var.key_generation_allow_stopping_for_update
-  allowed_operator_user_group              = var.allowed_operator_user_group
+  source                      = "../../../applications/multipartykeyhosting_primary"
+  environment                 = var.environment
+  project_id                  = var.project_id
+  primary_region              = var.primary_region
+  secondary_region            = var.secondary_region
+  allowed_operator_user_group = var.allowed_operator_user_group
 
   alarms_enabled            = var.alarms_enabled
   alarms_notification_email = var.alarms_notification_email
@@ -76,10 +74,10 @@ module "multipartykeyhosting_primary" {
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
 
-  mpkhs_primary_package_bucket_location = var.mpkhs_package_bucket_location
-  spanner_instance_config               = var.spanner_instance_config
-  spanner_processing_units              = var.spanner_processing_units
-  key_db_retention_period               = var.key_db_retention_period
+  mpkhs_package_bucket_location = var.mpkhs_package_bucket_location
+  spanner_instance_config       = var.spanner_instance_config
+  spanner_processing_units      = var.spanner_processing_units
+  key_db_retention_period       = var.key_db_retention_period
 
   enable_get_public_key_cdn                    = var.enable_get_public_key_cdn
   get_public_key_cloud_cdn_default_ttl_seconds = var.get_public_key_cloud_cdn_default_ttl_seconds

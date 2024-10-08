@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "core/interface/configuration_keys.h"
 #include "core/interface/metrics_def.h"
 #include "core/journal_service/src/error_codes.h"
@@ -30,6 +31,7 @@
 #include "core/journal_service/src/journal_output_stream.h"
 #include "core/journal_service/src/journal_serialization.h"
 #include "core/journal_service/src/proto/journal_service.pb.h"
+#include "opentelemetry/context/context.h"
 #include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
 #include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
 #include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
@@ -75,7 +77,7 @@ static constexpr size_t kMaxWaitTimeForFlushMs = 20;
 
 static constexpr size_t kStartupWaitIntervalMilliseconds = 100;
 
-static constexpr char kJournalService[] = "JournalService";
+static constexpr absl::string_view kJournalService = "JournalService";
 
 namespace google::scp::core {
 
@@ -104,62 +106,43 @@ ExecutionResult JournalService::Init() noexcept {
       bucket_name_, partition_name_, blob_storage_provider_client_,
       config_provider_);
 
-  recover_time_metric_ = MetricUtils::RegisterSimpleMetric(
-      async_executor_, metric_client_, kMetricNameRecoverExecutionTime,
-      kMetricComponentNameAndPartitionNamePrefixForJournalService +
-          ToString(partition_id_),
-      kMetricMethodRecover, kMillisecondsUnit);
-  execution_result = recover_time_metric_->Init();
-  if (!execution_result.Successful()) {
-    return execution_result;
+  if (metric_router_) {
+    meter_ = metric_router_->GetOrCreateMeter(kJournalService);
+
+    journal_recovery_time_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Histogram<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameJournalRecoveryTime,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Histogram(
+                      kMetricNameJournalRecoveryTime, "Journal recovery time",
+                      "ms");
+                }));
+    journal_recovery_count_instrument_ =
+        std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+            metric_router_->GetOrCreateSyncInstrument(
+                kMetricNameJournalRecoveryCount,
+                [&]() -> std::shared_ptr<
+                          opentelemetry::metrics::SynchronousInstrument> {
+                  return meter_->CreateUInt64Counter(
+                      kMetricNameJournalRecoveryCount,
+                      "Journal recovery count");
+                }));
+
+    std::vector<double> boundaries = {0,    50,   100,  150,  250,  500,  750,
+                                      1000, 1500, 2500, 5000, 7500, 10000};
+    metric_router_->CreateHistogramViewForInstrument(
+        /*metric_name=*/kMetricNameJournalRecoveryTime,
+        /*view_name=*/kMetricNameJournalRecoveryTime,
+        /*instrument_type=*/core::MetricRouter::InstrumentType::kHistogram,
+        /*boundaries=*/boundaries,
+        /*version=*/"", /*schema=*/"",
+        /*view_description=*/"Journal recovery time", /*unit=*/"ms");
   }
 
-  size_t metric_aggregation_interval_milliseconds;
-  if (!config_provider_
-           ->Get(kAggregatedMetricIntervalMs,
-                 metric_aggregation_interval_milliseconds)
-           .Successful()) {
-    metric_aggregation_interval_milliseconds =
-        kDefaultAggregatedMetricIntervalMs;
-  }
-  recover_log_count_metric_ = MetricUtils::RegisterAggregateMetric(
-      async_executor_, metric_client_, kMetricNameRecoverCount,
-      kMetricComponentNameAndPartitionNamePrefixForJournalService +
-          ToString(partition_id_),
-      kMetricMethodRecover, kCountUnit, {kMetricEventNameLogCount},
-      metric_aggregation_interval_milliseconds);
-  execution_result = recover_log_count_metric_->Init();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
+  RETURN_IF_FAILURE(InitMetricClientInterface());
 
-  journal_output_count_metric_ = MetricUtils::RegisterAggregateMetric(
-      async_executor_, metric_client_, kMetricNameJournalOutputStream,
-      kMetricComponentNameAndPartitionNamePrefixForJournalService +
-          ToString(partition_id_),
-      kMetricMethodOutputStream, kCountUnit,
-      {kMetricEventJournalOutputCountWriteJournalScheduledCount,
-       kMetricEventJournalOutputCountWriteJournalSuccessCount,
-       kMetricEventJournalOutputCountWriteJournalFailureCount},
-      metric_aggregation_interval_milliseconds);
-  execution_result = journal_output_count_metric_->Init();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-
-  if (!config_provider_
-           ->Get(kPBSJournalServiceFlushIntervalInMilliseconds,
-                 journal_flush_interval_in_milliseconds_)
-           .Successful()) {
-    journal_flush_interval_in_milliseconds_ = kMaxWaitTimeForFlushMs;
-  }
-
-  SCP_INFO(
-      kJournalService, partition_id_,
-      "Starting Journal Service for Partition with ID: '%s'. Flush interval "
-      "%zu milliseconds, Metric aggregating at every '%llu' ms",
-      ToString(partition_id_).c_str(), journal_flush_interval_in_milliseconds_,
-      metric_aggregation_interval_milliseconds);
   return SuccessExecutionResult();
 }
 
@@ -270,14 +253,21 @@ void JournalService::OnJournalStreamReadLogCallback(
       journal_recover_context.result = journal_stream_read_log_context.result;
     } else {
       time_event->Stop();
+      if (metric_router_) {
+        opentelemetry::context::Context context;
+        journal_recovery_time_instrument_->Record(time_event->diff_time,
+                                                  context);
+      }
       recover_time_metric_->Push(
           make_shared<MetricValue>(to_string(time_event->diff_time)));
+
       journal_recover_context.response = make_shared<JournalRecoverResponse>();
       journal_recover_context.response->last_processed_journal_id =
           journal_input_stream_->GetLastProcessedJournalId();
       journal_output_stream_ = make_shared<JournalOutputStream>(
           bucket_name_, partition_name_, async_executor_,
-          blob_storage_provider_client_, journal_output_count_metric_);
+          blob_storage_provider_client_, journal_output_count_metric_,
+          metric_router_);
       // Set to nullptr to deallocate the stream and its data.
       journal_input_stream_ = nullptr;
     }
@@ -293,6 +283,9 @@ void JournalService::OnJournalStreamReadLogCallback(
   size_t journal_log_counter = 0;
 
   for (const auto& log : *journal_stream_read_log_context.response->read_logs) {
+    if (metric_router_) {
+      journal_recovery_count_instrument_->Add(1);
+    }
     recover_log_count_metric_->Increment(kMetricEventNameLogCount);
 
     // Log the journal ID if not already logged.
@@ -462,6 +455,67 @@ void JournalService::FlushJournalOutputStream() noexcept {
 
     sleep_for(milliseconds(journal_flush_interval_in_milliseconds_));
   }
+}
+
+ExecutionResult JournalService::InitMetricClientInterface() {
+  recover_time_metric_ = MetricUtils::RegisterSimpleMetric(
+      async_executor_, metric_client_, kMetricNameJournalRecoveryTime,
+      kMetricComponentNameAndPartitionNamePrefixForJournalService +
+          ToString(partition_id_),
+      kMetricMethodRecover, kMillisecondsUnit);
+  auto execution_result = recover_time_metric_->Init();
+  if (!execution_result.Successful()) {
+    return execution_result;
+  }
+
+  size_t metric_aggregation_interval_milliseconds;
+  if (!config_provider_
+           ->Get(kAggregatedMetricIntervalMs,
+                 metric_aggregation_interval_milliseconds)
+           .Successful()) {
+    metric_aggregation_interval_milliseconds =
+        kDefaultAggregatedMetricIntervalMs;
+  }
+  recover_log_count_metric_ = MetricUtils::RegisterAggregateMetric(
+      async_executor_, metric_client_, kMetricNameJournalRecoveryCount,
+      kMetricComponentNameAndPartitionNamePrefixForJournalService +
+          ToString(partition_id_),
+      kMetricMethodRecover, kCountUnit, {kMetricEventNameLogCount},
+      metric_aggregation_interval_milliseconds);
+  execution_result = recover_log_count_metric_->Init();
+  if (!execution_result.Successful()) {
+    return execution_result;
+  }
+
+  journal_output_count_metric_ = MetricUtils::RegisterAggregateMetric(
+      async_executor_, metric_client_, kMetricNameJournalOutputStreamCount,
+      kMetricComponentNameAndPartitionNamePrefixForJournalService +
+          ToString(partition_id_),
+      kMetricMethodOutputStream, kCountUnit,
+      {kMetricEventJournalOutputCountWriteJournalScheduledCount,
+       kMetricEventJournalOutputCountWriteJournalSuccessCount,
+       kMetricEventJournalOutputCountWriteJournalFailureCount},
+      metric_aggregation_interval_milliseconds);
+  execution_result = journal_output_count_metric_->Init();
+  if (!execution_result.Successful()) {
+    return execution_result;
+  }
+
+  if (!config_provider_
+           ->Get(kPBSJournalServiceFlushIntervalInMilliseconds,
+                 journal_flush_interval_in_milliseconds_)
+           .Successful()) {
+    journal_flush_interval_in_milliseconds_ = kMaxWaitTimeForFlushMs;
+  }
+
+  SCP_INFO(
+      kJournalService, partition_id_,
+      "Starting Journal Service for Partition with ID: '%s'. Flush interval "
+      "%zu milliseconds, Metric aggregating at every '%llu' ms",
+      ToString(partition_id_).c_str(), journal_flush_interval_in_milliseconds_,
+      metric_aggregation_interval_milliseconds);
+
+  return execution_result;
 }
 
 }  // namespace google::scp::core

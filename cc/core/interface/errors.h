@@ -93,6 +93,9 @@ std::map<uint64_t, std::map<uint64_t, SCPError>>& GetGlobalErrorCodes();
 /// @brief The global map of error_code and associated public error code.
 std::map<uint64_t, uint64_t>& GetPublicErrorCodesMap();
 
+/// Returns the string representation of an HttpStatusCode.
+std::string HttpStatusCodeToString(HttpStatusCode status);
+
 /**
  * @brief Registers component code.
  *

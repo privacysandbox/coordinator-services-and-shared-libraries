@@ -1108,11 +1108,26 @@ resource "aws_route53_record" "pbs_domain_record" {
   count   = var.enable_domain_management ? 1 : 0
   zone_id = var.domain_hosted_zone_id
   name    = local.privacy_budget_domain
-  type    = "A"
+  type    = var.enable_alternate_pbs_domain ? "CNAME" : "A"
 
-  alias {
-    name                   = aws_elastic_beanstalk_environment.beanstalk_app_environment.cname
-    zone_id                = data.aws_elastic_beanstalk_hosted_zone.current.id
-    evaluate_target_health = false
+  records = var.enable_alternate_pbs_domain ? [var.pbs_alternate_domain_record_cname] : null
+  ttl     = var.enable_alternate_pbs_domain ? 60 : null
+
+  dynamic "alias" {
+    for_each = var.enable_alternate_pbs_domain ? [] : [1]
+    content {
+      name                   = aws_elastic_beanstalk_environment.beanstalk_app_environment.cname
+      zone_id                = data.aws_elastic_beanstalk_hosted_zone.current.id
+      evaluate_target_health = false
+    }
   }
+}
+
+resource "aws_route53_record" "pbs_domain_record_acme" {
+  count   = (var.enable_domain_management && var.enable_pbs_domain_record_acme) ? 1 : 0
+  zone_id = var.domain_hosted_zone_id
+  name    = "_acme-challenge.${local.privacy_budget_domain}"
+  type    = "CNAME"
+  ttl     = 60
+  records = [var.pbs_domain_record_acme]
 }

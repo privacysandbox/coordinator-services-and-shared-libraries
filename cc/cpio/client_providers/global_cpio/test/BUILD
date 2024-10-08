@@ -65,7 +65,6 @@ cc_library(
         ],
     copts = [
         "-DTEST_CPIO=1",
-        "-std=c++17",
     ],
     deps = [
         ":test_lib_cpio_provider",

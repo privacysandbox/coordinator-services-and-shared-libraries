@@ -20,9 +20,6 @@ cc_test(
     name = "gcp_auth_token_provider_test",
     size = "small",
     srcs = glob(["*.cc"]),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/curl_client/mock:mock_curl_client",

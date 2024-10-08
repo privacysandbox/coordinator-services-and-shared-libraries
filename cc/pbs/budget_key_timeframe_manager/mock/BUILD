@@ -23,13 +23,12 @@ cc_library(
             "**/*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/auto_expiry_concurrent_map/mock:auto_expiry_concurrent_map_mock",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/pbs/interface:pbs_interface_lib",
+        "@com_google_absl//absl/base:nullability",
     ],
 )

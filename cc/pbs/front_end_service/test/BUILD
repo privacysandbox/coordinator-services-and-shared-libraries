@@ -19,9 +19,6 @@ package(default_visibility = ["//visibility:public"])
 cc_test(
     name = "front_end_service_test",
     srcs = ["front_end_service_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],
@@ -45,9 +42,6 @@ cc_test(
 cc_test(
     name = "front_end_service_utils_test",
     srcs = ["front_end_service_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],
@@ -61,9 +55,6 @@ cc_test(
 cc_test(
     name = "transaction_request_router_test",
     srcs = ["transaction_request_router_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],
@@ -78,9 +69,6 @@ cc_test(
 cc_test(
     name = "front_end_service_v2_test",
     srcs = ["front_end_service_v2_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],

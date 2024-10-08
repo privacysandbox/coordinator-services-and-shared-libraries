@@ -28,8 +28,6 @@ provider "google" {
 
 locals {
   pbs_auth_allowed_principals           = var.pbs_remote_coordinator_service_account_email != "" ? concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}", "serviceAccount:${var.pbs_remote_coordinator_service_account_email}"]) : concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}"])
-  auth_cloud_function_handler_path      = var.auth_cloud_function_handler_path != "" ? var.auth_cloud_function_handler_path : "${path.module}/../../../../../python/privacybudget/gcp/pbs_auth_handler/auth_cloud_function_handler.py"
-  auth_cloud_function_requirements_path = var.auth_cloud_function_requirements_path != "" ? var.auth_cloud_function_requirements_path : "${path.module}/../../../../../python/privacybudget/gcp/pbs_auth_handler/config/requirements.txt"
   pbs_artifact_registry_repository_name = var.pbs_artifact_registry_repository_name != "" ? var.pbs_artifact_registry_repository_name : "${var.environment}-scp-pbs-artifact-registry-repo"
   pbs_instance_target_tag               = "${var.environment}-pbs-network-tag"
   service_subdomain_suffix              = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
@@ -77,8 +75,7 @@ module "pbs_auth" {
   environment = var.environment
   region      = var.region
 
-  auth_cloud_function_handler_path              = local.auth_cloud_function_handler_path
-  auth_cloud_function_requirements_path         = local.auth_cloud_function_requirements_path
+  auth_cloud_function_handler_path              = var.auth_cloud_function_handler_path
   pbs_auth_cloudfunction_min_instances          = var.pbs_auth_cloudfunction_min_instances
   pbs_auth_cloudfunction_max_instances          = var.pbs_auth_cloudfunction_max_instances
   pbs_auth_cloudfunction_timeout_seconds        = var.pbs_auth_cloudfunction_timeout_seconds
@@ -169,6 +166,7 @@ module "pbs_lb" {
   pbs_vpc_network_id             = google_compute_network.vpc_default_network.self_link
   pbs_instance_target_tag        = local.pbs_instance_target_tag
   pbs_instance_allow_ssh         = var.pbs_instance_allow_ssh
+  pbs_tls_alternate_names        = var.pbs_tls_alternate_names
 
   depends_on = [
     module.pbs_a_record,

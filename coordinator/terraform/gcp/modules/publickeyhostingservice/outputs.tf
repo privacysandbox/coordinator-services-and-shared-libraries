@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "get_public_key_cloudfunction_urls" {
-  value = [for cloud_function in google_cloudfunctions2_function.get_public_key_cloudfunction : cloud_function.service_config[0].uri]
-}
-
 output "get_public_key_loadbalancer_ip" {
   value = google_compute_global_address.get_public_key_ip_address.address
 }

@@ -20,9 +20,6 @@ cc_test(
     srcs = [
         "tcp_traffic_forwarder_socat_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

@@ -1,6 +1,7 @@
 module "serverless-connector" {
   count      = var.create_connectors ? 1 : 0
   source     = "terraform-google-modules/network/google//modules/vpc-serverless-connector-beta"
+  version    = "<= 9.1.0"
   project_id = var.project_id
   vpc_connectors = [
     for index, region in tolist(var.regions) : {

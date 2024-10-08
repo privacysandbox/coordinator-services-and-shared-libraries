@@ -1,3 +1,17 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 ################################################################################
 # Global Variables.
 ################################################################################
@@ -8,13 +22,15 @@ variable "project_id" {
 }
 
 variable "wipp_project_id_override" {
-  description = "Override the GCP Project ID in which workload identity pool (wip) and workload identity pool provider (wipp) will be created in."
+  description = "Override the GCP Project ID in which workload identity pool (wip) and workload identity pool provider (wipp) will be created in. The value of `project_id` is used by default."
   type        = string
+  default     = null
 }
 
 variable "wip_allowed_service_account_project_id_override" {
-  description = "Override the GCP Project ID in which wip allowed service account will be created in."
+  description = "Override the GCP Project ID in which WIP allowed service account will be created in. The value of `project_id` is used by default."
   type        = string
+  default     = null
 }
 
 variable "environment" {
@@ -27,22 +43,12 @@ variable "primary_region" {
   type        = string
 }
 
-variable "primary_region_zone" {
-  description = "Region zone where all services will be created."
-  type        = string
-}
-
 variable "secondary_region" {
   description = "Region where all services will be replicated."
   type        = string
 }
 
-variable "secondary_region_zone" {
-  description = "Region zone where all services will be replicated."
-  type        = string
-}
-
-variable "mpkhs_secondary_package_bucket_location" {
+variable "mpkhs_package_bucket_location" {
   description = "Location for multiparty keyhosting packages. Example: 'US'."
   type        = string
 }
@@ -50,6 +56,7 @@ variable "mpkhs_secondary_package_bucket_location" {
 variable "enable_audit_log" {
   description = "Enable Data Access Audit Logging for projects containing the WIP and Service Accounts."
   type        = bool
+  default     = false
 }
 
 ################################################################################
@@ -59,11 +66,13 @@ variable "enable_audit_log" {
 variable "alarms_enabled" {
   description = "Enable alarms for mpkhs services."
   type        = bool
+  default     = false
 }
 
 variable "alarms_notification_email" {
-  description = "Email to receive alarms for mpkhs services."
+  description = "Email to receive alarms for mpkhs services. Default to empty string so it is not required when alarms_enabled = false."
   type        = string
+  default     = ""
 }
 
 ################################################################################
@@ -78,6 +87,7 @@ variable "spanner_instance_config" {
 variable "spanner_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
+  default     = 1000
 }
 
 # Similar to Point-in-time recovery for AWS DynamoDB
@@ -86,7 +96,7 @@ variable "spanner_processing_units" {
 variable "key_db_retention_period" {
   description = "Duration to maintain table versioning for point-in-time recovery."
   type        = string
-  nullable    = false
+  default     = "7d"
 }
 
 ################################################################################
@@ -96,31 +106,43 @@ variable "key_db_retention_period" {
 variable "enable_domain_management" {
   description = "Manage domain SSL cert creation and routing for encryption key and key storage services."
   type        = bool
+  default     = false
 }
 
 variable "parent_domain_name" {
-  description = "Custom domain name to use with key hosting APIs."
+  description = <<-EOT
+    Custom domain name to register and use with key hosting APIs.
+    Default to empty string so it does not have to be populated when enable_domain_management = false".
+  EOT
   type        = string
+  default     = ""
 }
 
 variable "parent_domain_name_project" {
-  description = "Project ID where custom domain name hosted zone is located."
+  description = <<-EOT
+    Project ID where custom domain name hosted zone is located.
+    Default to empty string so it does not have to be populated when enable_domain_management = false".
+  EOT
   type        = string
+  default     = ""
 }
 
 variable "service_subdomain_suffix" {
   description = "When set, the value replaces `-$${var.environment}` as the service subdomain suffix."
   type        = string
+  default     = null
 }
 
 variable "encryption_key_service_subdomain" {
   description = "Subdomain to use with parent_domain_name to designate the encryption key service."
   type        = string
+  default     = "privatekeyservice"
 }
 
 variable "key_storage_service_subdomain" {
   description = "Subdomain to use with parent_domain_name to designate the key storage service."
   type        = string
+  default     = "keystorageservice"
 }
 
 ################################################################################
@@ -130,6 +152,7 @@ variable "key_storage_service_subdomain" {
 variable "cloudfunction_timeout_seconds" {
   description = "Number of seconds after which a function instance times out."
   type        = number
+  default     = 60
 }
 
 variable "encryption_key_service_zip" {
@@ -138,6 +161,7 @@ variable "encryption_key_service_zip" {
         Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
       EOT
   type        = string
+  default     = ""
 }
 
 variable "encryption_key_service_cloudfunction_memory_mb" {
@@ -148,11 +172,13 @@ variable "encryption_key_service_cloudfunction_memory_mb" {
 variable "encryption_key_service_cloudfunction_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
+  default     = 0
 }
 
 variable "encryption_key_service_cloudfunction_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
+  default     = 100
 }
 
 variable "key_storage_service_zip" {
@@ -161,6 +187,7 @@ variable "key_storage_service_zip" {
         Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
       EOT
   type        = string
+  default     = ""
 }
 
 variable "key_storage_service_cloudfunction_memory_mb" {
@@ -171,25 +198,29 @@ variable "key_storage_service_cloudfunction_memory_mb" {
 variable "key_storage_service_cloudfunction_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
+  default     = 0
 }
 
 variable "key_storage_service_cloudfunction_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
+  default     = 100
 }
 
 ################################################################################
-# Key Management Variables.
+# Workload Identity Pool Provider Variables.
 ################################################################################
 
 variable "allowed_wip_iam_principals" {
-  description = "List of allowed coordinator IAM principals."
+  description = "List of allowed IAM principals."
   type        = list(string)
+  default     = []
 }
 
 variable "allowed_wip_user_group" {
   description = "Google Group to manage allowed coordinator users. Deprecated - use allowed_wip_iam_principals instead."
   type        = string
+  default     = null
 }
 
 variable "allowed_operator_user_group" {
@@ -200,26 +231,31 @@ variable "allowed_operator_user_group" {
 variable "enable_attestation" {
   description = "Enable attestation requirement for this Workload Identity Pool. Assertion TEE vars required."
   type        = bool
+  default     = true
 }
 
 variable "assertion_tee_swname" {
   description = "Software Running TEE. Example: 'CONFIDENTIAL_SPACE'."
   type        = string
+  default     = "CONFIDENTIAL_SPACE"
 }
 
 variable "assertion_tee_support_attributes" {
   description = "Required support attributes of the Confidential Space image. Example: \"STABLE\", \"LATEST\". Empty for debug images."
   type        = list(string)
+  default     = ["STABLE"]
 }
 
 variable "assertion_tee_container_image_reference_list" {
   description = "List of acceptable image names TEE can run."
   type        = list(string)
+  default     = []
 }
 
 variable "assertion_tee_container_image_hash_list" {
   description = "List of acceptable binary hashes TEE can run."
   type        = list(string)
+  default     = []
 }
 
 ################################################################################
@@ -227,38 +263,45 @@ variable "assertion_tee_container_image_hash_list" {
 ################################################################################
 
 variable "keystorageservice_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
+  description = "Amount of time (in seconds) for alarm evaluation."
+  type        = number
+  default     = 360
 }
 
 variable "keystorageservice_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
-  type        = string
+  description = "Error rate greater than this to send alarm."
+  type        = number
+  default     = 10
 }
 
 variable "keystorageservice_cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm. Example: 9999."
-  type        = string
+  description = "Max execution time in ms to send alarm."
+  type        = number
+  default     = 10000
 }
 
 variable "keystorageservice_cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  description = "Cloud Function 5xx error rate greater than this to send alarm."
+  type        = number
+  default     = 10
 }
 
 variable "keystorageservice_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = string
+  description = "Load Balancer max latency to send alarm. Measured in milliseconds."
+  type        = number
+  default     = 10000
 }
 
 variable "keystorageservice_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  description = "Load Balancer 5xx error rate greater than this to send alarm."
+  type        = number
+  default     = 10
 }
 
 variable "keystorageservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
+  default     = 60
 }
 
 ################################################################################
@@ -266,36 +309,43 @@ variable "keystorageservice_alarm_duration_sec" {
 ################################################################################
 
 variable "encryptionkeyservice_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
+  description = "Amount of time (in seconds) for alarm evaluation."
+  type        = number
+  default     = 360
 }
 
 variable "encryptionkeyservice_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
-  type        = string
+  description = "Error rate greater than this to send alarm."
+  type        = number
+  default     = 10
 }
 
 variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm. Example: 9999."
-  type        = string
+  description = "Max execution time in ms to send alarm."
+  type        = number
+  default     = 10000
 }
 
 variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  description = "Cloud Function 5xx error rate greater than this to send alarm."
+  type        = number
+  default     = 10
 }
 
 variable "encryptionkeyservice_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = string
+  description = "Load Balancer max latency to send alarm. Measured in milliseconds."
+  type        = number
+  default     = 10000
 }
 
 variable "encryptionkeyservice_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  description = "Load Balancer 5xx error rate greater than this to send alarm."
+  type        = number
+  default     = 10
 }
 
 variable "encryptionkeyservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
+  default     = 60
 }

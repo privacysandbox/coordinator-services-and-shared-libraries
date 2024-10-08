@@ -21,9 +21,6 @@ cc_test(
     size = "small",
     timeout = "long",
     srcs = ["aws_cpio_lib_integration_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",

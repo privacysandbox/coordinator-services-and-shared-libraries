@@ -24,6 +24,8 @@
 #include <variant>
 #include <vector>
 
+#include "cc/core/telemetry/src/common/metric_utils.h"
+#include "cc/pbs/interface/metrics_def.h"
 #include "core/async_executor/mock/mock_async_executor.h"
 #include "core/common/concurrent_map/src/error_codes.h"
 #include "core/common/serialization/src/error_codes.h"
@@ -37,7 +39,9 @@
 #include "core/journal_service/mock/mock_journal_service_with_overrides.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
+#include "core/telemetry/mock/in_memory_metric_router.h"
 #include "core/test/utils/conditional_wait.h"
+#include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "pbs/budget_key/src/budget_key.h"
 #include "pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager_with_override.h"
 #include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_serialization.h"
@@ -119,11 +123,13 @@ using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
 static constexpr Uuid kDefaultUuid = {0, 0};
+static constexpr uint64_t kNanosecondsPerHour = 3600000000000;
 
 static shared_ptr<MockAggregateMetric> mock_aggregate_metric =
     make_shared<MockAggregateMetric>();
 
 namespace google::scp::pbs::test {
+
 TEST(BudgetKeyTimeframeManagerTest, InitShouldSubscribe) {
   auto budget_key_name = make_shared<string>("budget_key_name");
   auto bucket_name = make_shared<string>("bucket_name");
@@ -137,7 +143,7 @@ TEST(BudgetKeyTimeframeManagerTest, InitShouldSubscribe) {
 
   auto mock_journal_service = make_shared<MockJournalServiceWithOverrides>(
       bucket_name, partition_name, async_executor, blob_storage_provider,
-      mock_metric_client, mock_config_provider);
+      mock_metric_client, /*metric_router=*/nullptr, mock_config_provider);
   auto journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
@@ -146,8 +152,8 @@ TEST(BudgetKeyTimeframeManagerTest, InitShouldSubscribe) {
 
   BudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider,
-      mock_aggregate_metric);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider, mock_aggregate_metric);
 
   OnLogRecoveredCallback callback;
   EXPECT_EQ(mock_journal_service->GetSubscribersMap().Find(id, callback),
@@ -175,7 +181,8 @@ TEST(BudgetKeyTimeframeManagerTest, LoadWithEmptyReportingTimesIsDisallowed) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
       load_budget_key_timeframe_context;
@@ -205,7 +212,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
       load_budget_key_timeframe_context;
@@ -236,7 +244,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
       load_budget_key_timeframe_context;
@@ -273,7 +282,8 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateWithEmptyTimeframesIsDisallowed) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   EXPECT_EQ(
       budget_key_timeframe_manager.Update(update_budget_key_timeframe_context),
@@ -315,7 +325,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   EXPECT_EQ(
       budget_key_timeframe_manager.Update(update_budget_key_timeframe_context),
@@ -357,7 +368,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   EXPECT_EQ(
       budget_key_timeframe_manager.Update(update_budget_key_timeframe_context),
@@ -383,7 +395,8 @@ TEST(BudgetKeyTimeframeManagerTest, LoadKey) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   LoadBudgetKeyTimeframeRequest load_budget_key_request{
       .reporting_times = {reporting_time}};
 
@@ -428,7 +441,8 @@ TEST(BudgetKeyTimeframeManagerTest, RetryUntilLoaded) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   LoadBudgetKeyTimeframeRequest load_budget_key_request{
       .reporting_times = {reporting_time}};
 
@@ -489,7 +503,8 @@ TEST(BudgetKeyTimeframeManagerTest, RetryUntilLoadedAfterDeletion) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   LoadBudgetKeyTimeframeRequest load_budget_key_request{
       .reporting_times = {reporting_time}};
 
@@ -549,7 +564,8 @@ TEST(BudgetKeyTimeframeManagerTest, BecomeTheLoaderIfLoadingFails) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   LoadBudgetKeyTimeframeRequest load_budget_key_request{
       .reporting_times = {reporting_time}};
 
@@ -608,7 +624,8 @@ TEST(BudgetKeyTimeframeManagerTest, DoNotLoadIfKeyExists) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   LoadBudgetKeyTimeframeRequest load_budget_key_request{
       .reporting_times = {reporting_time}};
 
@@ -691,7 +708,8 @@ TEST(BudgetKeyTimeframeManagerTest, DoNotLoadIfKeysOfSameTimegroupExist) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   budget_key_timeframe_manager.load_timeframe_group_from_db_mock =
       [&](AsyncContext<LoadBudgetKeyTimeframeRequest,
@@ -868,7 +886,8 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateLogWithSingleTimeframe) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   mock_journal_service->log_mock =
       [&](AsyncContext<JournalLogRequest, JournalLogResponse>&
               journal_log_context) {
@@ -992,7 +1011,8 @@ TEST(BudgetKeyTimeframeManagerTest, UpdateLogWithMultipleTimeframes) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   mock_journal_service->log_mock =
       [&](AsyncContext<JournalLogRequest, JournalLogResponse>&
               journal_log_context) {
@@ -1093,7 +1113,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackFailure) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   Timestamp reporting_time = 10;
   auto time_group = Utils::GetTimeGroup(reporting_time);
@@ -1170,7 +1191,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackRetry) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   Timestamp reporting_time = 10;
   auto time_group = Utils::GetTimeGroup(reporting_time);
@@ -1246,7 +1268,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackSuccessNoEntry) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   AsyncContext<UpdateBudgetKeyTimeframeRequest,
                UpdateBudgetKeyTimeframeResponse>
       update_budget_key_timeframe_context;
@@ -1315,7 +1338,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogUpdateCallbackSuccessWithEntry) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   Timestamp reporting_time = 10;
   auto time_group = Utils::GetTimeGroup(reporting_time);
@@ -1390,7 +1414,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   // Both belong to same time group
   Timestamp reporting_time1 = nanoseconds(10).count();
@@ -1501,7 +1526,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnJournalServiceRecoverCallbackInvalidLog) {
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   auto bytes_buffer = make_shared<BytesBuffer>(1);
   EXPECT_EQ(budget_key_timeframe_manager.OnJournalServiceRecoverCallback(
                 bytes_buffer, kDefaultUuid),
@@ -1525,7 +1551,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   BudgetKeyTimeframeManagerLog budget_key_timeframe_manager_log;
   budget_key_timeframe_manager_log.mutable_version()->set_major(10);
   budget_key_timeframe_manager_log.mutable_version()->set_minor(2);
@@ -1557,7 +1584,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   BudgetKeyTimeframeManagerLog budget_key_timeframe_manager_log;
   budget_key_timeframe_manager_log.mutable_version()->set_major(1);
   budget_key_timeframe_manager_log.mutable_version()->set_minor(0);
@@ -1592,7 +1620,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   auto time_group = 10;
 
@@ -1646,7 +1675,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   auto time_group = 10;
 
@@ -1734,7 +1764,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   auto time_group = 1234;
   auto budget_key_timeframe_group =
@@ -1807,7 +1838,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   BudgetKeyTimeframeManagerLog budget_key_timeframe_manager_log;
   budget_key_timeframe_manager_log.mutable_version()->set_major(1);
   budget_key_timeframe_manager_log.mutable_version()->set_minor(0);
@@ -1899,7 +1931,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   BudgetKeyTimeframeManagerLog budget_key_timeframe_manager_log;
   budget_key_timeframe_manager_log.mutable_version()->set_major(1);
@@ -1967,7 +2000,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   auto time_group = 10;
 
@@ -2031,7 +2065,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   auto time_group = 10;
 
@@ -2116,7 +2151,8 @@ TEST(BudgetKeyTimeframeManagerTest,
       make_shared<MockNoSQLDatabaseProvider>();
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
   BudgetKeyTimeframeManagerLog budget_key_timeframe_manager_log;
   budget_key_timeframe_manager_log.mutable_version()->set_major(1);
   budget_key_timeframe_manager_log.mutable_version()->set_minor(0);
@@ -2267,7 +2303,8 @@ TEST(BudgetKeyTimeframeManagerTest, LoadTimeframeGroupFromDBResults) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   budget_key_timeframe_manager.Init();
 
@@ -2341,7 +2378,8 @@ TEST(BudgetKeyTimeframeManagerTest,
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   vector<ExecutionResult> results = {
       FailureExecutionResult(123), RetryExecutionResult(1234),
@@ -2451,7 +2489,8 @@ TEST(BudgetKeyTimeframeManagerTest,
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   vector<string> token_attr_names = {"Token", "TokenCount", "TokenCount",
                                      "TokenCount", "TokenCount"};
@@ -2586,7 +2625,8 @@ TEST(BudgetKeyTimeframeManagerTest,
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   vector<string> token_attr_names = {"Token", "TokenCount", "TokenCount",
                                      "TokenCount", "TokenCount"};
@@ -2746,7 +2786,8 @@ TEST(BudgetKeyTimeframeManagerTest,
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   vector<string> token_attr_names = {"TokenCount"};
   vector<string> token_attr_values = {
@@ -2884,7 +2925,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogLoadCallbackFailure) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   bool called = false;
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
@@ -2933,7 +2975,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnLogLoadCallbackSuccess) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   bool called = false;
   AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
@@ -2982,7 +3025,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnStoreTimeframeGroupToDBCallbackFailure) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>
       upsert_database_item_context;
@@ -3028,7 +3072,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnStoreTimeframeGroupToDBCallbackSuccess) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   AsyncContext<UpsertDatabaseItemRequest, UpsertDatabaseItemResponse>
       upsert_database_item_context;
@@ -3105,7 +3150,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnBeforeGarbageCollection) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   bool is_called = false;
   mock_nosql_database_provider->upsert_database_item_mock =
@@ -3182,7 +3228,8 @@ TEST(BudgetKeyTimeframeManagerTest,
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   mock_journal_service->log_mock =
       [&](AsyncContext<JournalLogRequest, JournalLogResponse>&
@@ -3229,7 +3276,8 @@ TEST(BudgetKeyTimeframeManagerTest, OnRemoveEntryFromCacheLogged) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   AsyncContext<JournalLogRequest, JournalLogResponse> journal_context;
 
@@ -3270,7 +3318,8 @@ TEST(BudgetKeyTimeframeManagerTest, Checkpoint) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   auto logs = make_shared<list<CheckpointLog>>();
   EXPECT_EQ(budget_key_timeframe_manager.Checkpoint(logs),
@@ -3318,7 +3367,8 @@ TEST(BudgetKeyTimeframeManagerTest, Checkpoint) {
 
   MockBudgetKeyTimeframeManager recovery_budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   auto it = logs->begin();
   auto bytes_buffer = make_shared<BytesBuffer>(it->bytes_buffer);
@@ -3433,7 +3483,8 @@ TEST(BudgetKeyTimeframeManagerTest, CanUnload) {
 
   MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
       budget_key_name, id, async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+      nosql_database_provider, mock_metric_client, /*metric_router=*/nullptr,
+      mock_config_provider);
 
   EXPECT_SUCCESS(budget_key_timeframe_manager.CanUnload());
 
@@ -3569,4 +3620,190 @@ TEST(BudgetKeyTimeframeManagerTest, PopulateLoadBudgetKeyTimeframeResponse) {
     EXPECT_EQ(response->budget_key_frames[1], budget_key_timeframe1);
   }
 }
+
+TEST(BudgetKeyTimeframeManagerTest, OTelReturnsCorrectScheduledBudgetKeyLoads) {
+  auto mock_journal_service = std::make_shared<MockJournalService>();
+  auto mock_metric_client = std::make_shared<MockMetricClient>();
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  mock_config_provider->Set(kBudgetKeyTableName, std::string("PBS_BudgetKeys"));
+  auto journal_service =
+      std::static_pointer_cast<JournalServiceInterface>(mock_journal_service);
+  auto mock_async_executor = std::make_shared<MockAsyncExecutor>();
+  auto async_executor =
+      std::static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
+  auto budget_key_name = std::make_shared<std::string>("budget_key_name");
+  Uuid id = Uuid::GenerateUuid();
+  auto mock_nosql_database_provider =
+      std::make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+  std::shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
+      std::static_pointer_cast<NoSQLDatabaseProviderInterface>(
+          mock_nosql_database_provider);
+
+  MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
+      budget_key_name, id, async_executor, journal_service,
+      nosql_database_provider, mock_metric_client, metric_router,
+      mock_config_provider);
+  budget_key_timeframe_manager.Init();
+
+  TimeBucket reporting_time = 1660498765350482296;
+  TimeGroup time_group = Utils::GetTimeGroup(reporting_time);
+  std::shared_ptr<BudgetKeyTimeframeGroup> budget_key_timeframe_group =
+      std::make_shared<BudgetKeyTimeframeGroup>(time_group);
+  AsyncContext<LoadBudgetKeyTimeframeRequest, LoadBudgetKeyTimeframeResponse>
+      load_budget_key_timeframe_context;
+  load_budget_key_timeframe_context.request =
+      std::make_shared<LoadBudgetKeyTimeframeRequest>();
+  load_budget_key_timeframe_context.request->reporting_times = {reporting_time};
+
+  budget_key_timeframe_manager.LoadTimeframeGroupFromDB(
+      load_budget_key_timeframe_context, budget_key_timeframe_group);
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      budget_key_scheduled_load_metric_point_data = core::GetMetricPointData(
+          google::scp::pbs::kMetricNameBudgetKeyScheduledLoads, {}, data);
+  ASSERT_TRUE(budget_key_scheduled_load_metric_point_data.has_value());
+
+  auto budget_key_scheduled_load_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          budget_key_scheduled_load_metric_point_data.value()));
+  EXPECT_EQ(std::get<int64_t>(budget_key_scheduled_load_sum_point_data.value_),
+            1);
+}
+
+TEST(BudgetKeyTimeframeManagerTest,
+     OTelReturnsCorrectScheduledBudgetKeyUnloads) {
+  auto mock_journal_service = std::make_shared<MockJournalService>();
+  auto mock_metric_client = std::make_shared<MockMetricClient>();
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  mock_config_provider->Set(kBudgetKeyTableName, std::string("PBS_BudgetKeys"));
+  auto journal_service =
+      std::static_pointer_cast<JournalServiceInterface>(mock_journal_service);
+  auto mock_async_executor = std::make_shared<MockAsyncExecutor>();
+  auto async_executor =
+      std::static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
+  auto budget_key_name = std::make_shared<std::string>("budget_key_name");
+  Uuid id = Uuid::GenerateUuid();
+  auto mock_nosql_database_provider =
+      std::make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+  std::shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
+      std::static_pointer_cast<NoSQLDatabaseProviderInterface>(
+          mock_nosql_database_provider);
+
+  MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
+      budget_key_name, id, async_executor, journal_service,
+      nosql_database_provider, mock_metric_client, metric_router,
+      mock_config_provider);
+  budget_key_timeframe_manager.Init();
+
+  Timestamp reporting_time = 172454490000000000;
+  auto time_group = Utils::GetTimeGroup(reporting_time);
+  auto timeframe_group = std::make_shared<BudgetKeyTimeframeGroup>(time_group);
+  for (auto i = 0;
+       i < google::scp::pbs::budget_key_timeframe_manager::kHoursPerDay; ++i) {
+    auto time_bucket =
+        Utils::GetTimeBucket(reporting_time + i * kNanosecondsPerHour);
+
+    auto timeframe = std::make_shared<BudgetKeyTimeframe>(time_bucket);
+    timeframe->active_token_count = 1;
+    timeframe->token_count = 23;
+    timeframe->active_transaction_id = core::common::kZeroUuid;
+    auto pair = std::make_pair(time_bucket, timeframe);
+
+    timeframe_group->budget_key_timeframes.Insert(pair, timeframe);
+  }
+
+  bool called = false;
+  auto newer_should_delete = [&](bool should_delete) {
+    EXPECT_EQ(should_delete, false);
+    called = true;
+  };
+
+  budget_key_timeframe_manager.OnBeforeGarbageCollection(
+      time_group, timeframe_group, newer_should_delete);
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      budget_key_scheduled_unload_metric_point_data = core::GetMetricPointData(
+          google::scp::pbs::kMetricNameBudgetKeyScheduledUnloads, {}, data);
+  ASSERT_TRUE(budget_key_scheduled_unload_metric_point_data.has_value());
+
+  auto budget_key_scheduled_unload_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          budget_key_scheduled_unload_metric_point_data.value()));
+  EXPECT_EQ(
+      std::get<int64_t>(budget_key_scheduled_unload_sum_point_data.value_), 1);
+}
+
+TEST(BudgetKeyTimeframeManagerTest, OTelReturnsCorrectBudgetKeyUnloads) {
+  auto mock_journal_service = std::make_shared<MockJournalService>();
+  auto mock_metric_client = std::make_shared<MockMetricClient>();
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
+  auto mock_config_provider = std::make_shared<MockConfigProvider>();
+  mock_config_provider->Set(kBudgetKeyTableName, std::string("PBS_BudgetKeys"));
+  auto journal_service =
+      std::static_pointer_cast<JournalServiceInterface>(mock_journal_service);
+  auto mock_async_executor = std::make_shared<MockAsyncExecutor>();
+  auto async_executor =
+      std::static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
+  auto budget_key_name = std::make_shared<std::string>("budget_key_name");
+  Uuid id = Uuid::GenerateUuid();
+  auto mock_nosql_database_provider =
+      std::make_shared<MockNoSQLDatabaseProviderNoOverrides>();
+  std::shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
+      std::static_pointer_cast<NoSQLDatabaseProviderInterface>(
+          mock_nosql_database_provider);
+
+  MockBudgetKeyTimeframeManager budget_key_timeframe_manager(
+      budget_key_name, id, async_executor, journal_service,
+      nosql_database_provider, mock_metric_client, metric_router,
+      mock_config_provider);
+  budget_key_timeframe_manager.Init();
+
+  Timestamp reporting_time = 172454490000000000;
+  auto time_group = Utils::GetTimeGroup(reporting_time);
+  auto timeframe_group = std::make_shared<BudgetKeyTimeframeGroup>(time_group);
+  for (auto i = 0;
+       i < google::scp::pbs::budget_key_timeframe_manager::kHoursPerDay; ++i) {
+    auto time_bucket =
+        Utils::GetTimeBucket(reporting_time + i * kNanosecondsPerHour);
+
+    auto timeframe = std::make_shared<BudgetKeyTimeframe>(time_bucket);
+    timeframe->active_token_count = 1;
+    timeframe->token_count = 23;
+    timeframe->active_transaction_id = core::common::kZeroUuid;
+    auto pair = std::make_pair(time_bucket, timeframe);
+
+    timeframe_group->budget_key_timeframes.Insert(pair, timeframe);
+  }
+
+  bool called = false;
+  auto newer_should_delete = [&](bool should_delete) {
+    EXPECT_EQ(should_delete, false);
+    called = true;
+  };
+
+  budget_key_timeframe_manager.OnBeforeGarbageCollection(
+      time_group, timeframe_group, newer_should_delete);
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router->GetExportedData();
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      budget_key_unload_metric_point_data = core::GetMetricPointData(
+          google::scp::pbs::kMetricNameBudgetKeyScheduledUnloads, {}, data);
+  ASSERT_TRUE(budget_key_unload_metric_point_data.has_value());
+
+  auto budget_key_unload_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          budget_key_unload_metric_point_data.value()));
+  EXPECT_EQ(std::get<int64_t>(budget_key_unload_sum_point_data.value_), 1);
+}
+
 }  // namespace google::scp::pbs::test

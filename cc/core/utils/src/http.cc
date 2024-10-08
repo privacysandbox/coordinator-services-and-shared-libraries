@@ -23,11 +23,9 @@
 #include <curl/curl.h>
 
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
+#include "cc/core/utils/src/error_codes.h"
 #include "cc/public/core/interface/execution_result.h"
-
-#include "error_codes.h"
 
 using std::string;
 
@@ -59,5 +57,22 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
 
   curl_easy_cleanup(curl_handle);
   return absl::StrCat(*request.path, "?", escaped_query);
+}
+
+ExecutionResultOr<absl::string_view> ExtractRequestClaimedIdentity(
+    const HttpHeaders& request_headers) noexcept {
+  if (request_headers.empty()) {
+    return core::FailureExecutionResult(
+        core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+  }
+
+  auto header_iter =
+      request_headers.find(std::string(core::kClaimedIdentityHeader));
+
+  if (header_iter == request_headers.end()) {
+    return core::FailureExecutionResult(
+        core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+  }
+  return header_iter->second;
 }
 }  // namespace google::scp::core::utils

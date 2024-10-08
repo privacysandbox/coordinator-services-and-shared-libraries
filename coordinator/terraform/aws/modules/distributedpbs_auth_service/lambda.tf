@@ -46,7 +46,7 @@ resource "aws_lambda_function" "lambda" {
   role             = module.lambda_roles.trustedparty_lambda_role_arn
   handler          = "auth_lambda_handler.lambda_handler"
   source_code_hash = filebase64sha256("${var.auth_lambda_handler_path}")
-  runtime          = "python3.8"
+  runtime          = "python3.9"
 
   environment {
     variables = {

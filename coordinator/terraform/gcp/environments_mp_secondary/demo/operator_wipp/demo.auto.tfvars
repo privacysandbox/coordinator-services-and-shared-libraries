@@ -19,7 +19,7 @@ project_id  = "<project id>"
 
 key_encryption_key_id = "<output from mpkhs_secondary>"
 
-allowed_wip_iam_principals = "group:<output from allowedoperatorgroup in secondary coordinator>"
+allowed_wip_iam_principals = ["group:<output from allowedoperatorgroup in secondary coordinator>"]
 
 assertion_tee_swname = "CONFIDENTIAL_SPACE"
 

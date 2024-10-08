@@ -63,6 +63,11 @@ variable "data_bucket_name" {
   type        = string
 }
 
+variable "data_bucket_versioning" {
+  description = "The versioning option for data bucket. Default is true (enabled)."
+  type        = bool
+}
+
 variable "data_bucket_location" {
   description = "The bucket location for data bucket."
   type        = string

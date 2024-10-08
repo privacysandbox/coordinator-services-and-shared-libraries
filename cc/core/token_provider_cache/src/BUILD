@@ -24,9 +24,6 @@ cc_library(
             "**/*.cc",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/http2_client/src:http2_client_lib",

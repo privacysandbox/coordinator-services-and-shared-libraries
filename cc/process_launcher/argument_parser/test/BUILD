@@ -20,9 +20,6 @@ cc_test(
     name = "json_arg_parser_test",
     size = "small",
     srcs = ["json_arg_parser_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",

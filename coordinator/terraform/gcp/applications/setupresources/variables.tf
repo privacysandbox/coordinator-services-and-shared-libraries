@@ -17,16 +17,6 @@ variable "project_id" {
   type        = string
 }
 
-variable "primary_region" {
-  description = "Region where all services will be created."
-  type        = string
-}
-
-variable "primary_region_zone" {
-  description = "Region zone where all services will be created."
-  type        = string
-}
-
 variable "domain_name" {
   description = "Domain name of zone for which to create hosted zone."
   type        = string

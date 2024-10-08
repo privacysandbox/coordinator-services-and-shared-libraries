@@ -23,9 +23,6 @@ cc_test(
         "grpc_auth_config_test.cc",
         "grpc_id_token_authenticator_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",

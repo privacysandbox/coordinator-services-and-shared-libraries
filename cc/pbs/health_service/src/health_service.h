@@ -64,12 +64,12 @@ class HealthService : public core::ServiceInterface {
   core::ExecutionResult Stop() noexcept override;
 
  protected:
-  /// Callback to be used with an OTel ObservableInstrument.
+  // Callback to be used with an OTel ObservableInstrument.
   static void ObserveMemoryUsageCallback(
       opentelemetry::metrics::ObserverResult observer_result,
       absl::Nonnull<HealthService*> self_ptr);
 
-  /// Callback to be used with an OTel ObservableInstrument.
+  // Callback to be used with an OTel ObservableInstrument.
   static void ObserveFileSystemStorageUsageCallback(
       opentelemetry::metrics::ObserverResult observer_result,
       absl::Nonnull<HealthService*> self_ptr);
@@ -135,34 +135,33 @@ class HealthService : public core::ServiceInterface {
   core::ExecutionResultOr<int> GetFileSystemStorageUsagePercentage(
       const std::string& directory) noexcept;
 
-  /// An instance of the http server.
+  // An instance of the http server.
   std::shared_ptr<core::HttpServerInterface> http_server_;
-  /// An instance of the config provider.
+  // An instance of the config provider.
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
-  /// Async executor instance.
+  // Async executor instance.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
-  /// Metric client instance for custom metric recording.
+  // Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-  /// The simple metric instance for instance memory usage.
+  // The simple metric instance for instance memory usage.
   std::shared_ptr<cpio::SimpleMetricInterface> instance_memory_usage_metric_;
-  /// The simple metric instance for instance FS usage.
+  // The simple metric instance for instance FS usage.
   std::shared_ptr<cpio::SimpleMetricInterface>
       instance_filesystem_storage_usage_metric_;
-  /// Metric should not be pushed too quickly, so keep track of the last push.
+  // Metric should not be pushed too quickly, so keep track of the last push.
   std::chrono::nanoseconds last_metric_push_steady_ns_timestamp_;
-  /// The OpenTelemetry Meter used for creating and managing metrics.
+  // The OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
-  /// The OpenTelemetry Instrument for instance memory usage.
+  // The OpenTelemetry Instrument for instance memory usage.
   std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
       memory_usage_instrument_;
-  /// The OpenTelemetry Instrument for instance file system storage usage.
+  // The OpenTelemetry Instrument for instance file system storage usage.
   std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
       filesystem_storage_usage_instrument_;
 
  private:
-  /// Initialize MetricClient.
-  ///
-  /// TODO: Remove MetricClient once OTel reaches feature parity.
+  // Initialize MetricClient.
+  //
   core::ExecutionResult InitMetricClientInterface();
 };
 

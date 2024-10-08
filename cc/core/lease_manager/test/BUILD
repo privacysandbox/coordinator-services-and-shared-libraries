@@ -20,9 +20,6 @@ cc_test(
     srcs = [
         "lease_manager_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -46,9 +43,6 @@ cc_test(
         "lease_liveness_enforcer_test.cc",
         "lease_manager_v2_test.cc",
         "lease_refresher_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

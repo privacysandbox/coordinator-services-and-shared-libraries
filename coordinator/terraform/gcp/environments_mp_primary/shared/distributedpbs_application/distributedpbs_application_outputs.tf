@@ -64,3 +64,8 @@ output "pbs_spanner_instance_name" {
   value       = module.distributedpbs_application.pbs_spanner_instance_name
   description = "Name of the PBS Spanner instance."
 }
+
+output "pbs_alternate_instance_domain_record_data" {
+  value       = module.distributedpbs_application.pbs_alternate_instance_domain_record_data
+  description = "Alternate DNS record data."
+}

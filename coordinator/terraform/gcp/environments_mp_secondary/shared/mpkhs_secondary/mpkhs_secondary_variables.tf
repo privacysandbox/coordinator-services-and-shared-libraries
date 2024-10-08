@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,18 +43,8 @@ variable "primary_region" {
   type        = string
 }
 
-variable "primary_region_zone" {
-  description = "Region zone where all services will be created."
-  type        = string
-}
-
 variable "secondary_region" {
   description = "Region where all services will be replicated."
-  type        = string
-}
-
-variable "secondary_region_zone" {
-  description = "Region zone where all services will be replicated."
   type        = string
 }
 
@@ -90,7 +80,7 @@ variable "alarms_notification_email" {
 ################################################################################
 
 variable "spanner_instance_config" {
-  description = "Config value for the Spanner Instance"
+  description = "Config value for the Spanner Instance."
   type        = string
 }
 
@@ -274,44 +264,44 @@ variable "assertion_tee_container_image_hash_list" {
 
 variable "keystorageservice_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation."
-  type        = string
-  default     = "360"
+  type        = number
+  default     = 360
 }
 
 variable "keystorageservice_cloudfunction_error_threshold" {
   description = "Error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "keystorageservice_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "keystorageservice_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "keystorageservice_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "keystorageservice_lb_5xx_threshold" {
   description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "keystorageservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
-  default     = "60"
+  default     = 60
 }
 
 ################################################################################
@@ -320,42 +310,42 @@ variable "keystorageservice_alarm_duration_sec" {
 
 variable "encryptionkeyservice_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation."
-  type        = string
-  default     = "360"
+  type        = number
+  default     = 360
 }
 
 variable "encryptionkeyservice_cloudfunction_error_threshold" {
   description = "Error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "encryptionkeyservice_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = string
+  type        = number
   default     = 10000
 }
 
 variable "encryptionkeyservice_lb_5xx_threshold" {
   description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = string
+  type        = number
   default     = 10
 }
 
 variable "encryptionkeyservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
-  default     = "60"
+  default     = 60
 }

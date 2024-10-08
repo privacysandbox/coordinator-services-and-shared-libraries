@@ -14,6 +14,7 @@
 
 load("@py3_privacybudget_gcp_pbs_auth_handler_test_deps//:requirements.bzl", "requirement")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
+load("@rules_pkg//:pkg.bzl", "pkg_zip")
 load("@rules_python//python:defs.bzl", "py_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -34,10 +35,18 @@ py_test(
 )
 
 pkg_files(
-    name = "auth_cloud_function_handler",
+    name = "auth_cloud_function_files",
     srcs = [
         "auth_cloud_function_handler.py",
         "config/requirements.txt",
     ],
-    prefix = "dist/pbs_auth_handler",
+    renames = {"auth_cloud_function_handler.py": "main.py"},
+)
+
+pkg_zip(
+    name = "auth_cloud_function_handler",
+    srcs = [
+        ":auth_cloud_function_files",
+    ],
+    package_dir = ".",
 )

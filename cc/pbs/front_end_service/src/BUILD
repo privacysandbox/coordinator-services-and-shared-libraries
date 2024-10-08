@@ -69,9 +69,6 @@ cc_library(
     name = "front_end_service",
     srcs = ["front_end_service.cc"],
     hdrs = ["front_end_service.h"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],
@@ -100,9 +97,6 @@ cc_library(
     name = "front_end_service_v2",
     srcs = ["front_end_service_v2.cc"],
     hdrs = ["front_end_service_v2.h"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],

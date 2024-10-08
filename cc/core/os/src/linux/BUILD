@@ -23,9 +23,6 @@ cc_library(
         "system_resource_info_provider_linux.cc",
         "system_resource_info_provider_linux.h",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

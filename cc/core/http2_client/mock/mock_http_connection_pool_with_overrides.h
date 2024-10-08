@@ -21,6 +21,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/http2_client/src/http_connection_pool.h"
@@ -31,8 +32,10 @@ class MockHttpConnectionPool : public HttpConnectionPool {
  public:
   MockHttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      std::shared_ptr<core::MetricRouter> metric_router,
       size_t max_connection_per_host)
-      : HttpConnectionPool(async_executor, max_connection_per_host) {}
+      : HttpConnectionPool(async_executor, metric_router,
+                           max_connection_per_host) {}
 
   std::shared_ptr<HttpConnection> CreateHttpConnection(
       std::string host, std::string service, bool is_https,

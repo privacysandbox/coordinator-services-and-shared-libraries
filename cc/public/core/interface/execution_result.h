@@ -17,6 +17,7 @@
 #ifndef SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
 #define SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
 
+#include <string>
 #include <utility>
 #include <variant>
 
@@ -175,6 +176,8 @@ enum class ExecutionStatus {
 
 /// Convert ExecutionStatus to Proto.
 core::common::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status);
+
+std::string ExecutionStatusToString(const ExecutionStatus& status);
 
 /// Status code returned from operation execution.
 typedef uint64_t StatusCode;

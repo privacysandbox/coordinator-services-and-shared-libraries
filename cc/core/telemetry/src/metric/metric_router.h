@@ -16,9 +16,13 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "absl/synchronization/mutex.h"
 #include "cc/core/interface/config_provider_interface.h"
+#include "core/common/global_logger/src/global_logger.h"
+#include "core/common/uuid/src/uuid.h"
+#include "core/telemetry/src/metric/error_codes.h"
 #include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/meter_provider.h"
@@ -37,27 +41,10 @@ namespace google::scp::core {
 
 class MetricRouter {
  public:
-  // OTel metric Instruments owned by MetricRouter. This is needed when a PBS
-  // component cannot own these Instruments itself due to object lifetime
-  // constraints.
-  struct MetricInstruments {
-    // TransactionManager
-    //
-    // The OpenTelemetry Instrument for the number of active transactions.
-    //
-    // Reports the maximum number of concurrent active transactions since
-    // metric is last observed, because the real-time number of active
-    // transactions fluctuates too quickly to be useful.
-    std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
-        active_transactions_instrument;
-
-    // The OpenTelemetry Instrument for the number of received transactions.
-    std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-        received_transactions_instrument;
-
-    // The OpenTelemetry Instrument for the number of finished transactions.
-    std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-        finished_transactions_instrument;
+  enum class InstrumentType {
+    kCounter,
+    kHistogram,
+    kGauge,
   };
 
   // Create a MetricRouter with a Periodic Reader, given a Resource and a
@@ -68,17 +55,29 @@ class MetricRouter {
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
 
-  // TransactionManager
+  std::shared_ptr<opentelemetry::metrics::Meter> GetOrCreateMeter(
+      absl::string_view service_name, absl::string_view version = "1.0",
+      absl::string_view schema_url = "");
+
+  std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>
+  GetOrCreateSyncInstrument(
+      absl::string_view metric_name,
+      absl::AnyInvocable<
+          std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>()>
+          instrument_factory);
+
   std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
-  GetActiveTransactionsInstrument();
+  GetOrCreateObservableInstrument(
+      absl::string_view metric_name,
+      absl::AnyInvocable<
+          std::shared_ptr<opentelemetry::metrics::ObservableInstrument>()>
+          instrument_factory);
 
-  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-  GetReceivedTransactionsInstrument();
-
-  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-  GetFinishedTransactionsInstrument();
-
-  std::shared_ptr<opentelemetry::metrics::Meter> transaction_manager_meter_;
+  ExecutionResult CreateHistogramViewForInstrument(
+      absl::string_view metric_name, absl::string_view view_name,
+      InstrumentType instrument_type, const std::vector<double>& boundaries,
+      absl::string_view version = "1.0", absl::string_view schema = "",
+      absl::string_view view_description = "", absl::string_view unit = "");
 
  protected:
   MetricRouter() = default;
@@ -88,17 +87,26 @@ class MetricRouter {
       opentelemetry::sdk::resource::Resource resource,
       std::shared_ptr<opentelemetry::sdk::metrics::MetricReader> metric_reader);
 
-  void SetupTransactionManagerMetricInstruments();
-
-  MetricInstruments metric_instruments_;
-
-  mutable absl::Mutex metric_instruments_mutex_;
-
  private:
   static std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>
   CreatePeriodicReader(
       std::shared_ptr<ConfigProviderInterface> config_provider,
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
+
+  absl::flat_hash_map<absl::string_view,
+                      std::shared_ptr<opentelemetry::metrics::Meter>>
+      meters_;
+  absl::flat_hash_map<
+      absl::string_view,
+      std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>>
+      synchronous_instruments_;
+  absl::flat_hash_map<
+      absl::string_view,
+      std::shared_ptr<opentelemetry::metrics::ObservableInstrument>>
+      asynchronous_instruments_;
+
+  mutable absl::Mutex metric_mutex_;
 };
+
 }  // namespace google::scp::core

@@ -274,15 +274,16 @@ void CheckpointService::CreateComponents() noexcept {
   io_async_executor_ = make_shared<AsyncExecutor>(8, 100000);
   journal_service_ = make_shared<JournalService>(
       bucket_name_, partition_name_, async_executor_, blob_storage_provider_,
-      metric_client_, config_provider_);
+      metric_client_, metric_router_, config_provider_);
   budget_key_provider_ = make_shared<BudgetKeyProvider>(
-      async_executor_, journal_service_, metric_client_, config_provider_);
+      async_executor_, journal_service_, metric_client_, metric_router_,
+      config_provider_);
   transaction_command_serializer_ = make_shared<TransactionCommandSerializer>(
       async_executor_, budget_key_provider_);
   transaction_manager_ = make_shared<TransactionManager>(
       async_executor_, transaction_command_serializer_, journal_service_,
-      remote_transaction_manager_, 100000, metric_client_,
-      /*metric_router=*/nullptr, config_provider_, partition_id_);
+      remote_transaction_manager_, 100000, metric_client_, metric_router_,
+      config_provider_, partition_id_);
 }
 
 ExecutionResult CheckpointService::Bootstrap() noexcept {

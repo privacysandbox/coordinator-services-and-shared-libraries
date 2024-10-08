@@ -20,9 +20,6 @@ cc_test(
     name = "cancellable_thread_task_test",
     size = "small",
     srcs = ["cancellable_thread_task_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/cancellable_thread_task/src:cancellable_thread_task_lib",

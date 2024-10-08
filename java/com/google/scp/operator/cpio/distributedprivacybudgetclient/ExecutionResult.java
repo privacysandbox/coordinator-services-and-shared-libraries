@@ -17,8 +17,10 @@
 package com.google.scp.operator.cpio.distributedprivacybudgetclient;
 
 import com.google.auto.value.AutoValue;
+import com.google.errorprone.annotations.Immutable;
 
 /** Operation's execution result with status and status code. */
+@Immutable
 @AutoValue
 public abstract class ExecutionResult {
 

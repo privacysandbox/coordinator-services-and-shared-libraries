@@ -26,9 +26,6 @@ cc_library(
             "type_def.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         ":type_def",
         "//cc:cc_base_include_dir",
@@ -43,9 +40,6 @@ cc_library(
         [
             "type_def.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",

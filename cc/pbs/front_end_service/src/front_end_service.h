@@ -363,8 +363,6 @@ class FrontEndService : public FrontEndServiceInterface {
       client_error_counter_;
   std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
       server_error_counter_;
-  /// @brief enables use of adtech site value as authorized_domain.
-  bool adtech_site_authorized_domain_enabled_;
 };
 
 }  // namespace google::scp::pbs

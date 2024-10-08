@@ -174,4 +174,7 @@ DEFINE_ERROR_CODE(SC_HTTP2_CLIENT_HTTP_REQUEST_RESPONSE_STATUS_UNKNOWN,
 DEFINE_ERROR_CODE(SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY, SC_HTTP2_CLIENT,
                   0x0035, "Http connection is not ready",
                   HttpStatusCode::INTERNAL_SERVER_ERROR);
+DEFINE_ERROR_CODE(SC_HTTP2_CLIENT_REQUEST_HEADER_NOT_FOUND, SC_HTTP2_CLIENT,
+                  0x00036, "Request header not found.",
+                  HttpStatusCode::BAD_REQUEST)
 }  // namespace google::scp::core::errors

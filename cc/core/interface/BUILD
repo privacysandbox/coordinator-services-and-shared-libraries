@@ -33,9 +33,6 @@ cc_library(
             "service_interface.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         ":async_context_lib",
         ":service_interface_lib",
@@ -53,9 +50,6 @@ cc_library(
     srcs = [
         "service_interface.h",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
     ],
@@ -67,9 +61,6 @@ cc_library(
         [
             "logger_interface.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         ":service_interface_lib",
         "//cc:cc_base_include_dir",
@@ -83,9 +74,6 @@ cc_library(
         [
             "async_context.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/global_logger/src:global_logger_lib",
@@ -99,9 +87,6 @@ cc_library(
         [
             "streaming_context.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         ":async_context_lib",
         "//cc:cc_base_include_dir",
@@ -117,9 +102,6 @@ cc_library(
         [
             "type_def.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/proto:core_common_proto_lib",
@@ -134,9 +116,6 @@ cc_library(
             "errors.cc",
             "errors.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/public/core/interface:execution_result",

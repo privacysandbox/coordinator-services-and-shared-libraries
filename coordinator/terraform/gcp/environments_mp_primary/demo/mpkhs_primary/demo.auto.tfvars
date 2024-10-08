@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-environment                              = "<environment name>"
-project_id                               = "<project id>"
-primary_region                           = "us-central1"
-primary_region_zone                      = "us-central1-c"
-secondary_region                         = "us-west3"
-key_generation_allow_stopping_for_update = true
+environment      = "<environment name>"
+project_id       = "<project id>"
+primary_region   = "us-central1"
+secondary_region = "us-west3"
 
 enable_domain_management   = true
 parent_domain_name         = "<domain name from domainrecordsetup>"

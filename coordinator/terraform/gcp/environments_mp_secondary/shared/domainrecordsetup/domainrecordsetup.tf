@@ -21,9 +21,7 @@
 # be modified for environment-specific customization.
 
 module "setupresources" {
-  source              = "../../../applications/setupresources"
-  project_id          = var.project
-  primary_region      = var.primary_region
-  primary_region_zone = var.primary_region_zone
-  domain_name         = var.domain_name
+  source      = "../../../applications/setupresources"
+  project_id  = var.project
+  domain_name = var.domain_name
 }

@@ -24,6 +24,7 @@ java_test(
         "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
         "//java/external:google_truth",
         "//java/external:mockito",
+        "//java/external:test_parameter_injector",
     ],
 )
 
@@ -45,6 +46,24 @@ java_test(
 )
 
 java_test(
+    name = "PrivacyBudgetClientV2Test",
+    srcs = ["PrivacyBudgetClientV2Test.java"],
+    deps = [
+        "//java/com/google/scp/coordinator/privacy/budgeting/model",
+        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
+        "//java/com/google/scp/shared/api/util",
+        "//java/com/google/scp/shared/aws/util",
+        "//java/com/google/scp/shared/mapper",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:google_truth",
+        "//java/external:jackson_databind",
+        "//java/external:mockito",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+    ],
+)
+
+java_test(
     name = "TransactionEngineTest",
     srcs = ["TransactionEngineTest.java"],
     deps = [
@@ -56,6 +75,18 @@ java_test(
         # Needs snakeyaml dependency here to choose the right snakeyaml version.
         "//java/external:snakeyaml",
         "//java/external:test_parameter_injector",
+    ],
+)
+
+java_test(
+    name = "TransactionOrchestratorTest",
+    srcs = ["TransactionOrchestratorTest.java"],
+    deps = [
+        "//java/com/google/scp/coordinator/privacy/budgeting/model",
+        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:mockito",
     ],
 )
 
@@ -89,6 +120,7 @@ java_test(
         "//java/external:guice",
         "//java/external:jackson_databind",
         "//java/external:mockito",
+        "//java/external:test_parameter_injector",
         "//java/external:testcontainers",
         "//javatests/com/google/scp/coordinator/privacy/budgeting/utils/gcp:pbs_gcp_e2e_test_utils",
         "//javatests/com/google/scp/shared/testutils/gcp",

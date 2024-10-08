@@ -35,8 +35,9 @@ class MockCheckpointService : public CheckpointService {
           blob_storage_provider,
       size_t initial_buffer_size)
       : CheckpointService(bucket_name, partition_name, metric_client,
-                          config_provider, journal_service,
-                          blob_storage_provider, initial_buffer_size) {}
+                          /*metric_router=*/nullptr, config_provider,
+                          journal_service, blob_storage_provider,
+                          initial_buffer_size) {}
 
   std::function<core::ExecutionResult()> bootstrap_mock;
   std::function<core::ExecutionResult()> shutdown_mock;

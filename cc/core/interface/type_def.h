@@ -140,4 +140,24 @@ static constexpr TimeDuration kDefaultRetryStrategyDelayInMs = 101;
 static constexpr size_t kDefaultMaxConnectionsPerHost = 2;
 static constexpr TimeDuration kDefaultHttp2ReadTimeoutInSeconds = 60;
 
+// Metrics
+static constexpr char kServerDurationMetric[] = "http.server.request.duration";
+static constexpr char kActiveRequestsMetric[] = "http.server.active_requests";
+static constexpr char kServerRequestBodySizeMetric[] =
+    "http.server.request.body.size";
+static constexpr char kServerResponseBodySizeMetric[] =
+    "http.server.response.body.size";
+static constexpr char kPbsTransactionMetric[] = "google.scp.pbs.transactions";
+
+// Labels
+static constexpr char kExecutionStatus[] = "execution-status";
+static constexpr char kResponseCode[] = "response-code";
+
+// Default Value
+inline static constexpr absl::string_view kUnknownValue = "unknown";
+
+// Units
+inline constexpr absl::string_view kSecondUnit = "s";
+inline constexpr absl::string_view kByteUnit = "By";
+
 }  // namespace google::scp::core

@@ -21,6 +21,8 @@ import com.google.inject.Singleton;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClient;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientImpl;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientImplV2;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientV2;
 import com.google.scp.shared.api.util.HttpClientWithInterceptor;
 import com.google.scp.shared.gcp.util.GcpHttpInterceptorUtil;
 import org.apache.hc.core5.http.HttpRequestInterceptor;
@@ -53,6 +55,35 @@ public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
         new PrivacyBudgetClientImpl(
             coordinatorAGcpHttpClient, coordinatorAPrivacyBudgetServiceBaseUrl),
         new PrivacyBudgetClientImpl(
+            coordinatorBGcpHttpClient, coordinatorBPrivacyBudgetServiceBaseUrl));
+  }
+
+  @Provides
+  @Singleton
+  public ImmutableList<PrivacyBudgetClientV2> privacyBudgetClientsV2(
+      @CoordinatorAPrivacyBudgetServiceBaseUrl String coordinatorAPrivacyBudgetServiceBaseUrl,
+      @CoordinatorBPrivacyBudgetServiceBaseUrl String coordinatorBPrivacyBudgetServiceBaseUrl,
+      @CoordinatorAPrivacyBudgetServiceAuthEndpoint
+          String coordinatorAPrivacyBudgetServiceAuthEndpoint,
+      @CoordinatorBPrivacyBudgetServiceAuthEndpoint
+          String coordinatorBPrivacyBudgetServiceAuthEndpoint) {
+    HttpRequestInterceptor coordinatorATokenInterceptor =
+        GcpHttpInterceptorUtil.createPbsHttpInterceptor(
+            coordinatorAPrivacyBudgetServiceAuthEndpoint);
+    HttpRequestInterceptor coordinatorBTokenInterceptor =
+        GcpHttpInterceptorUtil.createPbsHttpInterceptor(
+            coordinatorBPrivacyBudgetServiceAuthEndpoint);
+
+    HttpClientWithInterceptor coordinatorAGcpHttpClient =
+        new HttpClientWithInterceptor(coordinatorATokenInterceptor);
+
+    HttpClientWithInterceptor coordinatorBGcpHttpClient =
+        new HttpClientWithInterceptor(coordinatorBTokenInterceptor);
+
+    return ImmutableList.of(
+        new PrivacyBudgetClientImplV2(
+            coordinatorAGcpHttpClient, coordinatorAPrivacyBudgetServiceBaseUrl),
+        new PrivacyBudgetClientImplV2(
             coordinatorBGcpHttpClient, coordinatorBPrivacyBudgetServiceBaseUrl));
   }
 }

@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "absl/base/nullability.h"
 #include "core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/async_executor_interface.h"
@@ -28,7 +29,10 @@
 #include "core/interface/journal_service_interface.h"
 #include "core/interface/partition_types.h"
 #include "core/journal_service/interface/journal_service_stream_interface.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/sync_instruments.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
@@ -39,6 +43,7 @@ static constexpr google::scp::core::TimeDuration
 static constexpr size_t kJournalServiceRetryStrategyTotalRetries = 12;
 
 namespace google::scp::core {
+
 /*! @copydoc JournalServiceInterface
  */
 class JournalService : public JournalServiceInterface {
@@ -50,6 +55,7 @@ class JournalService : public JournalServiceInterface {
       const std::shared_ptr<BlobStorageProviderInterface>&
           blob_storage_provider,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<ConfigProviderInterface>& config_provider)
       : is_initialized_(false),
         is_running_(false),
@@ -63,6 +69,7 @@ class JournalService : public JournalServiceInterface {
                                   kJournalServiceRetryStrategyDelayMs,
                                   kJournalServiceRetryStrategyTotalRetries)),
         metric_client_(metric_client),
+        metric_router_(metric_router),
         config_provider_(config_provider),
         journal_flush_interval_in_milliseconds_(0) {}
 
@@ -128,7 +135,7 @@ class JournalService : public JournalServiceInterface {
                    journal_service::JournalStreamAppendLogResponse>&
           write_journal_stream_context) noexcept;
 
-  /// Flushes the current output stream.
+  // Flushes the current output stream.
   virtual void FlushJournalOutputStream() noexcept;
 
   bool is_running() {
@@ -136,68 +143,91 @@ class JournalService : public JournalServiceInterface {
     return is_running_;
   }
 
-  /// Indicates whether the journal service is initialized.
+  // Indicates whether the journal service is initialized.
   bool is_initialized_;
 
-  /// Indicates whether the journal service is running.
+  // Indicates whether the journal service is running.
   std::mutex mutex_;
   bool is_running_;  // protected by mutex_
 
-  /// The current bucket name to write the blob to.
+  // The current bucket name to write the blob to.
   std::shared_ptr<std::string> bucket_name_;
 
-  /// The current partition name to write the blob to.
+  // The current partition name to write the blob to.
   std::shared_ptr<std::string> partition_name_;
 
-  /// Async executor instance.
+  // Async executor instance.
   std::shared_ptr<AsyncExecutorInterface> async_executor_;
 
-  /// An instance of the blob storage provider.
+  // An instance of the blob storage provider.
   std::shared_ptr<BlobStorageProviderInterface> blob_storage_provider_;
 
-  /// Blob storage provider client instance.
+  // Blob storage provider client instance.
   std::shared_ptr<BlobStorageClientInterface> blob_storage_provider_client_;
 
-  /// An instance of the journal input stream.
+  // An instance of the journal input stream.
   std::shared_ptr<journal_service::JournalInputStreamInterface>
       journal_input_stream_;
 
-  /// An instance of the journal output stream.
+  // An instance of the journal output stream.
   std::shared_ptr<journal_service::JournalOutputStreamInterface>
       journal_output_stream_;
 
-  /// Operation dispatcher
+  // Operation dispatcher
   common::OperationDispatcher operation_dispatcher_;
 
-  /// The map of all the subscribers to the journal service.
+  // The map of all the subscribers to the journal service.
   common::ConcurrentMap<common::Uuid, OnLogRecoveredCallback,
                         common::UuidCompare>
       subscribers_map_;
 
-  /// Metric client instance for custom metric recording.
+  // Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
-  /// The simple metric instance for journal service recovery time.
+  // The simple metric instance for journal service recovery time.
   std::shared_ptr<cpio::SimpleMetricInterface> recover_time_metric_;
 
-  /// The aggregate metric instance for journal service recovery log count while
-  /// recovering.
+  // The aggregate metric instance for journal service recovery log count while
+  // recovering.
   std::shared_ptr<cpio::AggregateMetricInterface> recover_log_count_metric_;
 
-  /// The aggregate metric instance for journal service output stream count
-  /// while running.
+  // The aggregate metric instance for journal service output stream count
+  // while running.
   std::shared_ptr<cpio::AggregateMetricInterface> journal_output_count_metric_;
 
-  /// A unique pointer to the working thread.
+  // Keep a MetricRouter member in order to access MetricRouter-owned OTel
+  // Instruments.
+  //
+  // When null, this instance of PBS component does not produce OTel metrics.
+  absl::Nullable<std::shared_ptr<core::MetricRouter>> metric_router_;
+
+  // The OpenTelemetry Meter used for creating and managing metrics.
+  std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  // The OpenTelemetry Instrument for journal recovery time.
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      journal_recovery_time_instrument_;
+
+  // The OpenTelemetry Instrument for journal recovery count.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      journal_recovery_count_instrument_;
+
+  // A unique pointer to the working thread.
   std::unique_ptr<std::thread> flushing_thread_;
 
-  /// Config provider
+  // Config provider
   std::shared_ptr<ConfigProviderInterface> config_provider_;
 
-  /// Encapsulating Partition ID
+  // Encapsulating Partition ID
   PartitionId partition_id_;
 
-  /// Journal flush interval
+  // Journal flush interval
   size_t journal_flush_interval_in_milliseconds_;
+
+ private:
+  // Initialize MetricClient.
+  //
+  core::ExecutionResult InitMetricClientInterface();
 };
+
 }  // namespace google::scp::core

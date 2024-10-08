@@ -19,9 +19,6 @@ package(default_visibility = ["//visibility:public"])
 cc_binary(
     name = "pbs_log_recovery_aws",
     srcs = ["pbs_log_recovery_on_aws.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/blob_storage_provider/src/aws:core_blob_storage_provider_aws_lib",
@@ -43,9 +40,6 @@ cc_library(
     name = "read_journal_internal",
     srcs = ["read_journal_internal.cc"],
     hdrs = ["read_journal_internal.h"],
-    copts = [
-        "-std=c++17",
-    ],
     visibility = ["//cc/pbs/tools/pbs_log_recovery:__subpackages__"],
     deps = [
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
@@ -68,9 +62,6 @@ cc_library(
 cc_test(
     name = "read_journal_internal_test",
     srcs = ["read_journal_internal_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     linkopts = [
         "-latomic",
     ],

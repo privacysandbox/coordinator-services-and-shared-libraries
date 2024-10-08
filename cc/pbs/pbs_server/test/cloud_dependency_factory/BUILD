@@ -22,9 +22,6 @@ cc_test(
     srcs = [
         "aws_cloud_dependency_factory_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/config_provider/mock:core_config_provider_mock",
@@ -45,9 +42,6 @@ cc_test(
     size = "small",
     srcs = [
         "gcp_cloud_dependency_factory_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc/core/async_executor/src:core_async_executor_lib",

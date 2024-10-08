@@ -23,9 +23,6 @@ cc_test(
     srcs = [
         "http2_client_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -46,19 +43,22 @@ cc_test(
     srcs = [
         "http2_connection_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/mock:telemetry_mock",
+        "//cc/core/telemetry/src/common:telemetry_common",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_googletest//:gtest_main",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )
 
@@ -69,19 +69,22 @@ cc_test(
     srcs = [
         "http2_connection_pool_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/mock:telemetry_mock",
+        "//cc/core/telemetry/src/common:telemetry_common",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_googletest//:gtest_main",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )
 
@@ -89,9 +92,6 @@ cc_test(
     name = "aws_v4_signer_test",
     size = "small",
     srcs = ["aws_v4_signer_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/http2_client/src:http2_client_lib",

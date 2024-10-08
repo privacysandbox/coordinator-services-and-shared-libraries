@@ -16,12 +16,23 @@
 
 #include <list>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "absl/functional/bind_front.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/interface/http_server_interface.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/core/interface/logger_interface.h"
+#include "cc/core/interface/type_def.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/front_end_utils.h"
@@ -29,11 +40,11 @@
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/front_end_service_interface.h"
+#include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
-#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
-#include "core/interface/http_types.h"
 
 namespace google::scp::pbs {
 namespace {
@@ -63,14 +74,9 @@ using ::google::scp::core::errors::
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS;
-using ::google::scp::cpio::AggregateMetric;
 using ::google::scp::cpio::AggregateMetricInterface;
-using ::google::scp::cpio::kCountSecond;
-using ::google::scp::cpio::MetricDefinition;
 using ::google::scp::cpio::MetricLabels;
-using ::google::scp::cpio::MetricLabelsBase;
 using ::google::scp::cpio::MetricName;
-using ::google::scp::cpio::MetricUnit;
 using ::google::scp::pbs::FrontEndUtils;
 
 inline constexpr char kFrontEndService[] = "FrontEndServiceV2";
@@ -184,6 +190,18 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
 
   RETURN_IF_FAILURE(execution_result);
 
+  std::string health_check_path(kStatusHealthCheckPath);
+  HttpHandler health_check_handler =
+      absl::bind_front(&FrontEndServiceV2::BeginTransaction, this);
+  http_server_->RegisterResourceHandler(HttpMethod::POST, health_check_path,
+                                        health_check_handler);
+
+  std::string consume_budget_path(kStatusConsumeBudgetPath);
+  HttpHandler consume_budget_handler =
+      absl::bind_front(&FrontEndServiceV2::PrepareTransaction, this);
+  http_server_->RegisterResourceHandler(HttpMethod::POST, consume_budget_path,
+                                        consume_budget_handler);
+
   std::string begin_transaction_path(kBeginTransactionPath);
   HttpHandler begin_transaction_handler =
       absl::bind_front(&FrontEndServiceV2::BeginTransaction, this);
@@ -231,15 +249,6 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
            ->Get(kAggregatedMetricIntervalMs, aggregated_metric_interval_ms_)
            .Successful()) {
     aggregated_metric_interval_ms_ = kDefaultAggregatedMetricIntervalMs;
-  }
-
-  bool adtech_site_authorized_domain_enabled = false;
-  if (config_provider_ && config_provider_
-                              ->Get(core::kPBSAdtechSiteAsAuthorizedDomain,
-                                    adtech_site_authorized_domain_enabled)
-                              .Successful()) {
-    adtech_site_authorized_domain_enabled_ =
-        adtech_site_authorized_domain_enabled;
   }
 
   if (budget_consumption_helper_ == nullptr) {
@@ -297,7 +306,8 @@ std::shared_ptr<std::string> FrontEndServiceV2::ObtainTransactionOrigin(
   auto execution_result = FrontEndUtils::ExtractTransactionOrigin(
       http_context.request->headers, transaction_origin_in_header);
   if (execution_result.Successful() && !transaction_origin_in_header.empty()) {
-    return make_shared<std::string>(move(transaction_origin_in_header));
+    return std::make_shared<std::string>(
+        std::move(transaction_origin_in_header));
   }
   return http_context.request->auth_context.authorized_domain;
 }
@@ -397,27 +407,15 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
                            http_context, *transaction_id),
           http_context);
   consume_budget_context.response = std::make_shared<ConsumeBudgetsResponse>();
-  if (adtech_site_authorized_domain_enabled_) {
-    auto transaction_origin = ObtainTransactionOrigin(http_context);
-    if (auto execution_result = ParseBeginTransactionRequestBody(
-            *http_context.request->auth_context.authorized_domain,
-            *transaction_origin, http_context.request->body,
-            consume_budget_context.request->budgets);
-        !execution_result.Successful()) {
-      client_error_metrics_instance->Increment(reporting_origin_metric_label);
-      client_error_counter_->Add(1, prepare_transaction_label_kv);
-      return execution_result;
-    }
-  } else {
-    if (auto execution_result = ParseBeginTransactionRequestBody(
-            *http_context.request->auth_context.authorized_domain,
-            http_context.request->body,
-            consume_budget_context.request->budgets);
-        !execution_result.Successful()) {
-      client_error_metrics_instance->Increment(reporting_origin_metric_label);
-      client_error_counter_->Add(1, prepare_transaction_label_kv);
-      return execution_result;
-    }
+  auto transaction_origin = ObtainTransactionOrigin(http_context);
+  if (auto execution_result = ParseBeginTransactionRequestBody(
+          *http_context.request->auth_context.authorized_domain,
+          *transaction_origin, http_context.request->body,
+          consume_budget_context.request->budgets);
+      !execution_result.Successful()) {
+    client_error_metrics_instance->Increment(reporting_origin_metric_label);
+    client_error_counter_->Add(1, prepare_transaction_label_kv);
+    return execution_result;
   }
 
   if (consume_budget_context.request->budgets.size() == 0) {
@@ -548,6 +546,9 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
   http_context.Finish();
 }
 
+[[deprecated(
+    "No longer needed in the new version of PBS and will be removed when "
+    "clients can no longer rely on this.")]]
 ExecutionResult FrontEndServiceV2::CommitTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start CommitTransaction.");
@@ -590,6 +591,9 @@ ExecutionResult FrontEndServiceV2::CommitTransaction(
   return SuccessExecutionResult();
 }
 
+[[deprecated(
+    "No longer needed in the new version of PBS and will be removed when "
+    "clients can no longer rely on this.")]]
 ExecutionResult FrontEndServiceV2::NotifyTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start NotifyTransaction.");
@@ -632,7 +636,10 @@ ExecutionResult FrontEndServiceV2::NotifyTransaction(
   return SuccessExecutionResult();
 }
 
-ExecutionResult FrontEndServiceV2::AbortTransaction(
+[[deprecated(
+    "No longer needed in the new version of PBS and will be removed when "
+    "clients can no longer rely on this.")]] ExecutionResult
+FrontEndServiceV2::AbortTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start AbortTransaction.");
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
@@ -674,7 +681,10 @@ ExecutionResult FrontEndServiceV2::AbortTransaction(
   return SuccessExecutionResult();
 }
 
-ExecutionResult FrontEndServiceV2::EndTransaction(
+[[deprecated(
+    "No longer needed in the new version of PBS and will be removed when "
+    "clients can no longer rely on this.")]] ExecutionResult
+FrontEndServiceV2::EndTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start EndTransaction.");
   ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
@@ -715,7 +725,10 @@ ExecutionResult FrontEndServiceV2::EndTransaction(
   return SuccessExecutionResult();
 }
 
-ExecutionResult FrontEndServiceV2::GetTransactionStatus(
+[[deprecated(
+    "No longer needed in the new version of PBS and will be removed when "
+    "clients can no longer rely on this.")]] ExecutionResult
+FrontEndServiceV2::GetTransactionStatus(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context,
                     "Start GetTransactionStatus.");

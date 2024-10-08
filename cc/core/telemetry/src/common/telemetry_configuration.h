@@ -23,6 +23,15 @@
 #include "cc/core/interface/config_provider_interface.h"
 
 namespace google::scp::core {
+// OTel metrics exporter config
+//
+// Supported values for `OTEL_METRICS_EXPORTER` are:
+// - "otlp": OpenTelemetry Protocol to collector
+// - "googlecloud": MonitoringExporter to Google Cloud Monitoring
+inline constexpr absl::string_view kOtelMetricsExporterKey =
+    "OTEL_METRICS_EXPORTER";
+inline constexpr absl::string_view kOtelMetricsExporterValue = "otlp";
+
 // Path to otel collector
 inline constexpr absl::string_view kOtelExporterOtlpEndpointKey =
     "google_scp_otel_exporter_otlp_endpoint";

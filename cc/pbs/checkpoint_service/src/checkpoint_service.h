@@ -35,6 +35,7 @@
 #include "core/interface/transaction_command_serializer_interface.h"
 #include "core/interface/transaction_manager_interface.h"
 #include "core/interface/type_def.h"
+#include "core/telemetry/src/metric/metric_router.h"
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "pbs/interface/budget_key_provider_interface.h"
 #include "public/core/interface/execution_result.h"
@@ -52,6 +53,7 @@ class CheckpointService : public core::CheckpointServiceInterface {
       std::shared_ptr<std::string>& bucket_name,
       std::shared_ptr<std::string>& partition_name,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
+      std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       const std::shared_ptr<core::JournalServiceInterface>&
           application_journal_service,
@@ -64,6 +66,7 @@ class CheckpointService : public core::CheckpointServiceInterface {
         last_processed_journal_id_(0),
         last_persisted_checkpoint_id_(0),
         metric_client_(metric_client),
+        metric_router_(metric_router),
         initial_buffer_size_(initial_buffer_size),
         config_provider_(config_provider),
         application_journal_service_(application_journal_service),
@@ -171,6 +174,8 @@ class CheckpointService : public core::CheckpointServiceInterface {
   core::CheckpointId last_persisted_checkpoint_id_;
   /// Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
+  /// MetricRouter instance for OTel metrics.
+  std::shared_ptr<core::MetricRouter> metric_router_;
   /// The initial buffers size to write the blobs.
   size_t initial_buffer_size_;
   /// An instance of the async executor for the IO operations.

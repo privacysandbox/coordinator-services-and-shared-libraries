@@ -21,9 +21,6 @@ cc_test(
     size = "small",
     srcs =
         ["ec2_error_converter_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -40,9 +37,6 @@ cc_test(
     timeout = "long",
     srcs =
         ["aws_instance_client_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -64,9 +58,6 @@ cc_test(
     timeout = "long",
     srcs =
         ["aws_instance_client_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/curl_client/mock:mock_curl_client",
@@ -84,9 +75,6 @@ cc_library(
     srcs = [
         "test_aws_instance_client_provider.cc",
         "test_aws_instance_client_provider.h",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

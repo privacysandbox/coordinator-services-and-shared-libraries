@@ -22,9 +22,6 @@ cc_library(
     srcs = [
         "mock_blob_storage_client_provider.h",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",

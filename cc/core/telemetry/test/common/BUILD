@@ -22,9 +22,6 @@ cc_test(
     srcs = [
         "metric_utils_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/telemetry/src/common:telemetry_metric_utils",

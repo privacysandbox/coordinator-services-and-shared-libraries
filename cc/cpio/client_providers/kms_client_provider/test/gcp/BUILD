@@ -21,9 +21,6 @@ cc_test(
     size = "small",
     srcs =
         ["gcp_kms_aead_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -40,9 +37,6 @@ cc_test(
     size = "small",
     srcs =
         ["gcp_kms_client_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -60,9 +54,6 @@ cc_test(
     size = "small",
     srcs =
         ["tee_gcp_kms_client_provider_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/kms_client_provider/src/gcp:tee_gcp_kms_client_provider_lib",

@@ -20,9 +20,6 @@ cc_test(
     name = "telemetry_metric_integration_test",
     size = "small",
     srcs = ["metric_router_in_memory_integration_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",
@@ -48,9 +45,6 @@ cc_test(
         "metric_router_test.cc",
         "otlp_grpc_authed_metric_exporter_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",
@@ -64,6 +58,8 @@ cc_test(
         "@io_opentelemetry_cpp//api",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_exporter",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",
+        "@io_opentelemetry_cpp//ext:headers",
         "@io_opentelemetry_cpp//sdk/src/metrics",
+        "@io_opentelemetry_cpp//sdk/src/resource",
     ],
 )

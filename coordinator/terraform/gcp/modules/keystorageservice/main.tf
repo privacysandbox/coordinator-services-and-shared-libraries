@@ -48,7 +48,7 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
   description = "Cloud Function for key storage service"
 
   build_config {
-    runtime     = "java11"
+    runtime     = "java17"
     entry_point = "com.google.scp.coordinator.keymanagement.keystorage.service.gcp.KeyStorageServiceHttpFunction"
     source {
       storage_source {
@@ -71,6 +71,7 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
       SPANNER_INSTANCE = var.spanner_instance_name
       SPANNER_DATABASE = var.spanner_database_name
       VERSION          = module.version.version
+      LOG_EXECUTION_ID = "true"
     }
   }
 

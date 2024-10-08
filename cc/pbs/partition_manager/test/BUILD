@@ -23,9 +23,6 @@ cc_test(
         "pbs_partition_manager_map_entry_test.cc",
         "pbs_partition_manager_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/config_provider/src:config_provider_lib",
@@ -42,9 +39,6 @@ cc_test(
     size = "medium",
     srcs = [
         "pbs_partition_manager_concurrency_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc/core/config_provider/mock:core_config_provider_mock",

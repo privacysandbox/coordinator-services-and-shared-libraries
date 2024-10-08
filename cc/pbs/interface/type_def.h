@@ -41,22 +41,24 @@ static constexpr char kAbortTransactionPath[] = "/v1/transactions:abort";
 static constexpr char kEndTransactionPath[] = "/v1/transactions:end";
 static constexpr char kStatusTransactionPath[] = "/v1/transactions:status";
 static constexpr char kServiceStatusPath[] = "/v1/service:status";
+static constexpr char kStatusHealthCheckPath[] =
+    "/v1/transactions:health-check";
+static constexpr char kStatusConsumeBudgetPath[] =
+    "/v1/transactions:consume-budget";
 
 // Metric labels
 static constexpr char kMetricLabelFrontEndService[] = "frontend_service";
-static constexpr char kMetricLabelBeginTransaction[] = "begin_transaction";
-static constexpr char kMetricLabelPrepareTransaction[] = "prepare_transaction";
-static constexpr char kMetricLabelCommitTransaction[] = "commit_transaction";
-static constexpr char kMetricLabelAbortTransaction[] = "abort_transaction";
-static constexpr char kMetricLabelNotifyTransaction[] = "notify_transaction";
-static constexpr char kMetricLabelEndTransaction[] = "end_transaction";
-static constexpr char kMetricLabelGetStatusTransaction[] =
-    "get_status_transaction";
-static constexpr char kMetricLabelValueOperator[] = "operator";
-static constexpr char kMetricLabelValueCoordinator[] = "coordinator";
+static constexpr char kMetricLabelBeginTransaction[] = "BEGIN";
+static constexpr char kMetricLabelPrepareTransaction[] = "PREPARE";
+static constexpr char kMetricLabelCommitTransaction[] = "COMMIT";
+static constexpr char kMetricLabelAbortTransaction[] = "ABORT";
+static constexpr char kMetricLabelNotifyTransaction[] = "NOTIFY";
+static constexpr char kMetricLabelEndTransaction[] = "END";
+static constexpr char kMetricLabelGetStatusTransaction[] = "GET_STATUS";
+static constexpr char kMetricLabelValueOperator[] = "OPERATOR";
+static constexpr char kMetricLabelValueCoordinator[] = "COORDINATOR";
 static constexpr char kMetricLabelKeyReportingOrigin[] = "reporting_origin";
 static constexpr char kMetricLabelTransactionPhase[] = "transaction_phase";
-static constexpr char kMetricLabelTransactionStatus[] = "transaction_status";
 
 // Metric names
 static constexpr char kMetricNameRequests[] =

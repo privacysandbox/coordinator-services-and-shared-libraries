@@ -166,10 +166,14 @@ module "beanstalk_environment" {
   pbs_s3_bucket_lb_access_logs_id   = module.beanstalk_storage.pbs_s3_bucket_lb_access_logs_id
   enable_pbs_lb_access_logs         = var.enable_pbs_lb_access_logs
 
-  enable_domain_management = var.enable_domain_management
-  parent_domain_name       = var.parent_domain_name
-  service_subdomain        = var.service_subdomain
-  domain_hosted_zone_id    = var.enable_domain_management ? data.aws_route53_zone.hosted_zone[0].zone_id : null
+  enable_domain_management          = var.enable_domain_management
+  parent_domain_name                = var.parent_domain_name
+  service_subdomain                 = var.service_subdomain
+  domain_hosted_zone_id             = var.enable_domain_management ? data.aws_route53_zone.hosted_zone[0].zone_id : null
+  enable_pbs_domain_record_acme     = var.enable_domain_management ? var.enable_pbs_domain_record_acme : false
+  pbs_domain_record_acme            = (var.enable_domain_management && var.enable_pbs_domain_record_acme) ? var.pbs_domain_record_acme : null
+  enable_alternate_pbs_domain       = var.enable_domain_management ? var.enable_alternate_pbs_domain : false
+  pbs_alternate_domain_record_cname = var.enable_domain_management && var.enable_alternate_pbs_domain ? var.pbs_alternate_domain_record_cname : null
 
   pbs_budget_keys_dynamodb_table_name    = module.storage.budget_keys_dynamo_db_table_name
   pbs_partition_lock_dynamodb_table_name = module.storage.partition_lock_dynamo_db_table_name

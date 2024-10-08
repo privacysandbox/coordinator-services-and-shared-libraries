@@ -21,9 +21,6 @@ cc_test(
     size = "small",
     srcs =
         ["sqs_error_converter_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -40,9 +37,6 @@ cc_test(
     timeout = "long",
     srcs = [
         "aws_queue_client_provider_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",
