@@ -36,10 +36,11 @@ class MockBudgetKey : public BudgetKey {
       const std::shared_ptr<core::NoSQLDatabaseProviderInterface>&
           nosql_database_provider,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
+      std::shared_ptr<core::MetricRouter> metric_router = nullptr)
       : BudgetKey(name, id, async_executor, journal_service,
-                  nosql_database_provider, metric_client,
-                  /*metric_router=*/nullptr, config_provider,
+                  nosql_database_provider, metric_client, metric_router,
+                  config_provider,
                   std::make_shared<cpio::MockAggregateMetric>()) {}
 
   std::function<void(

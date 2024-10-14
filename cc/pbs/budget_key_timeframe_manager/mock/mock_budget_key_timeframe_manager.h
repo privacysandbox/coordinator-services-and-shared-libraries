@@ -79,6 +79,8 @@ class MockBudgetKeyTimeframeManager
     return core::SuccessExecutionResult();
   }
 
+  void MetricInit() noexcept override {}
+
   std::function<core::ExecutionResult(
       core::AsyncContext<LoadBudgetKeyTimeframeRequest,
                          LoadBudgetKeyTimeframeResponse>&)>

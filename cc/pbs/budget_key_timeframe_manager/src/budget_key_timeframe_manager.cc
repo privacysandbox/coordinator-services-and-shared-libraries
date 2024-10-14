@@ -97,12 +97,7 @@ static constexpr char kBudgetKeyTimeframeManager[] =
 
 namespace google::scp::pbs {
 
-ExecutionResult BudgetKeyTimeframeManager::Init() noexcept {
-  auto execution_result = budget_key_timeframe_groups_->Init();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-
+void BudgetKeyTimeframeManager::MetricInit() noexcept {
   if (metric_router_) {
     meter_ = metric_router_->GetOrCreateMeter(kBudgetKeyTimeframeManager);
 
@@ -147,6 +142,14 @@ ExecutionResult BudgetKeyTimeframeManager::Init() noexcept {
                       "Number of budget key unload-from-DB attempts");
                 }));
   }
+}
+
+ExecutionResult BudgetKeyTimeframeManager::Init() noexcept {
+  auto execution_result = budget_key_timeframe_groups_->Init();
+  if (!execution_result.Successful()) {
+    return execution_result;
+  }
+  MetricInit();
 
   return journal_service_->SubscribeForRecovery(
       id_, bind(&BudgetKeyTimeframeManager::OnJournalServiceRecoverCallback,
