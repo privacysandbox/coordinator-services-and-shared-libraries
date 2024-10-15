@@ -139,6 +139,8 @@ class BudgetKeyTimeframeManager : public BudgetKeyTimeframeManagerInterface {
       std::shared_ptr<std::list<core::CheckpointLog>>& checkpoint_logs) noexcept
       override;
 
+  void MetricInit() noexcept override;
+
  protected:
   /**
    * @brief Helper function to populate budget key time frames in response

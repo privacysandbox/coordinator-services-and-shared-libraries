@@ -33,12 +33,15 @@
 #include "core/journal_service/mock/mock_journal_service.h"
 #include "core/journal_service/mock/mock_journal_service_with_overrides.h"
 #include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "core/telemetry/mock/in_memory_metric_router.h"
+#include "core/telemetry/src/common/metric_utils.h"
 #include "core/test/utils/conditional_wait.h"
 #include "pbs/budget_key/mock/mock_budget_key_with_overrides.h"
 #include "pbs/budget_key/src/proto/budget_key.pb.h"
 #include "pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager.h"
 #include "pbs/budget_key_transaction_protocols/mock/mock_consume_budget_transaction_protocol.h"
 #include "pbs/interface/configuration_keys.h"
+#include "pbs/interface/metrics_def.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/mock/metric_client/mock_metric_client.h"
 #include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
@@ -218,6 +221,7 @@ TEST(BudgetKeyTest, LoadBudgetKey) {
 }
 
 TEST(BudgetKeyTest, LoadBudgetKeyWithSerialization) {
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
   auto budget_key_name = make_shared<string>("test_budget_key");
   shared_ptr<BudgetKeyTimeframeManagerInterface> budget_key_manager = nullptr;
   auto budget_key_transaction_protocol =
@@ -234,9 +238,10 @@ TEST(BudgetKeyTest, LoadBudgetKeyWithSerialization) {
   auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   mock_config_provider->Set(kBudgetKeyTableName, string("PBS_BudgetKeys"));
-  MockBudgetKey budget_key(
-      budget_key_name, Uuid::GenerateUuid(), async_executor, journal_service,
-      nosql_database_provider, mock_metric_client, mock_config_provider);
+  MockBudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(),
+                           async_executor, journal_service,
+                           nosql_database_provider, mock_metric_client,
+                           mock_config_provider, metric_router);
 
   mock_journal_service
       ->log_mock = [&](AsyncContext<JournalLogRequest, JournalLogResponse>&
@@ -406,6 +411,106 @@ TEST(BudgetKeyTest, OnLogLoadBudgetKeyCallbackWithFailure) {
 
   EXPECT_EQ(budget_key.GetBudgetKeyTimeframeManagerId(),
             budget_key_timeframe_manager_id);
+}
+
+TEST(BudgetKeyTest, MetricsInitInBudgetKeyTimeframeManager) {
+  auto metric_router = std::make_shared<core::InMemoryMetricRouter>();
+  auto budget_key_name = make_shared<string>("test_budget_key");
+  shared_ptr<BudgetKeyTimeframeManagerInterface> budget_key_manager;
+  auto budget_key_transaction_protocol =
+      make_shared<MockConsumeBudgetTransactionProtocol>();
+
+  auto mock_journal_service = make_shared<MockJournalService>();
+  shared_ptr<JournalServiceInterface> journal_service =
+      static_pointer_cast<JournalServiceInterface>(mock_journal_service);
+  shared_ptr<AsyncExecutorInterface> async_executor =
+      make_shared<MockAsyncExecutor>();
+  shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider =
+      make_shared<MockNoSQLDatabaseProvider>();
+  auto mock_metric_client = make_shared<MockMetricClient>();
+  auto mock_config_provider = make_shared<MockConfigProvider>();
+  mock_config_provider->Set(std::string(kBudgetKeyTableName), "budget table");
+  MockBudgetKey budget_key(budget_key_name, Uuid::GenerateUuid(),
+                           async_executor, journal_service,
+                           nosql_database_provider, mock_metric_client,
+                           mock_config_provider, metric_router);
+
+  // Call OnLogLoadBudgetKeyCallback in Budget Key as it will initialize the
+  // budget_key_timeframe_manager_ and then intialize metrics by calling
+  // budget_key_timeframe_manager_->MetricInit();
+  AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>
+      load_budget_key_context;
+  Uuid budget_key_timeframe_manager_id = Uuid::GenerateUuid();
+  core::AsyncContext<core::JournalLogRequest, core::JournalLogResponse>
+      journal_log_context;
+
+  load_budget_key_context.callback =
+      [](AsyncContext<LoadBudgetKeyRequest, LoadBudgetKeyResponse>&
+             load_budget_key_context) {
+        EXPECT_SUCCESS(load_budget_key_context.result);
+      };
+
+  journal_log_context.result = SuccessExecutionResult();
+
+  EXPECT_EQ(budget_key.GetBudgetConsumptionTransactionProtocol(), nullptr);
+
+  budget_key.OnLogLoadBudgetKeyCallback(load_budget_key_context,
+                                        budget_key_timeframe_manager_id,
+                                        journal_log_context);
+
+  EXPECT_EQ(budget_key.GetBudgetKeyTimeframeManagerId(),
+            budget_key_timeframe_manager_id);
+
+  // Once budget_key_timeframe_manager_ is initialized call BudgetKey::GetBudget
+  // as that calls BudgetKeyTimeframeManager::Load. Load eventually increments
+  // the budget_key_scheduled_load_instrument_ metric in
+  // BudgetKeyTimeframeManager::LoadTimeframeGroupFromDB.
+  // Checking the collected metrics prove the correct initialization of metrics.
+  vector<ExecutionResult> results = {SuccessExecutionResult(),
+                                     FailureExecutionResult(1)};
+
+  for (auto result : results) {
+    atomic<bool> condition(false);
+    core::Timestamp reporting_time = 10;
+
+    GetBudgetRequest request = {.time_bucket = reporting_time};
+    AsyncContext<GetBudgetRequest, GetBudgetResponse> get_budget_context(
+        make_shared<GetBudgetRequest>(move(request)), [](auto& context) {});
+    get_budget_context.callback = [result,
+                                   &condition](auto get_budget_context) {
+      condition = true;
+      return result;
+    };
+
+    budget_key.GetBudget(get_budget_context);
+    WaitUntil([&]() { return condition.load(); });
+  }
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router->GetExportedData();
+
+  // Budget Key Scheduled Loads.
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      budget_key_scheduled_load_metric_point_data = core::GetMetricPointData(
+          google::scp::pbs::kMetricNameBudgetKeyScheduledLoads, {}, data);
+  ASSERT_TRUE(budget_key_scheduled_load_metric_point_data.has_value());
+
+  auto budget_key_scheduled_load_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          budget_key_scheduled_load_metric_point_data.value()));
+  EXPECT_EQ(std::get<int64_t>(budget_key_scheduled_load_sum_point_data.value_),
+            2);
+
+  // Budget Key Loads.
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      budget_key_load_metric_point_data = core::GetMetricPointData(
+          google::scp::pbs::kMetricNameBudgetKeyLoads, {}, data);
+  ASSERT_TRUE(budget_key_load_metric_point_data.has_value());
+
+  auto budget_key_load_sum_point_data =
+      std::move(std::get<opentelemetry::sdk::metrics::SumPointData>(
+          budget_key_load_metric_point_data.value()));
+  EXPECT_EQ(std::get<int64_t>(budget_key_load_sum_point_data.value_), 2);
 }
 
 TEST(BudgetKeyTest, OnJournalServiceRecoverCallbackInvalidLog) {

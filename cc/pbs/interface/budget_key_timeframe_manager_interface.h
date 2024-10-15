@@ -169,5 +169,17 @@ class BudgetKeyTimeframeManagerInterface : public core::ServiceInterface {
   virtual core::ExecutionResult Checkpoint(
       std::shared_ptr<std::list<core::CheckpointLog>>&
           checkpoint_logs) noexcept = 0;
+
+  /**
+   * @brief Initializes the otel metrics.
+   *
+   * This method sets up metrics such as counters, histograms, and other
+   * telemetry instruments used to track application performance and operational
+   * statistics.
+   *
+   * @note This method is `noexcept`, meaning it guarantees no exceptions will
+   * be thrown.
+   */
+  virtual void MetricInit() noexcept = 0;
 };
 }  // namespace google::scp::pbs

@@ -15,8 +15,10 @@
 # Hosted zone must exist with NS records
 # See /applications/project_resources for an example
 data "google_dns_managed_zone" "dns_zone" {
-  name  = replace(var.parent_domain_name, ".", "-")
   count = var.enable_domain_management ? 1 : 0
+
+  project = var.parent_domain_name_project
+  name    = replace(var.parent_domain_name, ".", "-")
 
   lifecycle {
     # Parent domain name should not be empty

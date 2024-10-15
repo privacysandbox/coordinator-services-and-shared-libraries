@@ -306,6 +306,10 @@ void BudgetKey::OnLogLoadBudgetKeyCallback(
       nosql_database_provider_for_background_operations_,
       nosql_database_provider_for_live_traffic_, metric_client_, metric_router_,
       config_provider_, budget_key_count_metric_);
+
+  // Initializing metrics in budget_key_timeframe_manager_.
+  budget_key_timeframe_manager_->MetricInit();
+
   consume_budget_transaction_protocol_ =
       make_shared<ConsumeBudgetTransactionProtocol>(
           budget_key_timeframe_manager_);

@@ -267,6 +267,11 @@ resource "aws_iam_role_policy" "beanstalk_base_policy" {
           "ec2messages:GetMessages",
           "ec2messages:SendReply",
 
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel",
+
           "logs:CreateLogStream",
           "logs:CreateLogGroup",
           "logs:DescribeLogStreams",
