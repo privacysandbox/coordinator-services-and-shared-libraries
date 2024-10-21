@@ -135,7 +135,7 @@ ExecutionResult JournalService::Init() noexcept {
     metric_router_->CreateHistogramViewForInstrument(
         /*metric_name=*/kMetricNameJournalRecoveryTime,
         /*view_name=*/kMetricNameJournalRecoveryTime,
-        /*instrument_type=*/core::MetricRouter::InstrumentType::kHistogram,
+        /*instrument_type=*/InstrumentType::kHistogram,
         /*boundaries=*/boundaries,
         /*version=*/"", /*schema=*/"",
         /*view_description=*/"Journal recovery time", /*unit=*/"ms");

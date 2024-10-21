@@ -89,15 +89,8 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
         'client': client,
     }
 
-  def _get_env(self):
-    return {
-        'REPORTING_ORIGIN_AUTH_SPANNER_INSTANCE_ID': 'my_instance_id',
-        'REPORTING_ORIGIN_AUTH_SPANNER_DATABASE_ID': 'my_database_id',
-        'REPORTING_ORIGIN_AUTH_SPANNER_TABLE_NAME': 'my_table_name',
-        'AUTH_V2_SPANNER_INSTANCE_ID': 'my_instance_v2_id',
-        'AUTH_V2_SPANNER_DATABASE_ID': 'my_database_v2_id',
-        'AUTH_V2_SPANNER_TABLE_NAME': 'my_table_v2_name',
-    }
+  def _init_module(self):
+    auth_cloud_function_handler.init_module('my_instance_v2_id', 'my_database_v2_id', 'my_table_v2_name')
 
   def test_unauthorized_if_caller_identity_yields_no_record(self):
     empty_identity = json.dumps({'email': 'googler@google.com'})
@@ -114,10 +107,10 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Empty result
     self._setup_mock_spanner_result([])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
-      self.assertEqual(ret[1], 403)
-      self.assertEqual(ret[2], 'adtech_sites')
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
+    self.assertEqual(ret[1], 403)
+    self.assertEqual(ret[2], 'adtech_sites')
 
   def test_unauthorized_if_caller_identity_yields_more_than_one_record(self):
     empty_identity = json.dumps({'email': 'googler@google.com'})
@@ -134,10 +127,10 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return two records
     self._setup_mock_spanner_result(['record1', 'record2'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
-      self.assertEqual(ret[1], 403)
-      self.assertEqual(ret[2], 'adtech_sites')
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
+    self.assertEqual(ret[1], 403)
+    self.assertEqual(ret[2], 'adtech_sites')
 
   def test_unauthorized_if_reported_origin_does_not_match_reporting_origin(
       self,
@@ -156,11 +149,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin
     self._setup_mock_spanner_result(['reporting-origin.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[1], 403)
-      self.assertEqual(ret[2], 'auth_check')
+    self.assertEqual(ret[1], 403)
+    self.assertEqual(ret[2], 'auth_check')
 
   def test_should_query_the_spanner_v2_data_from_environment_vars(self):
     empty_identity = json.dumps({'email': 'googler@google.com'})
@@ -178,8 +171,8 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Empty result
     db_mocks = self._setup_mock_spanner_result([])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    auth_cloud_function_handler.function_handler(request)
 
     self.assertEqual(db_mocks['client'].instance_id, 'my_instance_v2_id')
     self.assertEqual(db_mocks['instance'].database_id, 'my_database_v2_id')
@@ -212,11 +205,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Empty result
     self._setup_mock_spanner_result([])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[1], 403)
-      self.assertEqual(ret[2], 'adtech_sites')
+    self.assertEqual(ret[1], 403)
+    self.assertEqual(ret[2], 'adtech_sites')
 
   def test_authorized_if_no_protocol_reported_origin_belongs_to_allowlisted_site(
       self,
@@ -236,11 +229,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin.
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
+    self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
+    self.assertEqual(ret[1], 200)
 
   def test_authorized_if_http_reported_origin_with_port_belongs_to_allowlisted_site(
       self,
@@ -260,11 +253,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin.
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
+    self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
+    self.assertEqual(ret[1], 200)
 
   def test_authorized_if_http_reported_origin_with_port_belongs_to_allowlisted_site(
       self,
@@ -284,11 +277,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
+    self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
+    self.assertEqual(ret[1], 200)
 
   def test_authorized_if_reported_origin_with_trailing_slash_belongs_to_allowlisted_site(
       self,
@@ -308,8 +301,8 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
     self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
     self.assertEqual(ret[1], 200)
@@ -332,11 +325,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
+    self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
+    self.assertEqual(ret[1], 200)
 
   def test_authorized_if_https_reported_origin_belongs_to_allowlisted_site(
       self,
@@ -356,11 +349,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
+    self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
+    self.assertEqual(ret[1], 200)
 
   def test_authorized_if_https_reported_origin_with_port_belongs_to_allowlisted_site(
       self,
@@ -380,10 +373,10 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
-      self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
-      self.assertEqual(ret[1], 200)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
+    self.assertEqual(ret[0], '{"authorized_domain": "https://domain.com"}')
+    self.assertEqual(ret[1], 200)
 
   def test_unauthorized_if_reported_origin_does_not_belong_to_allowlisted_site(
       self,
@@ -403,11 +396,11 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
     # Return the reporting origin
     self._setup_mock_spanner_result(['https://domain.com'])
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
 
-      self.assertEqual(ret[1], 403)
-      self.assertEqual(ret[2], 'auth_check')
+    self.assertEqual(ret[1], 403)
+    self.assertEqual(ret[2], 'auth_check')
 
   def test_spanner_service_unavailable_exception(self):
     empty_identity = json.dumps({'email': 'googler@google.com'})
@@ -427,9 +420,9 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
         google.api_core.exceptions.ServiceUnavailable('Service unavailable.'),
     )
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
-      self.assertEqual(ret[1], 503)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
+    self.assertEqual(ret[1], 503)
 
   def test_spanner_other_exception_return_500(self):
     empty_identity = json.dumps({'email': 'googler@google.com'})
@@ -448,9 +441,9 @@ class AuthCloudFunctionHandlerTest(unittest.TestCase):
         ['https://domain.com'], ValueError,
     )
 
-    with unittest.mock.patch.dict('os.environ', self._get_env()):
-      ret = auth_cloud_function_handler.function_handler(request)
-      self.assertEqual(ret[1], 500)
+    self._init_module()
+    ret = auth_cloud_function_handler.function_handler(request)
+    self.assertEqual(ret[1], 500)
 
 
 if __name__ == '__main__':

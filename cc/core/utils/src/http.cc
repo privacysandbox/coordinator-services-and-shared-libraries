@@ -16,6 +16,7 @@
 #include "http.h"
 
 #include <memory>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,6 +27,7 @@
 #include "absl/strings/str_split.h"
 #include "cc/core/utils/src/error_codes.h"
 #include "cc/public/core/interface/execution_result.h"
+#include "re2/re2.h"
 
 using std::string;
 
@@ -61,11 +63,7 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
 
 ExecutionResultOr<absl::string_view> ExtractRequestClaimedIdentity(
     const HttpHeaders& request_headers) noexcept {
-  if (request_headers.empty()) {
-    return core::FailureExecutionResult(
-        core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
-  }
-
+  // Find the claimed identity header.
   auto header_iter =
       request_headers.find(std::string(core::kClaimedIdentityHeader));
 
@@ -75,4 +73,46 @@ ExecutionResultOr<absl::string_view> ExtractRequestClaimedIdentity(
   }
   return header_iter->second;
 }
+
+ExecutionResultOr<absl::string_view> ExtractUserAgent(
+    const HttpHeaders& request_headers) noexcept {
+  // Find the User-Agent header.
+  auto header_iter = request_headers.find(std::string(kUserAgentHeader));
+  if (header_iter == request_headers.end()) {
+    return core::FailureExecutionResult(
+        core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+  }
+
+  // Regular expression to match 'aggregation-service/x.y.z', where x, y, and z
+  // are digits.
+  RE2 user_agent_regex(R"((aggregation-service/[0-9]+\.[0-9]+\.[0-9]+))");
+  absl::string_view user_agent = header_iter->second;
+
+  // Match position and length variables.
+  absl::string_view match;
+
+  // Search for the regex pattern in the User-Agent string.
+  if (RE2::PartialMatch(user_agent, user_agent_regex, &match)) {
+    // Return only the matched portion: 'aggregation-service/x.y.z'.
+    return match;
+  }
+
+  // Return unknown if pattern is not found.
+  return absl::string_view(kUnknownValue);
+}
+
+std::string HttpMethodToString(HttpMethod method) {
+  switch (method) {
+    case HttpMethod::GET:
+      return "GET";
+    case HttpMethod::POST:
+      return "POST";
+    case HttpMethod::PUT:
+      return "PUT";
+    case HttpMethod::UNKNOWN:
+      return "UNKNOWN";
+  }
+  return "UNKNOWN";
+}
+
 }  // namespace google::scp::core::utils

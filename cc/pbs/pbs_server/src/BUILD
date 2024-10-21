@@ -19,7 +19,6 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "error_codes",
     hdrs = ["error_codes.h"],
-    copts = ["-std=c++17"],
     deps = [
         "//cc/core/interface:errors_lib",
         "//cc/public/core/interface:execution_result",
@@ -48,7 +47,7 @@ cloud_platform_copts = select({
 cc_binary(
     name = "privacy_budget_service",
     srcs = ["pbs_server.cc"],
-    copts = cloud_platform_copts + ["-std=c++17"],
+    copts = cloud_platform_copts,
     linkopts = [
         # Tell LD to look in the working directory of the executable for SO
         # files to link

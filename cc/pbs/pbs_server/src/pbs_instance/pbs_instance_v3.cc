@@ -77,8 +77,12 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
     // On initialization of metric_router_, Meter Provider would be set globally
     // for PBS. Services can access the Meter Provider using
     // opentelemetry::metrics::Provider::GetMeterProvider()
+    //
+    // instance_client_provider here is passed as nullptr to avoid a dependency
+    // cycle. This is okay because PBSInstanceV3 is only used by PBS on GCP,
+    // which doesn't use instance_client_provider.
     metric_router_ = cloud_platform_dependency_factory_->ConstructMetricRouter(
-        instance_client_provider_);
+        /*instance_client_provider=*/nullptr);
   }
 
   // Construct foundational components.
@@ -121,7 +125,7 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
       authorization_proxy_, aws_authorization_proxy, metric_client_,
-      config_provider_, http2_server_options);
+      config_provider_, http2_server_options, metric_router_.get());
 
   health_http_server_ = std::make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,

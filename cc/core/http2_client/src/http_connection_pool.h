@@ -36,6 +36,7 @@
 #include "public/core/interface/execution_result.h"
 
 namespace google::scp::core {
+
 /**
  * @brief Provides connection pool functionality. Once the object is created,
  * the caller can get a connection to the remote host by calling get connection.
@@ -93,6 +94,8 @@ class HttpConnectionPool : public ServiceInterface {
         http2_read_timeout_in_sec_(http2_read_timeout_in_sec),
         is_running_(false),
         metric_router_(metric_router) {}
+
+  ~HttpConnectionPool();
 
   ExecutionResult Init() noexcept;
   ExecutionResult Run() noexcept;
@@ -168,4 +171,5 @@ class HttpConnectionPool : public ServiceInterface {
   std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
       client_address_errors_counter_;
 };
+
 }  // namespace google::scp::core

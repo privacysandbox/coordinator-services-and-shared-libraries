@@ -26,6 +26,36 @@ add_failure_stage_context = False
 psl = PublicSuffixList()
 
 
+def init_module(instance_id, database_id, table_name):
+  global _instance_id, _database_id, _table_name, _client, _instance, _database
+  _instance_id = instance_id
+  _database_id = database_id
+  _table_name = table_name
+
+  _client = spanner.Client()
+  _instance = _client.instance(_instance_id)
+  _database = _instance.database(_database_id)
+
+
+def _has_all_required_env_vars():
+  return all([
+      key in os.environ
+      for key in [
+          'AUTH_V2_SPANNER_INSTANCE_ID',
+          'AUTH_V2_SPANNER_DATABASE_ID',
+          'AUTH_V2_SPANNER_TABLE_NAME',
+      ]
+  ])
+
+
+if _has_all_required_env_vars():
+  init_module(
+      os.environ['AUTH_V2_SPANNER_INSTANCE_ID'],
+      os.environ['AUTH_V2_SPANNER_DATABASE_ID'],
+      os.environ['AUTH_V2_SPANNER_TABLE_NAME'],
+  )
+
+
 def forbidden(stage, status_code=403):
   if add_failure_stage_context:
     return json.dumps('authorization forbidden'), status_code, stage
@@ -72,19 +102,10 @@ def get_adtech_sites(caller_identity):
     message from Spanner.
   """
   try:
-    instance_id = os.environ['AUTH_V2_SPANNER_INSTANCE_ID']
-    database_id = os.environ['AUTH_V2_SPANNER_DATABASE_ID']
-    table_name = os.environ['AUTH_V2_SPANNER_TABLE_NAME']
-
-    client = spanner.Client()
-
-    instance = client.instance(instance_id)
-    database = instance.database(database_id)
-
-    with database.snapshot() as snapshot:
+    with _database.snapshot() as snapshot:
       query = (
           'SELECT auth.AdtechSites FROM {} auth WHERE AccountId = @accountId'
-          .format(table_name)
+          .format(_table_name)
       )
       results = snapshot.execute_sql(
           query,

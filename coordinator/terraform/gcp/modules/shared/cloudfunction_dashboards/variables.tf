@@ -16,6 +16,11 @@
 # Global Variables
 ################################################################################
 
+variable "project_id" {
+  type        = string
+  description = "The GCP project ID."
+}
+
 variable "environment" {
   type        = string
   description = "Environment where this service is deployed (e.g. dev, prod)."

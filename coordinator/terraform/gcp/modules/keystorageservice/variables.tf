@@ -161,3 +161,13 @@ variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
 }
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Use OpenTelemetry to export metrics from Key Storage Service."
+  type        = bool
+  default     = false
+}

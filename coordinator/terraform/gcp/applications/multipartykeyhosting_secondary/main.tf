@@ -21,11 +21,6 @@ terraform {
   }
 }
 
-provider "google" {
-  project = var.project_id
-  region  = var.primary_region
-}
-
 locals {
   service_subdomain_suffix   = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   encryption_key_service_zip = var.encryption_key_service_zip != "" ? var.encryption_key_service_zip : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/EncryptionKeyServiceHttpCloudFunctionDeploy.zip"
@@ -51,6 +46,7 @@ module "vpc" {
 
 # Storage bucket containing cloudfunction JARs
 resource "google_storage_bucket" "mpkhs_secondary_package_bucket" {
+  project = var.project_id
   # GCS names are globally unique
   name                        = local.package_bucket_name
   location                    = var.mpkhs_package_bucket_location
@@ -60,6 +56,7 @@ resource "google_storage_bucket" "mpkhs_secondary_package_bucket" {
 
 # Cloud KMS encryption ring and key encryption key (KEK)
 resource "google_kms_key_ring" "key_encryption_ring" {
+  project  = var.project_id
   name     = "${var.environment}_key_encryption_ring"
   location = "us"
 }
@@ -74,7 +71,9 @@ resource "google_kms_crypto_key" "key_encryption_key" {
 }
 
 resource "google_monitoring_notification_channel" "alarm_email" {
-  count        = var.alarms_enabled ? 1 : 0
+  count = var.alarms_enabled ? 1 : 0
+
+  project      = var.project_id
   display_name = "${var.environment} Coordinator B Key Hosting Alarms Notification Email"
   type         = "email"
   labels = {
@@ -92,7 +91,9 @@ resource "google_monitoring_notification_channel" "alarm_email" {
 }
 
 module "keydb" {
-  source                   = "../../modules/keydb"
+  source = "../../modules/keydb"
+
+  project_id               = var.project_id
   environment              = var.environment
   spanner_instance_config  = var.spanner_instance_config
   spanner_processing_units = var.spanner_processing_units
@@ -135,6 +136,9 @@ module "keystorageservice" {
   cloudfunction_max_execution_time_max = var.keystorageservice_cloudfunction_max_execution_time_max
   lb_5xx_threshold                     = var.keystorageservice_lb_5xx_threshold
   lb_max_latency_ms                    = var.keystorageservice_lb_max_latency_ms
+
+  # OTel Metrics
+  export_otel_metrics = var.export_otel_metrics
 }
 
 module "encryptionkeyservice" {
@@ -169,6 +173,9 @@ module "encryptionkeyservice" {
   cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
   lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
   lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+
+  # OTel Metrics
+  export_otel_metrics = var.export_otel_metrics
 }
 
 module "domain_a_records" {

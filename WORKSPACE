@@ -100,10 +100,16 @@ JAVA_OTEL_VERSION = "1.38.0"
 
 OTEL_ARTIFACTS = [
     "com.google.cloud.opentelemetry:exporter-metrics:0.31.0",
+    # Note from https://github.com/open-telemetry/semantic-conventions-java:
+    # Although this is for stable semantic conventions, the artifact still has the -alpha and comes with no
+    # compatibility guarantees. The goal is to mark this artifact stable.
+    "io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha",
     "io.opentelemetry:opentelemetry-api:" + JAVA_OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk:" + JAVA_OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-common:" + JAVA_OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-metrics:" + JAVA_OTEL_VERSION,
+    # As of adding, https://repo1.maven.org/maven2/io/opentelemetry/contrib/opentelemetry-gcp-resources/ only shows
+    # that alpha version is available.
     "io.opentelemetry.contrib:opentelemetry-gcp-resources:" + JAVA_OTEL_VERSION + "-alpha",
     "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:" + JAVA_OTEL_VERSION,
 ]

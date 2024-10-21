@@ -14,6 +14,7 @@
 
 # Network Endpoint Group to route to cloud function
 resource "google_compute_region_network_endpoint_group" "encryption_key_service_network_endpoint_group" {
+  project               = var.project_id
   name                  = "${var.environment}-${var.region}-encryption-key-service-endpoint-group"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
@@ -24,8 +25,8 @@ resource "google_compute_region_network_endpoint_group" "encryption_key_service_
 
 # Backend service that groups network endpoint groups for Load Balancer to use.
 resource "google_compute_backend_service" "encryption_key_service_loadbalancer_backend" {
-  name        = "${var.environment}-encryption-key-service-backend"
   project     = var.project_id
+  name        = "${var.environment}-encryption-key-service-backend"
   description = "Backend service to point Encryption Key Cloud Function."
 
   enable_cdn = false
@@ -49,14 +50,18 @@ resource "google_compute_url_map" "encryption_key_service_loadbalancer" {
 
 # Proxy to loadbalancer. HTTP without custom domain
 resource "google_compute_target_http_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count   = var.enable_domain_management ? 0 : 1
+  count = var.enable_domain_management ? 0 : 1
+
+  project = var.project_id
   name    = "${var.environment}-encryption-key-service-proxy"
   url_map = google_compute_url_map.encryption_key_service_loadbalancer.id
 }
 
 # Proxy to loadbalancer. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count            = var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management ? 1 : 0
+
+  project          = var.project_id
   name             = "${var.environment}-encryption-key-service-proxy"
   url_map          = google_compute_url_map.encryption_key_service_loadbalancer.id
   ssl_certificates = [google_compute_managed_ssl_certificate.encryption_key_service_loadbalancer[0].id]
@@ -64,11 +69,13 @@ resource "google_compute_target_https_proxy" "encryption_key_service_loadbalance
 
 # Reserve IP address.
 resource "google_compute_global_address" "encryption_key_service_ip_address" {
-  name = "${var.environment}-encryption-key-service-ip-address"
+  project = var.project_id
+  name    = "${var.environment}-encryption-key-service-ip-address"
 }
 
 # Map IP address and loadbalancer proxy
 resource "google_compute_global_forwarding_rule" "encryption_key_service_loadbalancer_config" {
+  project    = var.project_id
   name       = "${var.environment}-encryption-key-service-frontend-configuration"
   ip_address = google_compute_global_address.encryption_key_service_ip_address.address
   port_range = var.enable_domain_management ? "443" : "80"

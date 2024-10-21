@@ -120,6 +120,7 @@ struct Version {
 static constexpr char kClientActivityIdHeader[] = "x-gscp-client-activity-id";
 static constexpr char kClaimedIdentityHeader[] = "x-gscp-claimed-identity";
 static constexpr const char kAuthHeader[] = "x-auth-token";
+static constexpr const char kUserAgentHeader[] = "User-Agent";
 
 struct LoadableObject {
   LoadableObject() : is_loaded(false), needs_loader(false) {}
@@ -140,18 +141,27 @@ static constexpr TimeDuration kDefaultRetryStrategyDelayInMs = 101;
 static constexpr size_t kDefaultMaxConnectionsPerHost = 2;
 static constexpr TimeDuration kDefaultHttp2ReadTimeoutInSeconds = 60;
 
+// Meter
+inline constexpr absl::string_view kHttp2ServerMeter = "Http2 Server";
+
 // Metrics
-static constexpr char kServerDurationMetric[] = "http.server.request.duration";
+static constexpr char kServerRequestDurationMetric[] =
+    "http.server.request.duration";
 static constexpr char kActiveRequestsMetric[] = "http.server.active_requests";
 static constexpr char kServerRequestBodySizeMetric[] =
     "http.server.request.body.size";
 static constexpr char kServerResponseBodySizeMetric[] =
     "http.server.response.body.size";
-static constexpr char kPbsTransactionMetric[] = "google.scp.pbs.transactions";
+static constexpr char kPbsRequestsMetric[] = "google.scp.pbs.requests";
+
+// View
+inline constexpr absl::string_view kServerRequestDurationView =
+    "Server Duration";
 
 // Labels
-static constexpr char kExecutionStatus[] = "execution-status";
-static constexpr char kResponseCode[] = "response-code";
+inline constexpr absl::string_view kServerResponseStatusLabel =
+    "server.response_status";
+inline constexpr absl::string_view kAuthDomainLabel = "auth-domain";
 
 // Default Value
 inline static constexpr absl::string_view kUnknownValue = "unknown";

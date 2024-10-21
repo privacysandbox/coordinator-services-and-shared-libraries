@@ -69,7 +69,6 @@ public final class CloudFunctionUtil {
       Map<String, String> headers)
       throws IOException {
     BufferedWriter writer = response.getWriter();
-
     try {
       writer.write(jsonPrinter.print(bodyObject));
       response.setStatusCode(statusCode);

@@ -30,6 +30,7 @@ module "version" {
 }
 
 resource "google_service_account" "key_storage_service_account" {
+  project = var.project_id
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-keystorageuser"
   display_name = "KeyStorage Service Account"
@@ -43,6 +44,7 @@ resource "google_storage_bucket_object" "key_storage_archive" {
 }
 
 resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
+  project     = var.project_id
   name        = "${var.environment}-${var.region}-${var.key_storage_cloudfunction_name}"
   location    = var.region
   description = "Cloud Function for key storage service"
@@ -66,12 +68,13 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
     service_account_email = google_service_account.key_storage_service_account.email
     ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
-      PROJECT_ID       = var.project_id
-      GCP_KMS_URI      = "gcp-kms://${var.key_encryption_key_id}"
-      SPANNER_INSTANCE = var.spanner_instance_name
-      SPANNER_DATABASE = var.spanner_database_name
-      VERSION          = module.version.version
-      LOG_EXECUTION_ID = "true"
+      PROJECT_ID          = var.project_id
+      GCP_KMS_URI         = "gcp-kms://${var.key_encryption_key_id}"
+      SPANNER_INSTANCE    = var.spanner_instance_name
+      SPANNER_DATABASE    = var.spanner_database_name
+      VERSION             = module.version.version
+      LOG_EXECUTION_ID    = "true"
+      EXPORT_OTEL_METRICS = var.export_otel_metrics
     }
   }
 
@@ -88,6 +91,7 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
 
 # IAM entry for key storage service account to use the database
 resource "google_spanner_database_iam_member" "keydb_iam_policy" {
+  project  = var.project_id
   instance = var.spanner_instance_name
   database = var.spanner_database_name
   role     = "roles/spanner.databaseUser"
@@ -97,6 +101,7 @@ resource "google_spanner_database_iam_member" "keydb_iam_policy" {
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
   for_each = setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : [])
+
   project  = var.project_id
   location = google_cloudfunctions2_function.key_storage_cloudfunction.location
   service  = google_cloudfunctions2_function.key_storage_cloudfunction.name
@@ -110,4 +115,11 @@ resource "google_kms_crypto_key_iam_member" "kms_iam_policy" {
   crypto_key_id = var.key_encryption_key_id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:${google_service_account.key_storage_service_account.email}"
+}
+
+# IAM entry to allow key storage cloud function to write metrics.
+resource "google_project_iam_member" "keystorage_monitoring_iam_policy" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${google_service_account.key_storage_service_account.email}"
 }

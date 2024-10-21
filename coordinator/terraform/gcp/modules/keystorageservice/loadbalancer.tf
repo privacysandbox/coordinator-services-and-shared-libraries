@@ -118,6 +118,7 @@ moved {
 }
 
 resource "google_compute_region_network_endpoint_group" "key_storage_endpoint_group" {
+  project               = var.project_id
   name                  = "${var.environment}-keystoragegroup"
   network_endpoint_type = "SERVERLESS"
   region                = var.region

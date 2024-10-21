@@ -17,9 +17,10 @@ locals {
 }
 
 module "keystorageservice_loadbalancer_alarms" {
-  source = "../shared/loadbalancer_alarms"
   count  = var.alarms_enabled ? 1 : 0
+  source = "../shared/loadbalancer_alarms"
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   load_balancer_name      = var.load_balancer_name
@@ -32,9 +33,10 @@ module "keystorageservice_loadbalancer_alarms" {
 }
 
 module "keystorageservice_cloudfunction_alarms" {
-  source = "../shared/cloudfunction_alarms"
   count  = var.alarms_enabled ? 1 : 0
+  source = "../shared/cloudfunction_alarms"
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   function_name           = local.function_name
@@ -48,7 +50,9 @@ module "keystorageservice_cloudfunction_alarms" {
 }
 
 module "keystorageservice_monitoring_dashboard" {
-  source        = "../shared/cloudfunction_dashboards"
+  source = "../shared/cloudfunction_dashboards"
+
+  project_id    = var.project_id
   environment   = var.environment
   service_name  = "Key Storage"
   function_name = local.function_name

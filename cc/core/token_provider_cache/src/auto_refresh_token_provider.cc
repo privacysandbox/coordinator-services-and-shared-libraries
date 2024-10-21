@@ -15,6 +15,7 @@
  */
 #include "auto_refresh_token_provider.h"
 
+#include <mutex>
 #include <string>
 
 #include "core/interface/async_context.h"

@@ -14,7 +14,9 @@
 
 # Network Endpoint Group to route to cloud functions in each region
 resource "google_compute_region_network_endpoint_group" "get_public_key_network_endpoint_group" {
-  for_each              = google_cloudfunctions2_function.get_public_key_cloudfunction
+  for_each = google_cloudfunctions2_function.get_public_key_cloudfunction
+
+  project               = var.project_id
   name                  = "${var.environment}-${each.value.location}-get-public-key-endpoint-group"
   network_endpoint_type = "SERVERLESS"
   region                = each.value.location
@@ -66,14 +68,18 @@ resource "google_compute_url_map" "get_public_key_loadbalancer" {
 
 # Proxy to loadbalancer. HTTP without custom domain
 resource "google_compute_target_http_proxy" "get_public_key_loadbalancer_proxy" {
-  count   = var.enable_domain_management ? 0 : 1
+  count = var.enable_domain_management ? 0 : 1
+
+  project = var.project_id
   name    = "${var.environment}-get-public-key-proxy"
   url_map = google_compute_url_map.get_public_key_loadbalancer.id
 }
 
 # Proxy to loadbalancer. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "get_public_key_loadbalancer_proxy" {
-  count            = var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management ? 1 : 0
+
+  project          = var.project_id
   name             = "${var.environment}-get-public-key-proxy"
   url_map          = google_compute_url_map.get_public_key_loadbalancer.id
   ssl_certificates = [google_compute_managed_ssl_certificate.get_public_key_loadbalancer[0].id]
@@ -81,11 +87,13 @@ resource "google_compute_target_https_proxy" "get_public_key_loadbalancer_proxy"
 
 # Reserve IP address.
 resource "google_compute_global_address" "get_public_key_ip_address" {
-  name = "${var.environment}-get-public-key-ip-address"
+  project = var.project_id
+  name    = "${var.environment}-get-public-key-ip-address"
 }
 
 # Map IP address and loadbalancer proxy
 resource "google_compute_global_forwarding_rule" "get_public_key_loadbalancer_config" {
+  project    = var.project_id
   name       = "${var.environment}-get-public-key-frontend-configuration"
   ip_address = google_compute_global_address.get_public_key_ip_address.address
   port_range = var.enable_domain_management ? "443" : "80"

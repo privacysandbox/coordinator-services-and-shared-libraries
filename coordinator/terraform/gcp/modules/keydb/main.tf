@@ -13,6 +13,7 @@
 # limitations under the License.
 
 resource "google_spanner_instance" "keydb_instance" {
+  project          = var.project_id
   name             = "${var.environment}-keydbinstance"
   display_name     = "${var.environment}-keydbinstance"
   config           = var.spanner_instance_config
@@ -20,6 +21,7 @@ resource "google_spanner_instance" "keydb_instance" {
 }
 
 resource "google_spanner_database" "keydb" {
+  project                  = var.project_id
   instance                 = google_spanner_instance.keydb_instance.name
   name                     = "${var.environment}-keydb"
   version_retention_period = var.key_db_retention_period

@@ -23,7 +23,7 @@
 #  - java_base: Distroless image for running Java.
 ################################################################################
 
-# Updated as of: 2024-10-11
+# Updated as of: 2024-10-08
 
 CONTAINER_DEPS = {
     "amazonlinux_2": {

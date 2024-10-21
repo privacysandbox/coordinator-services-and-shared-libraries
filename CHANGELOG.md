@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.12.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.11.0...v1.12.0) (2024-10-21)
+
+- **Important note**
+  - **[GCP only]** Provider definitions have been removed from MPKHS Terraform. Ensure that the default project and region are set appropriately at the root module level
+
+### Changes
+
+  - Added KHS http request duration metric for private key fetching
+  - Addressed crash in BudgetKeyTimeframeManager
+  - Addressed crash in ListRecentEncryptionKeys when invalid keys present in database
+  - Addressed UAF triggered by observable metric callbacks
+  - Created Http server metrics labels in the terraform
+  - Updated dependencies to address security vulnerabilities
+  - [Aggregatable Report Accounting] Addressed dependency cycle in PBSInstanceV3 initialization
+  - [Aggregatable Report Accounting] Cleaned up the Terraform flag "google_scp_pbs_adtech_site_as_authorized_domain_enabled"
+  - [Aggregatable Report Accounting] Reduced the severity of logs when async context received error status due to false alarms
+  - [Aggregatable Report Accounting] Replaced absl::bind_front with std::bind_front
+  - [Aggregatable Report Accounting] Updated C++ version to C++20, except for `//cc/aws/proxy/...`
+  - [Aggregatable Report Accounting] Updated consume_budget.cc to reduce map lookup operations
+  - [Aggregatable Report Accounting] Updated documentation for PBS Cloud Spanner schema
+  - [AWS only] Added missing SSM permissions for SSH access for AWS PBS
+  - [GCP only] Added missing project in domain_a_records module
+  - [GCP only] Added terraform code to enable OTel metrics for public key, private key, and key storage services
+          - To enable, add `export_otel_metrics = true` to the corresponding `mpkhs/<env>.auto.tfvars`
+  - [GCP only] Removed provider definitions from MPKHS modules
+
 ## [1.11.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.10.0...v1.11.0) (2024-10-07)
 
 - **Important note**

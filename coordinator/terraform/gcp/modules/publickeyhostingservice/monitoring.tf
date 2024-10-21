@@ -22,9 +22,10 @@ locals {
 }
 
 module "load_balancer_alarms" {
-  source = "../shared/loadbalancer_alarms"
   count  = var.alarms_enabled ? 1 : 0
+  source = "../shared/loadbalancer_alarms"
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   load_balancer_name      = google_compute_url_map.get_public_key_loadbalancer.name
@@ -37,9 +38,10 @@ module "load_balancer_alarms" {
 }
 
 module "cloud_function_alarms" {
-  source   = "../shared/cloudfunction_alarms"
   for_each = var.alarms_enabled ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
+  source   = "../shared/cloudfunction_alarms"
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   function_name           = each.value.name

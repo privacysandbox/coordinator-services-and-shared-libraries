@@ -48,6 +48,22 @@ static constexpr char kHttpTag[] = "http";
 static constexpr char kHttpConnection[] = "HttpConnection";
 
 namespace google::scp::core {
+
+HttpConnectionPool::~HttpConnectionPool() {
+  if (client_active_requests_instrument_) {
+    client_active_requests_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HttpConnectionPool::ObserveClientActiveRequestsCallback),
+        this);
+  }
+  if (client_open_connections_instrument_) {
+    client_open_connections_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HttpConnectionPool::ObserveClientOpenConnectionsCallback),
+        this);
+  }
+}
+
 ExecutionResult HttpConnectionPool::Init() noexcept {
   if (metric_router_) {
     meter_ = metric_router_->GetOrCreateMeter(kHttpConnectionPoolMeter);
@@ -329,4 +345,5 @@ void HttpConnectionPool::IncrementClientAddressError(absl::string_view uri) {
     client_address_errors_counter_->Add(1, client_address_errors_label_kv);
   }
 }
+
 }  // namespace google::scp::core

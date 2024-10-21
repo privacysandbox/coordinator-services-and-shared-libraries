@@ -18,9 +18,10 @@ locals {
 }
 
 module "encryptionkeyservice_loadbalancer_alarms" {
-  source = "../shared/loadbalancer_alarms"
   count  = var.alarms_enabled ? 1 : 0
+  source = "../shared/loadbalancer_alarms"
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   load_balancer_name      = local.load_balancer_name
@@ -33,9 +34,10 @@ module "encryptionkeyservice_loadbalancer_alarms" {
 }
 
 module "encryptionkeyservice_cloudfunction_alarms" {
-  source = "../shared/cloudfunction_alarms"
   count  = var.alarms_enabled ? 1 : 0
+  source = "../shared/cloudfunction_alarms"
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   function_name           = local.function_name
@@ -49,7 +51,9 @@ module "encryptionkeyservice_cloudfunction_alarms" {
 }
 
 module "encryptionkeyservice_monitoring_dashboard" {
-  source        = "../shared/cloudfunction_dashboards"
+  source = "../shared/cloudfunction_dashboards"
+
+  project_id    = var.project_id
   environment   = var.environment
   service_name  = "Encryption Key"
   function_name = local.function_name

@@ -59,6 +59,8 @@ class HealthService : public core::ServiceInterface {
         metric_client_(metric_client),
         last_metric_push_steady_ns_timestamp_(0) {}
 
+  ~HealthService();
+
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;
   core::ExecutionResult Stop() noexcept override;

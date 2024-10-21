@@ -30,6 +30,7 @@ load("//build_defs/shared:grpc.bzl", "grpc")
 load("//build_defs/shared:java_grpc.bzl", "java_grpc")
 load("//build_defs/shared:protobuf.bzl", "protobuf")
 load("//build_defs/tink:tink_defs.bzl", "import_tink_git")
+load("//build_defs/cc/shared:re2_cpp.bzl", "re2_cpp")
 
 def sdk_common(protobuf_version, protobuf_repo_hash):
     absl()
@@ -50,3 +51,4 @@ def sdk_common(protobuf_version, protobuf_repo_hash):
     protobuf(protobuf_version, protobuf_repo_hash)
     import_google_cloud_cpp()
     import_tink_git()
+    re2_cpp()

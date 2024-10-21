@@ -32,6 +32,7 @@ cc_library(
         "@boringssl//:crypto",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_googlesource_code_re2//:re2",
         "@curl",
     ],
 )

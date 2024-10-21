@@ -26,12 +26,21 @@ import static com.google.scp.shared.gcp.util.CloudFunctionUtil.createCloudFuncti
 import com.google.cloud.functions.HttpFunction;
 import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.util.Durations;
 import com.google.scp.protos.shared.api.v1.ErrorResponseProto.ErrorResponse;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.HttpMethod;
+import com.google.scp.shared.otel.OTelSemConMetrics;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.metrics.DoubleHistogram;
+import io.opentelemetry.semconv.HttpAttributes;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -48,6 +57,11 @@ public abstract class CloudFunctionServiceBase implements HttpFunction {
     return ImmutableMap.of();
   }
 
+  /** Override below if OpenTelemetry SDK is needed */
+  protected OpenTelemetry OTel;
+
+  private DoubleHistogram httpServerDurationHistogram;
+
   protected final ImmutableMap<String, String> allHeaders() {
     return new ImmutableMap.Builder<String, String>()
         .putAll(customHeaders())
@@ -55,8 +69,28 @@ public abstract class CloudFunctionServiceBase implements HttpFunction {
         .build();
   }
 
+  /** Use this constructor if OpenTelemetry SDK is not needed */
+  protected CloudFunctionServiceBase() {
+    this(OpenTelemetry.noop());
+  }
+
+  /** Use this constructor if OpenTelemetry SDK is needed */
+  protected CloudFunctionServiceBase(OpenTelemetry OTel) {
+    this.OTel = OTel;
+    this.httpServerDurationHistogram =
+        OTel.getMeter(this.getClass().getName())
+            .histogramBuilder(OTelSemConMetrics.HTTP_SERVER_REQUEST_DURATION)
+            .setExplicitBucketBoundariesAdvice(OTelSemConMetrics.LATENCY_BUCKETS)
+            .build();
+  }
+
+  protected OpenTelemetry getOTel() {
+    return this.OTel;
+  }
+
   @Override
   public void service(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
+    Stopwatch stopwatch = Stopwatch.createStarted();
     ImmutableMap<HttpMethod, ImmutableMap<Pattern, CloudFunctionRequestHandler>> requestHandlerMap =
         getRequestHandlerMap();
 
@@ -92,5 +126,10 @@ public abstract class CloudFunctionServiceBase implements HttpFunction {
         potentialEntry.get().getValue().handleRequest(httpRequest, httpResponse);
       }
     }
+    long elapsedMillis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+    double elapsedSeconds = Durations.toSecondsAsDouble(Durations.fromMillis(elapsedMillis));
+    AttributesBuilder attributesBuilder = Attributes.builder();
+    attributesBuilder.put(HttpAttributes.HTTP_ROUTE, requestMethod);
+    this.httpServerDurationHistogram.record(elapsedSeconds, attributesBuilder.build());
   }
 }

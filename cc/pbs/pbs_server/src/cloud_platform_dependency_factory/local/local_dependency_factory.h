@@ -104,7 +104,8 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
           auth_token_provider_cache) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider) noexcept override;
 
  private:

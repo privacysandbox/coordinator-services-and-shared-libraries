@@ -17,6 +17,7 @@
 #include <optional>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 
 #include "cc/core/authorization_proxy/src/authorization_proxy.h"
 #include "cc/core/blob_storage_provider/src/gcp/gcp_cloud_storage.h"
@@ -53,6 +54,7 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/sdk/resource/resource_detector.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 
 #include "dummy_impls.h"
 
@@ -350,17 +352,25 @@ GcpDependencyFactory::ConstructRemoteCoordinatorPBSClient(
 }
 
 std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider) noexcept {
   auto resource_detector = google::cloud::otel::MakeResourceDetector();
+  opentelemetry::sdk::resource::ResourceAttributes resource_attributes = {
+      {opentelemetry::sdk::resource::SemanticConventions::kServiceName, "pbs"},
+  };
+
   opentelemetry::sdk::resource::Resource resource = resource_detector->Detect();
+  resource = resource.Merge(
+      opentelemetry::sdk::resource::Resource::Create(resource_attributes));
 
   return this->ConstructMetricRouter(instance_client_provider,
                                      std::move(resource));
 }
 
 std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider,
     opentelemetry::sdk::resource::Resource resource) noexcept {
   const std::string exporter_config = GetConfigValue(
@@ -369,8 +379,8 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
 
   if (exporter_config == "otlp") {
     SCP_INFO(kGcpDependencyProvider, kZeroUuid,
-                "Using value: " + exporter_config +
-                    " for option OTEL_METRICS_EXPORTER.");
+             "Using value: " + exporter_config +
+                 " for option OTEL_METRICS_EXPORTER.");
     std::unique_ptr<GrpcAuthConfig> metric_auth_config =
         std::make_unique<GrpcAuthConfig>(
             GetConfigValue(std::string(core::kOtelServiceAccountKey),
@@ -404,19 +414,27 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
                                           std::move(exporter));
   } else if (exporter_config == "googlecloud") {
     SCP_INFO(kGcpDependencyProvider, kZeroUuid,
-                "Using value: " + exporter_config +
-                    " for option OTEL_METRICS_EXPORTER.");
-    auto project_id_or =
-        GcpInstanceClientUtils::GetCurrentProjectId(instance_client_provider);
-    if (!project_id_or.Successful()) {
-      SCP_ERROR(
-          kGcpDependencyProvider, kZeroUuid, project_id_or.result(),
-          "Failed to read current project ID using GcpInstanceClientUtils.");
+             "Using value: " + exporter_config +
+                 " for option OTEL_METRICS_EXPORTER.");
+    if (resource.GetAttributes().find(
+            opentelemetry::sdk::resource::SemanticConventions::
+                kCloudAccountId) == resource.GetAttributes().end()) {
+      SCP_WARNING(kGcpDependencyProvider, kZeroUuid,
+                  "Failed to read current project ID using "
+                  "GcpResourceDetector: cannot find project ID.");
       return nullptr;
     }
-    std::string project_id = project_id_or.value();
 
-    auto project = google::cloud::Project(project_id);
+    auto project_id = resource.GetAttributes().at(
+        opentelemetry::sdk::resource::SemanticConventions::kCloudAccountId);
+    if (!std::holds_alternative<std::string>(project_id)) {
+      SCP_WARNING(kGcpDependencyProvider, kZeroUuid,
+                  "Failed to read current project ID using "
+                  "GcpResourceDetector: project ID is not a string.");
+      return nullptr;
+    }
+
+    auto project = google::cloud::Project(std::get<std::string>(project_id));
     auto connection =
         google::cloud::monitoring_v3::MakeMetricServiceConnection();
     auto client = google::cloud::monitoring_v3::MetricServiceClient(connection);

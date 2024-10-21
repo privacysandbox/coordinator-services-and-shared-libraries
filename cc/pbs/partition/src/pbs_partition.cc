@@ -302,7 +302,7 @@ PartitionLoadUnloadState PBSPartition::GetPartitionState() noexcept {
 }
 
 void PBSPartition::IncrementRequestCount() {
-  requests_seen_count_.fetch_add(1, std::memory_order::memory_order_relaxed);
+  requests_seen_count_.fetch_add(1, std::memory_order_relaxed);
   // Emit the counter every 1000 requests.
   // TODO: Convert this to a metric.
   if (requests_seen_count_.load() % 1000 == 0) {

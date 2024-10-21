@@ -29,5 +29,6 @@ cc_library(
         "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
+        "@com_google_absl//absl/base:nullability",
     ],
 )

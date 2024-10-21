@@ -199,7 +199,7 @@ void ReadSingleCoordinatorConfig(const path& config_path,
     throw runtime_error("Cannot initialize Config Provider");
   }
 
-  ifstream config_file_contents(config_path.u8string());
+  ifstream config_file_contents(config_path.c_str());
   if (config_file_contents.is_open()) {
     cout << "Using config file:\n" << config_file_contents.rdbuf() << endl;
     config_file_contents.close();

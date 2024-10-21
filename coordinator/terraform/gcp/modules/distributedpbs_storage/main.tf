@@ -80,8 +80,20 @@ resource "google_spanner_database" "pbs_spanner_database" {
   version_retention_period = var.pbs_spanner_database_retention_period
   deletion_protection      = var.pbs_spanner_database_deletion_protection
 
-  # Do not remove DDL statements. You may only append.
-  # Terraform apply will replace these resources otherwise.
+  # Do not modify existing DDL statements. Only append new statements to this list.
+  # Modifying existing statements will force Terraform to replace the associated resources,
+  # resulting in data loss.
+  #
+  # Example of what NOT to do:
+  #
+  #   Incorrect: Adding a column to an existing CREATE TABLE statement.
+  #     CREATE TABLE MyTable (
+  #       MyExistingColumn String(1024),
+  #       MyNewColumn String(1024),  <-- This modification is incorrect
+  #     ) PRIMARY KEY (MyExistingColumn)
+  #
+  #   This will cause Terraform to drop and recreate the table, deleting all existing data.
+  #   Instead, append a new ALTER TABLE statement to add the column.
   ddl = [
     <<-EOT
     CREATE TABLE ${local.pbs_spanner_budget_key_table_name} (

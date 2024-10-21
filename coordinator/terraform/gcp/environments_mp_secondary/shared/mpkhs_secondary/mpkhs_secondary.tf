@@ -80,4 +80,6 @@ module "multipartykeyhosting_secondary" {
   encryptionkeyservice_cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
   encryptionkeyservice_lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
   encryptionkeyservice_lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+
+  export_otel_metrics = var.export_otel_metrics
 }

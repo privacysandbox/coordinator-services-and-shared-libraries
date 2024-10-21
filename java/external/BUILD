@@ -737,3 +737,8 @@ alias(
     name = "opentelemetry_sdk_extension_autoconfigure_spi",
     actual = "@maven//:io_opentelemetry_opentelemetry_sdk_extension_autoconfigure_spi",
 )
+
+alias(
+    name = "opentelemetry_semconv",
+    actual = "@maven//:io_opentelemetry_semconv_opentelemetry_semconv",
+)

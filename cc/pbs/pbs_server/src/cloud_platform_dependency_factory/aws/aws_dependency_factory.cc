@@ -298,10 +298,12 @@ AwsDependencyFactory::ConstructRemoteCoordinatorPBSClient(
 }
 
 std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider) noexcept {
   std::string current_instance_resource_name;
-  auto execution_result =
+  CHECK(instance_client_provider != nullptr);
+  ExecutionResult execution_result =
       instance_client_provider->GetCurrentInstanceResourceNameSync(
           current_instance_resource_name);
 
@@ -310,6 +312,7 @@ std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
        "aws"},
       {opentelemetry::sdk::resource::SemanticConventions::kCloudPlatform,
        "aws_ec2"},
+      {opentelemetry::sdk::resource::SemanticConventions::kServiceName, "pbs"},
   };
   if (execution_result.Successful()) {
     auto cloud_region_or = AwsInstanceClientUtils::ParseRegionFromResourceName(
@@ -355,7 +358,8 @@ std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
 }
 
 std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider,
     opentelemetry::sdk::resource::Resource resource) noexcept {
   std::unique_ptr<GrpcAuthConfig> metric_auth_config =

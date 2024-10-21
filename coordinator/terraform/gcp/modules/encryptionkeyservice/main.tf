@@ -32,6 +32,7 @@ module "version" {
 }
 
 resource "google_service_account" "encryption_key_service_account" {
+  project = var.project_id
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-encryptionkeyuser"
   display_name = "Encryption Key Service Account"
@@ -45,6 +46,7 @@ resource "google_storage_bucket_object" "encryption_key_service_package_bucket_o
 }
 
 resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction" {
+  project  = var.project_id
   name     = "${var.environment}-${var.region}-${local.cloudfunction_name_suffix}"
   location = var.region
 
@@ -67,11 +69,12 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
     service_account_email = local.encryption_key_service_account_email
     ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
-      PROJECT_ID       = var.project_id
-      SPANNER_INSTANCE = var.spanner_instance_name
-      SPANNER_DATABASE = var.spanner_database_name
-      VERSION          = module.version.version
-      LOG_EXECUTION_ID = "true"
+      PROJECT_ID          = var.project_id
+      SPANNER_INSTANCE    = var.spanner_instance_name
+      SPANNER_DATABASE    = var.spanner_database_name
+      VERSION             = module.version.version
+      LOG_EXECUTION_ID    = "true"
+      EXPORT_OTEL_METRICS = var.export_otel_metrics
     }
   }
 
@@ -88,6 +91,7 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
 
 # IAM entry for service account to read from the database
 resource "google_spanner_database_iam_member" "encryption_key_service_spannerdb_iam_policy" {
+  project  = var.project_id
   instance = var.spanner_instance_name
   database = var.spanner_database_name
   role     = "roles/spanner.databaseReader"
@@ -102,4 +106,11 @@ resource "google_cloud_run_service_iam_member" "encryption_key_service_iam_polic
 
   role   = "roles/run.invoker"
   member = "group:${var.allowed_operator_user_group}"
+}
+
+# IAM entry to allow encryption key cloud function to write metrics.
+resource "google_project_iam_member" "encryption_key_service_monitoring_iam_policy" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${google_service_account.encryption_key_service_account.email}"
 }

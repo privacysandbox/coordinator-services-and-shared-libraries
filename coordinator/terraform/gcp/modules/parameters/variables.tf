@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "project_id" {
+  type        = string
+  description = "The GCP project ID."
+}
+
 variable "environment" {
   type        = string
   description = "Description for the environment, e.g. dev, staging, production."

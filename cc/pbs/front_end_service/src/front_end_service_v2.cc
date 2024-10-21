@@ -14,12 +14,12 @@
 
 #include "cc/pbs/front_end_service/src/front_end_service_v2.h"
 
+#include <functional>
 #include <list>
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "absl/functional/bind_front.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
@@ -192,55 +192,55 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
 
   std::string health_check_path(kStatusHealthCheckPath);
   HttpHandler health_check_handler =
-      absl::bind_front(&FrontEndServiceV2::BeginTransaction, this);
+      std::bind_front(&FrontEndServiceV2::BeginTransaction, this);
   http_server_->RegisterResourceHandler(HttpMethod::POST, health_check_path,
                                         health_check_handler);
 
   std::string consume_budget_path(kStatusConsumeBudgetPath);
   HttpHandler consume_budget_handler =
-      absl::bind_front(&FrontEndServiceV2::PrepareTransaction, this);
+      std::bind_front(&FrontEndServiceV2::PrepareTransaction, this);
   http_server_->RegisterResourceHandler(HttpMethod::POST, consume_budget_path,
                                         consume_budget_handler);
 
   std::string begin_transaction_path(kBeginTransactionPath);
   HttpHandler begin_transaction_handler =
-      absl::bind_front(&FrontEndServiceV2::BeginTransaction, this);
+      std::bind_front(&FrontEndServiceV2::BeginTransaction, this);
   http_server_->RegisterResourceHandler(
       HttpMethod::POST, begin_transaction_path, begin_transaction_handler);
 
   std::string prepare_transaction_path(kPrepareTransactionPath);
   HttpHandler prepare_transaction_handler =
-      absl::bind_front(&FrontEndServiceV2::PrepareTransaction, this);
+      std::bind_front(&FrontEndServiceV2::PrepareTransaction, this);
   http_server_->RegisterResourceHandler(
       HttpMethod::POST, prepare_transaction_path, prepare_transaction_handler);
 
   std::string commit_transaction_path(kCommitTransactionPath);
   HttpHandler commit_transaction_handler =
-      absl::bind_front(&FrontEndServiceV2::CommitTransaction, this);
+      std::bind_front(&FrontEndServiceV2::CommitTransaction, this);
   http_server_->RegisterResourceHandler(
       HttpMethod::POST, commit_transaction_path, commit_transaction_handler);
 
   std::string notify_transaction_path(kNotifyTransactionPath);
   HttpHandler notify_transaction_handler =
-      absl::bind_front(&FrontEndServiceV2::NotifyTransaction, this);
+      std::bind_front(&FrontEndServiceV2::NotifyTransaction, this);
   http_server_->RegisterResourceHandler(
       HttpMethod::POST, notify_transaction_path, notify_transaction_handler);
 
   std::string abort_transaction_path(kAbortTransactionPath);
   HttpHandler abort_transaction_handler =
-      absl::bind_front(&FrontEndServiceV2::AbortTransaction, this);
+      std::bind_front(&FrontEndServiceV2::AbortTransaction, this);
   http_server_->RegisterResourceHandler(
       HttpMethod::POST, abort_transaction_path, abort_transaction_handler);
 
   std::string end_transaction_path(kEndTransactionPath);
   HttpHandler end_transaction_handler =
-      absl::bind_front(&FrontEndServiceV2::EndTransaction, this);
+      std::bind_front(&FrontEndServiceV2::EndTransaction, this);
   http_server_->RegisterResourceHandler(HttpMethod::POST, end_transaction_path,
                                         end_transaction_handler);
 
   std::string get_transaction_status_path(kStatusTransactionPath);
   HttpHandler get_transaction_transaction_handler =
-      absl::bind_front(&FrontEndServiceV2::GetTransactionStatus, this);
+      std::bind_front(&FrontEndServiceV2::GetTransactionStatus, this);
   http_server_->RegisterResourceHandler(HttpMethod::GET,
                                         get_transaction_status_path,
                                         get_transaction_transaction_handler);
@@ -403,7 +403,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
       consume_budget_context(
           std::make_shared<ConsumeBudgetsRequest>(),
-          absl::bind_front(&FrontEndServiceV2::OnConsumeBudgetCallback, this,
+          std::bind_front(&FrontEndServiceV2::OnConsumeBudgetCallback, this,
                            http_context, *transaction_id),
           http_context);
   consume_budget_context.response = std::make_shared<ConsumeBudgetsResponse>();

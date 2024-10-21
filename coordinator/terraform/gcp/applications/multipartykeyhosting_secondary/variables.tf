@@ -349,3 +349,13 @@ variable "encryptionkeyservice_alarm_duration_sec" {
   type        = number
   default     = 60
 }
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Enable exporting OTEL metrics from MPKHS."
+  type        = bool
+  default     = false
+}

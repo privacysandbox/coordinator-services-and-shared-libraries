@@ -18,7 +18,9 @@ locals {
 }
 
 resource "google_monitoring_alert_policy" "keygen_pubsub_too_many_undelivered_messages_alert" {
-  count        = var.alarms_enabled ? 1 : 0
+  count = var.alarms_enabled ? 1 : 0
+
+  project      = var.project_id
   display_name = "${var.environment} Key Generation Pub/Sub Too Many Undelivered Messages"
   combiner     = "OR"
   conditions {
@@ -45,6 +47,7 @@ resource "google_monitoring_alert_policy" "keygen_pubsub_too_many_undelivered_me
 }
 
 resource "google_monitoring_dashboard" "key_generation_dashboard" {
+  project = var.project_id
   dashboard_json = jsonencode(
     {
       "displayName" : "${var.environment} Key Generation Dashboard",

@@ -46,4 +46,21 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
  */
 ExecutionResultOr<absl::string_view> ExtractRequestClaimedIdentity(
     const core::HttpHeaders& request_headers) noexcept;
+
+/**
+ * Extracts the User Agent from the HTTP request headers.
+ *
+ * @param request_headers A shared pointer to the HTTP headers. This contains
+ * metadata about the request, including the claimed identity.
+ *
+ * @return ExecutionResultOr<absl::string_view> Returns an ExecutionResult
+ * containing either the extracted claimed identity as an absl::string_view or
+ * an error if the extraction fails. The function is marked noexcept to indicate
+ * it doesn't throw exceptions.
+ */
+ExecutionResultOr<absl::string_view> ExtractUserAgent(
+    const core::HttpHeaders& request_headers) noexcept;
+
+// Function to convert HttpMethod enum to a string representation
+std::string HttpMethodToString(HttpMethod method);
 }  // namespace google::scp::core::utils
