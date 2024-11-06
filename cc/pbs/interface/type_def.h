@@ -59,6 +59,7 @@ static constexpr char kMetricLabelValueOperator[] = "OPERATOR";
 static constexpr char kMetricLabelValueCoordinator[] = "COORDINATOR";
 static constexpr char kMetricLabelKeyReportingOrigin[] = "reporting_origin";
 static constexpr char kMetricLabelTransactionPhase[] = "transaction_phase";
+inline constexpr absl::string_view kErrorReasonLabel = "pbs.error_reason";
 
 // Metric names
 static constexpr char kMetricNameRequests[] =
@@ -67,10 +68,16 @@ static constexpr char kMetricNameClientErrors[] =
     "google.scp.pbs.frontend.client_errors";
 static constexpr char kMetricNameServerErrors[] =
     "google.scp.pbs.frontend.server_errors";
+static constexpr char kSuccessfulBudgetConsumed[] =
+    "google.scp.pbs.frontend.successful_budget_consumed";
+static constexpr char kKeysPerTransaction[] =
+    "google.scp.pbs.frontend.keys_per_transaction";
 static constexpr char kMetricNameMemoryUsage[] =
     "google.scp.pbs.health.memory_usage";
 static constexpr char kMetricNameFileSystemStorageUsage[] =
     "google.scp.pbs.health.filesystem_storage_usage";
+inline constexpr absl::string_view kBudgetExhausted =
+    "google.scp.pbs.consume_budget.budget_exhausted";
 
 // TODO: This must be configurable.
 static constexpr int kMaxToken = 1;

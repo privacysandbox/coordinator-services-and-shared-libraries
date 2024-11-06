@@ -88,8 +88,8 @@ ExecutionResult GcpMetricClientProvider::Run() noexcept {
       instance_resource_name, instance_resource_);
   if (!execution_result.Successful()) {
     SCP_ERROR(kGcpMetricClientProvider, kZeroUuid, execution_result,
-              "Failed to parse instance resource name %s",
-              instance_resource_name.c_str());
+              absl::StrFormat("Failed to parse instance resource name %s",
+                              instance_resource_name));
   }
 
   CreateMetricServiceClient();

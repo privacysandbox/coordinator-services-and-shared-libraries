@@ -111,7 +111,7 @@ int CreateImage(const string& image_target, const string& args) {
 
 string BuildCreateImageCmd(const string& image_target, const string& args) {
   auto cmd = absl::StrFormat(
-      "bazel build --action_env=BAZEL_CXXOPTS='-std=c++17' %s", image_target);
+      "bazel build --action_env=BAZEL_CXXOPTS='-std=c++20' %s", image_target);
   if (!args.empty()) {
     cmd += " " + args;
   }

@@ -16,13 +16,13 @@
 
 #include <atomic>
 #include <chrono>
-#include <functional>
 #include <memory>
 #include <thread>
 
-#include "async_executor_utils.h"
-#include "error_codes.h"
-#include "typedef.h"
+#include "absl/time/time.h"
+#include "cc/core/async_executor/src/async_executor_utils.h"
+#include "cc/core/async_executor/src/error_codes.h"
+#include "cc/core/async_executor/src/typedef.h"
 
 using google::scp::core::common::ConcurrentQueue;
 using std::atomic;
@@ -100,6 +100,10 @@ void SingleThreadAsyncExecutor::StartWorker() noexcept {
         !normal_pri_queue_->TryDequeue(task).Successful()) {
       continue;
     }
+#if defined(PBS_ENABLE_BENCHMARKING)
+    scheduling_latency_for_testing_.push_back(absl::Now() -
+                                              task->GetTaskCreationTime());
+#endif
 
     thread_lock.unlock();
     task->Execute();
@@ -163,9 +167,11 @@ ExecutionResult SingleThreadAsyncExecutor::Schedule(
 };
 
 ExecutionResultOr<thread::id> SingleThreadAsyncExecutor::GetThreadId() const {
+#if !defined(PBS_ENABLE_BENCHMARKING)
   if (!is_running_.load()) {
     return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
+#endif
   return working_thread_id_;
 }
 

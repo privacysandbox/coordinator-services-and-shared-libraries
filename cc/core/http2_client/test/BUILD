@@ -29,10 +29,16 @@ cc_test(
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/mock:telemetry_fake",
+        "//cc/core/telemetry/mock:telemetry_mock",
+        "//cc/core/telemetry/src/common:telemetry_common",
+        "//cc/core/telemetry/src/common:telemetry_metric_utils",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_googletest//:gtest_main",
+        "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )
 

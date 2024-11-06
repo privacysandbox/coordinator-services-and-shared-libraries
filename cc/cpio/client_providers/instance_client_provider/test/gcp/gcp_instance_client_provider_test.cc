@@ -145,6 +145,19 @@ class GcpInstanceClientProviderTest : public testing::Test {
   shared_ptr<GetTagsByResourceNameRequest> get_tags_request_;
 };
 
+TEST_F(GcpInstanceClientProviderTest, SetContainerTypeToCloudRun) {
+  auto instance_provider = std::make_unique<GcpInstanceClientProvider>(
+      authorizer_provider_, http1_client_, http2_client_, "cloud_run");
+  EXPECT_EQ(instance_provider->GetContainerType(), ContainerType::kCloudRun);
+}
+
+TEST_F(GcpInstanceClientProviderTest, SetContainerTypeToComputeEngine) {
+  auto instance_provider = std::make_unique<GcpInstanceClientProvider>(
+      authorizer_provider_, http1_client_, http2_client_, "compute_engine");
+  EXPECT_EQ(instance_provider->GetContainerType(),
+            ContainerType::kComputeEngine);
+}
+
 TEST_F(GcpInstanceClientProviderTest, GetCurrentInstanceResourceNameSync) {
   string project_id_result = kProjectIdResult;
   string zone_result = kZoneResult;

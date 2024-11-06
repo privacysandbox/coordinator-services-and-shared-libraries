@@ -17,10 +17,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <stdint.h>
-
-#include <chrono>
-#include <csignal>
 #include <functional>
 #include <future>
 #include <memory>
@@ -32,11 +28,14 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/interface/async_context.h"
-#include "core/test/utils/auto_init_run_stop.h"
-#include "core/test/utils/conditional_wait.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/http2_client/src/http_client_def.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
+#include "cc/core/telemetry/src/common/metric_utils.h"
+#include "cc/core/test/utils/auto_init_run_stop.h"
+#include "cc/core/test/utils/conditional_wait.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
@@ -55,17 +54,6 @@ using google::scp::core::test::AutoInitRunStop;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
-using std::atomic;
-using std::bind;
-using std::future;
-using std::make_shared;
-using std::promise;
-using std::shared_ptr;
-using std::string;
-using std::thread;
-using std::to_string;
-using std::vector;
-using std::chrono::milliseconds;
 
 static constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 10;
 
@@ -99,7 +87,7 @@ class RandomGenHandler : std::enable_shared_from_this<RandomGenHandler> {
 
 class HttpServer {
  public:
-  HttpServer(string address, string port, size_t num_threads)
+  HttpServer(std::string address, std::string port, size_t num_threads)
       : address_(address), port_(port), num_threads_(num_threads) {}
 
   ~HttpServer() { server.join(); }
@@ -130,8 +118,10 @@ class HttpServer {
         res.end();
         return;
       }
-      vector<string> params;
-      static auto predicate = [](string::value_type c) { return c == '='; };
+      std::vector<std::string> params;
+      static auto predicate = [](std::string::value_type c) {
+        return c == '=';
+      };
       boost::split(params, query, predicate);
       if (params.size() != 2 || params[0] != "length") {
         res.write_head(400u);
@@ -145,10 +135,10 @@ class HttpServer {
         return;
       }
 
-      res.write_head(200u,
-                     {{string("content-length"),
-                       {to_string(length + SHA256_DIGEST_LENGTH), false}}});
-      auto handler = make_shared<RandomGenHandler>(length);
+      res.write_head(
+          200u, {{std::string("content-length"),
+                  {std::to_string(length + SHA256_DIGEST_LENGTH), false}}});
+      auto handler = std::make_shared<RandomGenHandler>(length);
       res.end(bind(&RandomGenHandler::handle, handler, _1, _2, _3));
     });
 
@@ -169,27 +159,28 @@ class HttpServer {
   http2 server;
 
  private:
-  atomic<bool> is_running_{false};
-  string address_;
-  string port_;
+  std::atomic<bool> is_running_{false};
+  std::string address_;
+  std::string port_;
   size_t num_threads_;
 };
 
 TEST(HttpClientTest, FailedToConnect) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   request->method = HttpMethod::GET;
-  request->path = make_shared<string>("http://localhost.failed:8000");
-  shared_ptr<AsyncExecutorInterface> async_executor =
-      make_shared<MockAsyncExecutor>();
+  request->path = std::make_shared<std::string>("http://localhost.failed:8000");
+  std::shared_ptr<AsyncExecutorInterface> async_executor =
+      std::make_shared<MockAsyncExecutor>();
   HttpClient http_client(async_executor);
   async_executor->Init();
   async_executor->Run();
   http_client.Init();
   http_client.Run();
 
-  atomic<bool> finished(false);
+  std::atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_THAT(
             context.result,
             ResultIs(FailureExecutionResult(
@@ -206,9 +197,10 @@ TEST(HttpClientTest, FailedToConnect) {
 class HttpClientTestII : public ::testing::Test {
  protected:
   void SetUp() override {
-    server = make_shared<HttpServer>("localhost", "0", 1);
+    metric_router_ = std::make_unique<InMemoryMetricRouter>();
+    server = std::make_shared<HttpServer>("localhost", "0", 1);
     server->Run();
-    async_executor = make_shared<AsyncExecutor>(2, 1000);
+    async_executor = std::make_shared<AsyncExecutor>(2, 1000);
     async_executor->Init();
     async_executor->Run();
 
@@ -218,7 +210,8 @@ class HttpClientTestII : public ::testing::Test {
                              kDefaultRetryStrategyMaxRetries),
         kDefaultMaxConnectionsPerHost, kHttp2ReadTimeoutInSeconds);
 
-    http_client = make_shared<HttpClient>(async_executor, options);
+    http_client = std::make_shared<HttpClient>(async_executor, options,
+                                               metric_router_.get());
     EXPECT_SUCCESS(http_client->Init());
     EXPECT_SUCCESS(http_client->Run());
   }
@@ -229,22 +222,24 @@ class HttpClientTestII : public ::testing::Test {
     server->Stop();
   }
 
-  shared_ptr<HttpServer> server;
-  shared_ptr<AsyncExecutorInterface> async_executor;
-  shared_ptr<HttpClient> http_client;
+  std::shared_ptr<HttpServer> server;
+  std::shared_ptr<AsyncExecutorInterface> async_executor;
+  std::shared_ptr<HttpClient> http_client;
+  std::unique_ptr<InMemoryMetricRouter> metric_router_;
 };
 
 TEST_F(HttpClientTestII, Success) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   request->method = HttpMethod::GET;
-  request->path = make_shared<string>(
+  request->path = std::make_shared<std::string>(
       "http://localhost:" + std::to_string(server->PortInUse()) + "/test");
-  promise<void> done;
+  std::promise<void> done;
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         const auto& bytes = *context.response->body.bytes;
-        EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
+        EXPECT_EQ(std::string(bytes.begin(), bytes.end()), "hello, world\n");
         done.set_value();
       });
 
@@ -254,16 +249,17 @@ TEST_F(HttpClientTestII, Success) {
 }
 
 TEST_F(HttpClientTestII, SingleQueryIsEscaped) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   request->method = HttpMethod::GET;
-  request->path = make_shared<Uri>(
+  request->path = std::make_shared<Uri>(
       "http://localhost:" + std::to_string(server->PortInUse()) +
       "/pingpong_query_param");
-  request->query = make_shared<string>("foo=!@#$");
+  request->query = std::make_shared<std::string>("foo=!@#$");
 
-  atomic<bool> finished(false);
+  std::atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         auto query_param_it = context.response->headers->find("query_param");
         EXPECT_NE(query_param_it, context.response->headers->end());
@@ -276,16 +272,17 @@ TEST_F(HttpClientTestII, SingleQueryIsEscaped) {
 }
 
 TEST_F(HttpClientTestII, MultiQueryIsEscaped) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   request->method = HttpMethod::GET;
-  request->path = make_shared<Uri>(
+  request->path = std::make_shared<Uri>(
       "http://localhost:" + std::to_string(server->PortInUse()) +
       "/pingpong_query_param");
-  request->query = make_shared<string>("foo=!@#$&bar=%^()");
+  request->query = std::make_shared<std::string>("foo=!@#$&bar=%^()");
 
-  atomic<bool> finished(false);
+  std::atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         auto query_param_it = context.response->headers->find("query_param");
         EXPECT_NE(query_param_it, context.response->headers->end());
@@ -298,13 +295,14 @@ TEST_F(HttpClientTestII, MultiQueryIsEscaped) {
 }
 
 TEST_F(HttpClientTestII, FailedToGetResponse) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   // Get has no corresponding handler.
-  request->path = make_shared<string>(
+  request->path = std::make_shared<std::string>(
       "http://localhost:" + std::to_string(server->PortInUse()) + "/wrong");
-  promise<void> done;
+  std::promise<void> done;
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
                         errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND)));
@@ -316,18 +314,19 @@ TEST_F(HttpClientTestII, FailedToGetResponse) {
 }
 
 TEST_F(HttpClientTestII, SequentialReuse) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   request->method = HttpMethod::GET;
-  request->path = make_shared<string>(
+  request->path = std::make_shared<std::string>(
       "http://localhost:" + std::to_string(server->PortInUse()) + "/test");
 
   for (int i = 0; i < 10; ++i) {
-    promise<void> done;
+    std::promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+        std::move(request),
+        [&](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_SUCCESS(context.result);
           const auto& bytes = *context.response->body.bytes;
-          EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
+          EXPECT_EQ(std::string(bytes.begin(), bytes.end()), "hello, world\n");
           done.set_value();
         });
     EXPECT_SUCCESS(http_client->PerformRequest(context));
@@ -336,23 +335,23 @@ TEST_F(HttpClientTestII, SequentialReuse) {
 }
 
 TEST_F(HttpClientTestII, ConcurrentReuse) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   request->method = HttpMethod::GET;
-  request->path = make_shared<string>(
+  request->path = std::make_shared<std::string>(
       "http://localhost:" + std::to_string(server->PortInUse()) + "/test");
-  shared_ptr<AsyncExecutorInterface> async_executor =
-      make_shared<AsyncExecutor>(2, 1000);
+  std::shared_ptr<AsyncExecutorInterface> async_executor =
+      std::make_shared<AsyncExecutor>(2, 1000);
 
-  vector<promise<void>> done;
+  std::vector<std::promise<void>> done;
   done.reserve(10);
   for (int i = 0; i < 10; ++i) {
     done.emplace_back();
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request),
+        std::move(request),
         [&, i](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_SUCCESS(context.result);
           const auto& bytes = *context.response->body.bytes;
-          EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
+          EXPECT_EQ(std::string(bytes.begin(), bytes.end()), "hello, world\n");
           done[i].set_value();
         });
     EXPECT_SUCCESS(http_client->PerformRequest(context));
@@ -364,14 +363,16 @@ TEST_F(HttpClientTestII, ConcurrentReuse) {
 
 // Request /random?length=xxxx and verify the hash of the return.
 TEST_F(HttpClientTestII, LargeData) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   size_t to_generate = 1048576UL;
-  request->path = make_shared<string>(
+  request->path = std::make_shared<std::string>(
       "http://localhost:" + std::to_string(server->PortInUse()) + "/random");
-  request->query = make_shared<string>("length=" + std::to_string(to_generate));
-  atomic<bool> finished(false);
+  request->query =
+      std::make_shared<std::string>("length=" + std::to_string(to_generate));
+  std::atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         EXPECT_EQ(context.response->body.length,
                   1048576 + SHA256_DIGEST_LENGTH);
@@ -389,19 +390,20 @@ TEST_F(HttpClientTestII, LargeData) {
 }
 
 TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
-  auto request = make_shared<HttpRequest>();
+  auto request = std::make_shared<HttpRequest>();
   request->method = HttpMethod::GET;
 
   // Make success http request.
   {
-    request->path = make_shared<string>(
+    request->path = std::make_shared<std::string>(
         "http://localhost:" + std::to_string(server->PortInUse()) + "/test");
-    promise<void> done;
+    std::promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+        std::move(request),
+        [&](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_THAT(context.result, IsSuccessful());
           const auto& bytes = *context.response->body.bytes;
-          EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
+          EXPECT_EQ(std::string(bytes.begin(), bytes.end()), "hello, world\n");
           done.set_value();
         });
 
@@ -411,12 +413,13 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
 
   // Http context will be finished correctly even the http server stopped.
   {
-    request->path = make_shared<string>(
+    request->path = std::make_shared<std::string>(
         "http://localhost:" + std::to_string(server->PortInUse()) + "/stop");
 
-    promise<void> done;
+    std::promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+        std::move(request),
+        [&](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_THAT(
               context.result,
               ResultIs(FailureExecutionResult(
@@ -429,4 +432,56 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
   }
 }
 
+TEST_F(HttpClientTestII, ConnectionCreationFailure) {
+  auto request = std::make_shared<HttpRequest>();
+  request->method = HttpMethod::GET;
+  request->path = std::make_shared<std::string>(
+      "http$://localhost:" + std::to_string(server->PortInUse()) + "/test");
+  std::promise<void> done;
+  AsyncContext<HttpRequest, HttpResponse> context(
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+        EXPECT_EQ(context.result.status, ExecutionStatus::Failure);
+        done.set_value();
+      });
+
+  EXPECT_SUCCESS(http_client->PerformRequest(context));
+
+  done.get_future().get();
+
+  // Test otel metrics.
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  const std::map<std::string, std::string>
+      client_connection_creation_error_label_kv;
+
+  const opentelemetry::sdk::common::OrderedAttributeMap
+      client_connection_creation_error_dimensions(
+          (opentelemetry::common::KeyValueIterableView<
+              std::map<std::string, std::string>>(
+              client_connection_creation_error_label_kv)));
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      client_connection_creation_error_metric_point_data =
+          core::GetMetricPointData("http.client.connection.creation_errors",
+                                   client_connection_creation_error_dimensions,
+                                   data);
+
+  EXPECT_TRUE(client_connection_creation_error_metric_point_data.has_value());
+
+  EXPECT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
+      client_connection_creation_error_metric_point_data.value()));
+
+  auto client_connection_creation_error_sum_point_data =
+      std::get<opentelemetry::sdk::metrics::SumPointData>(
+          client_connection_creation_error_metric_point_data.value());
+
+  EXPECT_EQ(
+      std::get<int64_t>(client_connection_creation_error_sum_point_data.value_),
+      1)
+      << "Expected client_connection_creation_error_sum_point_data.value_ to "
+         "be 1 "
+         "(int64_t)";
+}
 }  // namespace google::scp::core

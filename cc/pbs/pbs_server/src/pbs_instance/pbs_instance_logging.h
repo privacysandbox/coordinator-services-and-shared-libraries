@@ -25,6 +25,9 @@ namespace google::scp::pbs {
 static constexpr char kPBSInstance[] = "PBSInstance";
 
 #define INIT_PBS_COMPONENT(component)                                      \
+  SCP_INFO(::google::scp::pbs::kPBSInstance,                               \
+           ::google::scp::core::common::kZeroUuid,                         \
+           "PBS component '" #component "' is initializing");              \
   if (auto execution_result = component->Init();                           \
       !execution_result.Successful()) {                                    \
     SCP_CRITICAL(::google::scp::pbs::kPBSInstance,                         \
@@ -38,6 +41,9 @@ static constexpr char kPBSInstance[] = "PBSInstance";
   }
 
 #define RUN_PBS_COMPONENT(component)                                       \
+  SCP_INFO(::google::scp::pbs::kPBSInstance,                               \
+           ::google::scp::core::common::kZeroUuid,                         \
+           "PBS component '" #component "' is running");                   \
   if (auto execution_result = component->Run();                            \
       !execution_result.Successful()) {                                    \
     SCP_CRITICAL(::google::scp::pbs::kPBSInstance,                         \
@@ -51,6 +57,9 @@ static constexpr char kPBSInstance[] = "PBSInstance";
   }
 
 #define STOP_PBS_COMPONENT(component)                                      \
+  SCP_INFO(::google::scp::pbs::kPBSInstance,                               \
+           ::google::scp::core::common::kZeroUuid,                         \
+           "PBS component '" #component "' is stopping");                  \
   if (auto execution_result = component->Stop();                           \
       !execution_result.Successful()) {                                    \
     SCP_CRITICAL(::google::scp::pbs::kPBSInstance,                         \

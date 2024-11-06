@@ -18,17 +18,17 @@
 
 #include <memory>
 
+#include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
+#include "cc/core/http2_client/src/error_codes.h"
+#include "cc/core/http2_client/src/http_client_def.h"
+#include "cc/core/http2_client/src/http_connection_pool.h"
 #include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/http_client_interface.h"
-#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/telemetry/src/metric/metric_router.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/provider.h"
 #include "public/core/interface/execution_result.h"
-
-#include "error_codes.h"
-#include "http_connection_pool.h"
 
 namespace google::scp::core {
 
@@ -60,18 +60,21 @@ struct HttpClientOptions {
 class HttpClient : public HttpClientInterface {
  public:
   /**
-   * @brief Construct a new Http Client object
+   * @brief Constructs a new HttpClient object for making HTTP requests with
    *
-   * @param async_executor an instance of the async executor.
-   * @param retry_strategy_type retry strategy type.
-   * @param time_duraton_ms delay time duration in ms for http client retry
-   * strategy.
-   * @param total_retries total retry counts.
+   * @param async_executor A shared pointer to an instance of an asynchronous
+   * executor responsible for managing background tasks for HTTP request
+   * execution.
+   * @param options An optional HttpClientOptions object containing
+   * configurations such as timeout, retry strategy, and other HTTP-related
+   * settings. Defaults to a default-constructed HttpClientOptions if not
+   * provided.
+   * @param metric_router An optional pointer to a MetricRouter object used for
+   * creating HTTP client metrics. Defaults to nullptr if not provided.
    */
-  explicit HttpClient(
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      HttpClientOptions options = HttpClientOptions(),
-      std::shared_ptr<core::MetricRouter> metric_router = nullptr);
+  explicit HttpClient(std::shared_ptr<AsyncExecutorInterface>& async_executor,
+                      HttpClientOptions options = HttpClientOptions(),
+                      absl::Nullable<MetricRouter*> metric_router = nullptr);
 
   ExecutionResult Init() noexcept override;
   ExecutionResult Run() noexcept override;
@@ -81,16 +84,26 @@ class HttpClient : public HttpClientInterface {
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept override;
 
  private:
-  /// An instance of the connection pool that is used by the http client.
+  /**
+   * Increments the client connection creation error counter.
+   */
+  void IncrementClientConnectionCreationError(
+      const AsyncContext<HttpRequest, HttpResponse>& http_context);
+
+  // An instance of the connection pool that is used by the http client.
   std::unique_ptr<HttpConnectionPool> http_connection_pool_;
 
-  /// Operation dispatcher
+  // Operation dispatcher
   common::OperationDispatcher operation_dispatcher_;
 
-  /// An instance of metric router which will provide APIs to create metrics.
-  std::shared_ptr<core::MetricRouter> metric_router_;
+  // An instance of metric router which will provide APIs to create metrics.
+  MetricRouter* metric_router_;
 
-  /// OpenTelemetry Meter used for creating and managing metrics.
+  // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
+
+  // OpenTelemetry Instrument for client connection creation errors.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
+      client_connection_creation_error_counter_;
 };
 }  // namespace google::scp::core

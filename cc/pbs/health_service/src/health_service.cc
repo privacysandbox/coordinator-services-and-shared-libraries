@@ -123,6 +123,21 @@ void HealthService::ObserveFileSystemStorageUsageCallback(
       *(self_ptr->GetFileSystemStorageUsagePercentage(kVarLogDirectory)));
 }
 
+HealthService::~HealthService() {
+  if (memory_usage_instrument_) {
+    memory_usage_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HealthService::ObserveMemoryUsageCallback),
+        this);
+  }
+  if (filesystem_storage_usage_instrument_) {
+    filesystem_storage_usage_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HealthService::ObserveFileSystemStorageUsageCallback),
+        this);
+  }
+}
+
 ExecutionResult HealthService::Init() noexcept {
   HttpHandler check_health_handler =
       bind(&HealthService::CheckHealth, this, _1);

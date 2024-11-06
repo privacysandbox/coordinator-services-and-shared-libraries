@@ -25,6 +25,7 @@
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/interface/http_types.h"
 #include "cc/core/interface/type_def.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/pbs/front_end_service/src/metric_initialization.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/front_end_service_interface.h"
@@ -46,7 +47,8 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
       std::shared_ptr<cpio::MetricClientInterface> metric_client,
       std::shared_ptr<core::ConfigProviderInterface> config_provider,
       BudgetConsumptionHelperInterface* budget_consumption_helper,
-      std::unique_ptr<MetricInitialization> metric_initialization = nullptr);
+      std::unique_ptr<MetricInitialization> metric_initialization = nullptr,
+      core::MetricRouter* metric_router = nullptr);
 
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;
@@ -114,6 +116,9 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context)
       const;
 
+  // Initializes the metrics.
+  void MetricInit() noexcept;
+
   // An instance to the http server.
   std::shared_ptr<core::HttpServerInterface> http_server_;
 
@@ -144,15 +149,38 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   std::unique_ptr<const MetricInitialization> metric_initialization_;
   BudgetConsumptionHelperInterface* budget_consumption_helper_;
 
-  /// OpenTelemetry Meter used for creating and managing metrics.
+  // An instance of metric router which will provide APIs to create metrics.
+  core::MetricRouter* metric_router_;
+
+  // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
 
-  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+  // OpenTelemetry instrument for measuring the count of requests.
+  // This will be tracked in all the transaction phases.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
       total_request_counter_;
-  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+
+  // OpenTelemetry instrument for measuring the count of client errors.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
       client_error_counter_;
-  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
+
+  // OpenTelemetry instrument for measuring the count of PBS server errors.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
       server_error_counter_;
+
+  // OpenTelemetry instrument for measuring the count of keys/budgets per
+  // transaction/job.
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      keys_per_transaction_count_;
+
+  // OpenTelemetry instrument for measuring the successful budgets consumed in a
+  // transaction.
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      successful_budget_consumed_counter_;
+
+  // OpenTelemetry Instrument for measuring the number of budgets exhausted
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+      budgets_exhausted_;
 };
 
 }  // namespace google::scp::pbs

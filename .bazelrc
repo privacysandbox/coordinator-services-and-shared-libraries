@@ -4,8 +4,8 @@ build --color=yes
 build --config=clang
 build --config=java
 
-build:cpp --client_env=BAZEL_CXXOPTS=-std=c++17
-build:cpp --cxxopt=-std=c++17
+build:cpp --client_env=BAZEL_CXXOPTS=-std=c++20
+build:cpp --cxxopt=-std=c++20
 
 # Don't use opentelemetry-cpp’s copy of Abseil
 # https://github.com/open-telemetry/opentelemetry-cpp/pull/1172

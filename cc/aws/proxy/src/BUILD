@@ -30,6 +30,9 @@ cc_library(
             "socket_vendor.cc",
         ],
     ),
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc/aws:include_dir",
         "@boost//:asio",
@@ -47,12 +50,18 @@ cc_library(
         ":protocol.h",
         ":socket_vendor_protocol.h",
     ],
+    copts = [
+        "-std=c++17",
+    ],
     deps = ["//cc/aws:include_dir"],
 )
 
 cc_binary(
     name = "proxy",
     srcs = [":proxy.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     linkopts = ["-pthread"],
     deps = [
         ":proxy_lib",
@@ -69,6 +78,7 @@ cc_binary(
     ],
     copts = [
         "-fvisibility=hidden",
+        "-std=c++17",
     ],
     linkopts = ["-ldl"],
     linkshared = True,
@@ -78,12 +88,18 @@ cc_binary(
 cc_binary(
     name = "proxify",
     srcs = [":proxify.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = ["//cc/aws:include_dir"],
 )
 
 cc_binary(
     name = "socket_vendor",
     srcs = [":socket_vendor.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         ":proxy_lib",
     ],

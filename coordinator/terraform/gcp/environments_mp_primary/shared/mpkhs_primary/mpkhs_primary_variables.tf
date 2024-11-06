@@ -367,6 +367,34 @@ variable "application_name" {
 }
 
 ################################################################################
+# Cloud Run Variables.
+################################################################################
+
+variable "use_cloud_run" {
+  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
+  type        = bool
+  default     = false
+}
+
+variable "public_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Public Key Service."
+  type        = string
+  default     = null
+}
+
+variable "private_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Private Key Service."
+  type        = string
+  default     = null
+}
+
+variable "private_key_service_custom_audiences" {
+  description = "List of custom audiences for Private Key Service on Cloud Run."
+  type        = list(string)
+  default     = []
+}
+
+################################################################################
 # Key Management Variables.
 ################################################################################
 
@@ -479,3 +507,14 @@ variable "encryptionkeyservice_alarm_duration_sec" {
   type        = number
   default     = 60
 }
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Enable exporting OTEL metrics from MPKHS."
+  type        = bool
+  default     = false
+}
+

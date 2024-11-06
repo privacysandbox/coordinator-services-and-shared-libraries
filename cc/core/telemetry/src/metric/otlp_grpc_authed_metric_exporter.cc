@@ -52,7 +52,9 @@ OtlpGrpcAuthedMetricExporter::MakeChannel(
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_COULD_NOT_PARSE_URL);
     SCP_ERROR(kOtlpGrpcAuthedExporter, google::scp::core::common::kZeroUuid,
-              execution_result, "[OTLP GRPC Client] invalid endpoint: %s",
+              execution_result,
+              absl::StrFormat("[OTLP GRPC Client] invalid endpoint: %s",
+                              options.endpoint.c_str()),
               options.endpoint.c_str());
 
     return FailureExecutionResult(SC_TELEMETRY_COULD_NOT_PARSE_URL);
@@ -142,8 +144,10 @@ opentelemetry::sdk::common::ExportResult OtlpGrpcAuthedMetricExporter::Export(
         FailureExecutionResult(SC_TELEMETRY_EXPORTER_SHUTDOWN);
     SCP_ERROR(kOtlpGrpcAuthedExporter, google::scp::core::common::kZeroUuid,
               execution_result,
-              "[OTLP METRIC GRPC Exporter] Exporting %s metric(s) failed, "
-              "exporter is shutdown",
+              absl::StrFormat(
+                  "[OTLP METRIC GRPC Exporter] Exporting %zu metric(s) failed, "
+                  "exporter is shutdown",
+                  data.scope_metric_data_.size()),
               data.scope_metric_data_.size())
     return opentelemetry::sdk::common::ExportResult::kFailure;
   }
@@ -193,7 +197,8 @@ opentelemetry::sdk::common::ExportResult OtlpGrpcAuthedMetricExporter::Export(
     auto execution_result = FailureExecutionResult(SC_TELEMETRY_EXPORT_FAILED);
     SCP_ERROR(kOtlpGrpcAuthedExporter, google::scp::core::common::kZeroUuid,
               execution_result,
-              "[OTLP METRIC GRPC Exporter] Export() failed: %s",
+              absl::StrFormat("[OTLP METRIC GRPC Exporter] Export() failed: %s",
+                              status.error_message().c_str()),
               status.error_message().c_str());
 
     return opentelemetry::sdk::common::ExportResult::kFailure;

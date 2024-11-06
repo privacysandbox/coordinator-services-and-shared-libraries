@@ -112,6 +112,15 @@ void TransactionManager::ObserveActiveTransactionsCallback(
   self_ptr->max_transactions_since_observed_.store(0);
 }
 
+TransactionManager::~TransactionManager() {
+  if (active_transactions_instrument_) {
+    active_transactions_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &TransactionManager::ObserveActiveTransactionsCallback),
+        this);
+  }
+}
+
 ExecutionResult TransactionManager::RegisterAggregateMetric(
     shared_ptr<AggregateMetricInterface>& metrics_instance,
     const string& name) noexcept {

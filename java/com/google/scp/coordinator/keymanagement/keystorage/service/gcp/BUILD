@@ -62,6 +62,7 @@ java_library(
         "//java/external:guice",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
+        "//java/external:opentelemetry_api",
         "//java/external:protobuf_java_util",
     ],
 )

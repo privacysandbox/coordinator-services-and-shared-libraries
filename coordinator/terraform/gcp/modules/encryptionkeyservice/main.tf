@@ -22,9 +22,11 @@ terraform {
 }
 
 locals {
-  cloudfunction_name_suffix            = "encryption-key-service-cloudfunction"
-  cloudfunction_package_zip            = var.encryption_key_service_zip
-  encryption_key_service_account_email = google_service_account.encryption_key_service_account.email
+  cloudfunction_name_suffix = "encryption-key-service-cloudfunction"
+  cloudfunction_package_zip = var.encryption_key_service_zip
+
+  cloud_run_name            = "private-key-service"
+  cloud_run_revision_suffix = lower(join("", regexall("[a-zA-Z0-9\\-]", module.version.version)))
 }
 
 module "version" {
@@ -32,6 +34,7 @@ module "version" {
 }
 
 resource "google_service_account" "encryption_key_service_account" {
+  project = var.project_id
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-encryptionkeyuser"
   display_name = "Encryption Key Service Account"
@@ -45,6 +48,9 @@ resource "google_storage_bucket_object" "encryption_key_service_package_bucket_o
 }
 
 resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction" {
+  count = !var.use_cloud_run ? 1 : 0
+
+  project  = var.project_id
   name     = "${var.environment}-${var.region}-${local.cloudfunction_name_suffix}"
   location = var.region
 
@@ -64,14 +70,15 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
     max_instance_count    = var.encryption_key_service_cloudfunction_max_instances
     timeout_seconds       = var.cloudfunction_timeout_seconds
     available_memory      = "${var.encryption_key_service_cloudfunction_memory_mb}M"
-    service_account_email = local.encryption_key_service_account_email
+    service_account_email = google_service_account.encryption_key_service_account.email
     ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
-      PROJECT_ID       = var.project_id
-      SPANNER_INSTANCE = var.spanner_instance_name
-      SPANNER_DATABASE = var.spanner_database_name
-      VERSION          = module.version.version
-      LOG_EXECUTION_ID = "true"
+      PROJECT_ID          = var.project_id
+      SPANNER_INSTANCE    = var.spanner_instance_name
+      SPANNER_DATABASE    = var.spanner_database_name
+      VERSION             = module.version.version
+      LOG_EXECUTION_ID    = "true"
+      EXPORT_OTEL_METRICS = var.export_otel_metrics
     }
   }
 
@@ -88,18 +95,81 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
 
 # IAM entry for service account to read from the database
 resource "google_spanner_database_iam_member" "encryption_key_service_spannerdb_iam_policy" {
+  project  = var.project_id
   instance = var.spanner_instance_name
   database = var.spanner_database_name
   role     = "roles/spanner.databaseReader"
-  member   = "serviceAccount:${local.encryption_key_service_account_email}"
+  member   = "serviceAccount:${google_service_account.encryption_key_service_account.email}"
 }
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "encryption_key_service_iam_policy" {
+  count = !var.use_cloud_run ? 1 : 0
+
   project  = var.project_id
-  location = google_cloudfunctions2_function.encryption_key_service_cloudfunction.location
-  service  = google_cloudfunctions2_function.encryption_key_service_cloudfunction.name
+  location = google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].location
+  service  = google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].name
 
   role   = "roles/run.invoker"
   member = "group:${var.allowed_operator_user_group}"
+}
+
+# Cloud Run Service to get the encryption keys.
+resource "google_cloud_run_v2_service" "private_key_service" {
+  count = var.use_cloud_run ? 1 : 0
+
+  name     = "${var.environment}-${var.region}-${local.cloud_run_name}"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+
+  template {
+    containers {
+      image = var.private_key_service_image
+
+      env {
+        name  = "PROJECT_ID"
+        value = var.project_id
+      }
+      env {
+        name  = "SPANNER_INSTANCE"
+        value = var.spanner_instance_name
+      }
+      env {
+        name  = "SPANNER_DATABASE"
+        value = var.spanner_database_name
+      }
+      env {
+        name  = "VERSION"
+        value = module.version.version
+      }
+      env {
+        name  = "LOG_EXECUTION_ID"
+        value = true
+      }
+    }
+
+    service_account = google_service_account.encryption_key_service_account.email
+    revision        = "${var.environment}-${var.region}-${local.cloud_run_name}-${local.cloud_run_revision_suffix}-live"
+  }
+
+  custom_audiences = var.private_key_service_custom_audiences
+}
+
+# IAM entry to invoke the cloud run service.
+resource "google_cloud_run_service_iam_member" "private_key_service" {
+  count = var.use_cloud_run ? 1 : 0
+
+  project  = var.project_id
+  location = google_cloud_run_v2_service.private_key_service[0].location
+  service  = google_cloud_run_v2_service.private_key_service[0].name
+
+  role   = "roles/run.invoker"
+  member = "group:${var.allowed_operator_user_group}"
+}
+
+# IAM entry to allow encryption key cloud function to write metrics.
+resource "google_project_iam_member" "encryption_key_service_monitoring_iam_policy" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${google_service_account.encryption_key_service_account.email}"
 }

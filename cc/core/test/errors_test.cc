@@ -47,6 +47,16 @@ TEST(ERRORS, ErrorMessageReturn) {
   EXPECT_EQ(error_message, "Component error message test");
 }
 
+TEST(ERRORS, ErrorNameReturn) {
+  REGISTER_COMPONENT_CODE(COMPONENT_NAME, 0x7FFF)
+
+  DEFINE_ERROR_CODE(COMPONENT_NAME_ERROR, COMPONENT_NAME, 0xFFFF,
+                    "Component error message test", HttpStatusCode::BAD_REQUEST)
+
+  absl::string_view error_name = GetErrorName(COMPONENT_NAME_ERROR);
+  EXPECT_EQ(error_name, "COMPONENT_NAME_ERROR");
+}
+
 TEST(ERRORS, ErrorMessageSuccessErrorCode) {
   EXPECT_STREQ("Success", GetErrorMessage(SC_OK));
 }

@@ -16,6 +16,7 @@
 #include "http.h"
 
 #include <memory>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,8 +27,7 @@
 #include "absl/strings/str_split.h"
 #include "cc/core/utils/src/error_codes.h"
 #include "cc/public/core/interface/execution_result.h"
-
-using std::string;
+#include "re2/re2.h"
 
 namespace google::scp::core::utils {
 ExecutionResultOr<std::string> GetEscapedUriWithQuery(
@@ -41,12 +41,12 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
     return FailureExecutionResult(core::errors::SC_CORE_UTILS_CURL_INIT_ERROR);
   }
 
-  string escaped_query;
+  std::string escaped_query;
   // The "value" portion of each parameter needs to be escaped.
   for (const auto& query_part : absl::StrSplit(*request.query, "&")) {
     if (!escaped_query.empty()) absl::StrAppend(&escaped_query, "&");
 
-    std::pair<string, string> name_and_value =
+    std::pair<std::string, std::string> name_and_value =
         (absl::StrSplit(query_part, "="));
     char* escaped_value =
         curl_easy_escape(curl_handle, name_and_value.second.c_str(),
@@ -59,15 +59,10 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
   return absl::StrCat(*request.path, "?", escaped_query);
 }
 
-ExecutionResultOr<absl::string_view> ExtractRequestClaimedIdentity(
+ExecutionResultOr<std::string> ExtractRequestClaimedIdentity(
     const HttpHeaders& request_headers) noexcept {
-  if (request_headers.empty()) {
-    return core::FailureExecutionResult(
-        core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
-  }
-
-  auto header_iter =
-      request_headers.find(std::string(core::kClaimedIdentityHeader));
+  // Find the claimed identity header.
+  auto header_iter = request_headers.find(core::kClaimedIdentityHeader);
 
   if (header_iter == request_headers.end()) {
     return core::FailureExecutionResult(
@@ -75,4 +70,46 @@ ExecutionResultOr<absl::string_view> ExtractRequestClaimedIdentity(
   }
   return header_iter->second;
 }
+
+ExecutionResultOr<std::string> ExtractUserAgent(
+    const HttpHeaders& request_headers) noexcept {
+  // Find the User-Agent header.
+  auto header_iter = request_headers.find(kUserAgentHeader);
+  if (header_iter == request_headers.end()) {
+    return core::FailureExecutionResult(
+        core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+  }
+
+  // Regular expression to match 'aggregation-service/x.y.z', where x, y, and z
+  // are digits.
+  RE2 user_agent_regex(R"((aggregation-service/[0-9]+\.[0-9]+\.[0-9]+))");
+  auto user_agent = header_iter->second;
+
+  // Match position and length variables.
+  std::string match;
+
+  // Search for the regex pattern in the User-Agent string.
+  if (RE2::PartialMatch(user_agent, user_agent_regex, &match)) {
+    // Return only the matched portion: 'aggregation-service/x.y.z'.
+    return match;
+  }
+
+  // Return unknown if pattern is not found.
+  return std::string(kUnknownValue);
+}
+
+std::string HttpMethodToString(HttpMethod method) {
+  switch (method) {
+    case HttpMethod::GET:
+      return "GET";
+    case HttpMethod::POST:
+      return "POST";
+    case HttpMethod::PUT:
+      return "PUT";
+    case HttpMethod::UNKNOWN:
+      return "UNKNOWN";
+  }
+  return "UNKNOWN";
+}
+
 }  // namespace google::scp::core::utils

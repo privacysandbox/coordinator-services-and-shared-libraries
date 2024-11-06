@@ -59,13 +59,13 @@ void AppendHex(int byte, std::string& string_to_append) {
   string_to_append += kHexMap[second_digit];
 }
 
-uint64_t ReadHex(const std::string& string_to_read, int offset) {
-  string digits = string_to_read.substr(offset, 2);
-  std::istringstream istrstream(digits);
+inline int HexToPosition(char hex) {
+  return std::isdigit(hex) ? (hex - '0') : (hex - 'A' + 10);
+}
 
-  int byte = 0;
-  istrstream >> std::hex >> byte;
-  return byte;
+inline uint64_t ReadHex(const std::string& string_to_read, int offset) {
+  return HexToPosition(string_to_read[offset]) * 16 +
+         HexToPosition(string_to_read[offset + 1]);
 }
 
 std::string ToString(const Uuid& uuid) noexcept {
@@ -127,39 +127,31 @@ ExecutionResult FromString(const std::string& uuid_string,
   }
 
   for (size_t i = 0; i < uuid_string.length(); ++i) {
-    if (uuid_string[i] == '-') {
+    const char& c = uuid_string[i];
+    if (c == '-') {
       continue;
     }
 
-    if (!isxdigit(uuid_string[i])) {
+    if (!std::isxdigit(c)) {
       return FailureExecutionResult(errors::SC_UUID_INVALID_STRING);
     }
 
-    if (islower(uuid_string[i])) {
+    if (std::islower(c)) {
       return FailureExecutionResult(errors::SC_UUID_INVALID_STRING);
     }
   }
 
-  uuid.high |= (ReadHex(uuid_string, 0) << 56);
-  uuid.high |= (ReadHex(uuid_string, 2) << 48);
-  uuid.high |= (ReadHex(uuid_string, 4) << 40);
-  uuid.high |= (ReadHex(uuid_string, 6) << 32);
+  uuid.high =
+      (ReadHex(uuid_string, 0) << 56) | (ReadHex(uuid_string, 2) << 48) |
+      (ReadHex(uuid_string, 4) << 40) | (ReadHex(uuid_string, 6) << 32) |
+      (ReadHex(uuid_string, 9) << 24) | (ReadHex(uuid_string, 11) << 16) |
+      (ReadHex(uuid_string, 14) << 8) | (ReadHex(uuid_string, 16));
 
-  uuid.high |= (ReadHex(uuid_string, 9) << 24);
-  uuid.high |= (ReadHex(uuid_string, 11) << 16);
-
-  uuid.high |= (ReadHex(uuid_string, 14) << 8);
-  uuid.high |= (ReadHex(uuid_string, 16));
-
-  uuid.low |= (ReadHex(uuid_string, 19) << 56);
-  uuid.low |= (ReadHex(uuid_string, 21) << 48);
-
-  uuid.low |= (ReadHex(uuid_string, 24) << 40);
-  uuid.low |= (ReadHex(uuid_string, 26) << 32);
-  uuid.low |= (ReadHex(uuid_string, 28) << 24);
-  uuid.low |= (ReadHex(uuid_string, 30) << 16);
-  uuid.low |= (ReadHex(uuid_string, 32) << 8);
-  uuid.low |= (ReadHex(uuid_string, 34));
+  uuid.low =
+      (ReadHex(uuid_string, 19) << 56) | (ReadHex(uuid_string, 21) << 48) |
+      (ReadHex(uuid_string, 24) << 40) | (ReadHex(uuid_string, 26) << 32) |
+      (ReadHex(uuid_string, 28) << 24) | (ReadHex(uuid_string, 30) << 16) |
+      (ReadHex(uuid_string, 32) << 8) | (ReadHex(uuid_string, 34));
 
   return SuccessExecutionResult();
 }

@@ -22,9 +22,11 @@ terraform {
 }
 
 locals {
-  cloudfunction_name_suffix        = "get-public-key-cloudfunction"
-  cloudfunction_package_zip        = var.get_public_key_service_zip
-  public_key_service_account_email = google_service_account.public_key_service_account.email
+  cloudfunction_name_suffix = "get-public-key-cloudfunction"
+  cloudfunction_package_zip = var.get_public_key_service_zip
+
+  cloud_run_name            = "public-key-service"
+  cloud_run_revision_suffix = lower(join("", regexall("[a-zA-Z0-9\\-]", module.version.version)))
 }
 module "version" {
   source = "../version"
@@ -39,6 +41,7 @@ resource "google_storage_bucket_object" "get_public_key_package_bucket_object" {
 
 # One service account for multiple public key service locations
 resource "google_service_account" "public_key_service_account" {
+  project = var.project_id
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-pubkeyuser"
   display_name = "Public Key Service Account"
@@ -46,14 +49,17 @@ resource "google_service_account" "public_key_service_account" {
 
 # IAM entry for service account to read from the database
 resource "google_spanner_database_iam_member" "get_public_key_spannerdb_iam_policy" {
+  project  = var.project_id
   instance = var.spanner_instance_name
   database = var.spanner_database_name
   role     = "roles/spanner.databaseReader"
-  member   = "serviceAccount:${local.public_key_service_account_email}"
+  member   = "serviceAccount:${google_service_account.public_key_service_account.email}"
 }
 
 resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
-  for_each = var.regions
+  for_each = !var.use_cloud_run ? var.regions : []
+
+  project  = var.project_id
   name     = "${var.environment}-${each.key}-${local.cloudfunction_name_suffix}"
   location = each.key
 
@@ -73,15 +79,16 @@ resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
     max_instance_count    = var.get_public_key_cloudfunction_max_instances
     timeout_seconds       = var.cloudfunction_timeout_seconds
     available_memory      = "${var.get_public_key_cloudfunction_memory_mb}M"
-    service_account_email = local.public_key_service_account_email
+    service_account_email = google_service_account.public_key_service_account.email
     ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
-      PROJECT_ID       = var.project_id
-      SPANNER_INSTANCE = var.spanner_instance_name
-      SPANNER_DATABASE = var.spanner_database_name
-      APPLICATION_NAME = var.application_name
-      VERSION          = module.version.version
-      LOG_EXECUTION_ID = "true"
+      PROJECT_ID          = var.project_id
+      SPANNER_INSTANCE    = var.spanner_instance_name
+      SPANNER_DATABASE    = var.spanner_database_name
+      APPLICATION_NAME    = var.application_name
+      VERSION             = module.version.version
+      LOG_EXECUTION_ID    = "true"
+      EXPORT_OTEL_METRICS = var.export_otel_metrics
     }
   }
 
@@ -98,12 +105,67 @@ resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "get_public_key_iam_policy" {
-  for_each = google_cloudfunctions2_function.get_public_key_cloudfunction
+  for_each = !var.use_cloud_run ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
+
   project  = var.project_id
   location = each.value.location
   service  = each.value.name
 
   role = "roles/run.invoker"
   #TODO: Update so that only load balancer can invoke
+  member = "allUsers"
+}
+
+# IAM entry to allow public key cloud function to write metrics.
+resource "google_project_iam_member" "get_public_key_service_monitoring_iam_policy" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${google_service_account.public_key_service_account.email}"
+}
+
+# Cloud Run Service to serve public keys.
+resource "google_cloud_run_v2_service" "public_key_service" {
+  for_each = var.use_cloud_run ? var.regions : []
+
+  name     = "${var.environment}-${each.key}-${local.cloud_run_name}"
+  location = each.key
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+
+  template {
+    containers {
+      image = var.public_key_service_image
+
+      env {
+        name  = "APPLICATION_NAME"
+        value = var.application_name
+      }
+      env {
+        name  = "PROJECT_ID"
+        value = var.project_id
+      }
+      env {
+        name  = "SPANNER_INSTANCE"
+        value = var.spanner_instance_name
+      }
+      env {
+        name  = "SPANNER_DATABASE"
+        value = var.spanner_database_name
+      }
+    }
+
+    service_account = google_service_account.public_key_service_account.email
+    revision        = "${var.environment}-${each.key}-${local.cloud_run_name}-${local.cloud_run_revision_suffix}-live"
+  }
+}
+
+# IAM entry to invoke the cloud run service.
+resource "google_cloud_run_service_iam_member" "public_key_service" {
+  for_each = var.use_cloud_run ? google_cloud_run_v2_service.public_key_service : {}
+
+  project  = var.project_id
+  location = each.value.location
+  service  = each.value.name
+
+  role   = "roles/run.invoker"
   member = "allUsers"
 }

@@ -71,7 +71,29 @@ resource "google_spanner_instance" "pbs_spanner_instance" {
   name             = "${var.environment}-pbsinst"
   display_name     = "${var.environment}-pbsinst"
   config           = local.spanner_config
-  processing_units = var.pbs_spanner_instance_processing_units
+  processing_units = var.pbs_spanner_autoscaling_config == null ? var.pbs_spanner_instance_processing_units : null
+
+  dynamic "autoscaling_config" {
+    for_each = var.pbs_spanner_autoscaling_config != null ? [var.pbs_spanner_autoscaling_config] : []
+    content {
+      autoscaling_limits {
+        max_nodes = autoscaling_config.value.max_nodes
+        min_nodes = autoscaling_config.value.min_nodes
+      }
+
+      autoscaling_targets {
+        high_priority_cpu_utilization_percent = autoscaling_config.value.high_priority_cpu_utilization_percent
+        storage_utilization_percent           = autoscaling_config.value.storage_utilization_percent
+      }
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = (var.pbs_spanner_instance_processing_units != null) != (var.pbs_spanner_autoscaling_config != null)
+      error_message = "Exactly one of pbs_spanner_processing_units and pbs_spanner_autoscaling_config must be set."
+    }
+  }
 }
 
 resource "google_spanner_database" "pbs_spanner_database" {
@@ -80,8 +102,20 @@ resource "google_spanner_database" "pbs_spanner_database" {
   version_retention_period = var.pbs_spanner_database_retention_period
   deletion_protection      = var.pbs_spanner_database_deletion_protection
 
-  # Do not remove DDL statements. You may only append.
-  # Terraform apply will replace these resources otherwise.
+  # Do not modify existing DDL statements. Only append new statements to this list.
+  # Modifying existing statements will force Terraform to replace the associated resources,
+  # resulting in data loss.
+  #
+  # Example of what NOT to do:
+  #
+  #   Incorrect: Adding a column to an existing CREATE TABLE statement.
+  #     CREATE TABLE MyTable (
+  #       MyExistingColumn String(1024),
+  #       MyNewColumn String(1024),  <-- This modification is incorrect
+  #     ) PRIMARY KEY (MyExistingColumn)
+  #
+  #   This will cause Terraform to drop and recreate the table, deleting all existing data.
+  #   Instead, append a new ALTER TABLE statement to add the column.
   ddl = [
     <<-EOT
     CREATE TABLE ${local.pbs_spanner_budget_key_table_name} (

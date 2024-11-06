@@ -48,11 +48,13 @@ class HttpConnection : public ServiceInterface {
    * @param service The port of the connection.
    * @param is_https If the connection is https, must be set to true.
    * @param metric_router An instance of metric router to manage otel metrics.
+   * It could be nullptr as passed from the HttpClient or through
+   * MockHttpConnectionPool for testing.
    * @param http2_read_timeout_in_sec nghttp2 read timeout in second.
    */
   HttpConnection(const std::shared_ptr<AsyncExecutorInterface>& async_executor,
                  const std::string& host, const std::string& service,
-                 bool is_https, MetricRouter* metric_router,
+                 bool is_https, absl::Nullable<MetricRouter*> metric_router,
                  TimeDuration http2_read_timeout_in_sec =
                      kDefaultHttp2ReadTimeoutInSeconds);
 
@@ -317,10 +319,6 @@ class HttpConnection : public ServiceInterface {
   // OpenTelemetry Instrument for measuring response body size in bytes.
   std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
       client_response_body_size_;
-
-  // OpenTelemetry Instrument for client-server response after the client call.
-  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-      client_response_counter_;
 
   // OpenTelemetry Instrument for measuring connection duration. It tracks the
   // lifecyle duration of the connection.

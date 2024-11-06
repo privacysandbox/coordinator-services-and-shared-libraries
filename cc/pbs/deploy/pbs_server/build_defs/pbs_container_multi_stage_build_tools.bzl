@@ -306,6 +306,12 @@ def load_pbs_container_multi_stage_container_build_tools():
         "local",
     ]
 
+    pbs_cloud_run_container_platforms = [
+        "gcp",
+        "gcp_integration_test",
+        "local",
+    ]
+
     [
         # Extract the dependencies and remove the tars
         container_run_and_commit_layer(
@@ -336,4 +342,20 @@ def load_pbs_container_multi_stage_container_build_tools():
             user = "root",
         )
         for platform in pbs_container_platforms
+    ]
+
+    [
+        container_image(
+            name = "pbs_cloud_run_container_" + platform,
+            base = "@debian_11_runtime//image",
+            cmd = "/opt/google/pbs/privacy_budget_service",
+            entrypoint = None,
+            layers = [":pbs_container_runtime_dependencies_layer_" + platform],
+            tags = ["manual"],
+            tars = [
+                ":pbs_binary_tar",
+            ],
+            user = "root",
+        )
+        for platform in pbs_cloud_run_container_platforms
     ]

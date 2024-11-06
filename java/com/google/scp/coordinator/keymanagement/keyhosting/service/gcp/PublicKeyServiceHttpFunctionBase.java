@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.scp.shared.api.model.HttpMethod;
 import com.google.scp.shared.gcp.util.CloudFunctionRequestHandler;
 import com.google.scp.shared.gcp.util.CloudFunctionServiceBase;
+import io.opentelemetry.api.OpenTelemetry;
 import java.util.regex.Pattern;
 
 /** Base class for PublicKeyService. */
@@ -23,7 +24,9 @@ public abstract class PublicKeyServiceHttpFunctionBase extends CloudFunctionServ
    * Creates a new instance of the {@code PublicKeyServiceHttpFunctionBase} class with the given
    * {@link GetPublicKeysRequestHandler}.
    */
-  public PublicKeyServiceHttpFunctionBase(GetPublicKeysRequestHandler getPublicKeysRequestHandler) {
+  public PublicKeyServiceHttpFunctionBase(
+      GetPublicKeysRequestHandler getPublicKeysRequestHandler, OpenTelemetry OTel) {
+    super(OTel);
     this.getPublicKeysRequestHandler = getPublicKeysRequestHandler;
   }
 

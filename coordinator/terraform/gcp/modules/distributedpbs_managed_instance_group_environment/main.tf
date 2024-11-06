@@ -38,6 +38,9 @@ locals {
   startup_script = templatefile("${path.module}/files/instance_startup.sh", { host_certificate_path = local.host_certificate_path })
 
   pbs_auth_endpoint = var.enable_domain_management ? "${var.pbs_domain}/v1/auth" : var.pbs_auth_audience_url
+  pbs_image         = var.pbs_image_override != "" ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-image:${var.pbs_image_tag}"
+  pbs_image_cr      = var.pbs_image_override != "" ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-cloud-run-image:${var.pbs_image_tag}"
+
   pbs_application_environment_variables = concat(var.pbs_application_environment_variables, [
     {
       name  = "google_scp_gcp_project_id"
@@ -87,20 +90,12 @@ locals {
       value = var.main_port
     },
     {
-      name  = "google_scp_pbs_health_port"
-      value = var.health_check_port
-    },
-    {
       name  = "google_scp_pbs_http2_server_private_key_file_path"
       value = "${local.container_certificate_path}/privatekey.pem"
     },
     {
       name  = "google_scp_pbs_http2_server_certificate_file_path"
       value = "${local.container_certificate_path}/public.crt"
-    },
-    {
-      name  = "google_scp_pbs_http2_server_use_tls"
-      value = "true"
     },
     {
       name  = "google_scp_pbs_partition_lease_duration_in_seconds"
@@ -155,6 +150,62 @@ locals {
       value = "true"
     },
   ])
+  pbs_gce_environment_variables = [
+    {
+      name  = "google_scp_pbs_health_port"
+      value = var.health_check_port
+    },
+    {
+      name  = "google_scp_pbs_http2_server_use_tls"
+      value = "true"
+    },
+    {
+      name  = "google_scp_pbs_log_provider"
+      value = "SyslogLogProvider"
+    },
+    {
+      name  = "google_scp_pbs_container_type"
+      value = "compute_engine"
+    },
+    {
+      name  = "google_scp_pbs_async_executor_threads_count"
+      value = "64"
+    },
+    {
+      name  = "google_scp_pbs_io_async_executor_threads_count"
+      value = "256"
+    },
+    {
+      name  = "google_scp_core_http2server_threads_count"
+      value = "160"
+    },
+  ]
+  pbs_cloud_run_environment_variables = [
+    {
+      name  = "google_scp_pbs_http2_server_use_tls"
+      value = "false"
+    },
+    {
+      name  = "google_scp_pbs_log_provider"
+      value = "StdoutLogProvider"
+    },
+    {
+      name  = "google_scp_pbs_container_type"
+      value = "cloud_run"
+    },
+    {
+      name  = "google_scp_pbs_async_executor_threads_count"
+      value = "8"
+    },
+    {
+      name  = "google_scp_pbs_io_async_executor_threads_count"
+      value = "16"
+    },
+    {
+      name  = "google_scp_core_http2server_threads_count"
+      value = "40"
+    }
+  ]
 }
 
 resource "google_artifact_registry_repository_iam_member" "pbs_artifact_registry_iam_read" {
@@ -202,6 +253,15 @@ resource "google_project_iam_member" "pbs_tag_iam_viewer" {
   member  = "serviceAccount:${var.pbs_service_account_email}"
 }
 
+data "google_iam_policy" "cloud_run_no_auth" {
+  binding {
+    role = "roles/run.invoker"
+    members = [
+      "allUsers",
+    ]
+  }
+}
+
 # The following options cannot be used together.
 # `name` can be specified for a specific cos stable OS version
 # `family` can be specified for the latest cos stable OS.
@@ -219,13 +279,13 @@ module "pbs_container" {
   version = "~> 2.0"
 
   container = {
-    image = "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-image:${var.pbs_image_tag}"
+    image = local.pbs_image
     securityContext = {
       privileged : true
     }
     tty : false
 
-    env = local.pbs_application_environment_variables
+    env = concat(local.pbs_application_environment_variables, local.pbs_gce_environment_variables)
 
     volumeMounts = [
       # Mount the self-signed cert directory from the host machine on the container
@@ -401,5 +461,53 @@ resource "google_compute_region_autoscaler" "pbs_instance_group" {
     cpu_utilization {
       target = var.pbs_autoscaling_policy.cpu_utilization_target
     }
+  }
+}
+
+resource "google_cloud_run_service_iam_policy" "no_auth" {
+  count       = var.deploy_pbs_cloud_run ? 1 : 0
+  location    = google_cloud_run_v2_service.pbs_instance[0].location
+  project     = google_cloud_run_v2_service.pbs_instance[0].project
+  service     = google_cloud_run_v2_service.pbs_instance[0].name
+  policy_data = data.google_iam_policy.cloud_run_no_auth.policy_data
+}
+
+resource "google_cloud_run_v2_service" "pbs_instance" {
+  count    = var.deploy_pbs_cloud_run ? 1 : 0
+  name     = "${var.environment}-${var.region}-pbs-cloud-run"
+  location = var.region
+  template {
+    service_account = var.pbs_service_account_email
+    containers {
+      image = local.pbs_image_cr
+      ports {
+        name           = "h2c"
+        container_port = var.main_port
+      }
+      dynamic "env" {
+        for_each = concat(local.pbs_application_environment_variables, local.pbs_cloud_run_environment_variables)
+        content {
+          name  = env.value["name"]
+          value = env.value["value"]
+        }
+      }
+      resources {
+        limits = {
+          cpu    = 8
+          memory = "32Gi"
+        }
+        startup_cpu_boost = true
+        cpu_idle          = true
+      }
+    }
+    scaling {
+      min_instance_count = var.pbs_cloud_run_min_instances
+      max_instance_count = var.pbs_cloud_run_max_instances
+    }
+    max_instance_request_concurrency = var.pbs_cloud_run_max_concurrency
+  }
+  traffic {
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    percent = 100
   }
 }

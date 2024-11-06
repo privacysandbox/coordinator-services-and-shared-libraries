@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -68,4 +68,19 @@ config_setting(
 config_setting(
     name = "cloud_platform_local",
     flag_values = {"platform": "local"},
+)
+
+bool_flag(
+    name = "enable_benchmarking",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "disable_benchmarking_setting",
+    flag_values = {":enable_benchmarking": "False"},
+)
+
+config_setting(
+    name = "enable_benchmarking_setting",
+    flag_values = {":enable_benchmarking": "True"},
 )

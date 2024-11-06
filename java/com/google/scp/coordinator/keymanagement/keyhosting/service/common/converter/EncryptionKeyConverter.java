@@ -63,7 +63,10 @@ public final class EncryptionKeyConverter {
       encryptionKeyBuilder.setEncryptionKeyType(
           EncryptionKeyType.valueOf(encryptionKey.getKeyType()));
     } else {
-      throw new IllegalArgumentException("Unrecognized KeyType: " + encryptionKey.getKeyType());
+      throw new IllegalArgumentException(
+          String.format(
+              "Unrecognized KeyType of KeyId %s: %s",
+              encryptionKey.getKeyId(), encryptionKey.getKeyType()));
     }
 
     return encryptionKeyBuilder.build();

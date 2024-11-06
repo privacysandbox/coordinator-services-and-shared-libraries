@@ -112,9 +112,21 @@ public final class KeyService {
   public ListRecentEncryptionKeysResponse listRecentKeys(ListRecentEncryptionKeysRequest request)
       throws ServiceException {
     Stream<EncryptionKey> keys = listRecentEncryptionKeysTask.execute(request.getMaxAgeSeconds());
-    return ListRecentEncryptionKeysResponse.newBuilder()
-        .addAllKeys(keys.map(EncryptionKeyConverter::toApiEncryptionKey).collect(toImmutableList()))
-        .build();
+
+    // Fail gracefully by ignoring invalid keys.
+    var apiKeys =
+        keys.flatMap(
+                key -> {
+                  try {
+                    return Stream.of(EncryptionKeyConverter.toApiEncryptionKey(key));
+                  } catch (IllegalArgumentException exception) {
+                    logger.error("Unable to convert backend key to API key.", exception);
+                    return Stream.empty();
+                  }
+                })
+            .collect(toImmutableList());
+
+    return ListRecentEncryptionKeysResponse.newBuilder().addAllKeys(apiKeys).build();
   }
 
   /** Implements a GET request for a specific encryption key resource. */

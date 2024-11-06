@@ -39,14 +39,14 @@
  */
 namespace google::scp::core {
 
+enum class InstrumentType {
+  kCounter,
+  kHistogram,
+  kGauge,
+};
+
 class MetricRouter {
  public:
-  enum class InstrumentType {
-    kCounter,
-    kHistogram,
-    kGauge,
-  };
-
   // Create a MetricRouter with a Periodic Reader, given a Resource and a
   // cloud-specific Exporter
   explicit MetricRouter(
@@ -66,6 +66,12 @@ class MetricRouter {
           std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>()>
           instrument_factory);
 
+  // Get or create an ObservableInstrument.
+  //
+  // When adding a callback to the Instrument using
+  // ObservableInstrument::AddCallback, it is important to remove the callback
+  // before the observed object gets destroyed using
+  // ObservableInstrument::RemoveCallback to avoid an use-after-free.
   std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
   GetOrCreateObservableInstrument(
       absl::string_view metric_name,

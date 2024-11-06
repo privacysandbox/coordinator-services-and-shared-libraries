@@ -14,25 +14,41 @@
 
 # Network Endpoint Group to route to cloud function
 resource "google_compute_region_network_endpoint_group" "encryption_key_service_network_endpoint_group" {
+  count = !var.use_cloud_run ? 1 : 0
+
+  project               = var.project_id
   name                  = "${var.environment}-${var.region}-encryption-key-service-endpoint-group"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
   cloud_run {
-    service = google_cloudfunctions2_function.encryption_key_service_cloudfunction.name
+    service = google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].name
+  }
+}
+
+# Network Endpoint Group to route to cloud run
+resource "google_compute_region_network_endpoint_group" "encryption_key_cloud_run" {
+  count = var.use_cloud_run ? 1 : 0
+
+  project               = var.project_id
+  name                  = "${var.environment}-${var.region}-encryption-key-service-cr-endpoint-group"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+  cloud_run {
+    service = google_cloud_run_v2_service.private_key_service[0].name
   }
 }
 
 # Backend service that groups network endpoint groups for Load Balancer to use.
 resource "google_compute_backend_service" "encryption_key_service_loadbalancer_backend" {
-  name        = "${var.environment}-encryption-key-service-backend"
   project     = var.project_id
+  name        = "${var.environment}-encryption-key-service-backend"
   description = "Backend service to point Encryption Key Cloud Function."
 
   enable_cdn = false
 
   backend {
     description = var.environment
-    group       = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group.id
+    group       = var.use_cloud_run ? google_compute_region_network_endpoint_group.encryption_key_cloud_run[0].id : google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group[0].id
   }
 
   log_config {
@@ -49,14 +65,18 @@ resource "google_compute_url_map" "encryption_key_service_loadbalancer" {
 
 # Proxy to loadbalancer. HTTP without custom domain
 resource "google_compute_target_http_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count   = var.enable_domain_management ? 0 : 1
+  count = var.enable_domain_management ? 0 : 1
+
+  project = var.project_id
   name    = "${var.environment}-encryption-key-service-proxy"
   url_map = google_compute_url_map.encryption_key_service_loadbalancer.id
 }
 
 # Proxy to loadbalancer. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count            = var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management ? 1 : 0
+
+  project          = var.project_id
   name             = "${var.environment}-encryption-key-service-proxy"
   url_map          = google_compute_url_map.encryption_key_service_loadbalancer.id
   ssl_certificates = [google_compute_managed_ssl_certificate.encryption_key_service_loadbalancer[0].id]
@@ -64,16 +84,26 @@ resource "google_compute_target_https_proxy" "encryption_key_service_loadbalance
 
 # Reserve IP address.
 resource "google_compute_global_address" "encryption_key_service_ip_address" {
-  name = "${var.environment}-encryption-key-service-ip-address"
+  project = var.project_id
+  name    = "${var.environment}-encryption-key-service-ip-address"
 }
 
 # Map IP address and loadbalancer proxy
 resource "google_compute_global_forwarding_rule" "encryption_key_service_loadbalancer_config" {
+  project    = var.project_id
   name       = "${var.environment}-encryption-key-service-frontend-configuration"
   ip_address = google_compute_global_address.encryption_key_service_ip_address.address
   port_range = var.enable_domain_management ? "443" : "80"
   target = (var.enable_domain_management ? google_compute_target_https_proxy.encryption_key_service_loadbalancer_proxy[0].id
   : google_compute_target_http_proxy.encryption_key_service_loadbalancer_proxy[0].id)
+
+  # Terraform propagates and applies the create_before_destroy meta-attribute
+  # behaviour to all resource dependencies. This is required to avoid the error
+  # "resourceInUseByAnotherResource" while switching between Cloud Function and
+  # Cloud Run.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Creates SSL cert for given domain. Terraform does not wait for SSL cert to be provisioned before the `apply` operation
@@ -84,10 +114,6 @@ resource "google_compute_managed_ssl_certificate" "encryption_key_service_loadba
   count   = var.enable_domain_management ? 1 : 0
   project = var.project_id
   name    = "${var.environment}-encryption-key-cert"
-
-  lifecycle {
-    create_before_destroy = true
-  }
 
   managed {
     domains = [var.encryption_key_domain]

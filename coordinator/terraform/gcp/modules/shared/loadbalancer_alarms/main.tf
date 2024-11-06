@@ -13,6 +13,7 @@
 # limitations under the License.
 
 resource "google_monitoring_alert_policy" "error_count_5xx" {
+  project      = var.project_id
   display_name = "${var.service_prefix} Load Balancer 5xx Errors"
   combiner     = "OR"
   conditions {
@@ -39,6 +40,7 @@ resource "google_monitoring_alert_policy" "error_count_5xx" {
 }
 
 resource "google_monitoring_alert_policy" "total_latency" {
+  project      = var.project_id
   display_name = "${var.service_prefix} Load Balancer Total Request Latency"
   combiner     = "OR"
   conditions {

@@ -108,6 +108,7 @@ cc_library(
         ":transaction_request_router",
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
+        "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
         "//cc/pbs/consume_budget/src/gcp:consume_budget",

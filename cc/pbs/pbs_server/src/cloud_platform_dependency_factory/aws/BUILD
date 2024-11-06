@@ -49,5 +49,6 @@ cc_library(
         "//cc/public/cpio/interface/metric_client",
         "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
         "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
+        "@com_google_absl//absl/base:nullability",
     ],
 )

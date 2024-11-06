@@ -113,6 +113,21 @@ variable "key_encryption_key_id" {
   type        = string
 }
 
+variable "use_cloud_run" {
+  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
+  type        = bool
+}
+
+variable "key_storage_service_image" {
+  description = "The container image of Cloud Run service deployment for Key Storage Service."
+  type        = string
+}
+
+variable "key_storage_service_custom_audiences" {
+  description = "List of custom audiences for Key Storage Service on Cloud Run."
+  type        = list(string)
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################
@@ -160,4 +175,14 @@ variable "lb_max_latency_ms" {
 variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
+}
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Use OpenTelemetry to export metrics from Key Storage Service."
+  type        = bool
+  default     = false
 }

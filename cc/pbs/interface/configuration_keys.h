@@ -122,6 +122,7 @@ static constexpr char kRemotePrivacyBudgetServiceAssumeRoleExternalId[] =
 // Logging
 static constexpr char kEnabledLogLevels[] =
     "google_scp_core_enabled_log_levels";
+static constexpr char kLogProvider[] = "google_scp_pbs_log_provider";
 
 // HTTP2 Server TLS context
 static constexpr char kHttp2ServerUseTls[] =
@@ -155,4 +156,6 @@ static constexpr char kOtelEnabled[] = "google_scp_otel_enabled";
 static constexpr char kOtelPrintDataToConsoleEnabled[] =
     "google_scp_otel_print_data_to_console_enabled";
 
+// Container type (cloud_run or compute_engine)
+static constexpr char kContainerType[] = "google_scp_pbs_container_type";
 }  // namespace google::scp::pbs

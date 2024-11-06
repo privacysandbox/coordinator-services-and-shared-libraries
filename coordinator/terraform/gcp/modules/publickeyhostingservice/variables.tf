@@ -107,6 +107,16 @@ variable "public_key_load_balancer_logs_enabled" {
   type        = bool
 }
 
+variable "public_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Public Key Service."
+  type        = string
+}
+
+variable "use_cloud_run" {
+  description = "Whether to use Cloud Run or Cloud Functions."
+  type        = bool
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################
@@ -154,4 +164,13 @@ variable "get_public_key_lb_max_latency_ms" {
 variable "get_public_key_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
+}
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Use OpenTelemetry to export metrics from Public Key Service."
+  type        = bool
 }

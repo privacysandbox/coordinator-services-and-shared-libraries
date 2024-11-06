@@ -295,13 +295,13 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
       authorization_proxy_, /*aws_authorization_proxy=*/nullptr, metric_client_,
-      config_provider_, http2_server_options);
+      config_provider_, http2_server_options, metric_router_.get());
   health_http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       1 /* one thread needed */, async_executor_,
       pass_thru_authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
       nullptr /* metric_client, no metric recording for health http server */,
-      config_provider_, http2_server_options);
+      config_provider_, http2_server_options, metric_router_.get());
 
   health_service_ = make_shared<HealthService>(
       health_http_server_, config_provider_, async_executor_, metric_client_);

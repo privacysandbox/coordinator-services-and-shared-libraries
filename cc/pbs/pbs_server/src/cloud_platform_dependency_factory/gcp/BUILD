@@ -50,6 +50,7 @@ cc_library(
         "//cc/pbs/pbs_client/src:pbs_client_lib",
         "@com_github_googleapis_google_cloud_cpp//:monitoring",
         "@com_github_googleapis_google_cloud_cpp//:opentelemetry",
+        "@com_google_absl//absl/base:nullability",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",
         "@io_opentelemetry_cpp//sdk/src/resource",
     ],

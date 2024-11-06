@@ -22,6 +22,7 @@ namespace google::scp::core {
 inline constexpr absl::string_view kHttpConnectionPoolMeter =
     "Http Connection Pool";
 inline constexpr absl::string_view kHttpConnectionMeter = "Http Connection";
+inline constexpr absl::string_view kHttpClientMeter = "Http Client";
 
 // View
 inline constexpr absl::string_view kClientServerLatencyView =
@@ -48,15 +49,13 @@ inline constexpr absl::string_view kClientRequestBodySizeMetric =
     "http.client.request.body.size";
 inline constexpr absl::string_view kClientResponseBodySizeMetric =
     "http.client.response.body.size";
-inline constexpr absl::string_view kClientResponseMetric =
-    "http.client.response";
 inline constexpr absl::string_view kClientConnectionDurationMetric =
     "http.client.connection.duration";
+inline constexpr absl::string_view kClientConnectionCreationErrorsMetric =
+    "http.client.connection.creation_errors";
 
 // Labels
 inline constexpr absl::string_view kUriLabel = "server.uri";
-inline constexpr absl::string_view kResponseStatusLabel =
-    "server.response_status";
 inline constexpr absl::string_view kClientReturnCodeLabel =
     "client.return_code";
 

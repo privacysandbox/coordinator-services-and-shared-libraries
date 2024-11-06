@@ -63,6 +63,8 @@ class TransactionManager : public TransactionManagerInterface {
       std::shared_ptr<ConfigProviderInterface> config_provider,
       const PartitionId& partition_id = kGlobalPartitionId);
 
+  ~TransactionManager();
+
   ExecutionResult Init() noexcept override;
 
   ExecutionResult Run() noexcept override;

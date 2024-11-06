@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/http2_server/src/http2_server.h"
+#include "cc/core/http2_server/src/http2_server.h"
 
 #include <gtest/gtest.h>
 
@@ -28,26 +28,27 @@
 #include "absl/random/random.h"
 #include "absl/random/uniform_int_distribution.h"
 #include "absl/synchronization/blocking_counter.h"
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/authorization_proxy/mock/mock_authorization_proxy.h"
-#include "core/authorization_proxy/src/pass_thru_authorization_proxy.h"
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/config_provider/src/env_config_provider.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/http2_server/mock/mock_http2_request_with_overrides.h"
-#include "core/http2_server/mock/mock_http2_response_with_overrides.h"
-#include "core/http2_server/mock/mock_http2_server_with_overrides.h"
-#include "core/http2_server/src/error_codes.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
-#include "core/telemetry/src/common/metric_utils.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/utils/src/base64.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/authorization_proxy/mock/mock_authorization_proxy.h"
+#include "cc/core/authorization_proxy/src/pass_thru_authorization_proxy.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/config_provider/src/env_config_provider.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/http2_server/mock/mock_http2_request_with_overrides.h"
+#include "cc/core/http2_server/mock/mock_http2_response_with_overrides.h"
+#include "cc/core/http2_server/mock/mock_http2_server_with_overrides.h"
+#include "cc/core/http2_server/src/error_codes.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
+#include "cc/core/telemetry/src/common/metric_utils.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/utils/src/base64.h"
 #include "nlohmann/json.hpp"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/meter_provider.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/mock/metric_client/mock_metric_client.h"
 
@@ -71,6 +72,8 @@ using ::google::scp::core::test::WaitUntil;
 using ::google::scp::core::utils::Base64Encode;
 using ::google::scp::core::utils::PadBase64Encoding;
 using ::google::scp::cpio::MockMetricClient;
+using ::opentelemetry::sdk::resource::SemanticConventions::
+    kHttpResponseStatusCode;
 using ::testing::Return;
 
 class Http2ServerTest : public testing::Test {
@@ -87,8 +90,11 @@ class Http2ServerTest : public testing::Test {
 
     mock_config_provider_ = std::make_shared<MockConfigProvider>();
     mock_config_provider_->SetBool(kHttpServerDnsRoutingEnabled, true);
+
+    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
   }
 
+  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
   std::shared_ptr<MockConfigProvider> mock_config_provider_;
 };
 
@@ -152,7 +158,8 @@ TEST_F(Http2ServerTest, RegisterHandlers) {
       std::make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, mock_authorization_proxy,
-      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_);
+      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_,
+      metric_router_.get());
 
   std::string path("/test/path");
   HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
@@ -184,7 +191,8 @@ TEST_F(Http2ServerTest, HandleHttp2Request) {
       std::make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, authorization_proxy,
-      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_);
+      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_,
+      metric_router_.get());
 
   HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
     return SuccessExecutionResult();
@@ -227,7 +235,8 @@ TEST_F(Http2ServerTest, HandleHttp2RequestWithAwsProxy) {
       std::make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, authorization_proxy,
-      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_);
+      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_,
+      metric_router_.get());
 
   HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
     return SuccessExecutionResult();
@@ -285,7 +294,7 @@ TEST_F(Http2ServerTest,
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, authorization_proxy,
       mock_aws_authorization_proxy, mock_metric_client,
-      std::make_shared<EnvConfigProvider>());
+      std::make_shared<EnvConfigProvider>(), metric_router_.get());
   EXPECT_SUCCESS(http_server.Init());
   HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
     return SuccessExecutionResult();
@@ -330,7 +339,8 @@ TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {
       std::make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, authorization_proxy,
-      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_);
+      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_,
+      metric_router_.get());
 
   HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
     return SuccessExecutionResult();
@@ -363,15 +373,10 @@ TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {
 }
 
 TEST_F(Http2ServerTest, TestOtelMetric) {
-  std::shared_ptr<core::InMemoryMetricRouter> metric_router =
-      std::make_shared<core::InMemoryMetricRouter>();
-
   // Setup the server and the client.
   std::shared_ptr<core::config_provider::mock::MockConfigProvider>
       mock_config_provider =
           std::make_shared<config_provider::mock::MockConfigProvider>();
-
-  mock_config_provider->SetBool(kOtelServerMetricsEnabled, true);
 
   std::shared_ptr<AuthorizationProxyInterface> authorization_proxy =
       std::make_shared<PassThruAuthorizationProxy>();
@@ -392,8 +397,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
                                    /* delay in ms */ 100, /* num retries */ 5),
       /* max connections per host */ 1, /* read timeout in sec */ 5);
 
-  auto http2_client = std::make_shared<HttpClient>(
-      async_executor_for_client_, client_options, metric_router);
+  auto http2_client = std::make_shared<HttpClient>(async_executor_for_client_);
 
   std::string host = "localhost";
 
@@ -410,7 +414,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
       std::make_shared<MockHttp2ServerWithOverrides>(
           host, port, async_executor_for_server_, authorization_proxy,
           mock_aws_authorization_proxy, mock_metric_client,
-          mock_config_provider);
+          mock_config_provider, metric_router_.get());
 
   std::string path = "/v1/test";
   core::HttpHandler handler =
@@ -448,7 +452,9 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
       absl::StrCat("http://", host, ":", port, "/v1/test"));
   mock_http2_request->headers = std::make_shared<HttpHeaders>();
   mock_http2_request->headers->insert(
-      {kClaimedIdentityHeader, "https://origin.site.com"});
+      {"x-gscp-claimed-identity", "https://origin.site.com"});
+  mock_http2_request->headers->insert(
+      {"User-Agent", "aggregation-service/2.8.7"});
   auto mock_http2_response =
       std::make_shared<MockNgHttp2ResponseWithOverrides>(response);
   mock_http2_response->body = BytesBuffer("response body");
@@ -467,10 +473,9 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
   // Test otel metrics
   // Server latency
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      metric_router->GetExportedData();
+      metric_router_->GetExportedData();
 
-  const std::map<std::string, std::string> server_latency_label_kv = {
-      {kExecutionStatus, "Success"}};
+  const std::map<std::string, std::string> server_latency_label_kv;
 
   const opentelemetry::sdk::common::OrderedAttributeMap
       server_latency_dimensions(
@@ -479,7 +484,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       server_latency_metric_point_data = core::GetMetricPointData(
-          kServerDurationMetric, server_latency_dimensions, data);
+          "http.server.request.duration", server_latency_dimensions, data);
 
   EXPECT_TRUE(server_latency_metric_point_data.has_value());
 
@@ -496,7 +501,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       active_requests_metric_point_data = core::GetMetricPointData(
-          kActiveRequestsMetric, active_requests_dimensions, data);
+          "http.server.active_requests", active_requests_dimensions, data);
   EXPECT_TRUE(active_requests_metric_point_data.has_value());
 
   auto active_requests_last_value_point_data =
@@ -517,7 +522,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       request_body_metric_point_data = core::GetMetricPointData(
-          kServerRequestBodySizeMetric, request_body_dimensions, data);
+          "http.server.request.body.size", request_body_dimensions, data);
 
   EXPECT_TRUE(request_body_metric_point_data.has_value());
 
@@ -535,7 +540,9 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
 
   // Response body size
   const std::map<std::string, std::string> response_body_label_kv = {
-      {kResponseCode, "200"}};
+      {"http.response.status_code", "200"},
+      {"pbs.claimed_identity", "https://origin.site.com"},
+      {"scp.http.request.client_version", "aggregation-service/2.8.7"}};
 
   const opentelemetry::sdk::common::OrderedAttributeMap
       response_body_dimensions(
@@ -544,7 +551,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       response_body_metric_point_data = core::GetMetricPointData(
-          kServerResponseBodySizeMetric, response_body_dimensions, data);
+          "http.server.response.body.size", response_body_dimensions, data);
 
   EXPECT_TRUE(response_body_metric_point_data.has_value());
 
@@ -560,30 +567,29 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
       std::get_if<int64_t>(&response_body_histogram_data.max_);
   EXPECT_EQ(*response_body_histogram_data_max, 0);
 
-  // Pbs transactions
-  const std::map<std::string, std::string> pbs_transactions_label_kv = {
-      {kResponseCode, "200"}};
+  // Pbs requests
+  const std::map<std::string, std::string> pbs_requests_label_kv = {
+      {"http.response.status_code", "200"}};
 
-  const opentelemetry::sdk::common::OrderedAttributeMap
-      pbs_transactions_dimensions(
-          (opentelemetry::common::KeyValueIterableView<
-              std::map<std::string, std::string>>(pbs_transactions_label_kv)));
+  const opentelemetry::sdk::common::OrderedAttributeMap pbs_requests_dimensions(
+      (opentelemetry::common::KeyValueIterableView<
+          std::map<std::string, std::string>>(pbs_requests_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      pbs_transactions_metric_point_data = core::GetMetricPointData(
-          kPbsTransactionMetric, pbs_transactions_dimensions, data);
+      pbs_requests_metric_point_data = core::GetMetricPointData(
+          "google.scp.pbs.requests", pbs_requests_dimensions, data);
 
-  EXPECT_TRUE(pbs_transactions_metric_point_data.has_value());
+  EXPECT_TRUE(pbs_requests_metric_point_data.has_value());
 
   EXPECT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      pbs_transactions_metric_point_data.value()));
+      pbs_requests_metric_point_data.value()));
 
-  auto pbs_transactions_sum_point_data =
+  auto pbs_requests_sum_point_data =
       std::get<opentelemetry::sdk::metrics::SumPointData>(
-          pbs_transactions_metric_point_data.value());
+          pbs_requests_metric_point_data.value());
 
-  EXPECT_EQ(std::get<int64_t>(pbs_transactions_sum_point_data.value_), 1)
-      << "Expected pbs_transactions_sum_point_data.value_ to be 1 (int64_t)";
+  EXPECT_EQ(std::get<int64_t>(pbs_requests_sum_point_data.value_), 1)
+      << "Expected pbs_requests_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_SUCCESS(http2_client->Stop());
   EXPECT_SUCCESS(http_server->Stop());
@@ -605,7 +611,8 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackFailure) {
       std::make_shared<MockAsyncExecutor>();
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, authorization_proxy,
-      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_);
+      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_,
+      metric_router_.get());
 
   HttpHandler callback = [](AsyncContext<HttpRequest, HttpResponse>&) {
     return SuccessExecutionResult();
@@ -649,8 +656,6 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackFailure) {
 }
 
 TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router =
-      std::make_unique<core::InMemoryMetricRouter>();
   std::string host_address("localhost");
   std::string port("0");
 
@@ -664,7 +669,8 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
   auto mock_metric_client = std::make_shared<MockMetricClient>();
   MockHttp2ServerWithOverrides http_server(
       host_address, port, async_executor, authorization_proxy,
-      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_);
+      mock_aws_authorization_proxy, mock_metric_client, mock_config_provider_,
+      metric_router_.get());
 
   ASSERT_SUCCESS(http_server.Init());
 
@@ -701,7 +707,7 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
   WaitUntil([&]() { return should_continue; });
 
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      metric_router->GetExportedData();
+      metric_router_->GetExportedData();
   const std::map<std::string, std::string> request_body_label_kv = {};
 
   const opentelemetry::sdk::common::OrderedAttributeMap request_body_dimensions(
@@ -710,7 +716,7 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       request_body_metric_point_data = core::GetMetricPointData(
-          kServerRequestBodySizeMetric, request_body_dimensions, data);
+          "http.server.request.body.size", request_body_dimensions, data);
 
   EXPECT_TRUE(request_body_metric_point_data.has_value());
 
@@ -744,10 +750,11 @@ TEST_F(Http2ServerTest,
       true, std::make_shared<std::string>("/file/that/dos/not/exist.pem"),
       std::make_shared<std::string>("./public.crt"));
 
-  Http2Server http_server(
-      host_address, port, thread_pool_size, async_executor,
-      mock_authorization_proxy, mock_aws_authorization_proxy,
-      nullptr /* metric_client */, mock_config_provider_, http2_server_options);
+  Http2Server http_server(host_address, port, thread_pool_size, async_executor,
+                          mock_authorization_proxy,
+                          mock_aws_authorization_proxy,
+                          nullptr /* metric_client */, mock_config_provider_,
+                          http2_server_options, metric_router_.get());
 
   EXPECT_THAT(http_server.Init(),
               ResultIs(FailureExecutionResult(
@@ -771,10 +778,11 @@ TEST_F(Http2ServerTest,
       true, std::make_shared<std::string>("./privatekey.pem"),
       std::make_shared<std::string>("/file/that/dos/not/exist.crt"));
 
-  Http2Server http_server(
-      host_address, port, thread_pool_size, async_executor,
-      mock_authorization_proxy, mock_aws_authorization_proxy,
-      nullptr /* metric_client */, mock_config_provider_, http2_server_options);
+  Http2Server http_server(host_address, port, thread_pool_size, async_executor,
+                          mock_authorization_proxy,
+                          mock_aws_authorization_proxy,
+                          nullptr /* metric_client */, mock_config_provider_,
+                          http2_server_options, metric_router_.get());
 
   EXPECT_THAT(http_server.Init(),
               ResultIs(FailureExecutionResult(
@@ -798,10 +806,11 @@ TEST_F(Http2ServerTest,
       true, std::make_shared<std::string>("./privatekey.pem"),
       std::make_shared<std::string>("./public.crt"));
 
-  Http2Server http_server(
-      host_address, port, thread_pool_size, async_executor,
-      mock_authorization_proxy, mock_aws_authorization_proxy,
-      nullptr /* metric_client */, mock_config_provider_, http2_server_options);
+  Http2Server http_server(host_address, port, thread_pool_size, async_executor,
+                          mock_authorization_proxy,
+                          mock_aws_authorization_proxy,
+                          nullptr /* metric_client */, mock_config_provider_,
+                          http2_server_options, metric_router_.get());
 
   EXPECT_SUCCESS(http_server.Init());
 }
@@ -822,10 +831,11 @@ TEST_F(Http2ServerTest, ShouldInitCorrectlyRunAndStopWhenTlsIsEnabled) {
       true, std::make_shared<std::string>("./privatekey.pem"),
       std::make_shared<std::string>("./public.crt"));
 
-  Http2Server http_server(
-      host_address, port, thread_pool_size, async_executor,
-      mock_authorization_proxy, mock_aws_authorization_proxy,
-      nullptr /* metric_client */, mock_config_provider_, http2_server_options);
+  Http2Server http_server(host_address, port, thread_pool_size, async_executor,
+                          mock_authorization_proxy,
+                          mock_aws_authorization_proxy,
+                          nullptr /* metric_client */, mock_config_provider_,
+                          http2_server_options, metric_router_.get());
 
   EXPECT_SUCCESS(http_server.Init());
   EXPECT_SUCCESS(http_server.Run());
@@ -851,8 +861,6 @@ void SubmitUntilSuccess(HttpClient& http_client,
 }
 
 TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router =
-      std::make_unique<core::InMemoryMetricRouter>();
   std::string host_address("localhost");
   int random_port = GenerateRandomIntInRange(8000, 60000);
   std::string port = std::to_string(random_port);
@@ -886,7 +894,7 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
   Http2Server http_server(host_address, port, thread_pool_size, async_executor,
                           authorization_proxy, mock_aws_authorization_proxy,
                           nullptr /* metric_client */, mock_config_provider_,
-                          http2_server_options);
+                          http2_server_options, metric_router_.get());
 
   HttpHandler handler_callback =
       [](AsyncContext<HttpRequest, HttpResponse>& context) {
@@ -937,7 +945,7 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
 
   // Test empty request body collected.
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      metric_router->GetExportedData();
+      metric_router_->GetExportedData();
   const std::map<std::string, std::string> request_body_label_kv;
 
   const opentelemetry::sdk::common::OrderedAttributeMap request_body_dimensions(
@@ -946,7 +954,7 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       request_body_metric_point_data = core::GetMetricPointData(
-          kServerRequestBodySizeMetric, request_body_dimensions, data);
+          "http.server.request.body.size", request_body_dimensions, data);
 
   EXPECT_TRUE(request_body_metric_point_data.has_value());
 

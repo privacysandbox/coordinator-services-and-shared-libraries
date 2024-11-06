@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-#include "http2_server.h"
-
-#include <nghttp2/asio_http2_server.h>
+#include "cc/core/http2_server/src/http2_server.h"
 
 #include <chrono>
 #include <memory>
@@ -25,22 +23,22 @@
 #include <utility>
 #include <vector>
 
+#include <nghttp2/asio_http2_server.h>
+
 #include "absl/strings/str_cat.h"
-#include "core/authorization_service/src/error_codes.h"
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_server/src/error_codes.h"
-#include "core/http2_server/src/http2_utils.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/errors.h"
-#include "core/interface/metrics_def.h"
-#include "core/utils/src/base64.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "http2_utils.h"
+#include "cc/core/authorization_service/src/error_codes.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_server/src/error_codes.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/interface/metrics_def.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/core/utils/src/http.h"
 #include "nlohmann/json.hpp"
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/view/view.h"
-#include "opentelemetry/sdk/metrics/view/view_factory.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
@@ -48,6 +46,7 @@
 #include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 
 namespace google::scp::core {
+
 namespace {
 
 using ::absl::StrCat;
@@ -73,6 +72,13 @@ using ::google::scp::cpio::MetricUnit;
 using ::nghttp2::asio_http2::server::configure_tls_context_easy;
 using ::nghttp2::asio_http2::server::request;
 using ::nghttp2::asio_http2::server::response;
+using ::opentelemetry::sdk::resource::SemanticConventions::kHttpRequestMethod;
+using ::opentelemetry::sdk::resource::SemanticConventions::
+    kHttpResponseStatusCode;
+using ::opentelemetry::sdk::resource::SemanticConventions::kHttpRoute;
+using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
+using ::opentelemetry::sdk::resource::SemanticConventions::kServerPort;
+using ::opentelemetry::sdk::resource::SemanticConventions::kUrlScheme;
 
 static constexpr char kHttp2Server[] = "Http2Server";
 static constexpr size_t kConnectionReadTimeoutInSeconds = 90;
@@ -129,35 +135,39 @@ bool UseAwsAuthorizationProxy(
   return json_token.contains(kAmzDate);
 }
 
+/*
+ * @brief Sets up the synchronization context by retrieving it from the active
+ * requests map (or creating if it doesn't exist). It assigns the handler,
+ * context, and necessary callbacks for managing the HTTP2 request.
+ *
+ * @param http2_context The async context for the HTTP2 request and response.
+ * @param http_handler The HTTP handler function to process requests.
+ * @param active_requests A concurrent map containing active requests, mapped by
+ * UUID.
+ * @param sync_context A shared pointer to the synchronization context for the
+ * HTTP2 request.
+ *
+ * @return ExecutionResult indicating success or failure of setting up the sync
+ * context.
+ */
 ExecutionResult SetSyncContext(
     const AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-    const HttpHandler& http_handler, bool otel_server_metrics_enabled,
+    const HttpHandler& http_handler,
     common::ConcurrentMap<
         common::Uuid, std::shared_ptr<Http2Server::Http2SynchronizationContext>,
         common::UuidCompare>& active_requests,
     std::shared_ptr<Http2Server::Http2SynchronizationContext>& sync_context) {
   ExecutionResult execution_result;
-  if (otel_server_metrics_enabled) {
-    execution_result =
-        active_requests.Find(http2_context.request->id, sync_context);
-    if (execution_result.Successful()) {
-      sync_context->pending_callbacks =
-          2;  // 1 for authorization, 1 for body data.
-      sync_context->http2_context = http2_context;
-      sync_context->http_handler = http_handler;
-      sync_context->failed = false;
-    } else {
-      SCP_ERROR_CONTEXT(kHttp2Server, http2_context, execution_result,
-                        "[HandleHttp2Request] Cannot find the sync context in "
-                        "the active requests map!");
-    }
-  } else {
+
+  execution_result =
+      active_requests.Find(http2_context.request->id, sync_context);
+  if (!execution_result.Successful()) {
+    SCP_DEBUG_CONTEXT(kHttp2Server, http2_context,
+                      "[HandleHttp2Request] Cannot find the sync context in "
+                      "the active requests map! Creating new sync context and "
+                      "adding to the active requests map!");
+
     sync_context = std::make_shared<Http2Server::Http2SynchronizationContext>();
-    sync_context->pending_callbacks =
-        2;  // 1 for authorization, 1 for body data.
-    sync_context->http2_context = http2_context;
-    sync_context->http_handler = http_handler;
-    sync_context->failed = false;
 
     auto context_pair = std::make_pair(http2_context.request->id, sync_context);
     execution_result = active_requests.Insert(context_pair, sync_context);
@@ -165,11 +175,27 @@ ExecutionResult SetSyncContext(
       SCP_ERROR_CONTEXT(kHttp2Server, http2_context, execution_result,
                         "[HandleHttp2Request] Cannot insert the sync context "
                         "to the active requests map!");
+      return execution_result;
     }
   }
-  return execution_result;
+
+  sync_context->pending_callbacks = 2;  // 1 for authorization, 1 for body data.
+  sync_context->http2_context = http2_context;
+  sync_context->http_handler = http_handler;
+  sync_context->failed = false;
+
+  return SuccessExecutionResult();
 }
 }  // namespace
+
+Http2Server::~Http2Server() {
+  if (active_requests_instrument_) {
+    active_requests_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &Http2Server::ObserveActiveRequestsCallback),
+        this);
+  }
+}
 
 ExecutionResult Http2Server::MetricInit() noexcept {
   auto metric_name = std::make_shared<MetricName>(kMetricNameHttpRequest);
@@ -199,6 +225,87 @@ ExecutionResult Http2Server::MetricRun() noexcept {
 
 ExecutionResult Http2Server::MetricStop() noexcept {
   return http_request_metrics_->Stop();
+}
+
+ExecutionResult Http2Server::OtelMetricInit() noexcept {
+  if (!metric_router_) {
+    return SuccessExecutionResult();
+  }
+
+  meter_ = metric_router_->GetOrCreateMeter(kHttp2ServerMeter);
+
+  // Server Duration View Setup.
+  static std::vector<double> kServerRequestDurationBoundaries = {
+      0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25,
+      0.5,   0.75, 1,     2.5,  5,     7.5, 10};
+
+  metric_router_->CreateHistogramViewForInstrument(
+      /*metric_name=*/kServerRequestDurationMetric,
+      /*view_name=*/kServerRequestDurationView,
+      /*instrument_type=*/InstrumentType::kHistogram,
+      /*boundaries=*/kServerRequestDurationBoundaries,
+      /*version=*/"", /*schema=*/"",
+      /*view_description=*/"Server Request Duration Histogram",
+      /*unit=*/kSecondUnit);
+
+  server_request_duration_ =
+      std::static_pointer_cast<opentelemetry::metrics::Histogram<double>>(
+          metric_router_->GetOrCreateSyncInstrument(
+              kServerRequestDurationMetric,
+              [&]() -> std::shared_ptr<
+                        opentelemetry::metrics::SynchronousInstrument> {
+                return meter_->CreateDoubleHistogram(
+                    kServerRequestDurationMetric,
+                    "Duration of HTTP client requests.", kSecondUnit);
+              }));
+
+  active_requests_instrument_ = metric_router_->GetOrCreateObservableInstrument(
+      kActiveRequestsMetric,
+      [&]() -> std::shared_ptr<opentelemetry::metrics::ObservableInstrument> {
+        return meter_->CreateInt64ObservableGauge(
+            kActiveRequestsMetric, "Number of active HTTP server requests.");
+      });
+
+  active_requests_instrument_->AddCallback(
+      reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+          &Http2Server::ObserveActiveRequestsCallback),
+      this);
+
+  server_request_body_size_ =
+      std::static_pointer_cast<opentelemetry::metrics::Histogram<uint64_t>>(
+          metric_router_->GetOrCreateSyncInstrument(
+              kServerRequestBodySizeMetric,
+              [&]() -> std::shared_ptr<
+                        opentelemetry::metrics::SynchronousInstrument> {
+                return meter_->CreateUInt64Histogram(
+                    kServerRequestBodySizeMetric,
+                    "Server request body size in Bytes - uncompressed.",
+                    kByteUnit);
+              }));
+
+  server_response_body_size_ =
+      std::static_pointer_cast<opentelemetry::metrics::Histogram<uint64_t>>(
+          metric_router_->GetOrCreateSyncInstrument(
+              kServerResponseBodySizeMetric,
+              [&]() -> std::shared_ptr<
+                        opentelemetry::metrics::SynchronousInstrument> {
+                return meter_->CreateUInt64Histogram(
+                    kServerResponseBodySizeMetric,
+                    "Server response body size in Bytes - uncompressed.",
+                    kByteUnit);
+              }));
+
+  pbs_requests_ =
+      std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
+          metric_router_->GetOrCreateSyncInstrument(
+              kPbsRequestsMetric,
+              [&]() -> std::shared_ptr<
+                        opentelemetry::metrics::SynchronousInstrument> {
+                return meter_->CreateUInt64Counter(kPbsRequestsMetric,
+                                                   "Number of PBS Requests.");
+              }));
+
+  return SuccessExecutionResult();
 }
 
 ExecutionResult Http2Server::Init() noexcept {
@@ -247,79 +354,8 @@ ExecutionResult Http2Server::Init() noexcept {
     request_routing_enabled_ = request_routing_enabled;
   }
 
-  bool adtech_site_authorized_domain_enabled = false;
-  if (config_provider_ && config_provider_
-                              ->Get(kPBSAdtechSiteAsAuthorizedDomain,
-                                    adtech_site_authorized_domain_enabled)
-                              .Successful()) {
-    adtech_site_authorized_domain_enabled_ =
-        adtech_site_authorized_domain_enabled;
-  }
-
   // Otel metrics setup.
-  auto histogram_instrument_selector =
-      std::make_unique<opentelemetry::sdk::metrics::InstrumentSelector>(
-          opentelemetry::sdk::metrics::InstrumentType::kHistogram,
-          kServerDurationMetric, "s");
-
-  auto histogram_meter_selector =
-      std::make_unique<opentelemetry::sdk::metrics::MeterSelector>(
-          kServerDurationMetric, "v1.0", "");
-
-  auto histogram_aggregation_config = std::make_shared<
-      opentelemetry::sdk::metrics::HistogramAggregationConfig>();
-
-  // Define explicit bucket boundaries for server latency.
-  histogram_aggregation_config->boundaries_ =
-      std::vector<double>{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25,
-                          0.5,   0.75, 1,     2.5,  5,     7.5, 10};
-
-  std::unique_ptr<opentelemetry::sdk::metrics::View> histogram_view =
-      opentelemetry::sdk::metrics::ViewFactory::Create(
-          kServerDurationMetric, "Server request duration in seconds", "s",
-          opentelemetry::sdk::metrics::AggregationType::kHistogram,
-          histogram_aggregation_config);
-
-  std::shared_ptr<opentelemetry::metrics::MeterProvider> meter_provider =
-      opentelemetry::metrics::Provider::GetMeterProvider();
-
-  // Add the view only when provider has been initialized properly.
-  if (!dynamic_cast<opentelemetry::metrics::NoopMeterProvider*>(
-          meter_provider.get())) {
-    std::shared_ptr<opentelemetry::sdk::metrics::MeterProvider> sdk_provider =
-        std::dynamic_pointer_cast<opentelemetry::sdk::metrics::MeterProvider>(
-            meter_provider);
-
-    sdk_provider->AddView(std::move(histogram_instrument_selector),
-                          std::move(histogram_meter_selector),
-                          std::move(histogram_view));
-  }
-
-  meter_ = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
-      "Http2 Server");
-
-  server_request_duration_ = meter_->CreateDoubleHistogram(
-      kServerDurationMetric, "Server request duration in seconds", "s");
-  active_requests_instrument_ = meter_->CreateInt64ObservableGauge(
-      kActiveRequestsMetric, "Active Http server requests");
-  server_request_body_size_ = meter_->CreateUInt64Histogram(
-      kServerRequestBodySizeMetric,
-      "Server request body size in Bytes - uncompressed", "By");
-  server_response_body_size_ = meter_->CreateUInt64Histogram(
-      kServerResponseBodySizeMetric,
-      "Server response body size in Bytes - uncompressed", "By");
-  pbs_transactions_ =
-      meter_->CreateUInt64Counter(kPbsTransactionMetric, "Pbs transactions");
-
-  active_requests_instrument_->AddCallback(
-      reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
-          &Http2Server::ObserveActiveRequestsCallback),
-      this);
-
-  if (config_provider_) {
-    config_provider_->Get(kOtelServerMetricsEnabled,
-                          otel_server_metrics_enabled_);
-  }
+  RETURN_IF_FAILURE(OtelMetricInit());
 
   return SuccessExecutionResult();
 }
@@ -429,7 +465,7 @@ ExecutionResult Http2Server::RegisterResourceHandler(
 
 void Http2Server::OnHttp2Request(const request& request,
                                  const response& response) noexcept {
-  // Timestamp entry_time = GetSteadyTimestampInNanosecondsAsClockTicks;
+  // Measure the entry time to track request-response latency
   std::chrono::time_point<std::chrono::steady_clock> entry_time =
       std::chrono::steady_clock::now();
   auto parent_activity_id = Uuid::GenerateUuid();
@@ -451,23 +487,21 @@ void Http2Server::OnHttp2Request(const request& request,
   http2_context.response = std::make_shared<NgHttp2Response>(response);
   http2_context.response->headers = std::make_shared<core::HttpHeaders>();
 
-  if (otel_server_metrics_enabled_) {
-    auto sync_context = std::make_shared<Http2SynchronizationContext>();
-    sync_context->entry_time = entry_time;
-    auto context_pair = std::make_pair(http2Request->id, sync_context);
-    auto execution_result = active_requests_.Insert(context_pair, sync_context);
-    if (!execution_result.Successful()) {
-      SCP_ERROR_CONTEXT(kHttp2Server, http2_context, execution_result,
-                        "[OnHttp2Request] Cannot insert the sync context to "
-                        "the active requests map!");
-      FinishContext(execution_result, http2_context);
-      return;
-    }
+  auto sync_context = std::make_shared<Http2SynchronizationContext>();
+  sync_context->entry_time = entry_time;
+  auto context_pair = std::make_pair(http2Request->id, sync_context);
+  auto execution_result = active_requests_.Insert(context_pair, sync_context);
+  if (!execution_result.Successful()) {
+    SCP_ERROR_CONTEXT(kHttp2Server, http2_context, execution_result,
+                      "[OnHttp2Request] Cannot insert the sync context to "
+                      "the active requests map!");
+    FinishContext(execution_result, http2_context);
+    return;
   }
 
   SCP_DEBUG_CONTEXT(kHttp2Server, http2_context, "Received a http2 request");
 
-  auto execution_result = http2_context.request->UnwrapNgHttp2Request();
+  execution_result = http2_context.request->UnwrapNgHttp2Request();
   if (!execution_result.Successful()) {
     http2_context.result = execution_result;
     http2_context.Finish();
@@ -599,9 +633,8 @@ void Http2Server::HandleHttp2Request(
 
   std::shared_ptr<Http2SynchronizationContext> sync_context;
 
-  auto execution_result =
-      SetSyncContext(http2_context, http_handler, otel_server_metrics_enabled_,
-                     active_requests_, sync_context);
+  auto execution_result = SetSyncContext(http2_context, http_handler,
+                                         active_requests_, sync_context);
   if (!execution_result.Successful()) {
     FinishContext(execution_result, http2_context);
     return;
@@ -758,10 +791,7 @@ void Http2Server::OnHttp2PendingCallback(
 
   // Recording request body length in Bytes - request body is received when code
   // reaches here.
-  const absl::flat_hash_map<std::string, std::string> label_kv;
-  opentelemetry::context::Context context;
-  server_request_body_size_->Record(http_context.request->body.length, label_kv,
-                                    context);
+  RecordRequestBodySize(request_id);
 
   execution_result = sync_context->http_handler(http_context);
   if (!execution_result.Successful()) {
@@ -843,19 +873,10 @@ void Http2Server::OnHttp2Response(
   }
 
   // Record response body size in Bytes - response is prepared here to be sent.
-  const absl::flat_hash_map<std::string, std::string> response_body_label_kv = {
-      {kResponseCode,
-       std::to_string(static_cast<int>(http_context.response->code))}};
-  opentelemetry::context::Context context;
-  server_response_body_size_->Record(http_context.response->body.length,
-                                     response_body_label_kv, context);
+  RecordResponseBodySize(http_context);
 
-  // Increment pbs transactions counter.
-  const absl::flat_hash_map<std::string, std::string> pbs_transaction_label_kv =
-      {{kResponseCode,
-        std::to_string(static_cast<int>(http_context.response->code))}};
-
-  pbs_transactions_->Add(1, pbs_transaction_label_kv);
+  // Increment PBS requests counter.
+  RecordPbsRequests(http_context);
 
   // Capture the shared_ptr to keep the response object alive when the work
   // actually starts executing. Do not execute response->Send() on a thread
@@ -873,33 +894,141 @@ void Http2Server::OnHttp2Cleanup(Uuid activity_id, Uuid request_id,
               "The connection for request ID %s was closed with status code %d",
               request_id_str.c_str(), error_code);
   }
-  if (otel_server_metrics_enabled_) {
-    RecordServerLatency(activity_id, request_id);
-  }
+  RecordServerLatency(request_id);
   active_requests_.Erase(request_id);
 }
 
-void Http2Server::RecordServerLatency(const common::Uuid& activity_id,
-                                      const common::Uuid& request_id) {
+void Http2Server::RecordServerLatency(const common::Uuid& request_id) {
+  if (!server_request_duration_) {
+    return;
+  }
   auto request_id_str = ToString(request_id);
   std::shared_ptr<Http2SynchronizationContext> sync_context;
   auto execution_result = active_requests_.Find(request_id, sync_context);
   if (!execution_result.Successful()) {
-    SCP_DEBUG(kHttp2Server, activity_id,
-              "Could not find the Http2SynchronizationContext for the "
-              "request id %s",
-              request_id_str.c_str());
+    SCP_DEBUG(kHttp2Server, request_id,
+              "Could not find Http2SynchronizationContext(current request) in "
+              "active requests map");
     return;
   }
 
   std::chrono::duration<double> latency =
       std::chrono::steady_clock::now() - sync_context->entry_time;
-  double latency_s = latency / std::chrono::seconds(1);
+  double latency_s = latency.count();
 
-  const absl::flat_hash_map<std::string, std::string> http_request_label_kv = {
-      {kExecutionStatus, ExecutionStatusToString(execution_result.status)}};
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_address_},
+      {kServerPort, port_},
+      {kHttpRoute, sync_context->http2_context.request->handler_path},
+      {kHttpRequestMethod,
+       utils::HttpMethodToString(sync_context->http2_context.request->method)},
+      {kHttpResponseStatusCode,
+       std::to_string(
+           static_cast<int>(sync_context->http2_context.response->code))},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(sync_context->http2_context)},
+      {kScpHttpRequestClientVersionLabel,
+       utils::GetUserAgentOrUnknownValue(sync_context->http2_context)}};
+
+  if (std::string* auth_domain = sync_context->http2_context.request
+                                     ->auth_context.authorized_domain.get();
+      auth_domain != nullptr) {
+    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
+  }
+
   opentelemetry::context::Context context;
-  server_request_duration_->Record(latency_s, http_request_label_kv, context);
+  server_request_duration_->Record(latency_s, labels, context);
+}
+
+void Http2Server::RecordRequestBodySize(const common::Uuid& request_id) {
+  if (!server_request_body_size_) {
+    return;
+  }
+  auto request_id_str = ToString(request_id);
+  std::shared_ptr<Http2SynchronizationContext> sync_context;
+  auto execution_result = active_requests_.Find(request_id, sync_context);
+  if (!execution_result.Successful()) {
+    SCP_DEBUG(kHttp2Server, request_id,
+              "Could not find Http2SynchronizationContext(current request) in "
+              "active requests map");
+    return;
+  }
+
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_address_},
+      {kServerPort, port_},
+      {kHttpRoute, sync_context->http2_context.request->handler_path},
+      {kHttpRequestMethod,
+       utils::HttpMethodToString(sync_context->http2_context.request->method)},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(sync_context->http2_context)},
+      {kScpHttpRequestClientVersionLabel,
+       utils::GetUserAgentOrUnknownValue(sync_context->http2_context)}};
+
+  if (std::string* auth_domain = sync_context->http2_context.request
+                                     ->auth_context.authorized_domain.get();
+      auth_domain != nullptr) {
+    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
+  }
+  opentelemetry::context::Context context;
+  server_request_body_size_->Record(
+      sync_context->http2_context.request->body.length, labels, context);
+}
+
+void Http2Server::RecordResponseBodySize(
+    const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context) {
+  if (!server_response_body_size_) {
+    return;
+  }
+
+  absl::flat_hash_map<std::string_view, std::string> labels = {
+      {kServerAddress, host_address_},
+      {kServerPort, port_},
+      {kHttpRoute, http_context.request->handler_path},
+      {kHttpRequestMethod,
+       utils::HttpMethodToString(http_context.request->method)},
+      {kHttpResponseStatusCode,
+       std::to_string(static_cast<int>(http_context.response->code))},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(http_context)},
+      {kScpHttpRequestClientVersionLabel,
+       utils::GetUserAgentOrUnknownValue(http_context)}};
+
+  if (std::string* auth_domain =
+          http_context.request->auth_context.authorized_domain.get();
+      auth_domain != nullptr) {
+    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
+  }
+  opentelemetry::context::Context context;
+  server_response_body_size_->Record(http_context.response->body.length, labels,
+                                     context);
+}
+
+void Http2Server::RecordPbsRequests(
+    const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context) {
+  if (!pbs_requests_) {
+    return;
+  }
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_address_},
+      {kServerPort, port_},
+      {kHttpRoute, http_context.request->handler_path},
+      {kHttpRequestMethod,
+       utils::HttpMethodToString(http_context.request->method)},
+      {kHttpResponseStatusCode,
+       std::to_string(static_cast<int>(http_context.response->code))},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(http_context)},
+      {kScpHttpRequestClientVersionLabel,
+       utils::GetUserAgentOrUnknownValue(http_context)}};
+
+  if (std::string* auth_domain =
+          http_context.request->auth_context.authorized_domain.get();
+      auth_domain != nullptr) {
+    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
+  }
+  opentelemetry::context::Context context;
+  pbs_requests_->Add(1, labels);
 }
 
 void Http2Server::OnHttp2CleanupOfRoutedRequest(Uuid activity_id,

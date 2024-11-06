@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//build_defs/cc:benchmark.bzl", "BENCHMARK_COPT")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -33,6 +34,7 @@ cc_library(
             "service_interface.h",
         ],
     ),
+    copts = BENCHMARK_COPT,
     deps = [
         ":async_context_lib",
         ":service_interface_lib",

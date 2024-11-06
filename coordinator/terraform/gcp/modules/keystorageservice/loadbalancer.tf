@@ -22,7 +22,7 @@ resource "google_compute_backend_service" "key_storage" {
   name    = "${local.name}-backend-default"
 
   backend {
-    group = google_compute_region_network_endpoint_group.key_storage_endpoint_group.id
+    group = var.use_cloud_run ? google_compute_region_network_endpoint_group.key_storage_cloud_run[0].id : google_compute_region_network_endpoint_group.key_storage_endpoint_group[0].id
   }
 }
 moved {
@@ -117,11 +117,28 @@ moved {
   to   = google_compute_managed_ssl_certificate.key_storage
 }
 
+# Network Endpoint Group to route to cloud function
 resource "google_compute_region_network_endpoint_group" "key_storage_endpoint_group" {
+  count = !var.use_cloud_run ? 1 : 0
+
+  project               = var.project_id
   name                  = "${var.environment}-keystoragegroup"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
   cloud_run {
-    service = google_cloudfunctions2_function.key_storage_cloudfunction.name
+    service = google_cloudfunctions2_function.key_storage_cloudfunction[0].name
+  }
+}
+
+# Network Endpoint Group to route to cloud run
+resource "google_compute_region_network_endpoint_group" "key_storage_cloud_run" {
+  count = var.use_cloud_run ? 1 : 0
+
+  project               = var.project_id
+  name                  = "${var.environment}-cr-keystoragegroup"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+  cloud_run {
+    service = google_cloud_run_v2_service.key_storage_service[0].name
   }
 }

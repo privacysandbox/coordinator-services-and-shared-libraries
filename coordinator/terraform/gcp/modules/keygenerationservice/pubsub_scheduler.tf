@@ -14,7 +14,8 @@
 
 # Topic to publish messages
 resource "google_pubsub_topic" "key_generation_pubsub_topic" {
-  name = "${var.environment}-key-generation-topic"
+  project = var.project_id
+  name    = "${var.environment}-key-generation-topic"
 
   labels = {
     environment = var.environment
@@ -23,8 +24,9 @@ resource "google_pubsub_topic" "key_generation_pubsub_topic" {
 
 # Topic to publish messages
 resource "google_pubsub_subscription" "key_generation_pubsub_subscription" {
-  name  = "${var.environment}-key-generation-subscription"
-  topic = google_pubsub_topic.key_generation_pubsub_topic.name
+  project = var.project_id
+  name    = "${var.environment}-key-generation-subscription"
+  topic   = google_pubsub_topic.key_generation_pubsub_topic.name
 
   ack_deadline_seconds = 300
 
@@ -53,6 +55,7 @@ resource "google_pubsub_topic_iam_member" "key_generation_viewer_iam" {
 }
 
 resource "google_cloud_scheduler_job" "key_generation_cron" {
+  project     = var.project_id
   name        = "${var.environment}_key_generation_cron_job"
   description = "Cron job to publish message to Key Generation pubsub topic"
   schedule    = var.key_generation_cron_schedule

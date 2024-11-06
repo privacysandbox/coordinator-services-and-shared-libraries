@@ -16,8 +16,15 @@ steps:
 - name: '$_BUILD_IMAGE_REPO_PATH/$_BUILD_IMAGE_NAME:$_BUILD_IMAGE_TAG'
   script: |
     bash build-scripts/gcp/build_coordinator_services.sh \
-    $_OUTPUT_IMAGE_REPO_PATH $_OUTPUT_IMAGE_NAME $_OUTPUT_IMAGE_TAG \
+    $_OUTPUT_IMAGE_REPO_PATH $_OUTPUT_KEYGEN_IMAGE_NAME \
+    $_OUTPUT_PUBKEYSVC_IMAGE_NAME $_OUTPUT_ENCKEYSVC_IMAGE_NAME \
+    $_OUTPUT_KEYSTRSVC_IMAGE_NAME $_OUTPUT_IMAGE_TAG \
     $_TAR_PUBLISH_BUCKET $_TAR_PUBLISH_BUCKET_PATH
   automapSubstitutions: true
 options:
   machineType: "E2_HIGHCPU_32"
+# If image names are not specified, they will default to "skip".
+substitutions:
+  _OUTPUT_PUBKEYSVC_IMAGE_NAME: "skip"
+  _OUTPUT_ENCKEYSVC_IMAGE_NAME: "skip"
+  _OUTPUT_KEYSTRSVC_IMAGE_NAME: "skip"

@@ -19,11 +19,13 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <vector>
 
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/interface/async_executor_interface.h"
-
-#include "async_task.h"
+#include "absl/time/time.h"
+#include "absl/types/span.h"
+#include "cc/core/async_executor/src/async_task.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/interface/async_executor_interface.h"
 
 namespace google::scp::core {
 /**
@@ -40,7 +42,11 @@ class SingleThreadAsyncExecutor : ServiceInterface {
         worker_thread_stopped_(false),
         queue_cap_(queue_cap),
         drop_tasks_on_stop_(drop_tasks_on_stop),
-        affinity_cpu_number_(affinity_cpu_number) {}
+        affinity_cpu_number_(affinity_cpu_number) {
+#if defined(PBS_ENABLE_BENCHMARKING)
+    scheduling_latency_for_testing_.reserve(300000);
+#endif
+  }
 
   ExecutionResult Init() noexcept override;
 
@@ -63,6 +69,20 @@ class SingleThreadAsyncExecutor : ServiceInterface {
    * via thread IDs later. Will only be populated after Run() is called.
    */
   ExecutionResultOr<std::thread::id> GetThreadId() const;
+
+  /**
+   * @brief Returns the scheduling latencies for all AsyncOperation scheduled by
+   * this executor. This method should only be called after Stop() is called and
+   * should only be used in testing.
+   */
+  absl::Span<const absl::Duration> scheduling_latency_for_testing() const {
+#if defined(PBS_ENABLE_BENCHMARKING)
+    return absl::MakeConstSpan(scheduling_latency_for_testing_);
+#else
+    static constexpr std::array<absl::Duration, 0> kEmptyDurations = {};
+    return kEmptyDurations;
+#endif
+  }
 
  private:
   /// Starts the internal worker thread.
@@ -104,5 +124,9 @@ class SingleThreadAsyncExecutor : ServiceInterface {
    * element is pushed to the queue.
    */
   std::condition_variable condition_variable_;
+
+#if defined(PBS_ENABLE_BENCHMARKING)
+  std::vector<absl::Duration> scheduling_latency_for_testing_;
+#endif
 };
 }  // namespace google::scp::core

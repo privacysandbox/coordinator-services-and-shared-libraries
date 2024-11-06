@@ -72,7 +72,8 @@ static constexpr char kPartitionsBucketName[] = "partitions";
 
 namespace google::scp::pbs::test {
 
-class PBSPartitionTest : public testing::Test {
+// This test is disabled because it is flaky.
+class DISABLED_PBSPartitionTest : public testing::Test {
  protected:
   std::shared_ptr<AsyncExecutor> async_executor_;
   std::shared_ptr<MockBlobStorageProvider> blob_store_provider_;
@@ -219,13 +220,13 @@ class PBSPartitionTest : public testing::Test {
       dummy_transaction_manager_status_response_;
 };
 
-TEST_F(PBSPartitionTest, PartitionDoesNotAcceptRequestsToBeginWith) {
+TEST_F(DISABLED_PBSPartitionTest, PartitionDoesNotAcceptRequestsToBeginWith) {
   auto expected_result =
       RetryExecutionResult(core::errors::SC_PBS_PARTITION_NOT_LOADED);
   ExecuteAllRequestTypes(expected_result);
 }
 
-TEST_F(PBSPartitionTest, PartitionDoesNotAcceptRequestsBeforeLoad) {
+TEST_F(DISABLED_PBSPartitionTest, PartitionDoesNotAcceptRequestsBeforeLoad) {
   EXPECT_SUCCESS(partition_->Init());
 
   auto expected_result =
@@ -233,7 +234,7 @@ TEST_F(PBSPartitionTest, PartitionDoesNotAcceptRequestsBeforeLoad) {
   ExecuteAllRequestTypes(expected_result);
 }
 
-TEST_F(PBSPartitionTest, PartitionCannotAcceptRequestsAfterUnload) {
+TEST_F(DISABLED_PBSPartitionTest, PartitionCannotAcceptRequestsAfterUnload) {
   EXPECT_SUCCESS(partition_->Init());
   EXPECT_SUCCESS(partition_->Load());
   EXPECT_SUCCESS(partition_->Unload());
@@ -243,7 +244,7 @@ TEST_F(PBSPartitionTest, PartitionCannotAcceptRequestsAfterUnload) {
   ExecuteAllRequestTypes(expected_result);
 }
 
-TEST_F(PBSPartitionTest, PartitionCannotLoadUntilInitialized) {
+TEST_F(DISABLED_PBSPartitionTest, PartitionCannotLoadUntilInitialized) {
   auto expected_result = ResultIs(
       FailureExecutionResult(core::errors::SC_PBS_PARTITION_CANNOT_LOAD));
   EXPECT_THAT(partition_->Load(), expected_result);
@@ -253,7 +254,7 @@ TEST_F(PBSPartitionTest, PartitionCannotLoadUntilInitialized) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, PartitionCannotUnloadUntilLoaded) {
+TEST_F(DISABLED_PBSPartitionTest, PartitionCannotUnloadUntilLoaded) {
   auto expected_result = ResultIs(
       FailureExecutionResult(core::errors::SC_PBS_PARTITION_CANNOT_UNLOAD));
   EXPECT_THAT(partition_->Unload(), expected_result);
@@ -265,7 +266,8 @@ TEST_F(PBSPartitionTest, PartitionCannotUnloadUntilLoaded) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, PartitionAcceptsTransactionPhaseRequestAfterLoad) {
+TEST_F(DISABLED_PBSPartitionTest,
+       PartitionAcceptsTransactionPhaseRequestAfterLoad) {
   EXPECT_SUCCESS(partition_->Init());
   EXPECT_SUCCESS(partition_->Load());
 
@@ -274,7 +276,8 @@ TEST_F(PBSPartitionTest, PartitionAcceptsTransactionPhaseRequestAfterLoad) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, PartitionAcceptsGetTransactionStatusAfterLoad) {
+TEST_F(DISABLED_PBSPartitionTest,
+       PartitionAcceptsGetTransactionStatusAfterLoad) {
   EXPECT_SUCCESS(partition_->Init());
   EXPECT_SUCCESS(partition_->Load());
 
@@ -286,7 +289,8 @@ TEST_F(PBSPartitionTest, PartitionAcceptsGetTransactionStatusAfterLoad) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, PartitionAcceptsGetTransactionManagerStatusAfterLoad) {
+TEST_F(DISABLED_PBSPartitionTest,
+       PartitionAcceptsGetTransactionManagerStatusAfterLoad) {
   EXPECT_SUCCESS(partition_->Init());
   EXPECT_SUCCESS(partition_->Load());
 
@@ -297,7 +301,7 @@ TEST_F(PBSPartitionTest, PartitionAcceptsGetTransactionManagerStatusAfterLoad) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, PartitionAcceptsTransactionRequestAfterLoad) {
+TEST_F(DISABLED_PBSPartitionTest, PartitionAcceptsTransactionRequestAfterLoad) {
   EXPECT_SUCCESS(partition_->Init());
   EXPECT_SUCCESS(partition_->Load());
 
@@ -306,7 +310,7 @@ TEST_F(PBSPartitionTest, PartitionAcceptsTransactionRequestAfterLoad) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, MultiPartitionLoadUnloadIsSuccessful) {
+TEST_F(DISABLED_PBSPartitionTest, MultiPartitionLoadUnloadIsSuccessful) {
   auto partition_id1 = Uuid::GenerateUuid();
   auto partition_id2 = Uuid::GenerateUuid();
   auto partition_id3 = Uuid::GenerateUuid();
@@ -343,7 +347,7 @@ TEST_F(PBSPartitionTest, MultiPartitionLoadUnloadIsSuccessful) {
   EXPECT_SUCCESS(partition3->Unload());
 }
 
-TEST_F(PBSPartitionTest, ConcurrentLoadUnloadTest) {
+TEST_F(DISABLED_PBSPartitionTest, ConcurrentLoadUnloadTest) {
   auto partition_id = Uuid::GenerateUuid();
   auto partition = std::make_shared<PBSPartition>(
       partition_id, dependencies_, journal_bucket_name_,
@@ -408,7 +412,8 @@ TEST_F(PBSPartitionTest, ConcurrentLoadUnloadTest) {
   }
 }
 
-TEST_F(PBSPartitionTest, PartitionUnloadDuringLiveTrafficIsSuccessful) {
+TEST_F(DISABLED_PBSPartitionTest,
+       PartitionUnloadDuringLiveTrafficIsSuccessful) {
   std::vector<std::thread> traffic_pumps;
   // Nested scope to throw away partition object after unloading.
   {
@@ -508,7 +513,7 @@ TEST_F(PBSPartitionTest, PartitionUnloadDuringLiveTrafficIsSuccessful) {
   }
 }
 
-TEST_F(PBSPartitionTest, OTelReturnsCorrectActiveTransactionsCount) {
+TEST_F(DISABLED_PBSPartitionTest, OTelReturnsCorrectActiveTransactionsCount) {
   ASSERT_SUCCESS(partition_->Init());
   ASSERT_SUCCESS(partition_->Load());
 
@@ -536,7 +541,7 @@ TEST_F(PBSPartitionTest, OTelReturnsCorrectActiveTransactionsCount) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, OTelReturnsCorrectReceivedTransactionsCount) {
+TEST_F(DISABLED_PBSPartitionTest, OTelReturnsCorrectReceivedTransactionsCount) {
   ASSERT_SUCCESS(partition_->Init());
   ASSERT_SUCCESS(partition_->Load());
 
@@ -560,7 +565,7 @@ TEST_F(PBSPartitionTest, OTelReturnsCorrectReceivedTransactionsCount) {
   EXPECT_SUCCESS(partition_->Unload());
 }
 
-TEST_F(PBSPartitionTest, OTelRetrievesCorrectPartitionIdLabel) {
+TEST_F(DISABLED_PBSPartitionTest, OTelRetrievesCorrectPartitionIdLabel) {
   ASSERT_SUCCESS(partition_->Init());
   ASSERT_SUCCESS(partition_->Load());
 

@@ -26,6 +26,7 @@
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/config_provider/src/env_config_provider.h"
 #include "cc/core/interface/errors.h"
+#include "cc/core/logger/src/log_providers/stdout/stdout_log_provider.h"
 #include "cc/core/logger/src/log_providers/syslog/syslog_log_provider.h"
 #include "cc/core/logger/src/log_utils.h"
 #include "cc/core/logger/src/logger.h"
@@ -66,6 +67,7 @@ using ::google::scp::core::errors::GetErrorMessage;
 using ::google::scp::core::errors::INVALID_ENVIROMENT;
 using ::google::scp::core::logger::FromString;
 using ::google::scp::core::logger::Logger;
+using ::google::scp::core::logger::log_providers::StdoutLogProvider;
 using ::google::scp::core::logger::log_providers::SyslogLogProvider;
 using ::google::scp::pbs::CloudPlatformDependencyFactoryInterface;
 using ::google::scp::pbs::PBSInstance;
@@ -76,6 +78,7 @@ std::shared_ptr<ConfigProviderInterface> config_provider;
 std::shared_ptr<ServiceInterface> pbs_instance;
 
 inline constexpr char kPBSServer[] = "PBSServer";
+inline constexpr char kStdoutLogProvider[] = "StdoutLogProvider";
 
 inline ExecutionResultOr<
     std::unique_ptr<CloudPlatformDependencyFactoryInterface>>
@@ -115,8 +118,8 @@ void Init(std::shared_ptr<ServiceInterface> service, std::string service_name) {
   auto execution_result = service->Init();
   if (!execution_result.Successful()) {
     auto err_message = service_name + " failed to initialized.";
-    SCP_ERROR(kPBSServer, kZeroUuid, execution_result, "%s",
-              err_message.c_str());
+    SCP_ERROR(kPBSServer, kZeroUuid, execution_result,
+              absl::StrFormat("%s", err_message.c_str()), err_message.c_str());
     throw std::runtime_error(err_message);
   }
 
@@ -127,8 +130,8 @@ void Run(std::shared_ptr<ServiceInterface> service, std::string service_name) {
   auto execution_result = service->Run();
   if (!execution_result.Successful()) {
     auto err_message = service_name + " failed to run.";
-    SCP_ERROR(kPBSServer, kZeroUuid, execution_result, "%s",
-              err_message.c_str());
+    SCP_ERROR(kPBSServer, kZeroUuid, execution_result,
+              absl::StrFormat("%s", err_message.c_str()), err_message.c_str());
     throw std::runtime_error(err_message);
   }
 
@@ -139,8 +142,8 @@ void Stop(std::shared_ptr<ServiceInterface> service, std::string service_name) {
   auto execution_result = service->Stop();
   if (!execution_result.Successful()) {
     auto err_message = service_name + " failed to stop.";
-    SCP_ERROR(kPBSServer, kZeroUuid, execution_result, "%s",
-              err_message.c_str());
+    SCP_ERROR(kPBSServer, kZeroUuid, execution_result,
+              absl::StrFormat("%s", err_message.c_str()), err_message.c_str());
     throw std::runtime_error(err_message);
   }
 
@@ -188,8 +191,17 @@ int main(int argc, char** argv) {
     GlobalLogger::SetGlobalLogLevels(log_levels);
   }
 
-  std::unique_ptr<LoggerInterface> logger_ptr =
-      std::make_unique<Logger>(std::make_unique<SyslogLogProvider>());
+  std::unique_ptr<LoggerInterface> logger_ptr;
+  if (std::string log_provider;
+      config_provider->Get(google::scp::pbs::kLogProvider, log_provider)
+          .Successful() &&
+      log_provider == kStdoutLogProvider) {
+    logger_ptr =
+        std::make_unique<Logger>(std::make_unique<StdoutLogProvider>());
+  } else {
+    logger_ptr =
+        std::make_unique<Logger>(std::make_unique<SyslogLogProvider>());
+  }
   if (!logger_ptr->Init().Successful()) {
     throw std::runtime_error("Cannot initialize logger.");
   }

@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "error_codes",
     hdrs = ["error_codes.h"],
-    copts = ["-std=c++17"],
     deps = [
         "//cc/core/interface:errors_lib",
         "//cc/public/core/interface:execution_result",
@@ -48,7 +47,7 @@ cloud_platform_copts = select({
 cc_binary(
     name = "privacy_budget_service",
     srcs = ["pbs_server.cc"],
-    copts = cloud_platform_copts + ["-std=c++17"],
+    copts = cloud_platform_copts,
     linkopts = [
         # Tell LD to look in the working directory of the executable for SO
         # files to link
@@ -68,6 +67,7 @@ cc_binary(
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/src:logger_lib",
+        "//cc/core/logger/src/log_providers/stdout:stdout_lib",
         "//cc/core/logger/src/log_providers/syslog:syslog_lib",
         "//cc/pbs/pbs_server/src/pbs_instance",
         "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_multi_partition_lib",

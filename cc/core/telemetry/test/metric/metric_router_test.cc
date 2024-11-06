@@ -410,8 +410,7 @@ TEST_F(MetricRouterTest, CreateHistogramViewForInstrumentReturnsSuccess) {
   std::string view_name = "test_view";
   std::string description = "Test histogram view";
   std::string unit = "ms";
-  MetricRouter::InstrumentType instrument_type =
-      MetricRouter::InstrumentType::kHistogram;
+  InstrumentType instrument_type = InstrumentType::kHistogram;
   std::vector<double> boundaries = {0.0, 10.0, 20.0};
 
   auto execution_result = metric_router_->CreateHistogramViewForInstrument(
@@ -427,8 +426,7 @@ TEST_F(MetricRouterTest,
   std::string view_name = "test_view";
   std::string description = "Test histogram view";
   std::string unit = "ms";
-  MetricRouter::InstrumentType instrument_type =
-      MetricRouter::InstrumentType::kHistogram;
+  InstrumentType instrument_type = InstrumentType::kHistogram;
   std::vector<double> boundaries = {0.0, 10.0, 20.0};
 
   // Ensure that a NoopMeterProvider is being used.

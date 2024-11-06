@@ -27,6 +27,7 @@
 #include "public/core/interface/execution_result.h"
 
 namespace google::scp::core {
+
 /**
  * @brief  Is used by the async executor to encapsulate the async operations
  * provided by the user.
@@ -40,12 +41,18 @@ class AsyncTask {
    * @param async_operation The async operation to be executed.
    */
   AsyncTask(
-      AsyncOperation async_operation = []() {},
+      AsyncOperation async_operation = AsyncOperation([]() {}),
       Timestamp execution_timestamp =
           common::TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks())
       : async_operation_(async_operation),
         execution_timestamp_(execution_timestamp),
         is_cancelled_(false) {}
+
+#if defined(PBS_ENABLE_BENCHMARKING)
+  absl::Time GetTaskCreationTime() const {
+    return async_operation_.start_time_;
+  }
+#endif
 
   /**
    * @brief Returns the execution time of the current task.
