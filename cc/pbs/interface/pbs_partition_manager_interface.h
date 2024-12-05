@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "core/interface/partition_manager_interface.h"
-#include "pbs/interface/pbs_partition_interface.h"
+#include "cc/core/interface/partition_manager_interface.h"
+#include "cc/pbs/interface/pbs_partition_interface.h"
 
 namespace google::scp::pbs {
 /**

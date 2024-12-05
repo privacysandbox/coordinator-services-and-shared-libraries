@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/public_key_client_provider/src/public_key_client_provider.h"
+#include "cc/cpio/client_providers/public_key_client_provider/src/public_key_client_provider.h"
 
 #include <gtest/gtest.h>
 
@@ -20,12 +20,12 @@
 #include <memory>
 #include <string>
 
-#include "core/http2_client/mock/mock_http_client.h"
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
+#include "cc/core/http2_client/mock/mock_http_client.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 using google::cmrt::sdk::public_key_service::v1::ListPublicKeysRequest;
 using google::cmrt::sdk::public_key_service::v1::ListPublicKeysResponse;

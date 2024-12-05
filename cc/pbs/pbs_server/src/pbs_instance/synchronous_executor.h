@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "core/interface/async_executor_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
 
 namespace google::scp::pbs {
 // NOTE: Added this for LeasableLock's Sync use case and this must not be used

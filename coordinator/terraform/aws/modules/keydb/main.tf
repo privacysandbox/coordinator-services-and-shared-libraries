@@ -74,6 +74,13 @@ resource "aws_dynamodb_table" "keydb" {
     environment = var.environment
     role        = "keydb"
   }
+
+  lifecycle {
+    ignore_changes = [
+      read_capacity,
+      write_capacity,
+    ]
+  }
 }
 
 # Autoscaling is necessary for replication

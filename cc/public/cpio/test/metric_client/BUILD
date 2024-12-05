@@ -22,7 +22,6 @@ cc_library(
         "test_aws_metric_client_options.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/metric_client:type_def",
     ],
 )
@@ -39,7 +38,6 @@ cc_library(
         ],
     deps = [
         ":test_aws_metric_client_options",
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",

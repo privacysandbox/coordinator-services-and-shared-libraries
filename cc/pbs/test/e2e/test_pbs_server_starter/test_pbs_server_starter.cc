@@ -24,11 +24,11 @@
 #include <aws/dynamodb/model/UpdateItemRequest.h>
 
 #include "absl/strings/str_format.h"
-#include "core/interface/configuration_keys.h"
-#include "core/test/utils/aws_helper/aws_helper.h"
-#include "core/test/utils/docker_helper/docker_helper.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/test_configuration_keys.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/test/utils/aws_helper/aws_helper.h"
+#include "cc/core/test/utils/docker_helper/docker_helper.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/test_configuration_keys.h"
 
 using Aws::Map;
 using Aws::String;

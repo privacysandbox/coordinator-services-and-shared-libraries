@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/lease_manager/src/lease_manager.h"
+#include "cc/core/lease_manager/src/lease_manager.h"
 
 #include <gtest/gtest.h>
 
@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 
-#include "core/lease_manager/mock/mock_leasable_lock.h"
-#include "core/lease_manager/mock/mock_lease_manager_with_overrides.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/lease_manager/mock/mock_leasable_lock.h"
+#include "cc/core/lease_manager/mock/mock_lease_manager_with_overrides.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using std::abort;
 using std::atomic;

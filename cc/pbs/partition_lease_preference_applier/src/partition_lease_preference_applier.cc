@@ -20,7 +20,7 @@
 #include <memory>
 #include <thread>
 
-#include "core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
 
 #include "error_codes.h"
 

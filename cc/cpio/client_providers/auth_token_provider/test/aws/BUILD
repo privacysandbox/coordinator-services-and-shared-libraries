@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = glob(["*.cc"]),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/curl_client/mock:mock_curl_client",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",

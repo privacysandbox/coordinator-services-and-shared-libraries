@@ -21,17 +21,17 @@
 #include <vector>
 
 #include "absl/synchronization/notification.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
 #include "cc/core/interface/metrics_def.h"
+#include "cc/core/journal_service/mock/mock_journal_output_stream.h"
+#include "cc/core/journal_service/src/journal_serialization.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
-#include "core/journal_service/mock/mock_journal_output_stream.h"
-#include "core/journal_service/src/journal_serialization.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
-#include "core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::blob_storage_provider::mock::MockBlobStorageClient;

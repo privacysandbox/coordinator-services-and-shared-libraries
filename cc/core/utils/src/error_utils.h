@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::utils {
 /**

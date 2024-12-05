@@ -24,7 +24,6 @@ cc_library(
             "errors.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
     ],
 )
@@ -37,7 +36,6 @@ cc_library(
             "execution_result.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/proto:core_common_proto_lib",
     ],
 )

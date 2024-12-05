@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/lease_manager/src/v2/lease_manager_v2.h"
+#include "cc/core/lease_manager/src/v2/lease_manager_v2.h"
 
 #include <gtest/gtest.h>
 
@@ -23,17 +23,17 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/lease_manager_interface.h"
-#include "core/lease_manager/mock/mock_leasable_lock_gmock.h"
-#include "core/lease_manager/mock/mock_lease_event_sink.h"
-#include "core/lease_manager/mock/mock_lease_refresher.h"
-#include "core/lease_manager/mock/mock_lease_refresher_factory.h"
-#include "core/lease_manager/src/v2/error_codes.h"
-#include "core/lease_manager/src/v2/lease_refresh_liveness_enforcer.h"
-#include "core/lease_manager/src/v2/lease_refresher_factory.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/lease_manager_interface.h"
+#include "cc/core/lease_manager/mock/mock_leasable_lock_gmock.h"
+#include "cc/core/lease_manager/mock/mock_lease_event_sink.h"
+#include "cc/core/lease_manager/mock/mock_lease_refresher.h"
+#include "cc/core/lease_manager/mock/mock_lease_refresher_factory.h"
+#include "cc/core/lease_manager/src/v2/error_codes.h"
+#include "cc/core/lease_manager/src/v2/lease_refresh_liveness_enforcer.h"
+#include "cc/core/lease_manager/src/v2/lease_refresher_factory.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::common::TimeProvider;
 using google::scp::core::lease_manager::mock::MockLeasableLock;

@@ -21,8 +21,8 @@
 #include <mutex>
 #include <thread>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/lease_manager_interface.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/lease_manager_interface.h"
 
 namespace google::scp::core {
 /*! @copydoc LeaseManagerInterface

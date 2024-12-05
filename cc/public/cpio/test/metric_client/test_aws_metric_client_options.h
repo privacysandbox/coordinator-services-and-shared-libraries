@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 
-#include "public/cpio/interface/metric_client/type_def.h"
+#include "cc/public/cpio/interface/metric_client/type_def.h"
 
 namespace google::scp::cpio {
 /// MetricClientOptions for testing on AWS.

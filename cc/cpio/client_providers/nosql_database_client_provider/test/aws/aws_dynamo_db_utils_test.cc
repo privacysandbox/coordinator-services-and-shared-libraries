@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/nosql_database_client_provider/src/aws/aws_dynamo_db_utils.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/aws/aws_dynamo_db_utils.h"
 
 #include <gtest/gtest.h>
 
 #include <string>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::Map;
 using Aws::String;

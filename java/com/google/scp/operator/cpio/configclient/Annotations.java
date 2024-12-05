@@ -95,4 +95,10 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface CoordinatorBHttpClient {}
+
+  /** Version of the trusted services client that uses this shared library */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface TrustedServicesClientVersion {}
 }

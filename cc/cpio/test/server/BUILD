@@ -26,7 +26,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/docker_helper:docker_helper_lib",

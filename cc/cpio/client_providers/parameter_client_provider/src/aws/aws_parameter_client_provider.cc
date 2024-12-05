@@ -26,13 +26,13 @@
 #include <aws/ssm/SSMClient.h>
 #include <aws/ssm/model/GetParametersRequest.h>
 
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
 #include "cc/core/common/uuid/src/uuid.h"
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/interface/async_context.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
-#include "cpio/common/src/aws/aws_utils.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
+#include "cc/cpio/common/src/aws/aws_utils.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
 
 #include "error_codes.h"
 #include "ssm_error_converter.h"

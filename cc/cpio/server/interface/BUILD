@@ -100,7 +100,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface:type_def",
     ],
 )

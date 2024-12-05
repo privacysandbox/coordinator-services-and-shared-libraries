@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["public_key_client_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/message_router/src:message_router_lib",
@@ -39,7 +38,6 @@ cc_test(
     size = "small",
     srcs = ["public_key_client_utils_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/public_key_client_provider/src:public_key_client_provider_lib",

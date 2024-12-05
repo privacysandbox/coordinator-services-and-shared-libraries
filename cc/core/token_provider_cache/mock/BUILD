@@ -23,7 +23,6 @@ cc_library(
         "token_provider_cache_mock.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
     ],
 )

@@ -19,14 +19,14 @@
 // TODO: Delete this file once we have real implementations for all the
 // dependencies
 //
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/authorization_service_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/credentials_provider_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "pbs/interface/cloud_platform_dependency_factory_interface.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/authorization_service_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/credentials_provider_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
 class DummyMetricClient : public cpio::MetricClientInterface {

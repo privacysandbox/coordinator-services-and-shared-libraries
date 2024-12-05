@@ -21,9 +21,9 @@
 #include <aws/monitoring/CloudWatchClient.h>
 #include <aws/monitoring/model/PutMetricDataRequest.h>
 
-#include "core/interface/async_context.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 #include "error_codes.h"
 

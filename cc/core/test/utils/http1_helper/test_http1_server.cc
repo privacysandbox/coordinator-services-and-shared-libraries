@@ -19,9 +19,9 @@
 #include <string>
 #include <utility>
 
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/http1_helper/errors.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/http1_helper/errors.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace beast = boost::beast;
 namespace http = beast::http;

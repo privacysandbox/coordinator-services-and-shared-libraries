@@ -28,7 +28,6 @@ cc_library(
         "otlp_grpc_authed_metric_exporter.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/telemetry/src/authentication:telemetry_authentication",
         "//cc/core/telemetry/src/common:telemetry_common",

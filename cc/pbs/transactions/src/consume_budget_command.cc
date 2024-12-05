@@ -20,11 +20,11 @@
 #include <memory>
 #include <utility>
 
-#include "core/interface/async_context.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "pbs/budget_key_transaction_protocols/src/error_codes.h"
-#include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/transactions/src/command_error_codes.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/pbs/budget_key_transaction_protocols/src/error_codes.h"
+#include "cc/pbs/interface/budget_key_provider_interface.h"
+#include "cc/pbs/transactions/src/command_error_codes.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;

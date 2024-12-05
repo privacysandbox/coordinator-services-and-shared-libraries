@@ -19,12 +19,12 @@
 #include <memory>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_client/src/error_codes.h"
-#include "pbs/pbs_client/mock/mock_pbs_client.h"
-#include "pbs/pbs_client/mock/transactional/mock_client_consume_budget_command.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_client/src/error_codes.h"
+#include "cc/pbs/pbs_client/mock/mock_pbs_client.h"
+#include "cc/pbs/pbs_client/mock/transactional/mock_client_consume_budget_command.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;

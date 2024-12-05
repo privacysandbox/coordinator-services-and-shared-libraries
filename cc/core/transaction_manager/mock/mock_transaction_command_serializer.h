@@ -20,7 +20,7 @@
 #include <functional>
 #include <memory>
 
-#include "core/interface/transaction_command_serializer_interface.h"
+#include "cc/core/interface/transaction_command_serializer_interface.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionCommandSerializer

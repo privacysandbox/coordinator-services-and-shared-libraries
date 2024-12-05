@@ -23,7 +23,6 @@ cc_library(
         "//cc/cpio/client_providers/role_credentials_provider/src/aws:aws_role_credentials_provider_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_provider_lib",

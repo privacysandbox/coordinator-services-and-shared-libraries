@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include "core/authorization_proxy/src/authorization_proxy.h"
+#include "cc/core/authorization_proxy/src/authorization_proxy.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/authorization_proxy/src/error_codes.h"
-#include "core/interface/async_context.h"
-#include "core/interface/http_request_response_auth_interceptor_interface.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/authorization_proxy/src/error_codes.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_request_response_auth_interceptor_interface.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncExecutor;
 using std::make_shared;

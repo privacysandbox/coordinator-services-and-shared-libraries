@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "core/http2_client/src/aws/aws_v4_signer.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
 
 #include <gtest/gtest.h>
 
 #include <future>
 
-#include "core/http2_client/src/error_codes.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/async_context.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/http2_client/src/error_codes.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::ResultIs;
 using std::make_shared;

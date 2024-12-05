@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "core/interface/errors.h"
+#include "cc/core/interface/errors.h"
 
-#include "public/core/interface/errors.h"
+#include "cc/public/core/interface/errors.h"
 
 namespace google::scp::core {
 const char* GetErrorMessage(uint64_t error_code) {

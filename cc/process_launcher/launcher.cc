@@ -17,8 +17,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include "process_launcher/daemonizer/src/daemonizer.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/process_launcher/daemonizer/src/daemonizer.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::scp::core::SuccessExecutionResult;
 using google::scp::process_launcher::Daemonizer;

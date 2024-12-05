@@ -20,7 +20,6 @@ cc_library(
     name = "core_authorization_proxy_mock",
     srcs = ["mock_authorization_proxy.h"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
     ],
 )

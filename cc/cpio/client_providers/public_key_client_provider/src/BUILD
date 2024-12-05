@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/cpio/client_providers/interface:type_def",
         "//cc/public/cpio/interface:cpio_errors",

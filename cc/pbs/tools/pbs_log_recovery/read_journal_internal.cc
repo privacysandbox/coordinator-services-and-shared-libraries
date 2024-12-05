@@ -7,9 +7,9 @@
 #include "absl/status/statusor.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
+#include "cc/core/interface/type_def.h"
 #include "cc/core/journal_service/interface/journal_service_stream_interface.h"
 #include "cc/core/journal_service/src/proto/journal_service.pb.h"
-#include "core/interface/type_def.h"
 
 namespace google::scp::pbs {
 

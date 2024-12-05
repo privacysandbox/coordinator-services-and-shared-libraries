@@ -25,7 +25,6 @@ cc_binary(
         "-latomic",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/journal_service/src:core_journal_service_lib",

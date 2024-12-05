@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "absl/strings/str_format.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using absl::StrFormat;
 using google::scp::core::ExecutionResult;

@@ -18,11 +18,11 @@
 
 #include <memory>
 
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
-#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 namespace google::scp::cpio {
 class MockSimpleMetricOverrides : public SimpleMetric {

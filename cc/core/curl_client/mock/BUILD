@@ -20,7 +20,6 @@ cc_library(
     name = "mock_curl_client",
     hdrs = ["mock_curl_client.h"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/public/core/interface:execution_result",

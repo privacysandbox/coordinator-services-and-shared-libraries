@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/private_key_fetcher_provider/src:private_key_fetcher_provider_lib",
     ],

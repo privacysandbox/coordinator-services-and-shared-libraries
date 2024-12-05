@@ -27,11 +27,11 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/substitute.h"
-#include "core/interface/async_context.h"
-#include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
-#include "cpio/common/src/gcp/gcp_utils.h"
-#include "public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/cpio/common/src/gcp/gcp_utils.h"
+#include "cc/public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
 
 #include "gcp_spanner_utils.h"
 

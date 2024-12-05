@@ -14,9 +14,9 @@
 
 #include "aws_token_fetcher.h"
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/telemetry/src/authentication/error_codes.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/telemetry/src/authentication/error_codes.h"
 #include "google/cloud/credentials.h"
 
 #include "token_fetcher_utils.h"

@@ -639,7 +639,6 @@ public final class PrivacyBudgetClientV2Test {
         .setTransactionSecret("transaction-secret")
         .setTimeout(Timestamp.from(Instant.now()))
         .setClaimedIdentity("dummy-reporting-site")
-        .setTrustedServicesClientVersion("dummy-version")
         .build();
   }
 

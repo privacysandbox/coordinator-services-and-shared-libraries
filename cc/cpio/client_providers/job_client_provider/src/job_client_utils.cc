@@ -22,11 +22,11 @@
 #include <string>
 #include <vector>
 
-#include "core/common/serialization/src/serialization.h"
-#include "core/interface/async_context.h"
-#include "core/utils/src/base64.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/util/time_util.h"
-#include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

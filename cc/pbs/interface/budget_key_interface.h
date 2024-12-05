@@ -21,11 +21,11 @@
 #include <string>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "core/interface/checkpoint_service_interface.h"
-#include "core/interface/service_interface.h"
-#include "core/interface/transaction_protocol_interface.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/checkpoint_service_interface.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/core/interface/transaction_protocol_interface.h"
 
 #include "type_def.h"
 

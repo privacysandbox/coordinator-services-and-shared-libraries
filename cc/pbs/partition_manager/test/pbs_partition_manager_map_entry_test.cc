@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_manager/src/pbs_partition_manager_map_entry.h"
+#include "cc/pbs/partition_manager/src/pbs_partition_manager_map_entry.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::PartitionMetadata;
 using google::scp::core::PartitionType;

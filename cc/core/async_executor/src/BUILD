@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//build_defs/cc:benchmark.bzl", "BENCHMARK_COPT")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -24,8 +25,8 @@ cc_library(
             "*.h",
         ],
     ),
+    copts = BENCHMARK_COPT,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/concurrent_queue/src:concurrent_queue_lib",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/interface:async_context_lib",

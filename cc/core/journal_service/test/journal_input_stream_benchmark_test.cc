@@ -17,11 +17,11 @@
 #include <benchmark/benchmark.h>
 
 #include "absl/synchronization/notification.h"
-#include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
-#include "core/config_provider/src/env_config_provider.h"
-#include "core/journal_service/src/journal_input_stream.h"
-#include "core/journal_service/test/test_util.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
+#include "cc/core/config_provider/src/env_config_provider.h"
+#include "cc/core/journal_service/src/journal_input_stream.h"
+#include "cc/core/journal_service/test/test_util.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 namespace google::scp::core::test {
 

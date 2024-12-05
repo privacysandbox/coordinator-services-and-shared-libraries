@@ -305,7 +305,6 @@ public final class TransactionOrchestratorTest {
                     .build()))
         .setTransactionSecret("transaction-secret")
         .setTimeout(Timestamp.from(Instant.now()))
-        .setTrustedServicesClientVersion("dummy-version")
         .setClaimedIdentity("dummy-reporting-site")
         .build();
   }

@@ -151,7 +151,8 @@ public class FSBlobStorageClient implements BlobStorageClient {
               (path, attrs) ->
                   (attrs.isRegularFile() || attrs.isSymbolicLink())
                       && path.toString().startsWith(fullPathWithPrefixes.toString()))
-          .map(Path::getFileName)
+          // entire path after the bucket is part of the key.
+          .map(path -> fileSystem.getPath(blobLocation.bucket()).relativize(path))
           .map(Path::toString)
           .collect(ImmutableList.toImmutableList());
     } catch (IOException e) {

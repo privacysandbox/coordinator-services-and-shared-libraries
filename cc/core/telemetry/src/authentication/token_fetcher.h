@@ -18,8 +18,7 @@
 #include <memory>
 #include <string>
 
-#include <public/core/interface/execution_result.h>
-
+#include "cc/public/core/interface/execution_result.h"
 #include "grpcpp/impl/status.h"
 
 namespace google::scp::core {

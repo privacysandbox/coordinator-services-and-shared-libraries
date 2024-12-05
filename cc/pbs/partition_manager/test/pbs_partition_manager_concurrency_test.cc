@@ -19,15 +19,15 @@
 
 #include <random>
 
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/partition/mock/pbs_partition_mock.h"
-#include "pbs/partition/src/error_codes.h"
-#include "pbs/partition/src/pbs_partition.h"
-#include "pbs/partition_manager/mock/pbs_partition_manager_with_overrides.h"
-#include "pbs/partition_manager/src/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/partition/mock/pbs_partition_mock.h"
+#include "cc/pbs/partition/src/error_codes.h"
+#include "cc/pbs/partition/src/pbs_partition.h"
+#include "cc/pbs/partition_manager/mock/pbs_partition_manager_with_overrides.h"
+#include "cc/pbs/partition_manager/src/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;

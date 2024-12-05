@@ -21,9 +21,9 @@
 #include <mutex>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

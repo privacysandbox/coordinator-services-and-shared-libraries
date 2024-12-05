@@ -16,8 +16,8 @@
 
 #include <functional>
 
-#include "pbs/interface/pbs_client_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs::client::mock {
 class MockPrivacyBudgetServiceClient

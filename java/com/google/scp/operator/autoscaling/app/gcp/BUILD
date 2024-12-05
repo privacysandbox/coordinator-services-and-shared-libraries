@@ -40,6 +40,9 @@ java_library(
 
 java_binary(
     name = "WorkerScaleInCloudFunction",
+    resources = [
+        "//licenses/THIRD_PARTY_NOTICES/gcp_worker_scale_in_cloud_function:licenses",
+    ],
     runtime_deps = [
         ":gcp",
     ],

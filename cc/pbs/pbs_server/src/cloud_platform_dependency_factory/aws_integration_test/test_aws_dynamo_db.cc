@@ -20,8 +20,8 @@
 
 #include <aws/core/Aws.h>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/nosql_database_provider/src/aws/aws_dynamo_db.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/nosql_database_provider/src/aws/aws_dynamo_db.h"
 
 #include "test_configuration_keys.h"
 

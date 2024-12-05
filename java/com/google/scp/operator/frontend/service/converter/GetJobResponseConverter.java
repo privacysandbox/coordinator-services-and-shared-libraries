@@ -81,6 +81,7 @@ public final class GetJobResponseConverter
       GetJobResponseProto.GetJobResponse.Builder builder =
           GetJobResponseProto.GetJobResponse.newBuilder()
               .setJobRequestId(requestInfo.getJobRequestId())
+              .addAllInputDataBlobPrefixes(requestInfo.getInputDataBlobPrefixesList())
               .setInputDataBucketName(requestInfo.getInputDataBucketName())
               .setInputDataBlobPrefix(requestInfo.getInputDataBlobPrefix())
               .setOutputDataBucketName(requestInfo.getOutputDataBucketName())
@@ -127,6 +128,7 @@ public final class GetJobResponseConverter
               .setJobRequestId(createJobRequest.getJobRequestId())
               .setInputDataBucketName(createJobRequest.getInputDataBucketName())
               .setInputDataBlobPrefix(createJobRequest.getInputDataBlobPrefix())
+              .addAllInputDataBlobPrefixes(createJobRequest.getInputDataBlobPrefixesList())
               .setOutputDataBucketName(createJobRequest.getOutputDataBucketName())
               .setOutputDataBlobPrefix(createJobRequest.getOutputDataBlobPrefix())
               .setPostbackUrl(createJobRequest.getPostbackUrl())

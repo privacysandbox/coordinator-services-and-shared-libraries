@@ -19,9 +19,9 @@
 #include <memory>
 #include <string>
 
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/job_service/v1/job_service.pb.h"
-#include "public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/job_service/v1/job_service.pb.h"
+#include "cc/public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
 
 namespace google::scp::cpio::client_providers {
 class JobClientUtils {

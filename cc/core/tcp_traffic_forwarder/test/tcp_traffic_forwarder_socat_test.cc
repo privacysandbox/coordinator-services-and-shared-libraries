@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
+#include "cc/core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -22,7 +22,7 @@
 #include <thread>
 #include <vector>
 
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::TCPTrafficForwarderSocat;
 using std::cout;
@@ -45,7 +45,7 @@ static void SigChildHandler(int sig) {
 class TcpTrafficForwarderSoCatTest : public ::testing::Test {
  public:
   void SetUp() {
-    struct sigaction sigchild_action {};
+    struct sigaction sigchild_action{};
 
     sigchild_action.sa_handler = SigChildHandler;
     sigaction(SIGCHLD, &sigchild_action, nullptr);

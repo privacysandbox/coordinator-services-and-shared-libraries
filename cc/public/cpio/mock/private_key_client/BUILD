@@ -24,7 +24,6 @@ cc_library(
             "mock_private_key_client.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/private_key_client",
         "@com_google_googletest//:gtest",
     ],

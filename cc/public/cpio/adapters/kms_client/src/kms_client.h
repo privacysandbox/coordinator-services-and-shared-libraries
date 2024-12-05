@@ -20,14 +20,14 @@
 #include <string>
 #include <vector>
 
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/interface/async_context.h"
-#include "cpio/client_providers/interface/kms_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/kms_client/kms_client_interface.h"
-#include "public/cpio/interface/kms_client/type_def.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/kms_service/v1/kms_service.pb.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/client_providers/interface/kms_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/kms_client/kms_client_interface.h"
+#include "cc/public/cpio/interface/kms_client/type_def.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/kms_service/v1/kms_service.pb.h"
 
 namespace google::scp::cpio {
 /*! @copydoc KmsClientInterface

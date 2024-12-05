@@ -22,12 +22,12 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/token_provider_cache_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/token_provider_cache_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
 /*! @copydoc PrivacyBudgetServiceClientInterface

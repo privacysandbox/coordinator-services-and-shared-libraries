@@ -29,7 +29,6 @@ cc_library(
         "//cc/pbs/deploy/pbs_server/build_defs:pbs_container_aws.tar",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/aws_helper:aws_helper_lib",

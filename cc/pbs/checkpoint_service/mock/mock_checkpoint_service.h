@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 
-#include "pbs/checkpoint_service/src/checkpoint_service.h"
+#include "cc/pbs/checkpoint_service/src/checkpoint_service.h"
 
 namespace google::scp::pbs::checkpoint_service::mock {
 class MockCheckpointService : public CheckpointService {

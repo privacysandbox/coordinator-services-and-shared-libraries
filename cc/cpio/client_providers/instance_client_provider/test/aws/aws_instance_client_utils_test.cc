@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using absl::StrFormat;
 using google::scp::core::ExecutionResult;

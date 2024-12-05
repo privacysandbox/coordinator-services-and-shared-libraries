@@ -286,7 +286,6 @@ public final class DistributedPrivacyBudgetClientTest {
     if (enableNewClientOptions.equals(EnableNewClientOptions.UNSET)) {
       return ConsumePrivacyBudgetRequest.builder()
           .claimedIdentity("abc.com")
-          .trustedServicesClientVersion("dummy-version")
           .reportingOriginToPrivacyBudgetUnitsList(
               ImmutableList.of(originToBudgetUnitMapping, originToBudgetUnitMapping2))
           .build();
@@ -294,9 +293,7 @@ public final class DistributedPrivacyBudgetClientTest {
 
     return ConsumePrivacyBudgetRequest.builder()
         .claimedIdentity("abc.com")
-        .trustedServicesClientVersion("dummy-version")
         .reportingOriginToPrivacyBudgetUnitsList(ImmutableList.of(originToBudgetUnitMapping))
-        .trustedServicesClientVersion("dummy-version")
         .enableNewPbsClient(enableNewClientOptions.equals(EnableNewClientOptions.ON))
         .build();
   }

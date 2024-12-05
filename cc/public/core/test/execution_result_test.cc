@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <utility>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/proto/common.pb.h"
-#include "core/interface/async_context.h"
-#include "core/logger/mock/mock_logger.h"
-#include "core/logger/src/log_providers/console_log_provider.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/proto/common.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/logger/mock/mock_logger.h"
+#include "cc/core/logger/src/log_providers/console_log_provider.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::common::GlobalLogger;
 using google::scp::core::logger::mock::MockLogger;

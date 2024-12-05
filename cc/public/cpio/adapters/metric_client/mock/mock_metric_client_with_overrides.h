@@ -18,10 +18,10 @@
 
 #include <memory>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/message_router/src/message_router.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/message_router/src/message_router.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 namespace google::scp::cpio::mock {
 class MockMetricClientWithOverrides : public MetricClient {

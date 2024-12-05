@@ -57,6 +57,9 @@ java_library(
 
 java_binary(
     name = "FrontendServiceHttpCloudFunction",
+    resources = [
+        "//licenses/THIRD_PARTY_NOTICES/gcp_frontend_service_http_cloud_function:licenses",
+    ],
     runtime_deps = [
         ":gcp",
     ],

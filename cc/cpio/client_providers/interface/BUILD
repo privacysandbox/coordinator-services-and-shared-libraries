@@ -22,7 +22,6 @@ cc_library(
         ":cpio_client_provider_interface_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/public/core/interface:execution_result",
         "//cc/public/cpio/interface:type_def",
@@ -99,7 +98,6 @@ cc_library(
             "type_def.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "@com_google_protobuf//:protobuf",
     ],

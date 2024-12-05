@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/cpio/adapters/public_key_client/src/public_key_client.h"
+#include "cc/public/cpio/adapters/public_key_client/src/public_key_client.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -21,14 +21,14 @@
 #include <string>
 #include <utility>
 
-#include "core/interface/errors.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/adapters/public_key_client/mock/mock_public_key_client_with_overrides.h"
-#include "public/cpio/interface/public_key_client/public_key_client_interface.h"
-#include "public/cpio/interface/public_key_client/type_def.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/adapters/public_key_client/mock/mock_public_key_client_with_overrides.h"
+#include "cc/public/cpio/interface/public_key_client/public_key_client_interface.h"
+#include "cc/public/cpio/interface/public_key_client/type_def.h"
+#include "cc/public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 using google::cmrt::sdk::public_key_service::v1::ListPublicKeysRequest;
 using google::cmrt::sdk::public_key_service::v1::ListPublicKeysResponse;

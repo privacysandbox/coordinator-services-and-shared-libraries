@@ -22,7 +22,6 @@ cc_library(
         ":aws_instance_client_provider_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/common/concurrent_map/src:concurrent_map_lib",
         "//cc/core/common/uuid/src:uuid_lib",

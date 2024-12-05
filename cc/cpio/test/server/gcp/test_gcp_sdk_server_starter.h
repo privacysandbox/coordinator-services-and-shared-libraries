@@ -17,7 +17,7 @@
 #include <map>
 #include <string>
 
-#include "cpio/test/server/test_sdk_server_starter.h"
+#include "cc/cpio/test/server/test_sdk_server_starter.h"
 
 namespace google::scp::cpio::test {
 

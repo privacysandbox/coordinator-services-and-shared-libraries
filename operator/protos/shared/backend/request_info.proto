@@ -39,4 +39,6 @@ message RequestInfo {
   map<string, string> job_parameters = 7;
   /** The caller identity (email or service account in GCP). */
   string account_identity = 8;
+  /** List of URLs to the input prefix data files. */
+  repeated string input_data_blob_prefixes = 9;
 }

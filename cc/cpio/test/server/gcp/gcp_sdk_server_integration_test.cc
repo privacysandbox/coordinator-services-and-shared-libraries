@@ -29,13 +29,13 @@
 
 #include <google/protobuf/util/time_util.h>
 
-#include "core/common/operation_dispatcher/src/error_codes.h"
-#include "core/interface/errors.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/gcp_helper/gcp_helper.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/proto/queue_service/v1/queue_service.grpc.pb.h"
-#include "public/cpio/proto/queue_service/v1/queue_service.pb.h"
+#include "cc/core/common/operation_dispatcher/src/error_codes.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/gcp_helper/gcp_helper.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/proto/queue_service/v1/queue_service.grpc.pb.h"
+#include "cc/public/cpio/proto/queue_service/v1/queue_service.pb.h"
 
 #include "test_gcp_sdk_server_starter.h"
 

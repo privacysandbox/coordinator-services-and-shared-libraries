@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/pbs/checkpoint_service/src:pbs_checkpoint_service_lib",
     ],
 )

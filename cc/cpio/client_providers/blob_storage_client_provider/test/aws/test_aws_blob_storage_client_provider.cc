@@ -23,10 +23,10 @@
 #include <aws/core/client/ClientConfiguration.h>
 #include <aws/s3/S3Client.h>
 
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "cpio/common/test/aws/test_aws_utils.h"
-#include "public/cpio/interface/blob_storage_client/type_def.h"
-#include "public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/cpio/common/test/aws/test_aws_utils.h"
+#include "cc/public/cpio/interface/blob_storage_client/type_def.h"
+#include "cc/public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
 
 using Aws::Client::ClientConfiguration;
 using Aws::S3::S3Client;

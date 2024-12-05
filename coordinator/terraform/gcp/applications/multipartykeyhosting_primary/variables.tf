@@ -342,6 +342,16 @@ variable "get_public_key_cloudfunction_min_instances" {
   default     = 1
 }
 
+variable "get_public_key_request_concurrency" {
+  description = "The maximum number of request to allow to be concurrently processed by a function instance."
+  type        = number
+}
+
+variable "get_public_key_cpus" {
+  description = "The number of CPUs used in a single container instance."
+  type        = number
+}
+
 variable "encryption_key_service_cloudfunction_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
@@ -364,6 +374,40 @@ variable "application_name" {
   description = "Application name to separate serving path for public key service endpoint. Eg: aggregation-service."
   type        = string
   default     = "default"
+}
+
+################################################################################
+# Cloud Run Variables.
+################################################################################
+
+variable "use_cloud_run" {
+  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
+  type        = bool
+  default     = false
+}
+
+variable "cloud_run_revision_force_replace" {
+  description = "Whether to create a new Cloud Run revision for every deployment."
+  type        = bool
+  default     = false
+}
+
+variable "public_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Public Key Service."
+  type        = string
+  default     = null
+}
+
+variable "private_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Private Key Service."
+  type        = string
+  default     = null
+}
+
+variable "private_key_service_custom_audiences" {
+  description = "List of custom audiences for Private Key Service on Cloud Run."
+  type        = list(string)
+  default     = []
 }
 
 ################################################################################
@@ -478,4 +522,14 @@ variable "encryptionkeyservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
   default     = 60
+}
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Enable exporting OTEL metrics from MPKHS."
+  type        = bool
+  default     = false
 }

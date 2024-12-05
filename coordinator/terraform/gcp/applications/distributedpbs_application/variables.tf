@@ -44,6 +44,13 @@ variable "pbs_artifact_registry_repository_name" {
   nullable    = false
 }
 
+variable "pbs_image_override" {
+  description = "The absolute location of the PBS container (including the tag) which will override the derived location"
+  type        = string
+  default     = ""
+  nullable    = false
+}
+
 ################################################################################
 # Cloud Storage Variables.
 ################################################################################
@@ -97,13 +104,24 @@ variable "pbs_spanner_database_retention_period" {
 variable "pbs_spanner_instance_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
-  nullable    = false
+  default     = null
 }
 
 variable "pbs_spanner_database_deletion_protection" {
   description = "Prevents destruction of a table when it is not empty."
   type        = bool
   nullable    = false
+}
+
+variable "pbs_spanner_autoscaling_config" {
+  description = "Defines the auto-scaling config for Spanner."
+  type = object({
+    max_nodes                             = number
+    min_nodes                             = number
+    high_priority_cpu_utilization_percent = number
+    storage_utilization_percent           = number
+  })
+  default = null
 }
 
 ################################################################################
@@ -247,6 +265,36 @@ variable "pbs_autoscaling_policy" {
 }
 
 ################################################################################
+# PBS Cloud Run Variables.
+################################################################################
+
+variable "pbs_cloud_run_min_instances" {
+  description = "Minimum instances for Cloud Run PBS"
+  type        = number
+  nullable    = false
+}
+
+variable "pbs_cloud_run_max_instances" {
+  description = "Max instances for Cloud Run PBS"
+  type        = number
+  nullable    = false
+}
+
+
+
+variable "pbs_cloud_run_max_concurrency" {
+  description = "The maximum number of concurrent requests per Cloud Run PBS instance."
+  type        = number
+  nullable    = false
+}
+
+variable "deploy_pbs_cloud_run" {
+  description = "If true, a Cloud Run PBS backend will be instantiated but not linked to the PBS load balancer"
+  type        = bool
+  nullable    = false
+}
+
+################################################################################
 # Network Variables.
 ################################################################################
 
@@ -316,6 +364,26 @@ variable "pbs_tls_alternate_names" {
 
 variable "enable_health_check" {
   description = "Whether to enable the managed instance group health check."
+  type        = bool
+  nullable    = false
+}
+
+################################################################################
+# URL Map Variables.
+################################################################################
+
+variable "pbs_cloud_run_traffic_percentage" {
+  description = "Specifies the percent of traffic sent to Cloud Run PBS."
+  type        = number
+  nullable    = false
+  validation {
+    condition     = var.pbs_cloud_run_traffic_percentage >= 0 && var.pbs_cloud_run_traffic_percentage <= 100
+    error_message = "The pbs_cloud_run_traffic_percentage must be between 0 and 100."
+  }
+}
+
+variable "enable_pbs_cloud_run" {
+  description = "If true, the Cloud Run PBS backend will be linked to the PBS load balancer and will be able to serve traffi"
   type        = bool
   nullable    = false
 }

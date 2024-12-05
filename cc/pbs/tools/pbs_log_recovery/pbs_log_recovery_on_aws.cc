@@ -26,21 +26,21 @@
 #include <aws/s3/model/ListObjectsRequest.h>
 #include <aws/s3/model/PutObjectRequest.h>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/blob_storage_provider/src/aws/aws_s3.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/interface/remote_transaction_manager_interface.h"
-#include "core/journal_service/src/journal_service.h"
-#include "core/logger/src/log_providers/console_log_provider.h"
-#include "core/logger/src/logger.h"
-#include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
-#include "core/transaction_manager/src/transaction_manager.h"
-#include "pbs/budget_key_provider/src/budget_key_provider.h"
-#include "pbs/transactions/src/transaction_command_serializer.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/core/blob_storage_provider/src/aws/aws_s3.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/interface/remote_transaction_manager_interface.h"
+#include "cc/core/journal_service/src/journal_service.h"
+#include "cc/core/logger/src/log_providers/console_log_provider.h"
+#include "cc/core/logger/src/logger.h"
+#include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "cc/core/transaction_manager/src/transaction_manager.h"
+#include "cc/pbs/budget_key_provider/src/budget_key_provider.h"
+#include "cc/pbs/transactions/src/transaction_command_serializer.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using Aws::InitAPI;
 using Aws::MakeShared;

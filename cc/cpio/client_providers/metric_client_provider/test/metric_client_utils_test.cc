@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/metric_client_provider/src/metric_client_utils.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/metric_client_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -21,10 +21,10 @@
 #include <memory>
 #include <string>
 
-#include "cpio/client_providers/metric_client_provider/src/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;

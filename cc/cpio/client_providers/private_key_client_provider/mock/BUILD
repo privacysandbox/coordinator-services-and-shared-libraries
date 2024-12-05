@@ -26,7 +26,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/kms_client_provider/mock:kms_client_provider_mock",

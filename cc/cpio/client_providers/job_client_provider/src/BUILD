@@ -40,7 +40,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",

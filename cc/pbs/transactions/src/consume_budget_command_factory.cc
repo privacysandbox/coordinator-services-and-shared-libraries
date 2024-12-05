@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "pbs/transactions/src/consume_budget_command_factory.h"
+#include "cc/pbs/transactions/src/consume_budget_command_factory.h"
 
-#include "pbs/transactions/src/batch_consume_budget_command.h"
-#include "pbs/transactions/src/consume_budget_command.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command.h"
+#include "cc/pbs/transactions/src/consume_budget_command.h"
 
 namespace google::scp::pbs {
 

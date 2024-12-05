@@ -27,11 +27,11 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/async_context.h"
-#include "core/interface/configuration_keys.h"
-#include "core/nosql_database_provider/src/common/error_codes.h"
-#include "core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/nosql_database_provider/src/common/error_codes.h"
+#include "cc/core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
 
 #include "gcp_spanner_utils.h"
 

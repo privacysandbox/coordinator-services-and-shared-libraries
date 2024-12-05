@@ -20,8 +20,8 @@
 #include <string>
 #include <unordered_set>
 
-#include "core/interface/errors.h"
-#include "core/interface/logger_interface.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/interface/logger_interface.h"
 
 namespace google::scp::core::common {
 class GlobalLogger {
@@ -57,12 +57,10 @@ class GlobalLogger {
         component_name, correlation_id, parent_activity_id, activity_id,   \
         SCP_LOCATION, message, ##__VA_ARGS__);                             \
   }
-
 #define SCP_DEBUG(component_name, activity_id, message, ...)                  \
   __SCP_DEBUG_LOG(component_name, google::scp::core::common::kZeroUuid,       \
                   google::scp::core::common::kZeroUuid, activity_id, message, \
                   ##__VA_ARGS__)
-
 #define SCP_DEBUG_CONTEXT(component_name, async_context, message, ...)         \
   __SCP_DEBUG_LOG(component_name, async_context.correlation_id,                \
                   async_context.parent_activity_id, async_context.activity_id, \

@@ -18,13 +18,13 @@
 
 #include <memory>
 
-#include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "cpio/client_providers/global_cpio/test/test_lib_cpio_provider.h"
-#include "cpio/client_providers/interface/cpio_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/core/src/cpio_utils.h"
-#include "public/cpio/interface/cpio.h"
-#include "public/cpio/test/global_cpio/test_cpio_options.h"
+#include "cc/cpio/client_providers/global_cpio/src/global_cpio.h"
+#include "cc/cpio/client_providers/global_cpio/test/test_lib_cpio_provider.h"
+#include "cc/cpio/client_providers/interface/cpio_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/core/src/cpio_utils.h"
+#include "cc/public/cpio/interface/cpio.h"
+#include "cc/public/cpio/test/global_cpio/test_cpio_options.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::SuccessExecutionResult;

@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "core/telemetry/src/authentication/grpc_auth_config.h"
+#include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
 
 #include <memory>
 

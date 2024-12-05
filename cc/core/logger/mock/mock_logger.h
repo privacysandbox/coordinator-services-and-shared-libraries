@@ -22,8 +22,8 @@
 #include <utility>
 #include <vector>
 
-#include "core/logger/mock/mock_log_provider.h"
-#include "core/logger/src/logger.h"
+#include "cc/core/logger/mock/mock_log_provider.h"
+#include "cc/core/logger/src/logger.h"
 
 namespace google::scp::core::logger::mock {
 class MockLogger : public Logger {

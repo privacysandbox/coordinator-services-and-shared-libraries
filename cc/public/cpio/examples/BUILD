@@ -34,7 +34,6 @@ cc_binary(
     }),
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/public/core/interface:errors",
@@ -48,7 +47,6 @@ cc_binary(
     srcs = ["metric_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio",
@@ -61,7 +59,6 @@ cc_binary(
     srcs = ["local_metric_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface/metric_client",
@@ -74,7 +71,6 @@ cc_binary(
     srcs = ["public_key_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio",
@@ -87,7 +83,6 @@ cc_binary(
     srcs = ["kms_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio",
@@ -101,7 +96,6 @@ cc_binary(
     srcs = ["local_private_key_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface/private_key_client",
@@ -114,7 +108,6 @@ cc_binary(
     srcs = ["private_key_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio",
@@ -127,7 +120,6 @@ cc_binary(
     srcs = ["crypto_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio",
@@ -140,7 +132,6 @@ cc_binary(
     srcs = ["parameter_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio",
@@ -154,7 +145,6 @@ cc_binary(
     srcs = ["local_parameter_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface/parameter_client",
@@ -168,7 +158,6 @@ cc_binary(
     srcs = ["instance_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio",
@@ -182,7 +171,6 @@ cc_binary(
     srcs = ["local_instance_client_test.cc"],
     linkopts = LINK_OPTS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface/instance_client",

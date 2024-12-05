@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/transaction_manager_interface.h"
-#include "pbs/transactions/src/consume_budget_command_request_info.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/pbs/transactions/src/consume_budget_command_request_info.h"
 
 namespace google::scp::pbs {
 class ConsumeBudgetCommandFactoryInterface {

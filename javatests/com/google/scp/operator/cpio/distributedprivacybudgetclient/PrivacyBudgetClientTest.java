@@ -1061,7 +1061,6 @@ public final class PrivacyBudgetClientTest {
         .setTransactionSecret("transaction-secret")
         .setTimeout(Timestamp.from(Instant.now()))
         .setClaimedIdentity("dummy-reporting-site")
-        .setTrustedServicesClientVersion("dummy-version")
         .build();
   }
 
@@ -1077,7 +1076,6 @@ public final class PrivacyBudgetClientTest {
     headers.put("x-gscp-transaction-id", transaction.getId().toString().toUpperCase());
     headers.put("x-gscp-claimed-identity", "dummy-reporting-site");
     headers.put("x-gscp-transaction-secret", "transaction-secret");
-    headers.put("x-trusted-services-client-version", "dummy-version");
     if (transaction.getCurrentPhase() != TransactionPhase.BEGIN) {
       headers.put(
           TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY,

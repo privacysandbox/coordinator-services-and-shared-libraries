@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "public/cpio/adapters/instance_client/src/instance_client.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/public/cpio/adapters/instance_client/src/instance_client.h"
 
 namespace google::scp::cpio::mock {
 class MockInstanceClientWithOverrides : public InstanceClient {

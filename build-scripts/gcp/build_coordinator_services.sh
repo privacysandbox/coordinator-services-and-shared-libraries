@@ -17,10 +17,13 @@ set -eux
 set -o pipefail
 
 IMAGE_REPO_PATH=$1
-IMAGE_NAME=$2
-IMAGE_TAG=$3
-TAR_BUCKET=$4
-TAR_PATH=$5
+KEYGEN_IMAGE_NAME=$2
+PUBKEYSVC_IMAGE_NAME=$3
+ENCKEYSVC_IMAGE_NAME=$4
+KEYSTRSVC_IMAGE_NAME=$5
+IMAGE_TAG=$6
+TAR_BUCKET=$7
+TAR_PATH=$8
 
 KEY_GENERATION_LOG=$(pwd)/buildlog.txt
 cp cc/tools/build/build_container_params.bzl.prebuilt cc/tools/build/build_container_params.bzl
@@ -28,8 +31,32 @@ COORDINATOR_VERSION=$(cat version.txt)
 
 bazel run //coordinator/keygeneration/gcp:key_generation_app_mp_gcp_image_prod \
   --sandbox_writable_path=$HOME/.docker \
-  -- -dst "${IMAGE_REPO_PATH}/${IMAGE_NAME}:${IMAGE_TAG}" \
+  -- -dst "${IMAGE_REPO_PATH}/${KEYGEN_IMAGE_NAME}:${IMAGE_TAG}" \
   | tee "${KEY_GENERATION_LOG}"
+
+# Builds and pushes the container image for Public Key Service when
+# PUBKEYSVC_IMAGE_NAME is not set to "skip" explicitly.
+if [[ ${PUBKEYSVC_IMAGE_NAME} != "skip" ]]; then
+  bazel run //coordinator/keyhosting/gcp:public_key_service_image_push \
+    --sandbox_writable_path=$HOME/.docker \
+    -- -dst "${IMAGE_REPO_PATH}/${PUBKEYSVC_IMAGE_NAME}:${IMAGE_TAG}"
+fi
+
+# Builds and pushes the container image for Private Key Service when
+# ENCKEYSVC_IMAGE_NAME is not set to "skip" explicitly.
+if [[ ${ENCKEYSVC_IMAGE_NAME} != "skip" ]]; then
+  bazel run //coordinator/keyhosting/gcp:private_key_service_image_push \
+    --sandbox_writable_path=$HOME/.docker \
+    -- -dst "${IMAGE_REPO_PATH}/${ENCKEYSVC_IMAGE_NAME}:${IMAGE_TAG}"
+fi
+
+# Builds and pushes the container image for Key Storage Service when
+# KEYSTRSVC_IMAGE_NAME is not set to "skip" explicitly.
+if [[ ${KEYSTRSVC_IMAGE_NAME} != "skip" ]]; then
+  bazel run //coordinator/keystorage/gcp:key_storage_service_image_push \
+    --sandbox_writable_path=$HOME/.docker \
+    -- -dst "${IMAGE_REPO_PATH}/${KEYSTRSVC_IMAGE_NAME}:${IMAGE_TAG}"
+fi
 
 bazel build //coordinator/terraform/gcp:multiparty_coordinator_tar
 
@@ -45,7 +72,7 @@ cat <<EOT >> environments_mp_primary/shared/mpkhs_primary/image_params.auto.tfva
 # Prefiled values for container image lookup based on released version #
 ########################################################################
 
-key_generation_image = "${IMAGE_REPO_PATH}/${IMAGE_NAME}:${IMAGE_TAG}"
+key_generation_image = "${IMAGE_REPO_PATH}/${KEYGEN_IMAGE_NAME}:${IMAGE_TAG}"
 EOT
 
 ln -s ../../shared/mpkhs_primary/image_params.auto.tfvars environments_mp_primary/demo/mpkhs_primary/image_params.auto.tfvars

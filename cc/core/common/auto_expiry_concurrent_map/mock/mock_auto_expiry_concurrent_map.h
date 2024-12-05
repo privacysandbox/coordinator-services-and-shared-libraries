@@ -19,7 +19,7 @@
 #include <memory>
 #include <utility>
 
-#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "cc/core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 
 namespace google::scp::core::common::auto_expiry_concurrent_map::mock {
 

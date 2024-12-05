@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_namespace/src/pbs_partition_namespace.h"
+#include "cc/pbs/partition_namespace/src/pbs_partition_namespace.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/partition_types.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/partition_types.h"
 
 using google::scp::core::PartitionId;
 using google::scp::core::ResourceId;

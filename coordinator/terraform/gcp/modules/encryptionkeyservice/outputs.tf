@@ -14,7 +14,7 @@
 
 output "encryption_key_service_cloudfunction_url" {
   description = "The audience claim URL used by clients."
-  value       = google_cloudfunctions2_function.encryption_key_service_cloudfunction.url
+  value       = var.use_cloud_run ? google_cloud_run_v2_service.private_key_service[0].uri : google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].url
 }
 
 output "encryption_key_service_loadbalancer_ip" {

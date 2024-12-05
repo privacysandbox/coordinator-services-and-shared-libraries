@@ -55,7 +55,7 @@ public class OTelConfigurationModule extends AbstractModule {
     // we instrument keygen metrics.
     String exportOTelMetrics = System.getenv().get(EXPORT_OTEL_METRICS);
     String projectID = System.getenv().get(PROJECT_ID_ENV_VAR);
-    if (!exportOTelMetrics.equalsIgnoreCase("true")) {
+    if (exportOTelMetrics == null || !exportOTelMetrics.equalsIgnoreCase("true")) {
       logger.info("EXPORT_OTEL_METRICS not set or set to False, using noop OpenTelemetry SDK");
       return OpenTelemetry.noop();
     } else if (projectID == null) {

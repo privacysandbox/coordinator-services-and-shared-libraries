@@ -193,7 +193,8 @@ GcpIntegrationTestDependencyFactory::ConstructMetricClient(
 
 std::unique_ptr<core::MetricRouter>
 GcpIntegrationTestDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider) noexcept {
   // Hard-code resource attributes for testing.
   //

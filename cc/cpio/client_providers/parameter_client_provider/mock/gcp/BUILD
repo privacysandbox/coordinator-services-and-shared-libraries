@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
         "//cc/cpio/client_providers/parameter_client_provider/src/gcp:gcp_parameter_client_provider_lib",
         "@com_github_googleapis_google_cloud_cpp//:secretmanager",

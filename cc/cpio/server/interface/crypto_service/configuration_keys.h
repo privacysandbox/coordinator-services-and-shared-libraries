@@ -19,7 +19,7 @@
 #include <map>
 #include <string>
 
-#include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
+#include "cc/public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
 
 namespace google::scp::cpio {
 // Optional. All options are listed in kHpkeKemConfigMap. If not set, use the

@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "core/interface/service_interface.h"
-#include "cpio/client_providers/interface/queue_client_provider_interface.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/cpio/client_providers/interface/queue_client_provider_interface.h"
 
 namespace google::scp::cpio {
 

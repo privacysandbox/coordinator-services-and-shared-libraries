@@ -28,7 +28,6 @@ cc_library(
         "-latomic",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/journal_service/src:core_journal_service_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",

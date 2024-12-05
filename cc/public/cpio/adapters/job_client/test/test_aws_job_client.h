@@ -18,10 +18,10 @@
 
 #include <memory>
 
-#include "cpio/client_providers/job_client_provider/test/aws/test_aws_job_client_provider.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/adapters/job_client/src/job_client.h"
-#include "public/cpio/test/job_client/test_aws_job_client_options.h"
+#include "cc/cpio/client_providers/job_client_provider/test/aws/test_aws_job_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/adapters/job_client/src/job_client.h"
+#include "cc/public/cpio/test/job_client/test_aws_job_client_options.h"
 
 namespace google::scp::cpio {
 /*! @copydoc JobClientInterface

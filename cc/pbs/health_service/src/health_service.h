@@ -24,22 +24,22 @@
 #include <vector>
 
 #include "absl/base/nullability.h"
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/http_server_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/http_server_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/pbs/interface/budget_key_provider_interface.h"
+#include "cc/pbs/interface/front_end_service_interface.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
 #include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/observer_result.h"
-#include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/interface/front_end_service_interface.h"
-#include "pbs/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
 
 namespace google::scp::pbs {
 /**
@@ -58,6 +58,8 @@ class HealthService : public core::ServiceInterface {
         async_executor_(async_executor),
         metric_client_(metric_client),
         last_metric_push_steady_ns_timestamp_(0) {}
+
+  ~HealthService();
 
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;

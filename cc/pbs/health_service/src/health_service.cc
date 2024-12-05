@@ -24,14 +24,14 @@
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_split.h"
-#include "core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/metrics_def.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/metric_utils.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/simple_metric.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/meter_provider.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/metrics_def.h"
-#include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
-#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 #include "error_codes.h"
 
@@ -121,6 +121,21 @@ void HealthService::ObserveFileSystemStorageUsageCallback(
       opentelemetry::metrics::ObserverResultT<int64_t>>>(observer_result);
   observer->Observe(
       *(self_ptr->GetFileSystemStorageUsagePercentage(kVarLogDirectory)));
+}
+
+HealthService::~HealthService() {
+  if (memory_usage_instrument_) {
+    memory_usage_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HealthService::ObserveMemoryUsageCallback),
+        this);
+  }
+  if (filesystem_storage_usage_instrument_) {
+    filesystem_storage_usage_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HealthService::ObserveFileSystemStorageUsageCallback),
+        this);
+  }
 }
 
 ExecutionResult HealthService::Init() noexcept {

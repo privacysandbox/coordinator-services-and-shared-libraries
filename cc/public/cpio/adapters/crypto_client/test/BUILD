@@ -22,7 +22,6 @@ cc_test(
     timeout = "long",
     srcs = ["crypto_client_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/crypto_client_provider/src:crypto_client_provider_lib",

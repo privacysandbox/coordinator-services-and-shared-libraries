@@ -26,14 +26,14 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/serialization/src/serialization.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_client/src/error_codes.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/transaction_command_serializer_interface.h"
-#include "core/transaction_manager/src/proto/transaction_engine.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_client/src/error_codes.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/transaction_command_serializer_interface.h"
+#include "cc/core/transaction_manager/src/proto/transaction_engine.pb.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 #include "transaction_phase_manager.h"

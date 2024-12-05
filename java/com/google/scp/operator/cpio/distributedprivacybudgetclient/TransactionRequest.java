@@ -39,8 +39,6 @@ public abstract class TransactionRequest {
 
     public abstract Builder setClaimedIdentity(String claimedIdentity);
 
-    public abstract Builder setTrustedServicesClientVersion(String value);
-
     public abstract Builder setReportingOriginToPrivacyBudgetUnitsList(
         ImmutableList<ReportingOriginToPrivacyBudgetUnits> reportingOriginToPrivacyBudgetUnitsList);
 
@@ -57,8 +55,6 @@ public abstract class TransactionRequest {
   public abstract UUID transactionId();
 
   public abstract String claimedIdentity();
-
-  public abstract String trustedServicesClientVersion();
 
   public abstract ImmutableList<ReportingOriginToPrivacyBudgetUnits>
       reportingOriginToPrivacyBudgetUnitsList();

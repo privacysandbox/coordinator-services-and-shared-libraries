@@ -20,8 +20,8 @@
 
 #include <memory>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
 
 #include "error_codes.h"
 

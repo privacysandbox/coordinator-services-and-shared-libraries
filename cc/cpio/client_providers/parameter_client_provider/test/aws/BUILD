@@ -27,7 +27,6 @@ cc_library(
         "-DTEST_CPIO=1",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/parameter_client_provider/src/aws:aws_parameter_client_provider_lib",
         "//cc/cpio/common/test/aws:test_aws_utils_lib",
         "//cc/public/cpio/test/parameter_client:test_aws_parameter_client_options",
@@ -40,7 +39,6 @@ cc_test(
     srcs =
         ["ssm_error_converter_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/parameter_client_provider/src/aws:aws_parameter_client_provider_lib",
         "//cc/cpio/common/src/aws:aws_utils_lib",
@@ -56,7 +54,6 @@ cc_test(
     srcs =
         ["aws_parameter_client_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",

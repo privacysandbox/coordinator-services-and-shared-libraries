@@ -27,10 +27,10 @@
 
 #include <google/protobuf/util/time_util.h>
 
-#include "core/interface/http_types.h"
-#include "cpio/client_providers/interface/private_key_fetcher_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/cpio/client_providers/interface/private_key_fetcher_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
 #include "error_codes.h"
 

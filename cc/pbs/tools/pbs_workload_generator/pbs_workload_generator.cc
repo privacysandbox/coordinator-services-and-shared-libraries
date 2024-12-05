@@ -27,28 +27,28 @@
 
 #include <aws/core/Aws.h>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/src/config_provider.h"
-#include "core/config_provider/src/env_config_provider.h"
-#include "core/credentials_provider/src/aws_credentials_provider.h"
-#include "core/curl_client/src/http1_curl_client.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/authorization_service_interface.h"
-#include "core/interface/type_def.h"
-#include "core/logger/src/log_providers/syslog/syslog_log_provider.h"
-#include "core/logger/src/logger.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
-#include "core/token_provider_cache/src/auto_refresh_token_provider.h"
-#include "pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
-#include "pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_client/src/transactional/pbs_transactional_client.h"
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/src/config_provider.h"
+#include "cc/core/config_provider/src/env_config_provider.h"
+#include "cc/core/credentials_provider/src/aws_credentials_provider.h"
+#include "cc/core/curl_client/src/http1_curl_client.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/authorization_service_interface.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/logger/src/log_providers/syslog/syslog_log_provider.h"
+#include "cc/core/logger/src/logger.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/token_provider_cache/mock/token_provider_cache_dummy.h"
+#include "cc/core/token_provider_cache/src/auto_refresh_token_provider.h"
+#include "cc/pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
+#include "cc/pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_client/src/transactional/pbs_transactional_client.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;
@@ -199,7 +199,7 @@ void ReadSingleCoordinatorConfig(const path& config_path,
     throw runtime_error("Cannot initialize Config Provider");
   }
 
-  ifstream config_file_contents(config_path.u8string());
+  ifstream config_file_contents(config_path.c_str());
   if (config_file_contents.is_open()) {
     cout << "Using config file:\n" << config_file_contents.rdbuf() << endl;
     config_file_contents.close();

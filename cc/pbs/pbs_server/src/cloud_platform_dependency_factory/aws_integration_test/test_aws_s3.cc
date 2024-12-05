@@ -22,7 +22,7 @@
 #include <aws/core/Aws.h>
 #include <aws/s3/S3Client.h>
 
-#include "core/blob_storage_provider/src/aws/aws_s3.h"
+#include "cc/core/blob_storage_provider/src/aws/aws_s3.h"
 
 #include "test_configuration_keys.h"
 

@@ -23,17 +23,17 @@
 
 #include <google/protobuf/util/time_util.h>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/errors.h"
-#include "core/utils/src/error_utils.h"
-#include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "cpio/client_providers/metric_client_provider/src/metric_client_utils.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/adapters/common/adapter_utils.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/utils/src/error_utils.h"
+#include "cc/cpio/client_providers/global_cpio/src/global_cpio.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/metric_client_utils.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/adapters/common/adapter_utils.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;

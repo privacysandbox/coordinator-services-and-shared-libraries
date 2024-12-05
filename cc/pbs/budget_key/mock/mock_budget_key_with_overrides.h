@@ -20,10 +20,10 @@
 #include <list>
 #include <memory>
 
-#include "pbs/budget_key/src/budget_key.h"
-#include "pbs/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/pbs/budget_key/src/budget_key.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::budget_key::mock {
 

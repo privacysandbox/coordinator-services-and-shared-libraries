@@ -19,7 +19,6 @@ cc_test(
     size = "small",
     srcs = ["transaction_phase_manager_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
@@ -36,7 +35,6 @@ cc_test(
         "transaction_engine_local_and_remote_test.cc",
     ]),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
@@ -63,7 +61,6 @@ cc_test(
     size = "small",
     srcs = ["transaction_manager_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/journal_service/mock:core_journal_service_mock",

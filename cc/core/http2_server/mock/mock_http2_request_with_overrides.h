@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "core/http2_server/src/http2_request.h"
+#include "cc/core/http2_server/src/http2_request.h"
 
 namespace google::scp::core::http2_server::mock {
 

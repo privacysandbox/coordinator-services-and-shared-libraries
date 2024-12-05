@@ -21,8 +21,8 @@
 #include <utility>
 #include <vector>
 
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/parameter_client_provider/src/gcp/gcp_parameter_client_provider.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/cpio/client_providers/parameter_client_provider/src/gcp/gcp_parameter_client_provider.h"
 
 namespace google::scp::cpio::client_providers::mock {
 

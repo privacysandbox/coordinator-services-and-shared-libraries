@@ -41,11 +41,18 @@ java_test(
     name = "CloudFunctionServiceBaseTest",
     srcs = ["CloudFunctionServiceBaseTest.java"],
     deps = [
+        "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/gcp/util",
+        "//java/external:assertj_core",
         "//java/external:gcp_cloud_function",
         "//java/external:google_truth",
         "//java/external:jackson_databind",
         "//java/external:mockito",
+        "//java/external:opentelemetry_api",
+        "//java/external:opentelemetry_sdk_common",
+        "//java/external:opentelemetry_sdk_metrics",
+        "//java/external:opentelemetry_sdk_testing",
+        "//java/external:opentelemetry_semconv",
     ],
 )

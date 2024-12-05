@@ -20,9 +20,9 @@
 #include <functional>
 #include <memory>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/remote_transaction_manager_interface.h"
-#include "core/transaction_manager/interface/transaction_engine_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/remote_transaction_manager_interface.h"
+#include "cc/core/transaction_manager/interface/transaction_engine_interface.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockRemoteTransactionManager

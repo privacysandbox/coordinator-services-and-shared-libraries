@@ -23,8 +23,8 @@
 #include <utility>
 #include <vector>
 
-#include "pbs/front_end_service/src/front_end_service.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/pbs/front_end_service/src/front_end_service.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::front_end_service::mock {
 

@@ -18,7 +18,7 @@
 
 #include <optional>
 
-#include "pbs/interface/type_def.h"
+#include "cc/pbs/interface/type_def.h"
 
 namespace google::scp::pbs {
 /**

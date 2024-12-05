@@ -28,7 +28,6 @@ cc_library(
         "-latomic",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
         "//cc/core/common/concurrent_queue/src:concurrent_queue_lib",
         "//cc/core/common/serialization/src:serialization_lib",

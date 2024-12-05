@@ -19,7 +19,7 @@
 #include <atomic>
 #include <string>
 
-#include "core/interface/traffic_forwarder_interface.h"
+#include "cc/core/interface/traffic_forwarder_interface.h"
 
 namespace google::scp::core {
 class TCPTrafficForwarderSocat : public core::TrafficForwarderInterface {

@@ -22,7 +22,7 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/http_request_router_interface.h"
+#include "cc/core/interface/http_request_router_interface.h"
 
 namespace google::scp::core::http2_forwarder::mock {
 class MockHttp2Forwarder : public HttpRequestRouterInterface {

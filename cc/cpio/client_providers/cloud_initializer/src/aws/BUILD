@@ -22,7 +22,6 @@ cc_library(
         ":aws_initializer_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/public/core/interface:execution_result",
         "@aws_sdk_cpp//:core",

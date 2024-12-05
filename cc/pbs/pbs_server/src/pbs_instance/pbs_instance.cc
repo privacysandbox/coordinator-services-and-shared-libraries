@@ -29,55 +29,55 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/authorization_proxy/src/pass_thru_authorization_proxy.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/src/config_provider.h"
-#include "core/curl_client/src/http1_curl_client.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/http2_server/src/http2_server.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/traffic_forwarder_interface.h"
-#include "core/journal_service/src/journal_service.h"
-#include "core/lease_manager/src/lease_manager.h"
-#include "core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
-#include "core/telemetry/src/authentication/aws_token_fetcher.h"
-#include "core/telemetry/src/authentication/gcp_token_fetcher.h"
-#include "core/telemetry/src/authentication/grpc_auth_config.h"
-#include "core/telemetry/src/authentication/grpc_id_token_authenticator.h"
-#include "core/telemetry/src/common/telemetry_configuration.h"
-#include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
-#include "core/transaction_manager/src/transaction_manager.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/authorization_proxy/src/pass_thru_authorization_proxy.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/src/config_provider.h"
+#include "cc/core/curl_client/src/http1_curl_client.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/http2_server/src/http2_server.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/traffic_forwarder_interface.h"
+#include "cc/core/journal_service/src/journal_service.h"
+#include "cc/core/lease_manager/src/lease_manager.h"
+#include "cc/core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/core/telemetry/src/authentication/aws_token_fetcher.h"
+#include "cc/core/telemetry/src/authentication/gcp_token_fetcher.h"
+#include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
+#include "cc/core/telemetry/src/authentication/grpc_id_token_authenticator.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
+#include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
+#include "cc/core/transaction_manager/src/transaction_manager.h"
+#include "cc/pbs/budget_key_provider/src/budget_key_provider.h"
+#include "cc/pbs/checkpoint_service/src/checkpoint_service.h"
+#include "cc/pbs/front_end_service/src/front_end_service.h"
+#include "cc/pbs/front_end_service/src/transaction_request_router.h"
+#include "cc/pbs/health_service/src/health_service.h"
+#include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
+#include "cc/pbs/remote_transaction_manager/src/remote_transaction_manager.h"
+#include "cc/pbs/transactions/src/consume_budget_command_factory.h"
+#include "cc/pbs/transactions/src/consume_budget_command_factory_interface.h"
+#include "cc/pbs/transactions/src/transaction_command_serializer.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
-#include "pbs/budget_key_provider/src/budget_key_provider.h"
-#include "pbs/checkpoint_service/src/checkpoint_service.h"
-#include "pbs/front_end_service/src/front_end_service.h"
-#include "pbs/front_end_service/src/transaction_request_router.h"
-#include "pbs/health_service/src/health_service.h"
-#include "pbs/interface/cloud_platform_dependency_factory_interface.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
-#include "pbs/remote_transaction_manager/src/remote_transaction_manager.h"
-#include "pbs/transactions/src/consume_budget_command_factory.h"
-#include "pbs/transactions/src/consume_budget_command_factory_interface.h"
-#include "pbs/transactions/src/transaction_command_serializer.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 #if defined(PBS_GCP)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
 #elif defined(PBS_GCP_INTEGRATION_TEST)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/gcp_integration_test_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/gcp_integration_test_dependency_factory.h"
 #elif defined(PBS_AWS)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
 #elif defined(PBS_AWS_INTEGRATION_TEST)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/aws_integration_test_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/aws_integration_test_dependency_factory.h"
 #elif defined(PBS_LOCAL)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
 #endif
 
 #include "error_codes.h"
@@ -295,13 +295,13 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
       authorization_proxy_, /*aws_authorization_proxy=*/nullptr, metric_client_,
-      config_provider_, http2_server_options);
+      config_provider_, http2_server_options, metric_router_.get());
   health_http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       1 /* one thread needed */, async_executor_,
       pass_thru_authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
       nullptr /* metric_client, no metric recording for health http server */,
-      config_provider_, http2_server_options);
+      config_provider_, http2_server_options, metric_router_.get());
 
   health_service_ = make_shared<HealthService>(
       health_http_server_, config_provider_, async_executor_, metric_client_);

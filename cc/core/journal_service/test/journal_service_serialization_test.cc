@@ -18,11 +18,11 @@
 #include <memory>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/journal_service/src/journal_serialization.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/journal_service/src/journal_serialization.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::scp::core::common::Uuid;
 using google::scp::core::journal_service::CheckpointMetadata;

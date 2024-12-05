@@ -21,7 +21,6 @@ cc_test(
         "lease_manager_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/lease_manager/mock:core_lease_manager_mock",
         "//cc/core/lease_manager/src:core_lease_manager_lib",
@@ -45,7 +44,6 @@ cc_test(
         "lease_refresher_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/lease_manager/mock:core_lease_manager_mock",
         "//cc/core/lease_manager/src/v2:core_lease_manager_v2_lib",

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pbs/transactions/src/batch_consume_budget_command.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -24,22 +24,22 @@
 #include <memory>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/interface/async_context.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
-#include "core/test/utils/conditional_wait.h"
-#include "pbs/budget_key/mock/mock_budget_key.h"
-#include "pbs/budget_key_provider/mock/mock_budget_key_provider.h"
-#include "pbs/budget_key_transaction_protocols/mock/mock_batch_consume_budget_transaction_protocol.h"
-#include "pbs/budget_key_transaction_protocols/src/error_codes.h"
-#include "pbs/transactions/mock/mock_batch_consume_budget_command.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/pbs/budget_key/mock/mock_budget_key.h"
+#include "cc/pbs/budget_key_provider/mock/mock_budget_key_provider.h"
+#include "cc/pbs/budget_key_transaction_protocols/mock/mock_batch_consume_budget_transaction_protocol.h"
+#include "cc/pbs/budget_key_transaction_protocols/src/error_codes.h"
+#include "cc/pbs/transactions/mock/mock_batch_consume_budget_command.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;

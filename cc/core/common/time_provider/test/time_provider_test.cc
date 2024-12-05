@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
 
 #include <gtest/gtest.h>
 

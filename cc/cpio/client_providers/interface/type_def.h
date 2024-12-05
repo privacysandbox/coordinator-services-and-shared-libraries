@@ -19,9 +19,9 @@
 #include <memory>
 #include <utility>
 
-#include "core/interface/async_context.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers {
 /**

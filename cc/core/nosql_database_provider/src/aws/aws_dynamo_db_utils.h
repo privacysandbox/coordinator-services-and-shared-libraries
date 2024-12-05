@@ -24,9 +24,9 @@
 #include <aws/dynamodb/DynamoDBClient.h>
 #include <aws/dynamodb/model/AttributeDefinition.h>
 
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/nosql_database_provider/src/common/error_codes.h"
-#include "core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/nosql_database_provider/src/common/error_codes.h"
+#include "cc/core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
 
 namespace google::scp::core::nosql_database_provider {
 /**

@@ -20,9 +20,9 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/async_executor_interface.h"
-#include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/transactions/src/consume_budget_command_factory_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/pbs/interface/budget_key_provider_interface.h"
+#include "cc/pbs/transactions/src/consume_budget_command_factory_interface.h"
 
 /**
  * @brief Implementation of the consume budget command factory interface

@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::test::internal {
 std::string ToString(ExecutionStatus status) {

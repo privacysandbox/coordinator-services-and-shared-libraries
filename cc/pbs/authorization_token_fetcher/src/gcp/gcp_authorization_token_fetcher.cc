@@ -24,9 +24,9 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "core/authorization_service/src/error_codes.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/utils/src/base64.h"
+#include "cc/core/authorization_service/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/utils/src/base64.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;

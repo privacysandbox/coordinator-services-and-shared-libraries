@@ -19,9 +19,9 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/http_types.h"
-#include "core/interface/initializable_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/core/interface/initializable_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core {
 

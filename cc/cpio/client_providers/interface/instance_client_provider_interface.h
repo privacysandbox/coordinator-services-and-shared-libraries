@@ -21,11 +21,11 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/http_client_interface.h"
-#include "core/interface/service_interface.h"
-#include "cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/instance_service/v1/instance_service.pb.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/instance_service/v1/instance_service.pb.h"
 
 namespace google::scp::cpio::client_providers {
 /**

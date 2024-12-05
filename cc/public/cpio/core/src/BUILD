@@ -25,7 +25,6 @@ cc_library(
         "cpio_utils.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/cpio/client_providers/global_cpio/src/cpio_provider:cpio_provider_lib",

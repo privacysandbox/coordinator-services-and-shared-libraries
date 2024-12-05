@@ -25,14 +25,15 @@
 #include <utility>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "public/core/interface/execution_result.h"
-
-#include "async_task.h"
-#include "error_codes.h"
-#include "single_thread_async_executor.h"
-#include "single_thread_priority_async_executor.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/types/span.h"
+#include "cc/core/async_executor/src/async_task.h"
+#include "cc/core/async_executor/src/error_codes.h"
+#include "cc/core/async_executor/src/single_thread_async_executor.h"
+#include "cc/core/async_executor/src/single_thread_priority_async_executor.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 static constexpr char kAsyncExecutor[] = "AsyncExecutor";
 
@@ -117,6 +118,12 @@ class AsyncExecutor : public AsyncExecutorInterface {
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback,
       AsyncExecutorAffinitySetting affinity) noexcept override;
+
+  // Returns a map of thread ID to list of scheduling latency. This method
+  // should only be used for testing purpose and must not be used in
+  // production. The preprocessor macro PBS_ENABLE_BENCHMARKING must be defined.
+  absl::flat_hash_map<std::thread::id, absl::Span<const absl::Duration>>
+  SchedulingLatencyPerThreadForTesting() const;
 
  protected:
   using UrgentTaskExecutor = SingleThreadPriorityAsyncExecutor;

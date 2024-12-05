@@ -25,7 +25,6 @@ cc_binary(
         "single_coordinator_config.json",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/concurrent_queue/src:concurrent_queue_lib",
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/curl_client/src:http1_curl_client_lib",

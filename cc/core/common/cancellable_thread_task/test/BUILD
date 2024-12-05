@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["cancellable_thread_task_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/cancellable_thread_task/src:cancellable_thread_task_lib",
         "//cc/core/interface:type_def_lib",
         "//cc/core/test/utils:utils_lib",

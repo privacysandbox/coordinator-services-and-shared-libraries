@@ -22,7 +22,6 @@ cc_test(
     srcs = ["pbs_e2e_test.cc"],
     tags = ["manual"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/src:logger_lib",
@@ -44,7 +43,6 @@ cc_test(
     timeout = "long",
     srcs = ["pbs_integration_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/credentials_provider/mock:core_credentials_provider_mock",
         "//cc/core/credentials_provider/src:core_credentials_provider_lib",
         "//cc/core/interface:interface_lib",

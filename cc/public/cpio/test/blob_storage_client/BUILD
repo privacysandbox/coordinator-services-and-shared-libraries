@@ -22,7 +22,6 @@ cc_library(
         "test_aws_blob_storage_client_options.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/blob_storage_client:type_def",
     ],
 )

@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/http_server_interface.h"
+#include "cc/core/interface/http_server_interface.h"
 
 namespace google::scp::core::http2_server::mock {
 

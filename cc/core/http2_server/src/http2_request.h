@@ -24,8 +24,8 @@
 
 #include <nghttp2/asio_http2_server.h>
 
+#include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/http_server_interface.h"
-#include "core/common/uuid/src/uuid.h"
 
 namespace google::scp::core {
 

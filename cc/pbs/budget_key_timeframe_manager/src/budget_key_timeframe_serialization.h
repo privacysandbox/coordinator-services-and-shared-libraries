@@ -23,11 +23,11 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "core/common/serialization/src/serialization.h"
-#include "pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
-#include "pbs/interface/budget_key_timeframe_manager_interface.h"
-#include "pbs/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
+#include "cc/pbs/interface/budget_key_timeframe_manager_interface.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

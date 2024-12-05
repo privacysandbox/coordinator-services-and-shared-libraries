@@ -25,7 +25,6 @@ cc_test(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/common/src:cpio_utils_lib",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",

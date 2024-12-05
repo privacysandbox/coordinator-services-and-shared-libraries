@@ -24,7 +24,6 @@ cc_test(
         "//cc/core/http2_server/test/certs:csr.conf",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/http2_forwarder/src:core_http2_forwarder_lib",

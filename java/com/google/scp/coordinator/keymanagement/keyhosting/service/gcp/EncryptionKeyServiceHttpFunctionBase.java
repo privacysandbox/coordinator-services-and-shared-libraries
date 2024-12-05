@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.scp.shared.api.model.HttpMethod;
 import com.google.scp.shared.gcp.util.CloudFunctionRequestHandler;
 import com.google.scp.shared.gcp.util.CloudFunctionServiceBase;
+import io.opentelemetry.api.OpenTelemetry;
 import java.util.regex.Pattern;
 
 /** Base class for EncryptionKeyService. */
@@ -26,9 +27,12 @@ public abstract class EncryptionKeyServiceHttpFunctionBase extends CloudFunction
    */
   public EncryptionKeyServiceHttpFunctionBase(
       GetEncryptionKeyRequestHandler getEncryptionKeyRequestHandler,
-      ListRecentEncryptionKeysRequestHandler listRecentKeysRequestHandler) {
+      ListRecentEncryptionKeysRequestHandler listRecentKeysRequestHandler,
+      OpenTelemetry OTel) {
+    super(OTel);
     this.getEncryptionKeyRequestHandler = getEncryptionKeyRequestHandler;
     this.listRecentKeysRequestHandler = listRecentKeysRequestHandler;
+    this.OTel = OTel;
   }
 
   @Override

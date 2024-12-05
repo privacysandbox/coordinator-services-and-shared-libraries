@@ -26,10 +26,10 @@
 #include <nlohmann/json.hpp>
 #include <openssl/base64.h>
 
-#include "core/http2_client/src/aws/aws_v4_signer.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/http_types.h"
-#include "core/utils/src/base64.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/core/utils/src/base64.h"
 
 #include "error_codes.h"
 

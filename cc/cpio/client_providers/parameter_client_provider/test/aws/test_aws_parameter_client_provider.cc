@@ -22,9 +22,9 @@
 #include <aws/core/Aws.h>
 #include <aws/core/client/ClientConfiguration.h>
 
-#include "cpio/client_providers/interface/parameter_client_provider_interface.h"
-#include "cpio/common/test/aws/test_aws_utils.h"
-#include "public/cpio/test/parameter_client/test_aws_parameter_client_options.h"
+#include "cc/cpio/client_providers/interface/parameter_client_provider_interface.h"
+#include "cc/cpio/common/test/aws/test_aws_utils.h"
+#include "cc/public/cpio/test/parameter_client/test_aws_parameter_client_options.h"
 
 using Aws::Client::ClientConfiguration;
 using google::scp::core::ExecutionResult;

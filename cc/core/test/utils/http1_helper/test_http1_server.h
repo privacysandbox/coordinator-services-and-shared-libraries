@@ -25,8 +25,8 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 
-#include "core/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::test {
 

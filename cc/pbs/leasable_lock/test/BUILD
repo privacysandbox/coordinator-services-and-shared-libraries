@@ -23,7 +23,6 @@ cc_test(
         "lease_info_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/lease_manager/mock:core_lease_manager_mock",
         "//cc/core/lease_manager/src:core_lease_manager_lib",

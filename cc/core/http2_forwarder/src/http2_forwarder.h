@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "core/interface/http_client_interface.h"
-#include "core/interface/http_request_router_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/http_request_router_interface.h"
 
 namespace google::scp::core {
 

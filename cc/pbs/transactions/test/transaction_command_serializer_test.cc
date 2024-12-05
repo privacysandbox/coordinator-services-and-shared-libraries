@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-#include "pbs/transactions/src/transaction_command_serializer.h"
+#include "cc/pbs/transactions/src/transaction_command_serializer.h"
 
 #include <gtest/gtest.h>
 
 #include <memory>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
-#include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/transactions/src/batch_consume_budget_command.h"
-#include "pbs/transactions/src/consume_budget_command.h"
-#include "pbs/transactions/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/pbs/interface/budget_key_provider_interface.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command.h"
+#include "cc/pbs/transactions/src/consume_budget_command.h"
+#include "cc/pbs/transactions/src/error_codes.h"
 
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::BytesBuffer;

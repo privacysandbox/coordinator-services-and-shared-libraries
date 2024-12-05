@@ -49,6 +49,7 @@ import com.google.scp.shared.aws.util.AwsAuthTokenInterceptor;
 import com.google.scp.shared.gcp.util.GcpHttpInterceptorUtil;
 import com.google.testing.junit.testparameterinjector.TestParameter;
 import com.google.testing.junit.testparameterinjector.TestParameterInjector;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
@@ -73,6 +74,7 @@ public final class PbsGcpFunctionalTest {
   @Inject @Pbs2DatabaseClient DatabaseClient pbs2DataClient;
 
   private static final UUID TRANSACTION_ID = UUID.randomUUID();
+  private static final String DUMMY_USER_AGENT = "dummy-user-agent";
   private TransactionRequest transactionRequest;
   private PbsTestConfig pbsTestConfig;
 
@@ -88,16 +90,18 @@ public final class PbsGcpFunctionalTest {
   private DistributedPrivacyBudgetClient distributedPrivacyBudgetClientAws;
 
   @Before
-  public void setup() {
+  public void setup() throws IOException {
     this.pbs1PrivacyBudgetClient =
         new PrivacyBudgetClientImpl(
             new HttpClientWithInterceptor(
-                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT)),
+                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT),
+                DUMMY_USER_AGENT),
             pbs1Endpoint);
     this.pbs2PrivacyBudgetClient =
         new PrivacyBudgetClientImpl(
             new HttpClientWithInterceptor(
-                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT)),
+                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT),
+                DUMMY_USER_AGENT),
             pbs2Endpoint);
 
     AwsCredentialsProvider credsProvider =
@@ -106,27 +110,32 @@ public final class PbsGcpFunctionalTest {
         new PrivacyBudgetClientImpl(
             new HttpClientWithInterceptor(
                 new AwsAuthTokenInterceptor(
-                    Region.US_WEST_1, PbsTestUtils.DUMMY_AUTH_ENDPOINT, credsProvider)),
+                    Region.US_WEST_1, PbsTestUtils.DUMMY_AUTH_ENDPOINT, credsProvider),
+                DUMMY_USER_AGENT),
             pbs1Endpoint);
     this.pbs2AwsPrivacyBudgetClient =
         new PrivacyBudgetClientImpl(
             new HttpClientWithInterceptor(
                 new AwsAuthTokenInterceptor(
-                    Region.US_WEST_1, PbsTestUtils.DUMMY_AUTH_ENDPOINT, credsProvider)),
+                    Region.US_WEST_1, PbsTestUtils.DUMMY_AUTH_ENDPOINT, credsProvider),
+                DUMMY_USER_AGENT),
             pbs2Endpoint);
 
     this.pbs1PrivacyBudgetClientV2 =
         new PrivacyBudgetClientImplV2(
             new HttpClientWithInterceptor(
-                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT)),
+                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT),
+                DUMMY_USER_AGENT),
             pbs1Endpoint);
     this.pbs2PrivacyBudgetClientV2 =
         new PrivacyBudgetClientImplV2(
             new HttpClientWithInterceptor(
-                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT)),
+                GcpHttpInterceptorUtil.createPbsHttpInterceptor(PbsTestUtils.DUMMY_AUTH_ENDPOINT),
+                DUMMY_USER_AGENT),
             pbs2Endpoint);
     this.distributedPrivacyBudgetClientGcp =
-        PbsTestUtils.createDistributedPbsClient(pbs1Endpoint, pbs2Endpoint, pbsAuthEndpoint);
+        PbsTestUtils.createDistributedPbsClient(
+            pbs1Endpoint, pbs2Endpoint, pbsAuthEndpoint, DUMMY_USER_AGENT);
     this.distributedPrivacyBudgetClientAws =
         createDistributedPbsClientAws(
             credsProvider, Region.US_WEST_1, pbs1Endpoint, pbs2Endpoint, pbsAuthEndpoint);
@@ -769,7 +778,6 @@ public final class PbsGcpFunctionalTest {
         .setTransactionSecret("transaction-secret")
         .setTimeout(Timestamp.from(Instant.now()))
         .setClaimedIdentity("https://dummy-reporting-origin.com")
-        .setTrustedServicesClientVersion("dummy-version")
         .build();
   }
 
@@ -799,7 +807,6 @@ public final class PbsGcpFunctionalTest {
                     .setReportingOrigin("dummy-reporting-origin.com")
                     .build()))
         .enableNewPbsClient(enableNewClient)
-        .trustedServicesClientVersion("dummy-version")
         .claimedIdentity("https://dummy-reporting-origin.com")
         .build();
   }
@@ -812,7 +819,8 @@ public final class PbsGcpFunctionalTest {
       String authEndpoint) {
     AwsAuthTokenInterceptor awsAuthTokenInterceptor =
         new AwsAuthTokenInterceptor(region, authEndpoint, awsCredentialsProvider);
-    HttpClientWithInterceptor httpClient = new HttpClientWithInterceptor(awsAuthTokenInterceptor);
+    HttpClientWithInterceptor httpClient =
+        new HttpClientWithInterceptor(awsAuthTokenInterceptor, DUMMY_USER_AGENT);
     PrivacyBudgetClient pbs1Client = new PrivacyBudgetClientImpl(httpClient, pbs1Endpoint);
     PrivacyBudgetClient pbs2Client = new PrivacyBudgetClientImpl(httpClient, pbs2Endpoint);
     TransactionEngine transactionEngine =

@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",

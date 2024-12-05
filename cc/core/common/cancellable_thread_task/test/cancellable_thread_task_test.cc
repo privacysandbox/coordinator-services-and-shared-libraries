@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "core/common/cancellable_thread_task/src/cancellable_thread_task.h"
+#include "cc/core/common/cancellable_thread_task/src/cancellable_thread_task.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::WaitUntil;
 using std::atomic;

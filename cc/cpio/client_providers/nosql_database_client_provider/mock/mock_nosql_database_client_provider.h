@@ -18,7 +18,7 @@
 
 #include <gmock/gmock.h>
 
-#include "cpio/client_providers/interface/nosql_database_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/nosql_database_client_provider_interface.h"
 
 namespace google::scp::cpio::client_providers::mock {
 

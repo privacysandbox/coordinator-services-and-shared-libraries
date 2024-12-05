@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "cpio/client_providers/queue_client_provider/src/gcp/gcp_queue_client_provider.h"
+#include "cc/cpio/client_providers/queue_client_provider/src/gcp/gcp_queue_client_provider.h"
 
 namespace google::scp::cpio::client_providers {
 /// QueueClientOptions for testing on GCP.

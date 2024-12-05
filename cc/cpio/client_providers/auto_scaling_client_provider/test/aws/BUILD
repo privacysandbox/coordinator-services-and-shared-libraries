@@ -22,7 +22,6 @@ cc_test(
     srcs =
         ["auto_scaling_error_converter_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/auto_scaling_client_provider/src/aws:aws_auto_scaling_client_provider_lib",
         "//cc/cpio/common/src/aws:aws_utils_lib",
@@ -40,7 +39,6 @@ cc_test(
         "aws_auto_scaling_client_provider_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
@@ -66,7 +64,6 @@ cc_library(
         "-DTEST_CPIO=1",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/auto_scaling_client_provider/src/aws:aws_auto_scaling_client_provider_lib",
         "//cc/cpio/common/test/aws:test_aws_utils_lib",
     ],

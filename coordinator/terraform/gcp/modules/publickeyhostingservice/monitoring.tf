@@ -13,21 +13,22 @@
 # limitations under the License.
 
 locals {
-  load_balancer_name      = google_compute_url_map.get_public_key_loadbalancer.name
-  cloud_functions         = [for cf in google_cloudfunctions2_function.get_public_key_cloudfunction : cf]
-  cloud_function_a_name   = local.cloud_functions[0].name
-  cloud_function_a_region = local.cloud_functions[0].location
-  cloud_function_b_name   = local.cloud_functions[1].name
-  cloud_function_b_region = local.cloud_functions[1].location
+  load_balancer_name      = !var.use_cloud_run ? google_compute_url_map.get_public_key_loadbalancer[0].name : ""
+  cloud_functions         = !var.use_cloud_run ? [for cf in google_cloudfunctions2_function.get_public_key_cloudfunction : cf] : []
+  cloud_function_a_name   = !var.use_cloud_run ? local.cloud_functions[0].name : ""
+  cloud_function_a_region = !var.use_cloud_run ? local.cloud_functions[0].location : ""
+  cloud_function_b_name   = !var.use_cloud_run ? local.cloud_functions[1].name : ""
+  cloud_function_b_region = !var.use_cloud_run ? local.cloud_functions[1].location : ""
 }
 
 module "load_balancer_alarms" {
   source = "../shared/loadbalancer_alarms"
-  count  = var.alarms_enabled ? 1 : 0
+  count  = var.alarms_enabled && !var.use_cloud_run ? 1 : 0
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
-  load_balancer_name      = google_compute_url_map.get_public_key_loadbalancer.name
+  load_balancer_name      = google_compute_url_map.get_public_key_loadbalancer[0].name
   service_prefix          = "${var.environment} Public Key Service"
 
   eval_period_sec     = var.alarm_eval_period_sec
@@ -38,8 +39,9 @@ module "load_balancer_alarms" {
 
 module "cloud_function_alarms" {
   source   = "../shared/cloudfunction_alarms"
-  for_each = var.alarms_enabled ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
+  for_each = var.alarms_enabled && !var.use_cloud_run ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
 
+  project_id              = var.project_id
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   function_name           = each.value.name
@@ -53,7 +55,7 @@ module "cloud_function_alarms" {
 }
 
 resource "google_monitoring_dashboard" "dashboard" {
-  count = var.alarms_enabled ? 1 : 0
+  count = var.alarms_enabled && !var.use_cloud_run ? 1 : 0
 
   project = var.project_id
   dashboard_json = jsonencode(

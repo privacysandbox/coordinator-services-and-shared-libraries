@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "@com_github_googleapis_google_cloud_cpp//:pubsub",
         "@com_google_googleapis//google/pubsub/v1:pubsub_cc_grpc",
     ],

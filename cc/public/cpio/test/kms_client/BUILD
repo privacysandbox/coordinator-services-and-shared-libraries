@@ -22,7 +22,6 @@ cc_library(
         "test_aws_kms_client_options.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/kms_client:type_def",
     ],
 )

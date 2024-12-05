@@ -23,14 +23,14 @@
 #include <vector>
 
 #include "absl/base/nullability.h"
-#include "core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
-#include "pbs/interface/budget_key_interface.h"
-#include "pbs/interface/budget_key_timeframe_manager_interface.h"
-#include "pbs/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
+#include "cc/pbs/interface/budget_key_interface.h"
+#include "cc/pbs/interface/budget_key_timeframe_manager_interface.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::buget_key_timeframe_manager::mock {
 class MockBudgetKeyTimeframeManager : public BudgetKeyTimeframeManager {

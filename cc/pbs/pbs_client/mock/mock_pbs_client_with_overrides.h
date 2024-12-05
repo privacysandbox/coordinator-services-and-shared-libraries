@@ -18,8 +18,8 @@
 #include <memory>
 #include <string>
 
-#include "pbs/pbs_client/src/pbs_client.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs::client::mock {
 class MockPrivacyBudgetServiceClientWithOverrides

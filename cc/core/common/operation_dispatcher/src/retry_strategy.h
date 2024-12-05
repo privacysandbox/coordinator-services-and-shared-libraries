@@ -19,8 +19,8 @@
 #include <chrono>
 #include <cmath>
 
-#include "core/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::common {
 

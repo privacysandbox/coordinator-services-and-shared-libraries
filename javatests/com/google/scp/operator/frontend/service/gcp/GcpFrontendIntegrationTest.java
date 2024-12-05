@@ -3,6 +3,7 @@ package com.google.scp.operator.frontend.service.gcp;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_ATTRIBUTION_REPORT_TO;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT;
+import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_INPUT_DATA_BLOB_PREFIXES;
 import static com.google.scp.operator.frontend.service.model.Constants.JOB_PARAM_REPORTING_SITE;
 import static com.google.scp.shared.api.model.Code.ACCEPTED;
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
@@ -13,6 +14,7 @@ import static com.google.scp.shared.testutils.common.HttpRequestUtil.executeRequ
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.acai.Acai;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -48,6 +50,7 @@ public final class GcpFrontendIntegrationTest {
   private static final String getJobPath = "/v1alpha/getJob";
   private static CreateJobRequest createJobRequest;
   private static CreateJobRequest createJobRequestWithReportingSite;
+  private static CreateJobRequest createJobRequestWithInputPrefixList;
 
   @Before
   public void setUp() {
@@ -71,6 +74,22 @@ public final class GcpFrontendIntegrationTest {
         CreateJobRequest.newBuilder()
             .setJobRequestId("456")
             .setInputDataBlobPrefix("test")
+            .setInputDataBucketName("inputBucket")
+            .setOutputDataBlobPrefix("test")
+            .setOutputDataBucketName("outputBucket")
+            .setPostbackUrl("http://postback.com")
+            .putAllJobParameters(
+                ImmutableMap.of(
+                    JOB_PARAM_REPORTING_SITE,
+                    "https://foo.com",
+                    JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
+                    "5"))
+            .build();
+
+    createJobRequestWithInputPrefixList =
+        CreateJobRequest.newBuilder()
+            .setJobRequestId("789")
+            .addAllInputDataBlobPrefixes(ImmutableList.of("prefix1", "prefix2"))
             .setInputDataBucketName("inputBucket")
             .setOutputDataBlobPrefix("test")
             .setOutputDataBucketName("outputBucket")
@@ -174,6 +193,40 @@ public final class GcpFrontendIntegrationTest {
     assertThat(getJobNode.get("job_parameters").get(JOB_PARAM_REPORTING_SITE).asText())
         .isEqualTo(
             createJobRequestWithReportingSite.getJobParametersOrThrow(JOB_PARAM_REPORTING_SITE));
+  }
+
+  @Test
+  public void testCreateAndGetJob_withInputPrefixList_success()
+      throws IOException, JobQueueException {
+    HttpRequest createRequest =
+        HttpRequest.newBuilder()
+            .uri(getFunctionUri(createJobPath))
+            .setHeader("content-type", "application/json")
+            .POST(
+                HttpRequest.BodyPublishers.ofString(
+                    JsonFormat.printer().print(createJobRequestWithInputPrefixList)))
+            .build();
+    HttpResponse<String> createJobResponse = executeRequestWithRetry(client, createRequest);
+    Optional<JobQueueItem> item = pubSubJobQueue.receiveJob();
+
+    HttpRequest getRequest =
+        HttpRequest.newBuilder()
+            .uri(
+                getFunctionUri(
+                    String.format(
+                        "%s?job_request_id=%s",
+                        getJobPath, createJobRequestWithInputPrefixList.getJobRequestId())))
+            .setHeader("content-type", "application/json")
+            .GET()
+            .build();
+    HttpResponse<String> getJobResponse = executeRequestWithRetry(client, getRequest);
+    JsonNode getJobNode = new ObjectMapper().readTree(getJobResponse.body());
+
+    assertThat(createJobResponse.statusCode()).isEqualTo(ACCEPTED.getHttpStatusCode());
+    assertThat(getJobResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
+    assertThat(getJobNode.get("job_status").asText()).isEqualTo("RECEIVED");
+    assertThat(getJobNode.get(JOB_PARAM_INPUT_DATA_BLOB_PREFIXES).toString())
+        .isEqualTo("[\"prefix1\",\"prefix2\"]");
   }
 
   private String getCreateRequestJson() throws InvalidProtocolBufferException {

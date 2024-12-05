@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
 
 namespace google::scp::pbs {
 class AwsIntegrationTestDependencyFactory : public AwsDependencyFactory {
@@ -86,7 +86,8 @@ class AwsIntegrationTestDependencyFactory : public AwsDependencyFactory {
           instance_client_provider) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider) noexcept override;
 
  private:

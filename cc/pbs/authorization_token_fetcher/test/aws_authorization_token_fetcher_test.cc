@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
+#include "cc/pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::ResultIs;
 using std::atomic;

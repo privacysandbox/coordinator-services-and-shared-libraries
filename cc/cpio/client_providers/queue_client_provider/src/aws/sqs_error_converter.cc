@@ -16,7 +16,7 @@
 
 #include "sqs_error_converter.h"
 
-#include "cpio/common/src/aws/error_codes.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
 
 #include "error_codes.h"
 

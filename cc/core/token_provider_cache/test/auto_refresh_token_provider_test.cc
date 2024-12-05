@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/token_provider_cache/src/auto_refresh_token_provider.h"
+#include "cc/core/token_provider_cache/src/auto_refresh_token_provider.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <thread>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/token_fetcher_interface.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/token_provider_cache/src/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/token_fetcher_interface.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/token_provider_cache/src/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;

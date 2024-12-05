@@ -20,10 +20,10 @@
 
 #include <string>
 
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
-#include "public/cpio/utils/configuration_fetcher/interface/configuration_fetcher_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
+#include "cc/public/cpio/utils/configuration_fetcher/interface/configuration_fetcher_interface.h"
 
 namespace google::scp::cpio {
 class MockConfigurationFetcher : public ConfigurationFetcherInterface {

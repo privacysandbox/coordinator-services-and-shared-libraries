@@ -25,7 +25,6 @@ cc_test(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/common/src/gcp:gcp_utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface:cpio_errors",

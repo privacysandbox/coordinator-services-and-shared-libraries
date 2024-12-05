@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include "public/cpio/interface/type_def.h"
+#include "cc/public/cpio/interface/type_def.h"
 
 namespace google::scp::cpio {
 using PrivateKeyVendingServiceEndpoint = std::string;

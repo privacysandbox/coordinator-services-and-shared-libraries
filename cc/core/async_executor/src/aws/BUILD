@@ -24,11 +24,7 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "@aws_sdk_cpp//:core",
     ],

@@ -20,9 +20,9 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/type_def.h"
-#include "core/journal_service/src/error_codes.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/journal_service/src/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
 
 static constexpr char kCheckpointBlobNamePrefix[] = "checkpoint_";
 static constexpr size_t kCheckpointBlobNamePrefixLength = 11;

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
+#include "cc/pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -20,12 +20,12 @@
 #include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/authorization_service/src/error_codes.h"
-#include "core/curl_client/mock/mock_curl_client.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/utils/src/base64.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/authorization_service/src/error_codes.h"
+#include "cc/core/curl_client/mock/mock_curl_client.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;

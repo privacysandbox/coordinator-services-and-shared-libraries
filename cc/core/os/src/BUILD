@@ -22,7 +22,6 @@ cc_library(
         "system_resource_info_provider.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/public/core/interface:execution_result",
     ],

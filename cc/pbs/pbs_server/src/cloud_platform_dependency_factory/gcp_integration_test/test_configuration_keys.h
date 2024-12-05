@@ -18,7 +18,7 @@
 
 #include <string>
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
 static constexpr char kSpannerEndpointOverride[] =

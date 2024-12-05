@@ -37,11 +37,10 @@ import java.util.Date;
 public final class JobGenerator {
 
   private static final String DATA_HANDLE = "dataHandle";
+  private static final String[] DATA_HANDLE_LIST = new String[] {"dataHandle1", "dataHandle2"};
   private static final String DATA_HANDLE_BUCKET = "bucket";
   private static final String POSTBACK_URL = "http://postback.com";
   private static final String ACCOUNT_IDENTITY = "service-account@testing.com";
-  private static final ImmutableList<String> PRIVACY_BUDGET_KEYS =
-      ImmutableList.of("privacyBudgetKey1", "privacyBudgetKey2");
   private static final String ATTRIBUTION_REPORT_TO = "https://foo.com";
   private static final Integer DEBUG_PRIVACY_BUDGET_LIMIT = 5;
   private static final Instant REQUEST_RECEIVED_AT = Instant.parse("2019-10-01T08:25:24.00Z");
@@ -56,9 +55,6 @@ public final class JobGenerator {
   private static final com.google.scp.operator.protos.shared.backend.JobStatusProto.JobStatus
       JOB_STATUS_OLD_IMAGE_SHARED =
           com.google.scp.operator.protos.shared.backend.JobStatusProto.JobStatus.RECEIVED;
-  private static final ImmutableList<Instant> REPORTING_WINDOWS =
-      ImmutableList.of(
-          Instant.parse("2019-09-01T02:00:00.00Z"), Instant.parse("2019-09-01T02:30:00.00Z"));
   private static final int RECORD_VERSION_NEW_IMAGE = 2;
   private static final int RECORD_VERSION_OLD_IMAGE = 1;
   private static final ImmutableList<ErrorCount> ERROR_COUNTS =
@@ -212,71 +208,79 @@ public final class JobGenerator {
 
     RequestInfo requestInfo = createFakeRequestInfo(requestId);
 
-    JobMetadata jobMetadata =
-        JobMetadata.newBuilder()
-            .setCreateJobRequest(createJobRequest)
-            .setJobStatus(JOB_STATUS_NEW_IMAGE_SHARED)
-            .setRequestReceivedAt(ProtoUtil.toProtoTimestamp(REQUEST_RECEIVED_AT))
-            .setRequestUpdatedAt(ProtoUtil.toProtoTimestamp(REQUEST_UPDATED_AT))
-            .setNumAttempts(0)
-            .setJobKey(jobKey)
-            .setRecordVersion(RECORD_VERSION_NEW_IMAGE)
-            .setRequestInfo(requestInfo)
-            .setResultInfo(RESULT_INFO_SHARED)
-            .build();
-
-    return jobMetadata;
+    return JobMetadata.newBuilder()
+        .setCreateJobRequest(createJobRequest)
+        .setJobStatus(JOB_STATUS_NEW_IMAGE_SHARED)
+        .setRequestReceivedAt(ProtoUtil.toProtoTimestamp(REQUEST_RECEIVED_AT))
+        .setRequestUpdatedAt(ProtoUtil.toProtoTimestamp(REQUEST_UPDATED_AT))
+        .setNumAttempts(0)
+        .setJobKey(jobKey)
+        .setRecordVersion(RECORD_VERSION_NEW_IMAGE)
+        .setRequestInfo(requestInfo)
+        .setResultInfo(RESULT_INFO_SHARED)
+        .build();
   }
 
   /** Creates an instance of the {@code CreateJobRequest} class with fake values. */
   public static com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest
       createFakeCreateJobRequestShared(String requestId) {
-    com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest
-        createJobRequest =
-            com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest
-                .newBuilder()
-                .setJobRequestId(requestId)
-                .setInputDataBlobPrefix(DATA_HANDLE)
-                .setInputDataBucketName(DATA_HANDLE_BUCKET)
-                .setOutputDataBlobPrefix(DATA_HANDLE)
-                .setOutputDataBucketName(DATA_HANDLE_BUCKET)
-                .setPostbackUrl(POSTBACK_URL)
-                .setAttributionReportTo(ATTRIBUTION_REPORT_TO)
-                .setDebugPrivacyBudgetLimit(DEBUG_PRIVACY_BUDGET_LIMIT)
-                .putAllJobParameters(
-                    ImmutableMap.of(
-                        JOB_PARAM_ATTRIBUTION_REPORT_TO,
-                        ATTRIBUTION_REPORT_TO,
-                        JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
-                        DEBUG_PRIVACY_BUDGET_LIMIT.toString()))
-                .build();
 
-    return createJobRequest;
+    return com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest
+        .newBuilder()
+        .setJobRequestId(requestId)
+        .setInputDataBlobPrefix(DATA_HANDLE)
+        .setInputDataBucketName(DATA_HANDLE_BUCKET)
+        .setOutputDataBlobPrefix(DATA_HANDLE)
+        .setOutputDataBucketName(DATA_HANDLE_BUCKET)
+        .setPostbackUrl(POSTBACK_URL)
+        .setAttributionReportTo(ATTRIBUTION_REPORT_TO)
+        .setDebugPrivacyBudgetLimit(DEBUG_PRIVACY_BUDGET_LIMIT)
+        .putAllJobParameters(
+            ImmutableMap.of(
+                JOB_PARAM_ATTRIBUTION_REPORT_TO,
+                ATTRIBUTION_REPORT_TO,
+                JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
+                DEBUG_PRIVACY_BUDGET_LIMIT.toString()))
+        .build();
   }
 
   public static RequestInfo createFakeRequestInfo(String requestId) {
-    RequestInfo requestInfo =
-        RequestInfo.newBuilder()
-            .setJobRequestId(requestId)
-            .setInputDataBlobPrefix(DATA_HANDLE)
-            .setInputDataBucketName(DATA_HANDLE_BUCKET)
-            .setOutputDataBlobPrefix(DATA_HANDLE)
-            .setOutputDataBucketName(DATA_HANDLE_BUCKET)
-            .setPostbackUrl(POSTBACK_URL)
-            .putAllJobParameters(
-                ImmutableMap.of(
-                    JOB_PARAM_ATTRIBUTION_REPORT_TO,
-                    ATTRIBUTION_REPORT_TO,
-                    JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
-                    DEBUG_PRIVACY_BUDGET_LIMIT.toString()))
-            .build();
-    return requestInfo;
+    return RequestInfo.newBuilder()
+        .setJobRequestId(requestId)
+        .setInputDataBlobPrefix(DATA_HANDLE)
+        .setInputDataBucketName(DATA_HANDLE_BUCKET)
+        .setOutputDataBlobPrefix(DATA_HANDLE)
+        .setOutputDataBucketName(DATA_HANDLE_BUCKET)
+        .setPostbackUrl(POSTBACK_URL)
+        .putAllJobParameters(
+            ImmutableMap.of(
+                JOB_PARAM_ATTRIBUTION_REPORT_TO,
+                ATTRIBUTION_REPORT_TO,
+                JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
+                DEBUG_PRIVACY_BUDGET_LIMIT.toString()))
+        .build();
+  }
+
+  public static RequestInfo createFakeRequestInfoWithPrefixList(String requestId) {
+    return RequestInfo.newBuilder()
+        .setJobRequestId(requestId)
+        .setInputDataBucketName(DATA_HANDLE_BUCKET)
+        .addAllInputDataBlobPrefixes(ImmutableList.copyOf(DATA_HANDLE_LIST))
+        .setOutputDataBucketName(DATA_HANDLE_BUCKET)
+        .setPostbackUrl(POSTBACK_URL)
+        .putAllJobParameters(
+            ImmutableMap.of(
+                JOB_PARAM_ATTRIBUTION_REPORT_TO,
+                ATTRIBUTION_REPORT_TO,
+                JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
+                DEBUG_PRIVACY_BUDGET_LIMIT.toString()))
+        .build();
   }
 
   public static RequestInfo createFakeRequestInfoWithAccountIdentity(String requestId) {
-    RequestInfo requestInfo =
-        createFakeRequestInfo(requestId).toBuilder().setAccountIdentity(ACCOUNT_IDENTITY).build();
-    return requestInfo;
+    return createFakeRequestInfo(requestId).toBuilder()
+        .setAccountIdentity(ACCOUNT_IDENTITY)
+        .build();
   }
 
   /** Creates an instance of the {@code ResultInfo} class with fake values. */

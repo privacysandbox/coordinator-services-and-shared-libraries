@@ -22,7 +22,6 @@ cc_test(
     srcs =
         ["gcp_kms_aead_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/kms_client_provider/mock/gcp:gcp_kms_client_provider_mock",
@@ -38,7 +37,6 @@ cc_test(
     srcs =
         ["gcp_kms_client_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/kms_client_provider/mock/gcp:gcp_kms_client_provider_mock",
@@ -55,7 +53,6 @@ cc_test(
     srcs =
         ["tee_gcp_kms_client_provider_utils_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/kms_client_provider/src/gcp:tee_gcp_kms_client_provider_lib",
         "@com_google_googletest//:gtest_main",
     ],

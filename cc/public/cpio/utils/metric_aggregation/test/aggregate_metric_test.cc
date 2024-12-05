@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 
 #include <gtest/gtest.h>
 
@@ -26,16 +26,16 @@
 #include <utility>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
-#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric_with_overrides.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric_with_overrides.h"
 
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;

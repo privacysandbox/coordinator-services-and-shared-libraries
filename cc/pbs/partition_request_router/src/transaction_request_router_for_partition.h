@@ -18,12 +18,12 @@
 
 #include <memory>
 
-#include "core/interface/partition_manager_interface.h"
-#include "core/interface/partition_namespace_interface.h"
-#include "core/interface/partition_types.h"
-#include "core/interface/transaction_request_router_interface.h"
-#include "pbs/interface/pbs_partition_interface.h"
-#include "pbs/interface/pbs_partition_manager_interface.h"
+#include "cc/core/interface/partition_manager_interface.h"
+#include "cc/core/interface/partition_namespace_interface.h"
+#include "cc/core/interface/partition_types.h"
+#include "cc/core/interface/transaction_request_router_interface.h"
+#include "cc/pbs/interface/pbs_partition_interface.h"
+#include "cc/pbs/interface/pbs_partition_manager_interface.h"
 
 namespace google::scp::pbs {
 /**

@@ -22,10 +22,10 @@
 #include <utility>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/configuration_keys.h"
-#include "core/nosql_database_provider/src/common/error_codes.h"
-#include "core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/nosql_database_provider/src/common/error_codes.h"
+#include "cc/core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
 
 #include "test_configuration_keys.h"
 

@@ -19,11 +19,11 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "core/interface/credentials_provider_interface.h"
-#include "cpio/client_providers/interface/kms_client_provider_interface.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/credentials_provider_interface.h"
+#include "cc/cpio/client_providers/interface/kms_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers {
 /*! @copydoc KmsClientProviderInterface

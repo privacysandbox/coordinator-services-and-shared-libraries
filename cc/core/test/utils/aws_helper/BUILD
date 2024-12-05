@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "@aws_sdk_cpp//:core",
         "@aws_sdk_cpp//:dynamodb",
         "@aws_sdk_cpp//:kms",

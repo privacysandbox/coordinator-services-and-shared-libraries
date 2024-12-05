@@ -19,12 +19,12 @@
 #include "cc/core/http2_client/mock/mock_http_connection.h"
 #include "cc/core/http2_client/mock/mock_http_connection_pool_with_overrides.h"
 #include "cc/core/http2_client/src/error_codes.h"
+#include "cc/core/http2_client/src/http_client_def.h"
 #include "cc/core/interface/async_executor_interface.h"
-#include "core/http2_client/src/http_client_def.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
-#include "core/telemetry/src/common/metric_utils.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
+#include "cc/core/telemetry/src/common/metric_utils.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
 using ::google::scp::core::http2_client::mock::MockHttpConnection;
@@ -37,9 +37,9 @@ class HttpConnectionPoolTest : public testing::Test {
  protected:
   void SetUp() override {
     async_executor_ = std::make_shared<MockAsyncExecutor>();
-    metric_router_ = std::make_shared<core::InMemoryMetricRouter>();
+    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
     connection_pool_ = std::make_unique<MockHttpConnectionPool>(
-        async_executor_, metric_router_, num_connections_per_host_);
+        async_executor_, metric_router_.get(), num_connections_per_host_);
 
     EXPECT_SUCCESS(async_executor_->Init());
     EXPECT_SUCCESS(connection_pool_->Init());
@@ -56,7 +56,7 @@ class HttpConnectionPoolTest : public testing::Test {
   std::shared_ptr<AsyncExecutorInterface> async_executor_;
   std::shared_ptr<MockHttpConnectionPool> connection_pool_;
   size_t num_connections_per_host_ = 10;
-  std::shared_ptr<core::InMemoryMetricRouter> metric_router_;
+  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
 };
 
 TEST_F(HttpConnectionPoolTest, GetConnectionCreatesConnectionsForTheFirstTime) {
@@ -363,9 +363,8 @@ TEST_F(HttpConnectionPoolTest, TestOpenConnectionsOtelMetric) {
               std::map<std::string, std::string>>(open_connections_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      open_connections_metric_point_data =
-          core::GetMetricPointData(std::string(kClientOpenConnectionsMetric),
-                                   open_connections_dimensions, data);
+      open_connections_metric_point_data = core::GetMetricPointData(
+          "http.client.open_connections", open_connections_dimensions, data);
   ASSERT_TRUE(open_connections_metric_point_data.has_value());
 
   auto open_connections_last_value_point_data =
@@ -406,9 +405,8 @@ TEST_F(HttpConnectionPoolTest, TestActiveRequestsOtelMetric) {
               std::map<std::string, std::string>>(active_requests_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      active_requests_metric_point_data =
-          core::GetMetricPointData(std::string(kClientActiveRequestsMetric),
-                                   active_requests_dimensions, data);
+      active_requests_metric_point_data = core::GetMetricPointData(
+          "http.client.active_requests", active_requests_dimensions, data);
   ASSERT_TRUE(active_requests_metric_point_data.has_value());
 
   auto active_requests_last_value_point_data =
@@ -448,7 +446,7 @@ TEST_F(HttpConnectionPoolTest, TestAddressErrorsOtelMetric) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       client_address_errors_metric_point_data = core::GetMetricPointData(
-          std::string(kClientAddressErrorsMetric), dimensions, data);
+          "http.client.address_errors", dimensions, data);
 
   ASSERT_TRUE(client_address_errors_metric_point_data.has_value());
 

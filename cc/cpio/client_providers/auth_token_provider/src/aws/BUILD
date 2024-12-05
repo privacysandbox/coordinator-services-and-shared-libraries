@@ -22,7 +22,6 @@ cc_library(
         "//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/public/cpio/interface:cpio_errors",

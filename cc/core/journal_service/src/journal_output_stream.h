@@ -25,20 +25,20 @@
 #include <vector>
 
 #include "absl/base/nullability.h"
-#include "core/common/concurrent_map/src/concurrent_map.h"
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/journal_service/interface/journal_service_stream_interface.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/journal_service/interface/journal_service_stream_interface.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "google/protobuf/any.pb.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/sync_instruments.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::core {
 

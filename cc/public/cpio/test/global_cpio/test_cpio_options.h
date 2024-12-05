@@ -18,7 +18,7 @@
 
 #include <string>
 
-#include "public/cpio/interface/type_def.h"
+#include "cc/public/cpio/interface/type_def.h"
 
 namespace google::scp::cpio {
 /// Global CPIO options to test CPIO.

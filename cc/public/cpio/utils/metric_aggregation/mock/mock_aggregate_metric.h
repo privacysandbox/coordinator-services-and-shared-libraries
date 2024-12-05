@@ -21,8 +21,8 @@
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::cpio {
 class MockAggregateMetric : public AggregateMetricInterface {

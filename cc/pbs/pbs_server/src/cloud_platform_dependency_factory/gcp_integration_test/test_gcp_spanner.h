@@ -25,10 +25,10 @@
 
 #include <nlohmann/json.hpp>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/nosql_database_provider/src/gcp/gcp_spanner.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/nosql_database_provider/src/gcp/gcp_spanner.h"
 
 namespace google::scp::pbs {
 /*! @copydoc GcpSpanner

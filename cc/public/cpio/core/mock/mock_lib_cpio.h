@@ -19,10 +19,10 @@
 #include <memory>
 #include <stdexcept>
 
-#include "cpio/client_providers/global_cpio/mock/mock_lib_cpio_provider.h"
-#include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "cpio/client_providers/interface/cpio_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/cpio/client_providers/global_cpio/mock/mock_lib_cpio_provider.h"
+#include "cc/cpio/client_providers/global_cpio/src/global_cpio.h"
+#include "cc/cpio/client_providers/interface/cpio_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::cpio {
 static std::unique_ptr<client_providers::CpioProviderInterface> cpio_ptr;

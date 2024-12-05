@@ -28,7 +28,6 @@ cc_library(
         "-latomic",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/pbs/interface:pbs_interface_lib",
     ],

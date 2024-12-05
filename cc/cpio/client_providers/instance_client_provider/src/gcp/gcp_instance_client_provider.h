@@ -21,13 +21,23 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/http_client_interface.h"
-#include "cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
 
 namespace google::scp::cpio::client_providers {
+
+// Container type (Cloud Run or Compute Engine)
+enum class ContainerType { kCloudRun = 1, kComputeEngine = 2 };
+
 class GcpInstanceClientProvider : public InstanceClientProviderInterface {
  public:
+  GcpInstanceClientProvider(
+      const std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
+      const std::shared_ptr<core::HttpClientInterface>& http1_client,
+      const std::shared_ptr<core::HttpClientInterface>& http2_client,
+      const std::string& container_type);
+
   GcpInstanceClientProvider(
       const std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
       const std::shared_ptr<core::HttpClientInterface>& http1_client,
@@ -66,6 +76,8 @@ class GcpInstanceClientProvider : public InstanceClientProviderInterface {
       const std::string& resource_name,
       cmrt::sdk::instance_service::v1::InstanceDetails&
           instance_details) noexcept override;
+
+  ContainerType GetContainerType() { return container_type_; }
 
  private:
   // The tracker for instance resource id fetching status.
@@ -207,5 +219,6 @@ class GcpInstanceClientProvider : public InstanceClientProviderInterface {
   std::shared_ptr<std::string> http_uri_instance_id_;
   std::shared_ptr<std::string> http_uri_project_id_;
   std::shared_ptr<std::string> http_uri_instance_zone_;
+  ContainerType container_type_;
 };
 }  // namespace google::scp::cpio::client_providers

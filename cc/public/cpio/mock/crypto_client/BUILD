@@ -24,7 +24,6 @@ cc_library(
             "mock_crypto_client.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/crypto_client",
         "@com_google_googletest//:gtest",
     ],

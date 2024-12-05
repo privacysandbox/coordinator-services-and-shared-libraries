@@ -48,6 +48,7 @@ public final class DynamoMetadataTable {
   // CreateJobRequest Attributes
   private static final String JOB_REQUEST_ID = "JobRequestId";
   private static final String INPUT_DATA_BLOB_PREFIX = "InputDataBlobPrefix";
+  private static final String input_data_blob_prefixes = "InputDataBlobPrefixes";
   private static final String INPUT_DATA_BLOB_BUCKET = "InputDataBlobBucket";
   private static final String OUTPUT_DATA_BLOB_PREFIX = "OutputDataBlobPrefix";
   private static final String OUTPUT_DATA_BLOB_BUCKET = "OutputDataBlobBucket";
@@ -96,12 +97,24 @@ public final class DynamoMetadataTable {
                     .getter(CreateJobRequest::getJobRequestId)
                     .setter(CreateJobRequest.Builder::setJobRequestId))
         .addAttribute(
-            String.class,
+            EnhancedType.optionalOf(String.class),
             attribute ->
                 attribute
                     .name(INPUT_DATA_BLOB_PREFIX)
-                    .getter(CreateJobRequest::getInputDataBlobPrefix)
-                    .setter(CreateJobRequest.Builder::setInputDataBlobPrefix))
+                    .attributeConverter(OptionalStringAttributeConverter.create())
+                    .getter(
+                        attributeValue ->
+                            optionalFromProtoField(attributeValue.getInputDataBlobPrefix()))
+                    .setter(
+                        (builder, optionalValue) ->
+                            optionalValue.ifPresent(builder::setInputDataBlobPrefix)))
+        .addAttribute(
+            EnhancedType.listOf(String.class),
+            attribute ->
+                attribute
+                    .name(input_data_blob_prefixes)
+                    .getter(CreateJobRequest::getInputDataBlobPrefixesList)
+                    .setter(CreateJobRequest.Builder::addAllInputDataBlobPrefixes))
         .addAttribute(
             String.class,
             attribute ->
@@ -214,12 +227,24 @@ public final class DynamoMetadataTable {
                     .getter(RequestInfo::getJobRequestId)
                     .setter(RequestInfo.Builder::setJobRequestId))
         .addAttribute(
-            String.class,
+            EnhancedType.optionalOf(String.class),
             attribute ->
                 attribute
                     .name(INPUT_DATA_BLOB_PREFIX)
-                    .getter(RequestInfo::getInputDataBlobPrefix)
-                    .setter(RequestInfo.Builder::setInputDataBlobPrefix))
+                    .attributeConverter(OptionalStringAttributeConverter.create())
+                    .getter(
+                        attributeValue ->
+                            optionalFromProtoField(attributeValue.getInputDataBlobPrefix()))
+                    .setter(
+                        (builder, optionalValue) ->
+                            optionalValue.ifPresent(builder::setInputDataBlobPrefix)))
+        .addAttribute(
+            EnhancedType.listOf(String.class),
+            attribute ->
+                attribute
+                    .name(input_data_blob_prefixes)
+                    .getter(RequestInfo::getInputDataBlobPrefixesList)
+                    .setter(RequestInfo.Builder::addAllInputDataBlobPrefixes))
         .addAttribute(
             String.class,
             attribute ->

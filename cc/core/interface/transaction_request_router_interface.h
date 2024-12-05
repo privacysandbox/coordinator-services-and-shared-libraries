@@ -18,9 +18,9 @@
 
 #pragma once
 
-#include "core/interface/http_types.h"
-#include "core/interface/service_interface.h"
-#include "core/interface/transaction_manager_interface.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
 
 namespace google::scp::core {
 /**

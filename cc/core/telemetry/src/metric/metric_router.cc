@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "core/telemetry/src/metric/metric_router.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 
 #include <memory>
 #include <string>
@@ -20,10 +20,10 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/metrics_def.h"
-#include "core/telemetry/src/common/telemetry_configuration.h"
-#include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/metrics_def.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
+#include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
 #include "opentelemetry/sdk/metrics/meter_context.h"
@@ -55,10 +55,11 @@ void MetricRouter::SetupMetricRouter(
       std::move(views), std::move(resource));
   meter_context->AddMetricReader(metric_reader);
 
-  auto u_provider = opentelemetry::sdk::metrics::MeterProviderFactory::Create(
-      std::move(meter_context));
+  std::unique_ptr<opentelemetry::sdk::metrics::MeterProvider> meter_provider =
+      opentelemetry::sdk::metrics::MeterProviderFactory::Create(
+          std::move(meter_context));
 
-  opentelemetry::metrics::Provider::SetMeterProvider(std::move(u_provider));
+  opentelemetry::metrics::Provider::SetMeterProvider(std::move(meter_provider));
 }
 
 std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>
@@ -134,14 +135,17 @@ MetricRouter::GetOrCreateObservableInstrument(
   return new_instrument;
 }
 
-ExecutionResult MetricRouter::CreateHistogramViewForInstrument(
-    absl::string_view metric_name, absl::string_view view_name,
-    InstrumentType instrument_type, const std::vector<double>& boundaries,
-    absl::string_view version, absl::string_view schema,
-    absl::string_view view_description, absl::string_view unit) {
+ExecutionResult MetricRouter::CreateViewForInstrument(
+    absl::string_view meter_name, absl::string_view instrument_name,
+    opentelemetry::sdk::metrics::InstrumentType instrument_type,
+    opentelemetry::sdk::metrics::AggregationType aggregation_type,
+    const std::vector<double>& boundaries, absl::string_view version,
+    absl::string_view schema_url, absl::string_view view_description,
+    absl::string_view unit) {
   auto meter_selector =
       std::make_unique<opentelemetry::sdk::metrics::MeterSelector>(
-          std::string(metric_name), std::string(version), std::string(schema));
+          std::string(meter_name), std::string(version),
+          std::string(schema_url));
 
   auto histogram_aggregation_config = std::make_shared<
       opentelemetry::sdk::metrics::HistogramAggregationConfig>();
@@ -149,34 +153,13 @@ ExecutionResult MetricRouter::CreateHistogramViewForInstrument(
 
   std::unique_ptr<opentelemetry::sdk::metrics::View> view =
       opentelemetry::sdk::metrics::ViewFactory::Create(
-          std::string(view_name), std::string(view_description),
-          std::string(unit),
-          opentelemetry::sdk::metrics::AggregationType::kHistogram,
-          histogram_aggregation_config);
+          std::string(instrument_name), std::string(view_description),
+          std::string(unit), aggregation_type, histogram_aggregation_config);
 
   std::unique_ptr<opentelemetry::sdk::metrics::InstrumentSelector>
-      instrument_selector;
-
-  switch (instrument_type) {
-    case InstrumentType::kCounter:
       instrument_selector =
           std::make_unique<opentelemetry::sdk::metrics::InstrumentSelector>(
-              opentelemetry::sdk::metrics::InstrumentType::kCounter,
-              std::string(metric_name), std::string(unit));
-      break;
-    case InstrumentType::kHistogram:
-      instrument_selector =
-          std::make_unique<opentelemetry::sdk::metrics::InstrumentSelector>(
-              opentelemetry::sdk::metrics::InstrumentType::kHistogram,
-              std::string(metric_name), std::string(unit));
-      break;
-    case InstrumentType::kGauge:
-      instrument_selector =
-          std::make_unique<opentelemetry::sdk::metrics::InstrumentSelector>(
-              opentelemetry::sdk::metrics::InstrumentType::kObservableGauge,
-              std::string(metric_name), std::string(unit));
-      break;
-  }
+              instrument_type, std::string(instrument_name), std::string(unit));
 
   auto meter_provider = opentelemetry::metrics::Provider::GetMeterProvider();
   if (!dynamic_cast<opentelemetry::metrics::NoopMeterProvider*>(

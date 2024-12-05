@@ -22,7 +22,7 @@
 
 #include "cc/core/config_provider/src/error_codes.h"
 #include "cc/core/interface/config_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::config_provider::mock {
 class MockConfigProvider : public ConfigProviderInterface {

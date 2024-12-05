@@ -942,7 +942,6 @@ public final class TransactionEngineTest {
     return TransactionRequest.builder()
         .setTransactionId(new UUID(0L, 0L))
         .setClaimedIdentity("random_adtech")
-        .setTrustedServicesClientVersion("dummy-version")
         .setReportingOriginToPrivacyBudgetUnitsList(
             ImmutableList.of(
                 ReportingOriginToPrivacyBudgetUnits.builder()

@@ -20,7 +20,6 @@ cc_test(
     srcs = ["config_provider_test.cc"],
     data = ["resources/test_config.json"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
@@ -32,7 +31,6 @@ cc_test(
     size = "small",
     srcs = ["env_config_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",

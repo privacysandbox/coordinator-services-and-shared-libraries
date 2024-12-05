@@ -70,6 +70,8 @@ module "multipartykeyhosting_primary" {
   get_public_key_cloudfunction_memory_mb             = var.get_public_key_cloudfunction_memory_mb
   get_public_key_cloudfunction_min_instances         = var.get_public_key_cloudfunction_min_instances
   get_public_key_cloudfunction_max_instances         = var.get_public_key_cloudfunction_max_instances
+  get_public_key_request_concurrency                 = var.get_public_key_request_concurrency
+  get_public_key_cpus                                = var.get_public_key_cpus
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
@@ -98,4 +100,12 @@ module "multipartykeyhosting_primary" {
   encryptionkeyservice_cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
   encryptionkeyservice_lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
   encryptionkeyservice_lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+
+  export_otel_metrics = var.export_otel_metrics
+
+  use_cloud_run                        = var.use_cloud_run
+  cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
+  public_key_service_image             = var.public_key_service_image
+  private_key_service_image            = var.private_key_service_image
+  private_key_service_custom_audiences = var.private_key_service_custom_audiences
 }

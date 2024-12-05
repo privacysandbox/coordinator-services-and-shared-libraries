@@ -26,9 +26,9 @@
 #include <aws/dynamodb/model/QueryRequest.h>
 #include <aws/dynamodb/model/UpdateItemRequest.h>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "cpio/client_providers/interface/nosql_database_client_provider_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/cpio/client_providers/interface/nosql_database_client_provider_interface.h"
 
 namespace google::scp::cpio::client_providers {
 

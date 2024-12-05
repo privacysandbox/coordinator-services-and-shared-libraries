@@ -19,12 +19,12 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/authorization_proxy_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/http_request_response_auth_interceptor_interface.h"
-#include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/authorization_proxy_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/http_request_response_auth_interceptor_interface.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
 

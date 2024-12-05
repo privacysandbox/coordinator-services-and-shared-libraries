@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 
-#include "public/cpio/interface/parameter_client/type_def.h"
+#include "cc/public/cpio/interface/parameter_client/type_def.h"
 
 namespace google::scp::cpio {
 /// ParameterClientOptions for testing on AWS.

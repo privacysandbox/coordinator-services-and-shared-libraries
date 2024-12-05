@@ -20,10 +20,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/interface/transaction_protocol_interface.h"
-#include "pbs/interface/budget_key_interface.h"
-#include "pbs/interface/budget_key_timeframe_manager_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/interface/transaction_protocol_interface.h"
+#include "cc/pbs/interface/budget_key_interface.h"
+#include "cc/pbs/interface/budget_key_timeframe_manager_interface.h"
 
 namespace google::scp::pbs {
 /*! @copydoc BatchConsumeBudgetTransactionProtocolInterface

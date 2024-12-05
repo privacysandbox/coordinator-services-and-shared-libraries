@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-#include "pbs/partition/src/pbs_partition.h"
+#include "cc/pbs/partition/src/pbs_partition.h"
 
 #include <memory>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/interface/logger_interface.h"
-#include "core/interface/transaction_command_serializer_interface.h"
-#include "core/journal_service/src/journal_service.h"
-#include "core/transaction_manager/src/transaction_manager.h"
-#include "pbs/budget_key_provider/src/budget_key_provider.h"
-#include "pbs/checkpoint_service/src/checkpoint_service.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/partition/src/error_codes.h"
-#include "pbs/transactions/src/consume_budget_command.h"
-#include "pbs/transactions/src/transaction_command_serializer.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/interface/logger_interface.h"
+#include "cc/core/interface/transaction_command_serializer_interface.h"
+#include "cc/core/journal_service/src/journal_service.h"
+#include "cc/core/transaction_manager/src/transaction_manager.h"
+#include "cc/pbs/budget_key_provider/src/budget_key_provider.h"
+#include "cc/pbs/checkpoint_service/src/checkpoint_service.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/partition/src/error_codes.h"
+#include "cc/pbs/transactions/src/consume_budget_command.h"
+#include "cc/pbs/transactions/src/transaction_command_serializer.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
@@ -302,7 +302,7 @@ PartitionLoadUnloadState PBSPartition::GetPartitionState() noexcept {
 }
 
 void PBSPartition::IncrementRequestCount() {
-  requests_seen_count_.fetch_add(1, std::memory_order::memory_order_relaxed);
+  requests_seen_count_.fetch_add(1, std::memory_order_relaxed);
   // Emit the counter every 1000 requests.
   // TODO: Convert this to a metric.
   if (requests_seen_count_.load() % 1000 == 0) {

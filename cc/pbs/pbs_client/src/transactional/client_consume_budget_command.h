@@ -21,13 +21,13 @@
 #include <string>
 #include <vector>
 
-#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
-#include "core/common/operation_dispatcher/src/retry_strategy.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
+#include "cc/core/common/operation_dispatcher/src/retry_strategy.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 // TODO: Make the retry strategy configurable.
 static constexpr google::scp::core::TimeDuration

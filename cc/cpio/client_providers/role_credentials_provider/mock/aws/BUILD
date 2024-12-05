@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
         "//cc/cpio/client_providers/role_credentials_provider/src/aws:aws_role_credentials_provider_lib",

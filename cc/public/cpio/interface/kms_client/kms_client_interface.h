@@ -21,12 +21,12 @@
 #include <string>
 #include <vector>
 
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/interface/async_context.h"
-#include "core/interface/streaming_context.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/kms_service/v1/kms_service.pb.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/streaming_context.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/kms_service/v1/kms_service.pb.h"
 
 #include "type_def.h"
 

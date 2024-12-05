@@ -18,9 +18,9 @@
 #include <string_view>
 #include <thread>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "pbs/leasable_lock/src/error_codes.h"
-#include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/pbs/leasable_lock/src/error_codes.h"
+#include "cc/pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;

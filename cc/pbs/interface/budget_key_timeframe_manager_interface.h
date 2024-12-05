@@ -22,11 +22,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
-#include "core/interface/checkpoint_service_interface.h"
-#include "pbs/interface/budget_key_interface.h"
-#include "pbs/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "cc/core/interface/checkpoint_service_interface.h"
+#include "cc/pbs/interface/budget_key_interface.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
 /**

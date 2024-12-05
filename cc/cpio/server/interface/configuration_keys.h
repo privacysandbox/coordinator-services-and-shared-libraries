@@ -19,7 +19,7 @@
 #include <map>
 #include <string>
 
-#include "public/cpio/interface/type_def.h"
+#include "cc/public/cpio/interface/type_def.h"
 
 // Common configurations for all SDK services.
 namespace google::scp::cpio {

@@ -16,7 +16,7 @@
 
 #include <memory>
 
-#include "pbs/interface/pbs_partition_manager_interface.h"
+#include "cc/pbs/interface/pbs_partition_manager_interface.h"
 
 namespace google::scp::pbs::partition_manager::mock {
 class MockPBSPartitionManager : public PBSPartitionManagerInterface {

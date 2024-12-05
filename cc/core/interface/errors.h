@@ -20,9 +20,14 @@
 #include <map>
 #include <string>
 
-#include "public/core/interface/execution_result.h"
+#include "absl/strings/string_view.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::errors {
+
+inline constexpr absl::string_view kInvalidErrorCodeStr = "InvalidErrorCode";
+inline constexpr absl::string_view kUnknownErrorCodeStr = "Unknown Error";
+inline constexpr absl::string_view kSuccessErrorCodeStr = "Success";
 
 /// Enumerator for all the http status codes.
 enum class HttpStatusCode {
@@ -77,13 +82,13 @@ inline bool IsRetriableErrorCode(HttpStatusCode http_status_code) {
 }
 
 /**
- * @brief Extern links global_error_codes that stores all error codes.
+ * @brief Defines the structure for storing error details.
  *
- * It is a map from the component_code to the map between error codes and error
- * messages.
- *
+ * This structure holds information about an error, including its name,
+ * message, and associated HTTP status code.
  */
 struct SCPError {
+  absl::string_view name;
   std::string error_message;
   HttpStatusCode error_http_status_code;
 };
@@ -135,10 +140,12 @@ inline uint64_t MakeErrorCode(uint64_t component, uint64_t error) {
       "Component code is too large! Valid range is [0x0001, 0x7FFF).");       \
   static_assert(error < 0x10000,                                              \
                 "Error code is too large! Valid range is [0x0001, 0xFFFF]."); \
+  static constexpr const char* error_name##_str = #error_name;                \
   static uint64_t error_name =                                                \
       ::google::scp::core::errors::MakeErrorCode(component, error);           \
   static bool initialized_##component##error = []() {                         \
     ::google::scp::core::errors::SCPError scp_error;                          \
+    scp_error.name = std::string_view(error_name##_str);                      \
     scp_error.error_message = message;                                        \
     scp_error.error_http_status_code = http_status_code;                      \
     ::google::scp::core::errors::GetGlobalErrorCodes()[component].emplace(    \
@@ -176,14 +183,10 @@ inline uint64_t ExtractComponentCode(uint64_t error_code) {
  * @return std::string the message about the error code.
  */
 inline const char* GetErrorMessage(uint64_t error_code) {
-  static constexpr char kInvalidErrorCodeStr[] = "InvalidErrorCode";
-  static constexpr char kUnknownErrorCodeStr[] = "Unknown Error";
-  static constexpr char kSuccessErrorCodeStr[] = "Success";
-
   if (error_code == SC_OK) {
-    return kSuccessErrorCodeStr;
+    return kSuccessErrorCodeStr.data();
   } else if (error_code == SC_UNKNOWN) {
-    return kUnknownErrorCodeStr;
+    return kUnknownErrorCodeStr.data();
   }
 
   uint64_t component = ExtractComponentCode(error_code);
@@ -192,7 +195,29 @@ inline const char* GetErrorMessage(uint64_t error_code) {
     return it->second.error_message.c_str();
   }
 
-  return kInvalidErrorCodeStr;
+  return kInvalidErrorCodeStr.data();
+}
+
+/**
+ * @brief Gets the error name.
+ *
+ * @param error_code the global error code.
+ * @return absl::string_view the name of the error code.
+ */
+inline absl::string_view GetErrorName(uint64_t error_code) {
+  if (error_code == SC_OK) {
+    return kSuccessErrorCodeStr.data();
+  } else if (error_code == SC_UNKNOWN) {
+    return kUnknownErrorCodeStr.data();
+  }
+
+  uint64_t component = ExtractComponentCode(error_code);
+  auto it = GetGlobalErrorCodes()[component].find(error_code);
+  if (it != GetGlobalErrorCodes()[component].end()) {
+    return it->second.name;
+  }
+
+  return kInvalidErrorCodeStr.data();
 }
 
 /**

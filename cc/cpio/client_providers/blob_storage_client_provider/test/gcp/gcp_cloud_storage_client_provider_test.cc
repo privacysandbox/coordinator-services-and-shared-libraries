@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/blob_storage_client_provider/src/gcp/gcp_cloud_storage_client_provider.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/src/gcp/gcp_cloud_storage_client_provider.h"
 
 #include <gtest/gtest.h>
 
@@ -22,18 +22,18 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/utils/src/base64.h"
-#include "core/utils/src/hashing.h"
-#include "cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/core/utils/src/hashing.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "google/cloud/status.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/internal/object_requests.h"
 #include "google/cloud/storage/testing/mock_client.h"
-#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::cloud::Status;
 using google::cloud::StatusOr;

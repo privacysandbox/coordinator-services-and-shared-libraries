@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/kms_client_provider/src/aws/aws_kms_aead.h"
+#include "cc/cpio/client_providers/kms_client_provider/src/aws/aws_kms_aead.h"
 
 #include <gtest/gtest.h>
 
@@ -21,9 +21,9 @@
 
 #include <aws/core/Aws.h>
 
-#include "core/interface/type_def.h"
-#include "cpio/client_providers/kms_client_provider/mock/aws/mock_kms_client.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/cpio/client_providers/kms_client_provider/mock/aws/mock_kms_client.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;

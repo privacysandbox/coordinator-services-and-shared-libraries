@@ -15,10 +15,10 @@
 
 #include <utility>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

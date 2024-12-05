@@ -22,12 +22,12 @@
 #include <aws/sts/STSErrors.h>
 #include <aws/sts/model/AssumeRoleRequest.h>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/credentials_provider/mock/mock_aws_assume_role_credentials_provider.h"
-#include "core/credentials_provider/mock/mock_aws_sts_client.h"
-#include "core/credentials_provider/src/error_codes.h"
-#include "core/interface/async_executor_interface.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/credentials_provider/mock/mock_aws_assume_role_credentials_provider.h"
+#include "cc/core/credentials_provider/mock/mock_aws_sts_client.h"
+#include "cc/core/credentials_provider/src/error_codes.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;

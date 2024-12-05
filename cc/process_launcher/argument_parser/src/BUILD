@@ -23,7 +23,6 @@ cc_library(
         "json_arg_parser.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "@nlohmann_json//:lib",
     ],

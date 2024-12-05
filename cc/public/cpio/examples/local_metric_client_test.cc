@@ -18,14 +18,14 @@
 #include <string>
 #include <utility>
 
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/interface/metric_client/type_def.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
-#include "public/cpio/test/global_cpio/test_lib_cpio.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/interface/metric_client/type_def.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/public/cpio/test/global_cpio/test_lib_cpio.h"
 
 using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;

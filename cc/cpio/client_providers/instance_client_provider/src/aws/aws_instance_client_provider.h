@@ -25,8 +25,8 @@
 #include <aws/ec2/EC2Client.h>
 
 #include "cc/core/common/concurrent_map/src/concurrent_map.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

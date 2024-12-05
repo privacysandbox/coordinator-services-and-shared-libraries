@@ -16,7 +16,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.36"
+      version = ">= 5.37.0"
     }
   }
 }
@@ -104,6 +104,7 @@ module "pbs_storage" {
   pbs_spanner_instance_processing_units          = var.pbs_spanner_instance_processing_units
   pbs_spanner_database_retention_period          = var.pbs_spanner_database_retention_period
   pbs_spanner_database_deletion_protection       = var.pbs_spanner_database_deletion_protection
+  pbs_spanner_autoscaling_config                 = var.pbs_spanner_autoscaling_config
 }
 
 module "pbs_managed_instance_group_environment" {
@@ -114,6 +115,7 @@ module "pbs_managed_instance_group_environment" {
   region      = var.region
 
   pbs_artifact_registry_repository_name = local.pbs_artifact_registry_repository_name
+  pbs_image_override                    = var.pbs_image_override
   pbs_image_tag                         = var.pbs_image_tag
 
   pbs_cloud_storage_journal_bucket_name = module.pbs_storage.pbs_cloud_storage_journal_bucket_name
@@ -144,6 +146,11 @@ module "pbs_managed_instance_group_environment" {
   health_check_port        = local.pbs_health_port
   enable_health_check      = var.enable_health_check
   enable_public_ip_address = var.enable_public_ip_address
+
+  pbs_cloud_run_min_instances   = var.pbs_cloud_run_min_instances
+  pbs_cloud_run_max_instances   = var.pbs_cloud_run_max_instances
+  pbs_cloud_run_max_concurrency = var.pbs_cloud_run_max_concurrency
+  deploy_pbs_cloud_run          = var.deploy_pbs_cloud_run
 }
 
 module "pbs_lb" {
@@ -153,20 +160,24 @@ module "pbs_lb" {
   region      = var.region
   project_id  = var.project
 
-  enable_domain_management       = var.enable_domain_management
-  pbs_domain                     = local.pbs_domain
-  parent_domain_name             = var.parent_domain_name
-  parent_domain_project          = var.parent_domain_project
-  pbs_ip_address                 = local.pbs_ip_address
-  pbs_auth_cloudfunction_name    = module.pbs_auth.pbs_auth_cloudfunction_name
-  pbs_managed_instance_group_url = module.pbs_managed_instance_group_environment.pbs_instance_group_url
-  pbs_named_port                 = local.pbs_main_port_name
-  pbs_main_port                  = var.pbs_main_port
-  pbs_health_check_port          = local.pbs_health_port
-  pbs_vpc_network_id             = google_compute_network.vpc_default_network.self_link
-  pbs_instance_target_tag        = local.pbs_instance_target_tag
-  pbs_instance_allow_ssh         = var.pbs_instance_allow_ssh
-  pbs_tls_alternate_names        = var.pbs_tls_alternate_names
+  enable_domain_management         = var.enable_domain_management
+  pbs_domain                       = local.pbs_domain
+  parent_domain_name               = var.parent_domain_name
+  parent_domain_project            = var.parent_domain_project
+  pbs_ip_address                   = local.pbs_ip_address
+  pbs_auth_cloudfunction_name      = module.pbs_auth.pbs_auth_cloudfunction_name
+  pbs_cloud_run_name               = module.pbs_managed_instance_group_environment.pbs_cloud_run_name
+  pbs_managed_instance_group_url   = module.pbs_managed_instance_group_environment.pbs_instance_group_url
+  pbs_named_port                   = local.pbs_main_port_name
+  pbs_main_port                    = var.pbs_main_port
+  pbs_health_check_port            = local.pbs_health_port
+  pbs_vpc_network_id               = google_compute_network.vpc_default_network.self_link
+  pbs_instance_target_tag          = local.pbs_instance_target_tag
+  pbs_instance_allow_ssh           = var.pbs_instance_allow_ssh
+  pbs_tls_alternate_names          = var.pbs_tls_alternate_names
+  pbs_cloud_run_traffic_percentage = var.pbs_cloud_run_traffic_percentage
+  deploy_pbs_cloud_run             = var.deploy_pbs_cloud_run
+  enable_pbs_cloud_run             = var.enable_pbs_cloud_run
 
   depends_on = [
     module.pbs_a_record,

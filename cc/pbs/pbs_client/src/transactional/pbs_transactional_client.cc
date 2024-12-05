@@ -19,15 +19,15 @@
 #include <string>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/authorization_service_interface.h"
-#include "core/journal_service/mock/mock_journal_service.h"
-#include "core/transaction_manager/mock/mock_transaction_command_serializer.h"
-#include "core/transaction_manager/src/transaction_manager.h"
-#include "pbs/pbs_client/src/pbs_client.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/authorization_service_interface.h"
+#include "cc/core/journal_service/mock/mock_journal_service.h"
+#include "cc/core/transaction_manager/mock/mock_transaction_command_serializer.h"
+#include "cc/core/transaction_manager/src/transaction_manager.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 #include "client_consume_budget_command.h"
 

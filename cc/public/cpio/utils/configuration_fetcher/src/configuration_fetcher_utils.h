@@ -23,9 +23,9 @@
 #include <string>
 #include <utility>
 
-#include "core/interface/async_context.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/utils/configuration_fetcher/interface/configuration_fetcher_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/utils/configuration_fetcher/interface/configuration_fetcher_interface.h"
 
 #include "error_codes.h"
 

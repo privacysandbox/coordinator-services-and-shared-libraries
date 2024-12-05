@@ -17,14 +17,29 @@
 #pragma once
 
 #include <functional>
-#include <memory>
+
+#include "absl/time/time.h"
 
 #include "service_interface.h"
 #include "type_def.h"
 
 namespace google::scp::core {
 /// Defines operation type.
+#if defined(PBS_ENABLE_BENCHMARKING)
+class AsyncOperation {
+ public:
+  explicit AsyncOperation(std::function<void()> fn,
+                          absl::Time start_time = absl::Now())
+      : fn_(fn), start_time_(start_time) {}
+
+  void operator()() { fn_(); }
+
+  std::function<void()> fn_;
+  absl::Time start_time_;
+};
+#else
 typedef std::function<void()> AsyncOperation;
+#endif
 
 /// Async operation execution priority.
 enum class AsyncPriority {

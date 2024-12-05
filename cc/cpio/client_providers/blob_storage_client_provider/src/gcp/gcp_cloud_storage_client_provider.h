@@ -20,16 +20,16 @@
 #include <sstream>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/streaming_context.h"
-#include "cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
-#include "cpio/client_providers/interface/blob_storage_client_provider_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "cpio/common/src/gcp/gcp_utils.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/streaming_context.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/interface/blob_storage_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/cpio/common/src/gcp/gcp_utils.h"
+#include "cc/public/cpio/interface/blob_storage_client/type_def.h"
 #include "google/cloud/storage/client.h"
-#include "public/cpio/interface/blob_storage_client/type_def.h"
 
 namespace google::scp::cpio::client_providers {
 

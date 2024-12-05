@@ -20,7 +20,7 @@
 #include <optional>
 #include <string>
 
-#include "core/interface/lease_manager_interface.h"
+#include "cc/core/interface/lease_manager_interface.h"
 
 namespace google::scp::pbs::leasable_lock::mock {
 class MockLeasableLock : public core::LeasableLockInterface {

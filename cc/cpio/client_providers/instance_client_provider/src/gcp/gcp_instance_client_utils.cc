@@ -25,9 +25,9 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 
@@ -47,7 +47,6 @@ using std::regex;
 using std::regex_match;
 using std::shared_ptr;
 using std::string;
-using std::strlen;
 using std::to_string;
 using std::vector;
 
@@ -57,8 +56,11 @@ constexpr char kGcpInstanceClientUtils[] = "GcpInstanceClientUtils";
 // Valid GCP instance resource name format:
 // `//compute.googleapis.com/projects/{PROJECT_ID}/zones/{ZONE_ID}/instances/{INSTANCE_ID}`
 constexpr char kInstanceResourceNameRegex[] =
-    R"(//compute.googleapis.com/projects\/([a-z0-9][a-z0-9-]{5,29})\/zones\/([a-z][a-z0-9-]{5,29})\/instances\/(\d+))";
-constexpr char kInstanceResourceNamePrefix[] = R"(//compute.googleapis.com/)";
+    R"(//(compute|run).googleapis.com/projects\/([a-z0-9][a-z0-9-]{5,29})\/(zones|locations)\/([a-z][a-z0-9-]{5,29})\/(instances|services)\/([a-z0-9]+))";
+constexpr absl::string_view kInstanceResourceNamePrefix =
+    R"(//compute.googleapis.com/)";
+constexpr absl::string_view kCloudRunServiceResourceNamePrefix =
+    R"(//run.googleapis.com/)";
 
 // GCP listing all tags attached to a resource has two kinds of urls.
 // For non-location tied resource, like project, it is
@@ -133,7 +135,6 @@ ExecutionResult GcpInstanceClientUtils::ValidateInstanceResourceNameFormat(
     return FailureExecutionResult(
         SC_GCP_INSTANCE_CLIENT_INVALID_INSTANCE_RESOURCE_NAME);
   }
-
   return SuccessExecutionResult();
 }
 
@@ -144,7 +145,9 @@ ExecutionResult GcpInstanceClientUtils::GetInstanceResourceNameDetails(
   RETURN_IF_FAILURE(result);
 
   string resource_id =
-      resource_name.substr(strlen(kInstanceResourceNamePrefix));
+      resource_name.substr(2, 3) == "run"
+          ? resource_name.substr(kCloudRunServiceResourceNamePrefix.size())
+          : resource_name.substr(kInstanceResourceNamePrefix.size());
   // Splits `projects/project_abc1/zones/us-west1/instances/12345678987654321`
   // to { projects,project_abc1,zones,us-west1,instances,12345678987654321 }
   vector<string> splits = StrSplit(resource_id, "/");

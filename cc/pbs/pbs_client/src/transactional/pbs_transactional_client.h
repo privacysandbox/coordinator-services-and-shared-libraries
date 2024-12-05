@@ -18,19 +18,19 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/credentials_provider_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/interface/remote_transaction_manager_interface.h"
-#include "core/interface/token_provider_cache_interface.h"
-#include "core/interface/transaction_command_serializer_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "pbs/interface/pbs_transactional_client_interface.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/credentials_provider_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/interface/remote_transaction_manager_interface.h"
+#include "cc/core/interface/token_provider_cache_interface.h"
+#include "cc/core/interface/transaction_command_serializer_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/pbs/interface/pbs_transactional_client_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
 /*! @copydoc PrivacyBudgetServiceTransactionalClientInterface

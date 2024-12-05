@@ -21,9 +21,9 @@
 #include <string>
 #include <vector>
 
-#include "pbs/transactions/mock/mock_batch_consume_budget_command.h"
-#include "pbs/transactions/mock/mock_consume_budget_command.h"
-#include "pbs/transactions/src/consume_budget_command_factory_interface.h"
+#include "cc/pbs/transactions/mock/mock_batch_consume_budget_command.h"
+#include "cc/pbs/transactions/mock/mock_consume_budget_command.h"
+#include "cc/pbs/transactions/src/consume_budget_command_factory_interface.h"
 
 namespace google::scp::pbs::transactions::mock {
 class MockConsumeBudgetCommandFactory

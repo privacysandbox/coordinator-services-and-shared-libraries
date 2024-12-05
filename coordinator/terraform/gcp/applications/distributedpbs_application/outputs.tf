@@ -42,6 +42,11 @@ output "pbs_service_account_email" {
   value       = var.pbs_service_account_email
 }
 
+output "pbs_spanner_budget_key_table_name" {
+  value       = module.pbs_storage.pbs_spanner_budget_key_table_name
+  description = "Name of the PBS Spanner budget key table."
+}
+
 output "pbs_spanner_database_name" {
   value       = module.pbs_storage.pbs_spanner_database_name
   description = "Name of the PBS Spanner database."

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 resource "google_monitoring_dashboard" "cloudfunction_dashboard" {
+  project = var.project_id
   dashboard_json = jsonencode(
     {
       "displayName" : "${var.environment} ${var.service_name} Dashboard",

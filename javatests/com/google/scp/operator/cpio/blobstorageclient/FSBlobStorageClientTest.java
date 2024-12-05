@@ -261,7 +261,7 @@ public class FSBlobStorageClientTest {
     ImmutableList<String> blobs =
         fsBlobStorageClient.listBlobs(getDataLocation("testbucket", targetBlobString));
 
-    assertThat(blobs).containsExactlyElementsIn(ImmutableList.of(blob1.getFileName().toString()));
+    assertThat(blobs).containsExactly(targetBlobString);
   }
 
   @Test
@@ -280,7 +280,7 @@ public class FSBlobStorageClientTest {
     ImmutableList<String> blobs =
         fsBlobStorageClient.listBlobs(getDataLocation("testbucket/a", targetBlobString));
 
-    assertThat(blobs).containsExactlyElementsIn(ImmutableList.of(blob1.getFileName().toString()));
+    assertThat(blobs).containsExactlyElementsIn(ImmutableList.of("b/blob-1"));
   }
 
   @Test
@@ -296,9 +296,7 @@ public class FSBlobStorageClientTest {
     ImmutableList<String> blobs =
         fsBlobStorageClient.listBlobs(getDataLocation("testbucket", targetPrefix));
 
-    assertThat(blobs)
-        .containsExactlyElementsIn(
-            ImmutableList.of(blob1.getFileName().toString(), blob2.getFileName().toString()));
+    assertThat(blobs).containsExactlyElementsIn(ImmutableList.of("blob-1", "blob-11/blob-2"));
   }
 
   @Test
@@ -322,10 +320,7 @@ public class FSBlobStorageClientTest {
 
     assertThat(blobs)
         .containsExactlyElementsIn(
-            ImmutableList.of(
-                blob1.getFileName().toString(),
-                blob2.getFileName().toString(),
-                blob3.getFileName().toString()));
+            ImmutableList.of("blob-1/blob-2", "blob-1/blob-3", "blob-11/blob-4"));
   }
 
   @Test

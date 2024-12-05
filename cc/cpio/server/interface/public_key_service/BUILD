@@ -23,6 +23,5 @@ cc_library(
             "configuration_keys.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
     ],
 )

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "pbs/consume_budget/src/gcp/consume_budget.h"
+#include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
 
 #include <gtest/gtest.h>
 

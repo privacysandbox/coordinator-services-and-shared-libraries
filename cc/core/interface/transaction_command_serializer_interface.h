@@ -18,7 +18,7 @@
 
 #include <memory>
 
-#include "core/common/uuid/src/uuid.h"
+#include "cc/core/common/uuid/src/uuid.h"
 
 #include "transaction_manager_interface.h"
 #include "type_def.h"

@@ -22,7 +22,6 @@ cc_library(
         ":aws_metric_client_provider_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",

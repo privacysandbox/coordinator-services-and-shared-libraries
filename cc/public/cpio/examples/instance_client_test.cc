@@ -17,13 +17,13 @@
 #include <memory>
 #include <string>
 
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/cpio.h"
-#include "public/cpio/interface/instance_client/instance_client_interface.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/instance_service/v1/instance_service.pb.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/cpio.h"
+#include "cc/public/cpio/interface/instance_client/instance_client_interface.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/instance_service/v1/instance_service.pb.h"
 
 using google::cmrt::sdk::instance_service::v1::
     GetCurrentInstanceResourceNameRequest;

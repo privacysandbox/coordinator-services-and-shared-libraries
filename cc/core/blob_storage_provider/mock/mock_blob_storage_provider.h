@@ -28,8 +28,8 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/strip.h"
-#include "core/blob_storage_provider/src/common/error_codes.h"
-#include "core/interface/blob_storage_provider_interface.h"
+#include "cc/core/blob_storage_provider/src/common/error_codes.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
 
 namespace google::scp::core::blob_storage_provider::mock {
 

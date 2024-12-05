@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["metric_client_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/message_router/src:message_router_lib",
@@ -41,7 +40,6 @@ cc_test(
     size = "small",
     srcs = ["metric_client_utils_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",

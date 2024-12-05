@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/utils/src/base64.h"
+#include "cc/core/utils/src/base64.h"
 
 #include <gtest/gtest.h>
 
 #include <string>
 
-#include "core/utils/src/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/utils/src/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;

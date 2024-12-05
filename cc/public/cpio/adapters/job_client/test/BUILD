@@ -31,7 +31,6 @@ cc_test(
     timeout = "long",
     srcs = ["job_client_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/job_client_provider/src:job_client_provider_select_lib",

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pbs/health_service/src/health_service.h"
+#include "cc/pbs/health_service/src/health_service.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -25,17 +25,17 @@
 #include <string>
 #include <vector>
 
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/http2_server/mock/mock_http2_server.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/http_server_interface.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/pbs/health_service/src/error_codes.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/http2_server/mock/mock_http2_server.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/http_server_interface.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "pbs/interface/configuration_keys.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;
@@ -471,8 +471,7 @@ TEST_F(HealthServiceTest,
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       filesystem_storage_usage_metric_point_data = core::GetMetricPointData(
-          google::scp::pbs::kMetricNameFileSystemStorageUsage, {},
-          data);
+          google::scp::pbs::kMetricNameFileSystemStorageUsage, {}, data);
   ASSERT_TRUE(filesystem_storage_usage_metric_point_data.has_value());
 
   auto filesystem_storage_usage_last_value_point_data =

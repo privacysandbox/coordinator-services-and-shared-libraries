@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = glob(["*.cc"]),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/credentials_provider/mock:core_credentials_provider_mock",

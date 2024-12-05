@@ -23,7 +23,6 @@ cc_test(
     srcs =
         ["nontee_aws_kms_client_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
@@ -42,7 +41,6 @@ cc_test(
     srcs =
         ["tee_aws_kms_client_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/kms_client_provider/mock/aws:aws_kms_client_provider_mock",
@@ -60,7 +58,6 @@ cc_test(
     srcs =
         ["aws_kms_aead_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/kms_client_provider/mock/aws:aws_kms_client_provider_mock",
@@ -76,7 +73,6 @@ cc_test(
     srcs =
         ["tee_aws_kms_client_provider_utils_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/kms_client_provider/src/aws:tee_aws_kms_client_provider_lib",
         "@com_google_googletest//:gtest_main",
     ],

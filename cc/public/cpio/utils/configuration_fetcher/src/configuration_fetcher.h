@@ -22,12 +22,12 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/instance_client/instance_client_interface.h"
-#include "public/cpio/interface/parameter_client/parameter_client_interface.h"
-#include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
-#include "public/cpio/utils/configuration_fetcher/interface/configuration_fetcher_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/instance_client/instance_client_interface.h"
+#include "cc/public/cpio/interface/parameter_client/parameter_client_interface.h"
+#include "cc/public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
+#include "cc/public/cpio/utils/configuration_fetcher/interface/configuration_fetcher_interface.h"
 
 #include "error_codes.h"
 

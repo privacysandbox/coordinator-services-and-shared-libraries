@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/core/test/interface/struct_matchers.h"
+#include "cc/public/core/test/interface/struct_matchers.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

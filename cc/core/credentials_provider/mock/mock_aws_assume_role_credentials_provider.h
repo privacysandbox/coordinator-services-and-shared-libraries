@@ -21,8 +21,8 @@
 
 #include <aws/sts/STSClient.h>
 
-#include "core/credentials_provider/src/aws_assume_role_credentials_provider.h"
-#include "core/interface/credentials_provider_interface.h"
+#include "cc/core/credentials_provider/src/aws_assume_role_credentials_provider.h"
+#include "cc/core/interface/credentials_provider_interface.h"
 
 namespace google::scp::core::credentials_provider::mock {
 

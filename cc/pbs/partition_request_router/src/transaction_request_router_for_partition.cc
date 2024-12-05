@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_request_router/src/transaction_request_router_for_partition.h"
+#include "cc/pbs/partition_request_router/src/transaction_request_router_for_partition.h"
 
-#include "pbs/partition_request_router/src/error_codes.h"
+#include "cc/pbs/partition_request_router/src/error_codes.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;

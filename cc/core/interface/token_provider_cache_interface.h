@@ -18,7 +18,7 @@
 
 #include <memory>
 
-#include "core/interface/service_interface.h"
+#include "cc/core/interface/service_interface.h"
 
 namespace google::scp::core {
 

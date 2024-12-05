@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//build_defs/cc:benchmark.bzl", "BENCHMARK_COPT")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -33,11 +34,11 @@ cc_library(
             "service_interface.h",
         ],
     ),
+    copts = BENCHMARK_COPT,
     deps = [
         ":async_context_lib",
         ":service_interface_lib",
         ":streaming_context_lib",
-        "//cc:cc_base_include_dir",
         "//cc/core/common/concurrent_map/src:concurrent_map_lib",
         "//cc/core/common/proto:core_common_proto_lib",
         "//cc/core/common/streaming_context/src:streaming_context_errors_lib",
@@ -51,7 +52,6 @@ cc_library(
         "service_interface.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
     ],
 )
 
@@ -63,7 +63,6 @@ cc_library(
         ],
     deps = [
         ":service_interface_lib",
-        "//cc:cc_base_include_dir",
         "//cc/core/common/uuid/src:uuid_lib",
     ],
 )
@@ -75,7 +74,6 @@ cc_library(
             "async_context.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/common/uuid/src:uuid_lib",
     ],
@@ -89,7 +87,6 @@ cc_library(
         ],
     deps = [
         ":async_context_lib",
-        "//cc:cc_base_include_dir",
         "//cc/core/common/concurrent_queue/src:concurrent_queue_lib",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/common/uuid/src:uuid_lib",
@@ -103,7 +100,6 @@ cc_library(
             "type_def.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/proto:core_common_proto_lib",
         "@com_google_absl//absl/base:core_headers",
     ],
@@ -117,7 +113,6 @@ cc_library(
             "errors.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/core/interface:execution_result",
     ],
 )

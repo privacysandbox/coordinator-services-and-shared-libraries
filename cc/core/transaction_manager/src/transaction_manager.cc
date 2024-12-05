@@ -28,14 +28,14 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/metrics_def.h"
-#include "core/interface/partition_types.h"
-#include "core/interface/transaction_command_serializer_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/metrics_def.h"
+#include "cc/core/interface/partition_types.h"
+#include "cc/core/interface/transaction_command_serializer_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 
 #include "error_codes.h"
 #include "transaction_engine.h"
@@ -110,6 +110,15 @@ void TransactionManager::ObserveActiveTransactionsCallback(
   observer->Observe(self_ptr->max_transactions_since_observed_.load(),
                     metric_labels);
   self_ptr->max_transactions_since_observed_.store(0);
+}
+
+TransactionManager::~TransactionManager() {
+  if (active_transactions_instrument_) {
+    active_transactions_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &TransactionManager::ObserveActiveTransactionsCallback),
+        this);
+  }
 }
 
 ExecutionResult TransactionManager::RegisterAggregateMetric(

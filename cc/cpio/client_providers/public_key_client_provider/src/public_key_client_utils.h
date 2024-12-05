@@ -18,10 +18,10 @@
 
 #include <vector>
 
-#include "core/interface/http_types.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 #include "error_codes.h"
 

@@ -19,9 +19,9 @@
 #include <memory>
 #include <utility>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "cpio/client_providers/interface/auth_token_provider_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
 
 #include "error_codes.h"
 

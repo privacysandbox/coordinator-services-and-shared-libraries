@@ -21,13 +21,13 @@
 #include <string>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/journal_service/interface/journal_service_stream_interface.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/journal_service/interface/journal_service_stream_interface.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
 
 namespace google::scp::core {
 

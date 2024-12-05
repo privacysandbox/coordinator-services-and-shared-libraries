@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "core/interface/async_context.h"
-#include "core/interface/partition_interface.h"
-#include "core/interface/transaction_manager_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/partition_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
 
 namespace google::scp::pbs {
 

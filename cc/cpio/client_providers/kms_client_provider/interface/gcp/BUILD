@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "@com_github_googleapis_google_cloud_cpp//:kms",
     ],
 )

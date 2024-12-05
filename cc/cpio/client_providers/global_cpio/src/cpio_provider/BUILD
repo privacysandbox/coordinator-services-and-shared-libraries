@@ -35,7 +35,6 @@ cc_library(
     name = "cpio_provider_lib",
     srcs = [":lib_cpio_provider_srcs"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/curl_client/src:http1_curl_client_lib",
         "//cc/core/http2_client/src:http2_client_lib",

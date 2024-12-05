@@ -20,11 +20,11 @@
 #include <memory>
 #include <string>
 
-#include "core/common/concurrent_map/src/concurrent_map.h"
-#include "core/interface/async_context.h"
-#include "core/interface/message_router_interface.h"
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/message_router_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

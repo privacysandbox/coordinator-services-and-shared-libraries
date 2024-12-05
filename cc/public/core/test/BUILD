@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["errors_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/core/interface:errors",
         "//cc/public/cpio/interface:cpio_errors",
         "@com_google_googletest//:gtest_main",
@@ -33,7 +32,6 @@ cc_test(
     size = "small",
     srcs = ["execution_result_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/common/proto:core_common_proto_lib",
         "//cc/core/logger/mock:logger_mock",
@@ -48,7 +46,6 @@ cc_test(
     size = "small",
     srcs = ["struct_matchers_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/core/test/interface:struct_matchers",
         "@com_google_googletest//:gtest_main",
     ],

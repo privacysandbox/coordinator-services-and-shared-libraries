@@ -21,9 +21,9 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/metric_client/type_def.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/metric_client/type_def.h"
 
 namespace google::scp::cpio {
 using MetricNamespace = std::string;

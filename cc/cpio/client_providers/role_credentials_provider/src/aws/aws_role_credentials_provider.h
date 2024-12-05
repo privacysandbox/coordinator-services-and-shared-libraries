@@ -21,9 +21,9 @@
 
 #include <aws/sts/STSClient.h>
 
-#include "core/interface/async_executor_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
 
 #include "error_codes.h"
 

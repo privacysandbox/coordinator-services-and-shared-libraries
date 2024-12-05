@@ -33,7 +33,6 @@ cc_library(
             "lease_refresher_factory.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/interface:interface_lib",
     ],

@@ -22,7 +22,6 @@ cc_library(
         ":aws_job_client_provider_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/job_client_provider/src:job_client_provider_lib",
         "//cc/cpio/client_providers/nosql_database_client_provider/src/aws:aws_nosql_database_provider_lib",
         "//cc/public/core/interface:execution_result",

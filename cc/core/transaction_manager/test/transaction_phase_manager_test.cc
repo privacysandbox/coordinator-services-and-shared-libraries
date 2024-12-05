@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/transaction_manager/src/transaction_phase_manager.h"
+#include "cc/core/transaction_manager/src/transaction_phase_manager.h"
 
 #include <gtest/gtest.h>
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::RetryExecutionResult;

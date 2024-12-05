@@ -25,7 +25,6 @@ cc_test(
         "-latomic",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
         "//cc/core/config_provider/mock:core_config_provider_mock",

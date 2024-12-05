@@ -21,7 +21,6 @@ cc_library(
     srcs = [],
     hdrs = ["telemetry_configuration.h"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "@com_google_absl//absl/strings",
     ],
@@ -36,7 +35,6 @@ cc_library(
         "metric_utils.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/telemetry/src/common:telemetry_common",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",

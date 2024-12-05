@@ -38,6 +38,7 @@ import com.google.scp.operator.shared.dao.metadatadb.testing.JobGenerator;
 import com.google.scp.operator.shared.testing.APIGatewayProxyRequestEventFakeFactory;
 import com.google.scp.shared.mapper.TimeObjectMapper;
 import com.google.scp.shared.testutils.aws.LambdaResponsePayload;
+import java.util.Arrays;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -125,6 +126,49 @@ public final class CreateJobIntegrationTest {
     assertThat(jobMetadata.getJobKey().getJobRequestId()).isEqualTo(jobKeyString);
     assertThat(jobMetadata.getRequestInfo().getInputDataBlobPrefix())
         .isEqualTo(inputDataBlobPrefix);
+    assertThat(jobMetadata.getRequestInfo().getInputDataBucketName())
+        .isEqualTo(inputDataBlobBucket);
+    assertThat(jobMetadata.getRequestInfo().getOutputDataBlobPrefix())
+        .isEqualTo(outputDataBlobPrefix);
+    assertThat(jobMetadata.getRequestInfo().getOutputDataBucketName())
+        .isEqualTo(outputDataBlobBucket);
+    assertThat(jobMetadata.getRequestInfo().getPostbackUrl()).isEqualTo(postbackUrl);
+    assertThat(jobMetadata.getRequestInfo().getJobParameters()).hasSize(1);
+    assertThat(jobMetadata.getRequestInfo().getJobParameters().get(JOB_PARAM_REPORTING_SITE))
+        .isEqualTo(reportingSite);
+    assertThat(payload).isNotNull();
+    assertThat(payload.headers().get("content-type")).isEqualTo("application/json");
+    assertThat(payload.statusCode()).isEqualTo(202);
+    assertThat(payload.body()).isNotNull();
+  }
+
+  @Test(timeout = 120_000)
+  public void createJob_withInputDataBlobPrefixList_success()
+      throws JsonProcessingException, JobMetadataDbException {
+    var jobKeyString = "1";
+    var inputDataBlobPrefixList = new String[] {"IDBP1", "IDBP2", "IDBP3"};
+    var inputDataBlobBucket = "IDBB";
+    var outputDataBlobPrefix = "ODBP";
+    var outputDataBlobBucket = "ODBB";
+    var postbackUrl = "foo.com";
+    var reportingSite = "https://fakeurl.com";
+    var request =
+        CreateJobRequest.newBuilder()
+            .setJobRequestId(jobKeyString)
+            .addAllInputDataBlobPrefixes(Arrays.asList(inputDataBlobPrefixList))
+            .setInputDataBucketName(inputDataBlobBucket)
+            .setOutputDataBlobPrefix(outputDataBlobPrefix)
+            .setOutputDataBucketName(outputDataBlobBucket)
+            .setPostbackUrl(postbackUrl)
+            .putAllJobParameters(ImmutableMap.of(JOB_PARAM_REPORTING_SITE, reportingSite))
+            .build();
+
+    LambdaResponsePayload payload = invokeAndValidateLambdaResponse(request);
+
+    var jobMetadata = metadataDb.getJobMetadata(jobKeyString).get();
+    assertThat(jobMetadata.getJobKey().getJobRequestId()).isEqualTo(jobKeyString);
+    assertThat(jobMetadata.getRequestInfo().getInputDataBlobPrefixesList())
+        .containsExactly(inputDataBlobPrefixList);
     assertThat(jobMetadata.getRequestInfo().getInputDataBucketName())
         .isEqualTo(inputDataBlobBucket);
     assertThat(jobMetadata.getRequestInfo().getOutputDataBlobPrefix())

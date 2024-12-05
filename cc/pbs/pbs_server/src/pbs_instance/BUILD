@@ -36,7 +36,6 @@ cloud_platform_copts = select({
 })
 
 deps = [
-    "//cc:cc_base_include_dir",
     "//cc/core/async_executor/src:core_async_executor_lib",
     "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
     "//cc/core/blob_storage_provider/src/aws:core_blob_storage_provider_aws_lib",

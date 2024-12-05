@@ -18,18 +18,18 @@
 
 #include <memory>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/message_router_interface.h"
-#include "core/message_router/src/message_router.h"
-#include "cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "cpio/client_providers/interface/cloud_initializer_interface.h"
-#include "cpio/client_providers/interface/cpio_provider_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/message_router_interface.h"
+#include "cc/core/message_router/src/message_router.h"
+#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
+#include "cc/cpio/client_providers/interface/cloud_initializer_interface.h"
+#include "cc/cpio/client_providers/interface/cpio_provider_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

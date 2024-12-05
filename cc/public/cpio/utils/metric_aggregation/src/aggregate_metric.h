@@ -22,14 +22,14 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
 
 #include "error_codes.h"
 

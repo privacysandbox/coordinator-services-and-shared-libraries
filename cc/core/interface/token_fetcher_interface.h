@@ -15,8 +15,8 @@
  */
 #pragma once
 
-#include "core/interface/async_context.h"
-#include "core/interface/initializable_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/initializable_interface.h"
 
 namespace google::scp::core {
 

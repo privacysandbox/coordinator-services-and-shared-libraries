@@ -19,10 +19,10 @@
 #include <memory>
 #include <string>
 
-#include "core/common/concurrent_map/src/concurrent_map.h"
-#include "pbs/interface/pbs_partition_manager_interface.h"
-#include "pbs/partition/src/pbs_partition.h"
-#include "pbs/partition_manager/src/pbs_partition_manager_map_entry.h"
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/pbs/interface/pbs_partition_manager_interface.h"
+#include "cc/pbs/partition/src/pbs_partition.h"
+#include "cc/pbs/partition_manager/src/pbs_partition_manager_map_entry.h"
 
 namespace google::scp::pbs {
 

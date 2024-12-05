@@ -24,7 +24,6 @@ cc_test(
         "grpc_id_token_authenticator_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/telemetry/mock:telemetry_fake",
         "//cc/core/telemetry/src/authentication:telemetry_authentication",

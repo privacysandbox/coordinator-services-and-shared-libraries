@@ -30,7 +30,6 @@ cc_library(
         "in_memory_metric_router.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "@io_opentelemetry_cpp//api",
@@ -50,7 +49,6 @@ cc_library(
         "instrument_mock.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "@io_opentelemetry_cpp//api",

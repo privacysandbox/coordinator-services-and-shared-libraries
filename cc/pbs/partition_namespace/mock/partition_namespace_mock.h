@@ -18,7 +18,7 @@
 
 #include <vector>
 
-#include "core/interface/partition_namespace_interface.h"
+#include "cc/core/interface/partition_namespace_interface.h"
 
 namespace google::scp::pbs::partition_namespace::mock {
 class MockPartitionNamespace : public core::PartitionNamespaceInterface {

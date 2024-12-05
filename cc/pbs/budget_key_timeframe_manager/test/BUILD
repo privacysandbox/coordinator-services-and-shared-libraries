@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["budget_key_timeframe_manager_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/interface:interface_lib",
@@ -47,7 +46,6 @@ cc_test(
     size = "small",
     srcs = ["budget_key_timeframe_serialization_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/config_provider/mock:core_config_provider_mock",
@@ -70,7 +68,6 @@ cc_test(
     size = "small",
     srcs = ["budget_key_timeframe_utils_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/config_provider/mock:core_config_provider_mock",

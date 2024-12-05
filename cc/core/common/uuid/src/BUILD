@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/time_provider/src:time_provider_lib",
         "//cc/core/interface:errors_lib",
         "//cc/public/core/interface:execution_result",

@@ -23,9 +23,9 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/concurrent_map/src/concurrent_map.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/nosql_database_provider/src/common/error_codes.h"
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/nosql_database_provider/src/common/error_codes.h"
 
 namespace google::scp::core::nosql_database_provider::mock {
 class MockNoSQLDatabaseProvider : public NoSQLDatabaseProviderInterface {

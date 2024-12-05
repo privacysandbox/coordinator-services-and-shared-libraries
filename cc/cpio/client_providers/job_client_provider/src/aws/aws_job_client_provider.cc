@@ -17,8 +17,8 @@
 
 #include <memory>
 
-#include "cpio/client_providers/job_client_provider/src/error_codes.h"
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/job_client_provider/src/error_codes.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;

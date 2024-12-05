@@ -26,11 +26,11 @@
 #include <nghttp2/asio_http2.h>
 
 #include "absl/strings/str_cat.h"
+#include "cc/core/interface/http_client_interface.h"
 #include "cc/core/utils/src/http.h"
-#include "core/interface/http_client_interface.h"
-#include "cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
-#include "cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider_utils.h"
+#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider_utils.h"
 
 #include "error_codes.h"
 

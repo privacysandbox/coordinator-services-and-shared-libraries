@@ -20,10 +20,10 @@
 #include <functional>
 #include <memory>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
 
 #include "errors.h"
 #include "type_def.h"
@@ -131,10 +131,22 @@ struct AsyncContext {
         // typeid(TRequest).name() is an approximation of the context's template
         // types mangled in compiler defined format, mainly for debugging
         // purposes.
-        SCP_ERROR_CONTEXT("AsyncContext", (*this), result,
-                          "AsyncContext Finished. Mangled RequestType: '%s', "
-                          "Mangled ResponseType: '%s'",
-                          typeid(TRequest).name(), typeid(TResponse).name());
+        if (!result.Retryable()) {
+          SCP_ERROR_CONTEXT(
+              "AsyncContext", (*this), result,
+              absl::StrFormat(
+                  "AsyncContext Finished. Mangled RequestType: '%s', "
+                  "Mangled ResponseType: '%s'",
+                  typeid(TRequest).name(), typeid(TResponse).name()));
+        } else {
+          SCP_DEBUG_CONTEXT(
+              "AsyncContext", (*this),
+              absl::StrFormat(
+                  "AsyncContext Finished. Mangled RequestType: '%s', "
+                  "Mangled ResponseType: '%s', Message: '%s'",
+                  typeid(TRequest).name(), typeid(TResponse).name(),
+                  errors::GetErrorMessage(result.status_code)));
+        }
       }
       callback(*this);
     }

@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/nosql_database_provider/src/common:core_nosql_database_provider_common_lib",

@@ -22,13 +22,13 @@
 #include <utility>
 #include <vector>
 
-#include "core/lease_manager/mock/mock_leasable_lock_gmock.h"
-#include "core/lease_manager/mock/mock_lease_event_sink.h"
-#include "core/lease_manager/src/v2/error_codes.h"
-#include "core/lease_manager/src/v2/lease_refresher_factory.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/lease_manager/mock/mock_leasable_lock_gmock.h"
+#include "cc/core/lease_manager/mock/mock_lease_event_sink.h"
+#include "cc/core/lease_manager/src/v2/error_codes.h"
+#include "cc/core/lease_manager/src/v2/lease_refresher_factory.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::lease_manager::mock::MockLeasableLock;
 using google::scp::core::lease_manager::mock::MockLeaseEventSink;

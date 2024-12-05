@@ -22,11 +22,11 @@
 #include <unordered_set>
 
 #include "absl/base/nullability.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/journal_service/src/journal_service.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_simple_metric.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/journal_service/src/journal_service.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_simple_metric.h"
 
 namespace google::scp::core::journal_service::mock {
 class MockJournalServiceWithOverrides : public JournalService {

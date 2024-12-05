@@ -69,3 +69,21 @@ pkg_files(
     prefix = "applications/distributedpbs_application",
     strip_prefix = ".",
 )
+
+pkg_files(
+    name = "cloudwatch_metric_stream_iam_pkg",
+    srcs = [
+        "//coordinator/terraform/aws/applications/cloudwatch_metric_stream_iam",
+    ],
+    prefix = "applications/cloudwatch_metric_stream_iam",
+    strip_prefix = ".",
+)
+
+pkg_files(
+    name = "cloudwatch_metric_stream_region_pkg",
+    srcs = [
+        "//coordinator/terraform/aws/applications/cloudwatch_metric_stream_region",
+    ],
+    prefix = "applications/cloudwatch_metric_stream_region",
+    strip_prefix = ".",
+)

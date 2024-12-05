@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_manager/src/pbs_partition_manager.h"
+#include "cc/pbs/partition_manager/src/pbs_partition_manager.h"
 
 #include <utility>
 #include <vector>
 
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/partition/src/error_codes.h"
-#include "pbs/partition/src/pbs_partition.h"
-#include "pbs/partition/src/remote_pbs_partition.h"
-#include "pbs/partition_manager/src/error_codes.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/partition/src/error_codes.h"
+#include "cc/pbs/partition/src/pbs_partition.h"
+#include "cc/pbs/partition/src/remote_pbs_partition.h"
+#include "cc/pbs/partition_manager/src/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;

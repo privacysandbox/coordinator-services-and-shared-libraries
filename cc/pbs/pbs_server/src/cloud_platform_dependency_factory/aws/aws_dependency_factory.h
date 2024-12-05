@@ -19,8 +19,9 @@
 #include <memory>
 #include <string>
 
+#include "absl/base/nullability.h"
+#include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 #include "opentelemetry/sdk/resource/resource.h"
-#include "pbs/interface/cloud_platform_dependency_factory_interface.h"
 
 namespace google::scp::pbs {
 class AwsDependencyFactory : public CloudPlatformDependencyFactoryInterface {
@@ -96,13 +97,19 @@ class AwsDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       std::shared_ptr<core::TokenProviderCacheInterface>
           auth_token_provider_cache) noexcept override;
 
+  // A null InstanceClientProviderInterface should not be passed to
+  // AwsDependencyFactory even though CloudPlatformDependencyFactoryInterface
+  // specifies it as nullable, as it is required to retrieve metric resource
+  // attributes.
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider) noexcept override;
 
   // Allow passing in a Resource, for integration tests.
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider,
       opentelemetry::sdk::resource::Resource resource) noexcept;
 

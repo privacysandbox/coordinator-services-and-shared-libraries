@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["lib_cpio_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/global_cpio/test:test_global_cpio_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface/metric_client",

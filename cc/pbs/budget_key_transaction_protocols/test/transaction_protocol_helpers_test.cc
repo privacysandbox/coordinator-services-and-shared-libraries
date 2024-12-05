@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pbs/budget_key_transaction_protocols/src/transaction_protocol_helpers.h"
+#include "cc/pbs/budget_key_transaction_protocols/src/transaction_protocol_helpers.h"
 
 #include <gtest/gtest.h>
 
-#include "pbs/interface/budget_key_interface.h"
+#include "cc/pbs/interface/budget_key_interface.h"
 
 using std::make_shared;
 using std::shared_ptr;

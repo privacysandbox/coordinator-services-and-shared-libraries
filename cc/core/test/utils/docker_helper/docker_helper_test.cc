@@ -63,9 +63,9 @@ TEST(DockerHelper, BuildStartContainerCmd) {
 
 TEST(DockerHelper, BuildCreateImageCmd) {
   EXPECT_EQ(BuildCreateImageCmd("image_target"),
-            "bazel build --action_env=BAZEL_CXXOPTS='-std=c++17' image_target");
+            "bazel build --action_env=BAZEL_CXXOPTS='-std=c++20' image_target");
   EXPECT_EQ(BuildCreateImageCmd("image_target", "--p1=p1 --p2=p2 --p3=p3"),
-            "bazel build --action_env=BAZEL_CXXOPTS='-std=c++17' image_target "
+            "bazel build --action_env=BAZEL_CXXOPTS='-std=c++20' image_target "
             "--p1=p1 --p2=p2 --p3=p3");
 }
 

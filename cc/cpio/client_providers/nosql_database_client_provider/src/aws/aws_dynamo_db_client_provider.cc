@@ -28,9 +28,9 @@
 #include <aws/dynamodb/model/UpdateItemRequest.h>
 
 #include "absl/strings/str_cat.h"
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
-#include "cpio/common/src/aws/aws_utils.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
+#include "cc/cpio/common/src/aws/aws_utils.h"
 
 #include "aws_dynamo_db_utils.h"
 

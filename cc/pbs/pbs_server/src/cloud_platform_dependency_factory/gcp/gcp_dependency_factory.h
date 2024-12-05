@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "absl/base/nullability.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/type_def.h"
 #include "cc/pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
@@ -100,13 +101,15 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
           auth_token_provider_cache) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider) noexcept override;
 
   // This overload exists so that we can pass in a Resource from either this
   // dependency factory, or an integration test.
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider,
       opentelemetry::sdk::resource::Resource resource) noexcept;
 

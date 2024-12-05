@@ -21,15 +21,15 @@
 #include <unordered_map>
 #include <utility>
 
-#include "core/common/cancellable_thread_task/src/cancellable_thread_task.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/lease_manager_interface.h"
-#include "core/interface/partition_manager_interface.h"
-#include "core/interface/service_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/core/common/cancellable_thread_task/src/cancellable_thread_task.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/lease_manager_interface.h"
+#include "cc/core/interface/partition_manager_interface.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 #include "partition_metrics_wrapper.h"
 

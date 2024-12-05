@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pbs/budget_key_transaction_protocols/src/batch_consume_budget_transaction_protocol.h"
+#include "cc/pbs/budget_key_transaction_protocols/src/batch_consume_budget_transaction_protocol.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -21,14 +21,14 @@
 #include <utility>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/type_def.h"
-#include "core/test/utils/conditional_wait.h"
-#include "pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager.h"
-#include "pbs/budget_key_transaction_protocols/mock/mock_consume_budget_transaction_protocol_with_overrides.h"
-#include "pbs/budget_key_transaction_protocols/src/error_codes.h"
-#include "pbs/interface/budget_key_timeframe_manager_interface.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager.h"
+#include "cc/pbs/budget_key_transaction_protocols/mock/mock_consume_budget_transaction_protocol_with_overrides.h"
+#include "cc/pbs/budget_key_transaction_protocols/src/error_codes.h"
+#include "cc/pbs/interface/budget_key_timeframe_manager_interface.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;

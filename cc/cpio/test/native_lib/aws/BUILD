@@ -22,7 +22,6 @@ cc_test(
     timeout = "long",
     srcs = ["aws_cpio_lib_integration_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/aws_helper:aws_helper_lib",
         "//cc/core/test/utils/docker_helper:docker_helper_lib",

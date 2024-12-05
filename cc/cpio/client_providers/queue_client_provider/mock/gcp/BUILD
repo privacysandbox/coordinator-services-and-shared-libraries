@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "@com_github_googleapis_google_cloud_cpp//:pubsub",
         "@com_google_googletest//:gtest",

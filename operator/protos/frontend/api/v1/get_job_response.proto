@@ -49,4 +49,6 @@ message GetJobResponse {
   map<string, string> job_parameters = 11;
   /** The time the worker starts to process the request. */
   google.protobuf.Timestamp request_processing_started_at = 12;
+  /** List of URLs to the input prefix data files. */
+  repeated string input_data_blob_prefixes = 13;
 }

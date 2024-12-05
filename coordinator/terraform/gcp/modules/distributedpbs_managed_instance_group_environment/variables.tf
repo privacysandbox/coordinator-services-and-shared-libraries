@@ -44,6 +44,12 @@ variable "pbs_artifact_registry_repository_name" {
   nullable    = false
 }
 
+variable "pbs_image_override" {
+  description = "The absolute location of the PBS container (including the tag) which will override the derived location"
+  type        = string
+  default     = ""
+}
+
 ################################################################################
 # Cloud Storage Variables.
 ################################################################################
@@ -146,6 +152,34 @@ variable "pbs_autoscaling_policy" {
     cpu_utilization_target = number
   })
   default = null
+}
+
+################################################################################
+# PBS Cloud Run Variables.
+################################################################################
+
+variable "pbs_cloud_run_min_instances" {
+  description = "Minimum instances for Cloud Run PBS"
+  type        = number
+  nullable    = false
+}
+
+variable "pbs_cloud_run_max_instances" {
+  description = "Max instances for Cloud Run PBS"
+  type        = number
+  nullable    = false
+}
+
+variable "pbs_cloud_run_max_concurrency" {
+  description = "The maximum number of concurrent requests per Cloud Run PBS instance"
+  type        = number
+  nullable    = false
+}
+
+variable "deploy_pbs_cloud_run" {
+  description = "If true, a Cloud Run PBS backend will be instantiated but not linked to the PBS load balancer"
+  type        = bool
+  nullable    = false
 }
 
 ################################################################################

@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/initializable_interface.h"
-#include "core/interface/partition_interface.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/initializable_interface.h"
+#include "cc/core/interface/partition_interface.h"
 
 namespace google::scp::core {
 

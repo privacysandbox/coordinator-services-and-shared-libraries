@@ -27,8 +27,8 @@
 
 #include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/logger/src/log_utils.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/logger/src/log_utils.h"
 
 #include "error_codes.h"
 

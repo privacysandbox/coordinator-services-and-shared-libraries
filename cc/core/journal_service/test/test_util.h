@@ -17,12 +17,12 @@
 #include <string>
 #include <vector>
 
+#include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/journal_service/interface/journal_service_stream_interface.h"
+#include "cc/core/journal_service/src/journal_input_stream.h"
 #include "cc/core/journal_service/src/proto/journal_service.pb.h"
-#include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
-#include "core/interface/type_def.h"
-#include "core/journal_service/interface/journal_service_stream_interface.h"
-#include "core/journal_service/src/journal_input_stream.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::journal_service::test_util {
 

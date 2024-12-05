@@ -20,7 +20,6 @@ cc_library(
     name = "aws_blob_storage_client_provider_lib",
     srcs = [":aws_blob_storage_client_provider_srcs"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/utils/src:core_utils",
         "//cc/cpio/client_providers/blob_storage_client_provider/src/common:core_blob_storage_provider_common_lib",

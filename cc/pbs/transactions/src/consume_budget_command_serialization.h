@@ -20,12 +20,12 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
-#include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/transactions/src/consume_budget_command.h"
-#include "pbs/transactions/src/proto/transaction_command.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/pbs/interface/budget_key_provider_interface.h"
+#include "cc/pbs/transactions/src/consume_budget_command.h"
+#include "cc/pbs/transactions/src/proto/transaction_command.pb.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

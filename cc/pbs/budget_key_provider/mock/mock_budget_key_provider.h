@@ -20,10 +20,10 @@
 #include <memory>
 #include <string>
 
-#include "core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
-#include "core/interface/async_executor_interface.h"
-#include "pbs/budget_key_provider/src/budget_key_provider.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/pbs/budget_key_provider/src/budget_key_provider.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs::budget_key_provider::mock {
 class MockBudgetKeyProvider : public BudgetKeyProvider {

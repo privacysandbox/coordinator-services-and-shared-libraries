@@ -16,7 +16,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 5.21"
+      version = ">= 5.37.0"
     }
   }
 }
@@ -29,6 +29,7 @@ module "version" {
 }
 
 resource "google_service_account" "key_generation_service_account" {
+  project = var.project_id
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-keygenuser"
   display_name = "Key Generation Service Account"
@@ -36,6 +37,7 @@ resource "google_service_account" "key_generation_service_account" {
 
 # Cloud KMS encryption ring and key encryption key (KEK)
 resource "google_kms_key_ring" "key_encryption_ring" {
+  project  = var.project_id
   name     = "${var.environment}_key_encryption_ring"
   location = "us"
 }
@@ -43,6 +45,9 @@ resource "google_kms_key_ring" "key_encryption_ring" {
 resource "google_kms_crypto_key" "key_encryption_key" {
   name     = "${var.environment}_key_encryption_key"
   key_ring = google_kms_key_ring.key_encryption_ring.id
+
+  # Setting KMS key rotation to yearly
+  rotation_period = "31536000s"
 
   lifecycle {
     prevent_destroy = true
@@ -58,6 +63,7 @@ resource "google_kms_key_ring_iam_member" "key_encryption_ring_iam" {
 
 # KeyDB read/write permissions
 resource "google_spanner_database_iam_member" "key_generation_keydb_iam" {
+  project  = var.project_id
   instance = var.spanner_instance_name
   database = var.spanner_database_name
   role     = "roles/spanner.databaseUser"
@@ -130,6 +136,7 @@ resource "google_compute_region_autoscaler" "keygen_autoscaler" {
 }
 
 resource "google_compute_region_instance_group_manager" "keygen_instance_group" {
+  project            = var.project_id
   name               = "${var.environment}-keygen-vm-mig"
   description        = "The managed instance group for Key generation instance."
   base_instance_name = "${var.environment}-keygen"

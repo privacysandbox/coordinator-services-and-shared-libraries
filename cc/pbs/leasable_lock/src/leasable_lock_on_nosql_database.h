@@ -21,9 +21,9 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/lease_manager_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "pbs/interface/configuration_keys.h"
+#include "cc/core/interface/lease_manager_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/pbs/interface/configuration_keys.h"
 
 namespace google::scp::pbs {
 

@@ -22,22 +22,21 @@
 #include <vector>
 
 #include "absl/strings/str_format.h"
+#include "cc/core/blob_storage_provider/src/common/error_codes.h"
+#include "cc/core/blob_storage_provider/src/gcp/gcp_cloud_storage_utils.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
 #include "cc/core/interface/configuration_keys.h"
-#include "core/blob_storage_provider/src/common/error_codes.h"
-#include "core/blob_storage_provider/src/gcp/gcp_cloud_storage_utils.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/type_def.h"
-#include "core/utils/src/base64.h"
-#include "core/utils/src/hashing.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/core/utils/src/hashing.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/cloud/options.h"
 #include "google/cloud/status_or.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/object_read_stream.h"
-#include "public/core/interface/execution_result.h"
 
 namespace google::scp::core::blob_storage_provider {
 namespace {

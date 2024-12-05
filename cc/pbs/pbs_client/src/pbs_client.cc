@@ -22,14 +22,14 @@
 #include <google/protobuf/util/time_util.h>
 #include <nlohmann/json.hpp>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/authorization_service_interface.h"
-#include "core/interface/type_def.h"
-#include "pbs/front_end_service/src/front_end_utils.h"
-#include "pbs/interface/type_def.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/authorization_service_interface.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/pbs/front_end_service/src/front_end_utils.h"
+#include "cc/pbs/interface/type_def.h"
 
 #include "error_codes.h"
 

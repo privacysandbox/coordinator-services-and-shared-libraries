@@ -359,7 +359,7 @@ alias(
 
 alias(
     name = "slf4j_log4j",
-    actual = "@maven//:org_slf4j_slf4j_log4j12",
+    actual = "@maven//:org_slf4j_slf4j_reload4j",
     # log4j is only used in tests.
     visibility = ["//javatests:__subpackages__"],
 )
@@ -736,4 +736,19 @@ alias(
 alias(
     name = "opentelemetry_sdk_extension_autoconfigure_spi",
     actual = "@maven//:io_opentelemetry_opentelemetry_sdk_extension_autoconfigure_spi",
+)
+
+alias(
+    name = "opentelemetry_semconv",
+    actual = "@maven//:io_opentelemetry_semconv_opentelemetry_semconv",
+)
+
+alias(
+    name = "opentelemetry_sdk_testing",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_testing",
+)
+
+alias(
+    name = "assertj_core",
+    actual = "@maven//:org_assertj_assertj_core",
 )

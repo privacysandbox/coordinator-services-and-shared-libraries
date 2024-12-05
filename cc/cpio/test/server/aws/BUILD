@@ -45,7 +45,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/aws_helper:aws_helper_lib",
@@ -74,7 +73,6 @@ cc_test(
     tags = ["manual"],
     deps = [
         ":test_aws_sdk_server_starter_lib",
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/interface:logger_interface",
         "//cc/core/logger/src:logger_lib",

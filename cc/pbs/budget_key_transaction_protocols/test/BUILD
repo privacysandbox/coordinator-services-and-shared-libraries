@@ -25,7 +25,6 @@ cc_test(
         "transaction_protocol_helpers_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/pbs/budget_key_timeframe_manager/mock:pbs_budget_key_timeframe_manager_mock",
