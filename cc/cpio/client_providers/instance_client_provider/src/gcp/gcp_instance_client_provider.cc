@@ -20,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -28,9 +29,9 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "cpio/common/src/cpio_utils.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/common/src/cpio_utils.h"
 
 #include "error_codes.h"
 #include "gcp_instance_client_utils.h"
@@ -95,25 +96,39 @@ using std::placeholders::_1;
 
 namespace {
 constexpr char kGcpInstanceClientProvider[] = "GcpInstanceClientProvider";
+constexpr char kCloudRun[] = "cloud_run";
 
+// Shared Metadata URIs
 constexpr char kURIForInstancePrivateIpv4Address[] =
     "http://metadata.google.internal/computeMetadata/v1/instance/"
     "network-interfaces/0/ip";
 constexpr char kURIForInstanceId[] =
     "http://metadata.google.internal/computeMetadata/v1/instance/id";
-constexpr char kURIForInstanceZone[] =
-    "http://metadata.google.internal/computeMetadata/v1/instance/zone";
 constexpr char kURIForProjectId[] =
     "http://metadata.google.internal/computeMetadata/v1/project/project-id";
 constexpr char kMetadataFlavorHeaderKey[] = "Metadata-Flavor";
 constexpr char kMetadataFlavorHeaderValue[] = "Google";
 
+// Google Compute Engine Metadata URIs
+constexpr char kURIForInstanceZone[] =
+    "http://metadata.google.internal/computeMetadata/v1/instance/zone";
 constexpr char kGcpInstanceRNFormatString[] =
     "//compute.googleapis.com/projects/%s/zones/%s/instances/%s";
-
-constexpr char kInstanceResourceNamePrefix[] = "//compute.googleapis.com/";
+constexpr absl::string_view kInstanceResourceNamePrefix =
+    "//compute.googleapis.com/";
 constexpr char kGcpInstanceGetUrlPrefix[] =
     "https://compute.googleapis.com/compute/v1/";
+
+// Cloud Run Metadata URIs
+constexpr char kURIForCloudRunServiceRegion[] =
+    "http://metadata.google.internal/computeMetadata/v1/instance/region";
+constexpr char kGcpCloudRunServiceRNFormatString[] =
+    "//run.googleapis.com/projects/%s/locations/%s/services/%s";
+constexpr absl::string_view kCloudRunServiceResourceNamePrefix =
+    "//run.googleapis.com/";
+constexpr char kGcpCloudRunServiceGetUrlPrefix[] =
+    "https://run.googleapis.com/v2/";
+
 constexpr char kAuthorizationHeaderKey[] = "Authorization";
 constexpr char kBearerTokenPrefix[] = "Bearer ";
 constexpr char kInstanceDetailsJsonIdKey[] = "id";
@@ -161,6 +176,26 @@ const auto& GetRequiredFieldsForResourceTags() {
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
+
+GcpInstanceClientProvider::GcpInstanceClientProvider(
+    const shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
+    const shared_ptr<HttpClientInterface>& http1_client,
+    const shared_ptr<HttpClientInterface>& http2_client,
+    const std::string& container_type)
+    : http1_client_(http1_client),
+      http2_client_(http2_client),
+      auth_token_provider_(auth_token_provider),
+      http_uri_instance_private_ipv4_(
+          std::make_shared<std::string>(kURIForInstancePrivateIpv4Address)),
+      http_uri_instance_id_(make_shared<std::string>(kURIForInstanceId)),
+      http_uri_project_id_(make_shared<std::string>(kURIForProjectId)) {
+  container_type_ = container_type == kCloudRun ? ContainerType::kCloudRun
+                                                : ContainerType::kComputeEngine;
+  http_uri_instance_zone_ =
+      container_type_ == ContainerType::kCloudRun
+          ? make_shared<std::string>(kURIForCloudRunServiceRegion)
+          : make_shared<std::string>(kURIForInstanceZone);
+}
 
 GcpInstanceClientProvider::GcpInstanceClientProvider(
     const shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
@@ -268,8 +303,9 @@ GcpInstanceClientProvider::MakeHttpRequestsForInstanceResourceName(
       SCP_ERROR_CONTEXT(
           kGcpInstanceClientProvider, get_resource_name_context,
           get_resource_name_context.result,
-          "Failed to perform http request to fetch resource id with uri %s",
-          uri->c_str());
+          absl::StrFormat(
+              "Failed to perform http request to fetch resource id with uri %s",
+              *uri));
       get_resource_name_context.Finish();
     }
     return execution_result;
@@ -301,8 +337,9 @@ void GcpInstanceClientProvider::OnGetInstanceResourceName(
       SCP_ERROR_CONTEXT(
           kGcpInstanceClientProvider, get_resource_name_context,
           get_resource_name_context.result,
-          "Failed to perform http request to fetch resource id with uri %s",
-          http_client_context.request->path->c_str());
+          absl::StrFormat(
+              "Failed to perform http request to fetch resource id with uri %s",
+              http_client_context.request->path->c_str()));
       get_resource_name_context.Finish();
     }
     return;
@@ -333,9 +370,10 @@ void GcpInstanceClientProvider::OnGetInstanceResourceName(
     default: {
       get_resource_name_context.result = FailureExecutionResult(
           SC_GCP_INSTANCE_CLIENT_INVALID_INSTANCE_RESOURCE_TYPE);
-      SCP_ERROR_CONTEXT(kGcpInstanceClientProvider, get_resource_name_context,
-                        get_resource_name_context.result,
-                        "Invalid instance resource type %d.", type);
+      SCP_ERROR_CONTEXT(
+          kGcpInstanceClientProvider, get_resource_name_context,
+          get_resource_name_context.result,
+          absl::StrFormat("Invalid instance resource type %d.", type));
       get_resource_name_context.Finish();
     }
   }
@@ -345,12 +383,18 @@ void GcpInstanceClientProvider::OnGetInstanceResourceName(
   if (prev_unfinished == 1) {
     get_resource_name_context.response =
         make_shared<GetCurrentInstanceResourceNameResponse>();
-    // The instance resource name is
-    // `projects/PROJECT_ID/zones/ZONE_ID/instances/INSTANCE_ID`.
-    auto resource_name = StrFormat(
-        kGcpInstanceRNFormatString, instance_resource_name_tracker->project_id,
-        instance_resource_name_tracker->instance_zone,
-        instance_resource_name_tracker->instance_id);
+
+    auto resource_name =
+        container_type_ == ContainerType::kCloudRun
+            ? absl::StrFormat(kGcpCloudRunServiceRNFormatString,
+                              instance_resource_name_tracker->project_id,
+                              instance_resource_name_tracker->instance_zone,
+                              instance_resource_name_tracker->instance_id)
+            : absl::StrFormat(kGcpInstanceRNFormatString,
+                              instance_resource_name_tracker->project_id,
+                              instance_resource_name_tracker->instance_zone,
+                              instance_resource_name_tracker->instance_id);
+
     get_resource_name_context.response->set_instance_resource_name(
         resource_name);
     get_resource_name_context.result = SuccessExecutionResult();
@@ -372,10 +416,10 @@ ExecutionResult GcpInstanceClientProvider::GetTagsByResourceName(
       auth_token_provider_->GetSessionToken(get_token_context);
   if (!execution_result.Successful()) {
     get_tags_context.result = execution_result;
-    SCP_ERROR_CONTEXT(kGcpInstanceClientProvider, get_tags_context,
-                      get_tags_context.result,
-                      "Failed to get the tags for resource %s",
-                      get_tags_context.request->resource_name().c_str());
+    SCP_ERROR_CONTEXT(
+        kGcpInstanceClientProvider, get_tags_context, get_tags_context.result,
+        absl::StrFormat("Failed to get the tags for resource %s",
+                        get_tags_context.request->resource_name().c_str()));
     get_tags_context.Finish();
 
     return execution_result;
@@ -390,10 +434,10 @@ void GcpInstanceClientProvider::OnGetSessionTokenForTagsCallback(
     AsyncContext<GetSessionTokenRequest, GetSessionTokenResponse>&
         get_token_context) noexcept {
   if (!get_token_context.result.Successful()) {
-    SCP_ERROR_CONTEXT(kGcpInstanceClientProvider, get_tags_context,
-                      get_token_context.result,
-                      "Failed to get the access token for resource %s",
-                      get_tags_context.request->resource_name().c_str());
+    SCP_ERROR_CONTEXT(
+        kGcpInstanceClientProvider, get_tags_context, get_token_context.result,
+        absl::StrFormat("Failed to get the access token for resource %s",
+                        get_tags_context.request->resource_name().c_str()));
     get_tags_context.result = get_token_context.result;
     get_tags_context.Finish();
     return;
@@ -423,11 +467,11 @@ void GcpInstanceClientProvider::OnGetSessionTokenForTagsCallback(
   auto execution_result = http2_client_->PerformRequest(http_context);
   if (!execution_result.Successful()) {
     get_tags_context.result = execution_result;
-    SCP_ERROR_CONTEXT(kGcpInstanceClientProvider, get_tags_context,
-                      get_tags_context.result,
-                      "Failed to perform http request to get the tags "
-                      "of resource %s",
-                      get_tags_context.request->resource_name().c_str());
+    SCP_ERROR_CONTEXT(
+        kGcpInstanceClientProvider, get_tags_context, get_tags_context.result,
+        absl::StrFormat("Failed to perform http request to get the tags "
+                        "of resource %s",
+                        get_tags_context.request->resource_name().c_str()));
     get_tags_context.Finish();
     return;
   }
@@ -441,8 +485,9 @@ void GcpInstanceClientProvider::OnGetTagsByResourceNameCallback(
     SCP_ERROR_CONTEXT(
         kGcpInstanceClientProvider, get_tags_context,
         http_client_context.result,
-        "Failed to perform http request to get the tags for resource %s",
-        get_tags_context.request->resource_name().c_str());
+        absl::StrFormat(
+            "Failed to perform http request to get the tags for resource %s",
+            get_tags_context.request->resource_name().c_str()));
     get_tags_context.result = http_client_context.result;
     get_tags_context.Finish();
     return;
@@ -459,9 +504,10 @@ void GcpInstanceClientProvider::OnGetTagsByResourceNameCallback(
   } catch (...) {
     SCP_ERROR_CONTEXT(
         kGcpInstanceClientProvider, get_tags_context, malformed_failure,
-        "Received http response could not be parsed into a JSON for "
-        "resource %s",
-        get_tags_context.request->resource_name().c_str());
+        absl::StrFormat(
+            "Received http response could not be parsed into a JSON for "
+            "resource %s",
+            get_tags_context.request->resource_name().c_str()));
     get_tags_context.result = malformed_failure;
     get_tags_context.Finish();
     return;
@@ -479,8 +525,10 @@ void GcpInstanceClientProvider::OnGetTagsByResourceNameCallback(
   if (!json_response.contains(kTagBindingsListKey)) {
     SCP_ERROR_CONTEXT(
         kGcpInstanceClientProvider, get_tags_context, malformed_failure,
-        "Received http response doesn't contain the required fields "
-        "for resource %s",
+        absl::StrFormat(
+            "Received http response doesn't contain the required fields "
+            "for resource %s",
+            get_tags_context.request->resource_name().c_str()),
         get_tags_context.request->resource_name().c_str());
     get_tags_context.result = malformed_failure;
     get_tags_context.Finish();
@@ -493,11 +541,12 @@ void GcpInstanceClientProvider::OnGetTagsByResourceNameCallback(
                 [&tag_binding](const char* const component) {
                   return tag_binding.contains(component);
                 })) {
-      SCP_ERROR_CONTEXT(kGcpInstanceClientProvider, get_tags_context,
-                        malformed_failure,
-                        "Received http response doesn't contain the required "
-                        "fields for resource %s",
-                        get_tags_context.request->resource_name().c_str());
+      SCP_ERROR_CONTEXT(
+          kGcpInstanceClientProvider, get_tags_context, malformed_failure,
+          absl::StrFormat("Received http response doesn't contain the required "
+                          "fields for resource %s",
+                          get_tags_context.request->resource_name().c_str()),
+          get_tags_context.request->resource_name().c_str());
       get_tags_context.result = malformed_failure;
       get_tags_context.Finish();
       return;
@@ -533,8 +582,10 @@ ExecutionResult GcpInstanceClientProvider::GetInstanceDetailsByResourceNameSync(
   if (!execution_result.Successful()) {
     SCP_ERROR(
         kGcpInstanceClientProvider, kZeroUuid, execution_result,
-        "Failed to run async function GetInstanceDetailsByResourceName for "
-        "resource %s",
+        absl::StrFormat(
+            "Failed to run async function GetInstanceDetailsByResourceName for "
+            "resource %s",
+            request.instance_resource_name().c_str()),
         request.instance_resource_name().c_str());
     return execution_result;
   }
@@ -555,7 +606,11 @@ ExecutionResult GcpInstanceClientProvider::GetInstanceDetailsByResourceName(
     SCP_ERROR_CONTEXT(
         kGcpInstanceClientProvider, get_instance_details_context,
         execution_result,
-        "Failed to parse instance resource ID from instance resource name %s",
+        absl::StrFormat(
+            "Failed to parse instance resource ID from instance resource name "
+            "%s",
+            get_instance_details_context.request->instance_resource_name()
+                .c_str()),
         get_instance_details_context.request->instance_resource_name().c_str());
     get_instance_details_context.result = execution_result;
     get_instance_details_context.Finish();
@@ -575,8 +630,11 @@ ExecutionResult GcpInstanceClientProvider::GetInstanceDetailsByResourceName(
     SCP_ERROR_CONTEXT(
         kGcpInstanceClientProvider, get_instance_details_context,
         get_instance_details_context.result,
-        "Failed to perform http request to get the details "
-        "of instance %s",
+        absl::StrFormat(
+            "Failed to perform http request to get the details "
+            "of instance %s",
+            get_instance_details_context.request->instance_resource_name()
+                .c_str()),
         get_instance_details_context.request->instance_resource_name().c_str());
     get_instance_details_context.Finish();
 
@@ -600,12 +658,15 @@ void GcpInstanceClientProvider::OnGetSessionTokenForInstanceDetailsCallback(
     get_instance_details_context.Finish();
     return;
   }
-
   auto resource_id =
-      get_instance_details_context.request->instance_resource_name().substr(
-          strlen(kInstanceResourceNamePrefix));
-
-  auto uri = absl::StrCat(kGcpInstanceGetUrlPrefix, resource_id);
+      container_type_ == ContainerType::kCloudRun
+          ? get_instance_details_context.request->instance_resource_name()
+                .substr(kCloudRunServiceResourceNamePrefix.size())
+          : get_instance_details_context.request->instance_resource_name()
+                .substr(kInstanceResourceNamePrefix.size());
+  auto uri = container_type_ == ContainerType::kCloudRun
+                 ? absl::StrCat(kGcpCloudRunServiceGetUrlPrefix, resource_id)
+                 : absl::StrCat(kGcpInstanceGetUrlPrefix, resource_id);
   auto signed_request = make_shared<HttpRequest>();
   signed_request->path = make_shared<string>(move(uri));
   signed_request->method = HttpMethod::GET;
@@ -628,8 +689,11 @@ void GcpInstanceClientProvider::OnGetSessionTokenForInstanceDetailsCallback(
     SCP_ERROR_CONTEXT(
         kGcpInstanceClientProvider, get_instance_details_context,
         get_instance_details_context.result,
-        "Failed to perform http request to get the details "
-        "of instance %s",
+        absl::StrFormat(
+            "Failed to perform http request to get the details "
+            "of instance %s",
+            get_instance_details_context.request->instance_resource_name()
+                .c_str()),
         get_instance_details_context.request->instance_resource_name().c_str());
     get_instance_details_context.Finish();
     return;
@@ -645,8 +709,11 @@ void GcpInstanceClientProvider::OnGetInstanceDetailsCallback(
     SCP_ERROR_CONTEXT(
         kGcpInstanceClientProvider, get_instance_details_context,
         http_client_context.result,
-        "Failed to perform http request to get the details "
-        "of instance %s",
+        absl::StrFormat(
+            "Failed to perform http request to get the details "
+            "of instance %s",
+            get_instance_details_context.request->instance_resource_name()
+                .c_str()),
         get_instance_details_context.request->instance_resource_name().c_str());
     get_instance_details_context.result = http_client_context.result;
     get_instance_details_context.Finish();
@@ -739,5 +806,4 @@ InstanceClientProviderFactory::Create(
   return make_shared<GcpInstanceClientProvider>(auth_token_provider,
                                                 http1_client, http2_client);
 }
-
 }  // namespace google::scp::cpio::client_providers

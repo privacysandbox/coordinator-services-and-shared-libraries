@@ -13,6 +13,7 @@
 # limitations under the License.
 
 resource "google_monitoring_alert_policy" "error_count_5xx" {
+  project      = var.project_id
   display_name = "${var.service_prefix} Cloud Function 5xx Errors"
   combiner     = "OR"
   conditions {
@@ -39,6 +40,7 @@ resource "google_monitoring_alert_policy" "error_count_5xx" {
 }
 
 resource "google_monitoring_alert_policy" "execution_times" {
+  project      = var.project_id
   display_name = "${var.service_prefix} Cloud Function Execution Times"
   combiner     = "OR"
   conditions {
@@ -66,6 +68,7 @@ resource "google_monitoring_alert_policy" "execution_times" {
 }
 
 resource "google_monitoring_alert_policy" "error_count" {
+  project      = var.project_id
   display_name = "${var.service_prefix} Cloud Function Execution Errors"
   combiner     = "OR"
   conditions {

@@ -22,9 +22,9 @@
 #include <type_traits>
 
 #include "absl/strings/str_format.h"
-#include "core/common/proto/common.pb.h"
-#include "public/core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/proto/common.pb.h"
+#include "cc/public/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::test {
 namespace internal {

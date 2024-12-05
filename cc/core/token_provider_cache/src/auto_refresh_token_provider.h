@@ -20,9 +20,9 @@
 #include <shared_mutex>
 #include <utility>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/token_fetcher_interface.h"
-#include "core/interface/token_provider_cache_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/token_fetcher_interface.h"
+#include "cc/core/interface/token_provider_cache_interface.h"
 
 namespace google::scp::core {
 

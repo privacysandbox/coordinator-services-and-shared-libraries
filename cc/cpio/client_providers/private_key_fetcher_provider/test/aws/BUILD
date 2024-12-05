@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["aws_private_key_fetcher_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/http2_client/mock:http2_client_mock",
         "//cc/core/interface:interface_lib",
@@ -47,7 +46,6 @@ cc_library(
         "-DTEST_CPIO=1",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/cpio/client_providers/private_key_fetcher_provider/src/aws:aws_private_key_fetcher_provider_lib",
     ],

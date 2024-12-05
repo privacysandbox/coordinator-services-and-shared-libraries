@@ -48,6 +48,8 @@ pkg_tar(
     srcs = [
         ":multiparty_dist_files",
         ":multiparty_dist_scripts",
+        "//coordinator/terraform/aws/applications:cloudwatch_metric_stream_iam_pkg",
+        "//coordinator/terraform/aws/applications:cloudwatch_metric_stream_region_pkg",
         "//coordinator/terraform/aws/applications:distributed_pbs_application_pkg",
         "//coordinator/terraform/aws/applications:distributed_pbs_base_pkg",
         "//coordinator/terraform/aws/applications:domainrecords_module_pkg",

@@ -21,7 +21,7 @@
 
 #include <grpcpp/grpcpp.h>
 
-#include "cpio/client_providers/interface/queue_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/queue_client_provider_interface.h"
 
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;

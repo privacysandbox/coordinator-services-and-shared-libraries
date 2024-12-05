@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["auto_expiry_concurrent_map_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/common/auto_expiry_concurrent_map/mock:auto_expiry_concurrent_map_mock",
         "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",

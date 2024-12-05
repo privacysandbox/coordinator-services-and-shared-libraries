@@ -19,7 +19,7 @@
 #include <memory>
 #include <utility>
 
-#include "core/interface/transaction_manager_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
 
 namespace google::scp::pbs {
 class ConsumeBudgetCommandBase : public core::TransactionCommand {

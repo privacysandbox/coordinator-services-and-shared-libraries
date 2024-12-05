@@ -20,12 +20,12 @@
 #include <string>
 #include <utility>
 
-#include "core/interface/async_context.h"
-#include "cpio/client_providers/interface/job_client_provider_interface.h"
-#include "cpio/client_providers/interface/nosql_database_client_provider_interface.h"
-#include "cpio/client_providers/interface/queue_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/job_service/v1/job_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/client_providers/interface/job_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/nosql_database_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/queue_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/job_service/v1/job_service.pb.h"
 
 #include "error_codes.h"
 

@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = glob(["aws_role_credentials_provider_test.cc"]),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/interface:interface_lib",
@@ -40,7 +39,6 @@ cc_test(
     srcs =
         ["sts_error_converter_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/role_credentials_provider/src/aws:aws_role_credentials_provider_lib",
@@ -63,7 +61,6 @@ cc_library(
         "-DTEST_CPIO=1",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/role_credentials_provider/src/aws:aws_role_credentials_provider_lib",
         "//cc/cpio/common/test/aws:test_aws_utils_lib",
         "//cc/public/cpio/test/global_cpio:test_cpio_options",

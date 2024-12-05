@@ -52,4 +52,6 @@ message CreateJobRequest {
   map<string, string> job_parameters = 11;
   /** Ad-tech reporting site where reports will be sent. This is derived from jobParameters. */
   string reporting_site = 12;
+  /** List of URLs to the input prefix data files. */
+  repeated string input_data_blob_prefixes = 13;
 }

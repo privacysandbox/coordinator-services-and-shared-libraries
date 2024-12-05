@@ -19,10 +19,10 @@
 
 #include <memory>
 
-#include "cpio/client_providers/interface/nosql_database_client_provider_interface.h"
-#include "cpio/client_providers/interface/queue_client_provider_interface.h"
-#include "cpio/client_providers/job_client_provider/src/job_client_provider.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/cpio/client_providers/interface/nosql_database_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/queue_client_provider_interface.h"
+#include "cc/cpio/client_providers/job_client_provider/src/job_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockJobClientProvider : public JobClientProviderInterface {

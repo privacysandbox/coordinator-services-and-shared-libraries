@@ -28,7 +28,6 @@ cc_library(
         "-latomic",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",

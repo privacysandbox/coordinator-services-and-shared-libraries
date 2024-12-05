@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/common/lru_cache/src/lru_cache.h"
+#include "cc/core/common/lru_cache/src/lru_cache.h"
 
 #include <gtest/gtest.h>
 

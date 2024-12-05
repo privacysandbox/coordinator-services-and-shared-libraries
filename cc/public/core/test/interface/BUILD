@@ -23,7 +23,6 @@ cc_library(
         "execution_result_matchers.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/proto:core_common_proto_lib",
         "//cc/public/core/interface:errors",
         "@com_google_absl//absl/strings:str_format",
@@ -38,7 +37,6 @@ cc_library(
         "struct_matchers.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "@com_google_googletest//:gtest",
     ],
 )

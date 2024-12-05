@@ -22,14 +22,14 @@
 #include <utility>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/http_types.h"
-#include "core/utils/src/base64.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/private_key_client/type_def.h"
+#include "cc/public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/private_key_client/type_def.h"
-#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
 #include "error_codes.h"
 #include "private_key_client_utils.h"

@@ -110,9 +110,12 @@ public class HttpClientWithInterceptor {
   private final Retry retryConfig;
 
   @Inject
-  public HttpClientWithInterceptor(HttpRequestInterceptor authTokenInterceptor) {
+  public HttpClientWithInterceptor(HttpRequestInterceptor authTokenInterceptor, String userAgent) {
     this.httpClient =
-        HttpAsyncClients.customHttp2().addRequestInterceptorFirst(authTokenInterceptor).build();
+        HttpAsyncClients.customHttp2()
+            .setUserAgent(userAgent)
+            .addRequestInterceptorFirst(authTokenInterceptor)
+            .build();
     if (!IOReactorStatus.ACTIVE.equals(httpClient.getStatus())) {
       httpClient.start();
     }

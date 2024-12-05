@@ -41,6 +41,7 @@ load("//build_defs/shared:protobuf.bzl", "protobuf")
 load("//build_defs/shared:protobuf_javascript.bzl", "protobuf_javascript")
 load("//build_defs/shared:rpm.bzl", "rpm")
 load("//build_defs/shared:terraform.bzl", "terraform")
+load("//build_defs/shared:platforms.bzl", "platforms")
 
 def scp_dependencies(protobuf_version, protobuf_repo_hash):
     absl()
@@ -72,3 +73,4 @@ def scp_dependencies(protobuf_version, protobuf_repo_hash):
     import_aws_sdk_cpp()
     import_google_cloud_cpp()
     google_api_core()
+    platforms()

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "core/blob_storage_provider/src/common/error_codes.h"
+#include "cc/core/blob_storage_provider/src/common/error_codes.h"
 #include "google/cloud/status.h"
 
 namespace google::scp::core::blob_storage_provider {

@@ -71,6 +71,9 @@ java_library(
 
 java_binary(
     name = "AwsChangeHandlerLambda",
+    resources = [
+        "//licenses/THIRD_PARTY_NOTICES/aws_aws_change_handler_lambda:licenses",
+    ],
     runtime_deps = [
         ":aws",
         "//java/com/google/scp/operator/frontend/injection/modules:aws_change_handler_module",
@@ -96,6 +99,9 @@ pkg_files(
 
 java_binary(
     name = "AwsFrontendCleanupLambda",
+    resources = [
+        "//licenses/THIRD_PARTY_NOTICES/aws_aws_frontend_cleanup_handler_lambda:licenses",
+    ],
     runtime_deps = [
         ":aws",
         "//java/com/google/scp/operator/frontend/injection/modules:aws_failed_job_queue_change_handler_module",

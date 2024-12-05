@@ -23,7 +23,6 @@ cc_test(
         "gcp_queue_client_provider_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
@@ -51,7 +50,6 @@ cc_library(
         "-DTEST_CPIO=1",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/queue_client_provider/src/gcp:gcp_queue_client_provider_lib",
     ],
 )

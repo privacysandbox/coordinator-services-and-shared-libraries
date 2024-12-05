@@ -24,10 +24,10 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "core/test/utils/docker_helper/docker_helper.h"
-#include "cpio/server/interface/configuration_keys.h"
-#include "cpio/server/interface/queue_service/configuration_keys.h"
-#include "cpio/server/src/queue_service/test_gcp/test_configuration_keys.h"
+#include "cc/core/test/utils/docker_helper/docker_helper.h"
+#include "cc/cpio/server/interface/configuration_keys.h"
+#include "cc/cpio/server/interface/queue_service/configuration_keys.h"
+#include "cc/cpio/server/src/queue_service/test_gcp/test_configuration_keys.h"
 
 using google::scp::core::test::GetIpAddress;
 using google::scp::core::test::StartGcpContainer;

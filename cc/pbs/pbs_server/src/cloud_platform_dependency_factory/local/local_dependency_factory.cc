@@ -18,17 +18,19 @@
 #include <utility>
 #include <vector>
 
+#include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
 #include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
-#include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/configuration_keys.h"
-#include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
+#include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/resource/resource_detector.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "pbs/pbs_client/src/pbs_client.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 
 #include "local_authorization_proxy.h"
 #include "local_instance_metadata_client.h"
@@ -185,7 +187,8 @@ LocalDependencyFactory::ConstructRemoteCoordinatorPBSClient(
 
 std::unique_ptr<core::MetricRouter>
 LocalDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider) noexcept {
   bool is_otel_print_data_to_console_enabled = false;
   config_provider_->Get(kOtelPrintDataToConsoleEnabled,
@@ -199,7 +202,13 @@ LocalDependencyFactory::ConstructMetricRouter(
           is_otel_print_data_to_console_enabled);
 
   opentelemetry::sdk::resource::OTELResourceDetector resource_detector;
+  opentelemetry::sdk::resource::ResourceAttributes resource_attributes = {
+      {opentelemetry::sdk::resource::SemanticConventions::kServiceName, "pbs"},
+  };
+
   opentelemetry::sdk::resource::Resource resource = resource_detector.Detect();
+  resource = resource.Merge(
+      opentelemetry::sdk::resource::Resource::Create(resource_attributes));
 
   return std::make_unique<MetricRouter>(config_provider_, std::move(resource),
                                         std::move(metric_exporter));

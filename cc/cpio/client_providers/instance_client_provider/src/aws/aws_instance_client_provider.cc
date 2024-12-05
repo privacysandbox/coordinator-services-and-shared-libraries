@@ -28,14 +28,14 @@
 #include <nlohmann/json.hpp>
 
 #include "absl/strings/str_format.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "cpio/common/src/aws/aws_utils.h"
-#include "cpio/common/src/cpio_utils.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/cpio/common/src/aws/aws_utils.h"
+#include "cc/cpio/common/src/cpio_utils.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "aws_instance_client_utils.h"
 #include "ec2_error_converter.h"

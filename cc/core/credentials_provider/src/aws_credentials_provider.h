@@ -21,7 +21,7 @@
 #include <aws/core/auth/AWSCredentialsProvider.h>
 #include <aws/core/auth/AWSCredentialsProviderChain.h>
 
-#include "core/interface/credentials_provider_interface.h"
+#include "cc/core/interface/credentials_provider_interface.h"
 
 namespace google::scp::core {
 

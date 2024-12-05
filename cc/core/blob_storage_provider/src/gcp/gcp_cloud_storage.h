@@ -20,10 +20,10 @@
 #include <sstream>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/interface/config_provider_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
 #include "google/cloud/storage/client.h"
 
 namespace google::scp::core::blob_storage_provider {

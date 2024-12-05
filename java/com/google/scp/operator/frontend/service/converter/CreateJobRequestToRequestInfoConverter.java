@@ -21,7 +21,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Converts between the {@link
@@ -34,10 +36,13 @@ public final class CreateJobRequestToRequestInfoConverter
   /** Converts the frontend CreateJobRequest model into the shared RequestInfo model. */
   @Override
   protected RequestInfo doForward(CreateJobRequest createJobRequest) {
+    List<String> inputDataBlobPrefixList =
+        createJobRequest.getInputDataBlobPrefixesList().stream().collect(Collectors.toList());
     return RequestInfo.newBuilder()
         .setJobRequestId(createJobRequest.getJobRequestId())
         .setInputDataBucketName(createJobRequest.getInputDataBucketName())
         .setInputDataBlobPrefix(createJobRequest.getInputDataBlobPrefix())
+        .addAllInputDataBlobPrefixes(inputDataBlobPrefixList)
         .setOutputDataBucketName(createJobRequest.getOutputDataBucketName())
         .setOutputDataBlobPrefix(createJobRequest.getOutputDataBlobPrefix())
         .setPostbackUrl(createJobRequest.getPostbackUrl())

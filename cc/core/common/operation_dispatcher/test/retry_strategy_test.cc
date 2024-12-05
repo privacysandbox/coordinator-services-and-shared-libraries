@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "core/common/operation_dispatcher/src/retry_strategy.h"
+#include "cc/core/common/operation_dispatcher/src/retry_strategy.h"
 
 #include <gtest/gtest.h>
 
-#include "core/interface/type_def.h"
+#include "cc/core/interface/type_def.h"
 
 namespace google::scp::core::common::test {
 TEST(RetryStrategyTests, ExponentialRetryStrategyTest) {

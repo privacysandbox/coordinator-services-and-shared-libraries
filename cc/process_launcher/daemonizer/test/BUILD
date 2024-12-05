@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["daemonizer_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/process_launcher/daemonizer/src:daemonizer_lib",
         "//cc/public/core/test/interface:execution_result_matchers",

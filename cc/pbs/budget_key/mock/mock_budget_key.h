@@ -19,9 +19,9 @@
 #include <list>
 #include <memory>
 
-#include "pbs/budget_key/src/budget_key.h"
-#include "pbs/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/pbs/budget_key/src/budget_key.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs::budget_key::mock {
 

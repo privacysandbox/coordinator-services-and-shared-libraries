@@ -21,11 +21,11 @@
 #include <memory>
 #include <string>
 
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/transaction_manager/interface/transaction_engine_interface.h"
-#include "core/transaction_manager/src/transaction_manager.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/transaction_manager/interface/transaction_engine_interface.h"
+#include "cc/core/transaction_manager/src/transaction_manager.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionManager : public core::TransactionManager {

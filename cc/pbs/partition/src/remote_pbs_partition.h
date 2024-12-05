@@ -19,8 +19,8 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/partition_types.h"
-#include "pbs/interface/pbs_partition_interface.h"
+#include "cc/core/interface/partition_types.h"
+#include "cc/pbs/interface/pbs_partition_interface.h"
 
 #include "error_codes.h"
 

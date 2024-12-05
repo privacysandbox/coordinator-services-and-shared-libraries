@@ -19,19 +19,19 @@
 #include <memory>
 #include <string>
 
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/cpio/client_providers/job_client_provider/mock/mock_job_client_provider_with_overrides.h"
 #include "cc/cpio/client_providers/job_client_provider/src/error_codes.h"
 #include "cc/cpio/client_providers/job_client_provider/src/job_client_utils.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/utils/src/base64.h"
-#include "cpio/client_providers/job_client_provider/mock/mock_job_client_provider_with_overrides.h"
-#include "cpio/client_providers/job_client_provider/test/hello_world.pb.h"
-#include "cpio/client_providers/nosql_database_client_provider/mock/mock_nosql_database_client_provider.h"
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
-#include "cpio/client_providers/queue_client_provider/mock/mock_queue_client_provider.h"
+#include "cc/cpio/client_providers/job_client_provider/test/hello_world.pb.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/mock/mock_nosql_database_client_provider.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/queue_client_provider/mock/mock_queue_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/proto/job_service/v1/job_service.pb.h"
 #include "google/protobuf/util/time_util.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/proto/job_service/v1/job_service.pb.h"
 
 using google::cmrt::sdk::job_service::v1::DeleteOrphanedJobMessageRequest;
 using google::cmrt::sdk::job_service::v1::DeleteOrphanedJobMessageResponse;

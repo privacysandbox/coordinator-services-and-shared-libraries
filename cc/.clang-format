@@ -1,5 +1,5 @@
 BasedOnStyle: Google
-Standard: c++17
+Standard: c++20
 DerivePointerAlignment: false
 # allow in-header short functions and empty functions to be on single line.
 AllowShortFunctionsOnASingleLine: Inline

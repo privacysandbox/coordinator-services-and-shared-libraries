@@ -18,15 +18,15 @@
 #include <string>
 
 #include "absl/strings/strip.h"
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/cpio.h"
-#include "public/cpio/interface/kms_client/kms_client_interface.h"
-#include "public/cpio/interface/kms_client/type_def.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/kms_service/v1/kms_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/cpio.h"
+#include "cc/public/cpio/interface/kms_client/kms_client_interface.h"
+#include "cc/public/cpio/interface/kms_client/type_def.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/kms_service/v1/kms_service.pb.h"
 
 using google::cmrt::sdk::kms_service::v1::DecryptRequest;
 using google::cmrt::sdk::kms_service::v1::DecryptResponse;

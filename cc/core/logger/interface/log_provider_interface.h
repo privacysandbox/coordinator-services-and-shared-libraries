@@ -19,10 +19,10 @@
 #include <cstdarg>
 #include <string_view>
 
+#include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/logger_interface.h"
 #include "cc/core/interface/service_interface.h"
-#include "core/common/uuid/src/uuid.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::logger {
 /**

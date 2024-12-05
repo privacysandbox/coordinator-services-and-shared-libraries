@@ -21,10 +21,10 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/service_interface.h"
-#include "pbs/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "front_end_service_interface.h"
 

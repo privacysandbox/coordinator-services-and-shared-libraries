@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/partition_namespace_interface.h"
+#include "cc/core/interface/partition_namespace_interface.h"
 
 namespace google::scp::pbs {
 /**

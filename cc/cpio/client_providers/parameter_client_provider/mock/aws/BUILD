@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "@aws_sdk_cpp//:ssm",
         "@com_google_absl//absl/algorithm:container",
     ],

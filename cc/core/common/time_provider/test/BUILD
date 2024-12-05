@@ -24,7 +24,6 @@ cc_test(
             "time_provider_test.cc",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/test/utils:utils_lib",
         "@com_google_googletest//:gtest_main",
@@ -40,7 +39,6 @@ cc_test(
             "stopwatch_test.cc",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "@com_google_googletest//:gtest_main",
     ],

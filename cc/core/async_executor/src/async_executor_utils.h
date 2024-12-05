@@ -18,8 +18,8 @@
 #include <optional>
 #include <thread>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
 
 #include "error_codes.h"
 
@@ -37,7 +37,8 @@ class AsyncExecutorUtils {
       auto result = FailureExecutionResult(
           errors::SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY);
       SCP_ERROR(kAsyncExecutorUtils, common::kZeroUuid, result,
-                "SetAffinity pthread_setaffinity_np failed: %s", strerror(rc));
+                absl::StrFormat("SetAffinity pthread_setaffinity_np failed: %s",
+                                strerror(rc)));
       return result;
     }
     return SuccessExecutionResult();

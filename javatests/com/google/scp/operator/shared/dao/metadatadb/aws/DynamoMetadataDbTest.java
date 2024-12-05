@@ -82,6 +82,8 @@ public class DynamoMetadataDbTest {
   JobKey jobKey;
   JobMetadata jobMetadata;
   private static JobMetadata jobMetadataWithReportingSite;
+
+  private static JobMetadata jobMetadataWithInputPrefixList;
   ResultInfo resultInfo;
 
   /**
@@ -145,6 +147,37 @@ public class DynamoMetadataDbTest {
                 CreateJobRequest.newBuilder()
                     .setJobRequestId(jobRequestId)
                     .setInputDataBlobPrefix("foobar.avro")
+                    .setInputDataBucketName("foo-bar")
+                    .setOutputDataBlobPrefix("outputfile.avro")
+                    .setOutputDataBucketName("bucket")
+                    .setPostbackUrl("http://foo.com/bar")
+                    .setReportingSite("https://bar.com")
+                    .setDebugPrivacyBudgetLimit(5)
+                    .putAllJobParameters(
+                        ImmutableMap.of(
+                            "reporting_site",
+                            "https://bar.com",
+                            "output_domain_blob_prefix",
+                            "outputfile.avro",
+                            "output_domain_bucket_name",
+                            "bucket",
+                            "debug_privacy_budget_limit",
+                            "5"))
+                    .build())
+            .build();
+
+    jobMetadataWithInputPrefixList =
+        JobMetadata.newBuilder()
+            .setJobKey(jobKey)
+            .setRequestReceivedAt(ProtoUtil.toProtoTimestamp(Instant.now()))
+            .setRequestUpdatedAt(ProtoUtil.toProtoTimestamp(Instant.now()))
+            .setNumAttempts(0)
+            .setJobStatus(RECEIVED)
+            .setServerJobId(UUID.randomUUID().toString())
+            .setCreateJobRequest(
+                CreateJobRequest.newBuilder()
+                    .setJobRequestId(jobRequestId)
+                    .addAllInputDataBlobPrefixes(ImmutableList.of("prefix1", "prefix2", "prefix3"))
                     .setInputDataBucketName("foo-bar")
                     .setOutputDataBlobPrefix("outputfile.avro")
                     .setOutputDataBucketName("bucket")
@@ -245,6 +278,20 @@ public class DynamoMetadataDbTest {
 
     assertThat(lookedUpJobMetadata).isPresent();
     assertJobMetadataEquals(lookedUpJobMetadata.get(), jobMetadataWithReportingSite);
+    assertThat(lookedUpJobMetadata.get().getRequestProcessingStartedAt())
+        .isEqualTo(Timestamp.getDefaultInstance());
+  }
+
+  /** Test that a metadata item with a list of input prefixes can be inserted and read back. */
+  @Test
+  public void testInputPrefixListItemInsertAndGet() throws Exception {
+    // No setup
+    dynamoMetadataDb.insertJobMetadata(jobMetadataWithInputPrefixList);
+    Optional<JobMetadata> lookedUpJobMetadata =
+        dynamoMetadataDb.getJobMetadata(jobKey.getJobRequestId());
+
+    assertThat(lookedUpJobMetadata).isPresent();
+    assertJobMetadataEquals(jobMetadataWithInputPrefixList, lookedUpJobMetadata.get());
     assertThat(lookedUpJobMetadata.get().getRequestProcessingStartedAt())
         .isEqualTo(Timestamp.getDefaultInstance());
   }

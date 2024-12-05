@@ -100,13 +100,22 @@ JAVA_OTEL_VERSION = "1.38.0"
 
 OTEL_ARTIFACTS = [
     "com.google.cloud.opentelemetry:exporter-metrics:0.31.0",
+    # Note from https://github.com/open-telemetry/semantic-conventions-java:
+    # Although this is for stable semantic conventions, the artifact still has the -alpha and comes with no
+    # compatibility guarantees. The goal is to mark this artifact stable.
+    "io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha",
     "io.opentelemetry:opentelemetry-api:" + JAVA_OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk:" + JAVA_OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-common:" + JAVA_OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-metrics:" + JAVA_OTEL_VERSION,
+    # As of adding, https://repo1.maven.org/maven2/io/opentelemetry/contrib/opentelemetry-gcp-resources/ only shows
+    # that alpha version is available.
     "io.opentelemetry.contrib:opentelemetry-gcp-resources:" + JAVA_OTEL_VERSION + "-alpha",
     "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-testing:" + JAVA_OTEL_VERSION,
 ]
+
+load("//build_defs/shared:variables.bzl", "CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION")
 
 maven_install(
     name = "maven",
@@ -140,7 +149,7 @@ maven_install(
         "com.google.cloud:google-cloud-secretmanager:2.7.0",
         "com.google.cloud:google-cloud-compute:1.17.0",
         "com.google.api.grpc:proto-google-cloud-compute-v1:1.17.0",
-        "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
+        "com.google.cloud.functions.invoker:java-function-invoker:" + CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION,
         "com.google.auth:google-auth-library-oauth2-http:1.11.0",
         "com.google.cloud.functions:functions-framework-api:1.0.4",
         "commons-logging:commons-logging:1.1.1",
@@ -178,6 +187,7 @@ maven_install(
         "org.apache.httpcomponents.core5:httpcore5-h2:5.1.4",  # Explicit transitive dependency to avoid https://issues.apache.org/jira/browse/HTTPCLIENT-2222
         "org.apache.logging.log4j:log4j-1.2-api:2.17.0",
         "org.apache.logging.log4j:log4j-core:2.17.0",
+        "org.assertj:assertj-core:3.26.3",
         "org.awaitility:awaitility:3.0.0",
         "org.mock-server:mockserver-core:5.11.2",
         "org.mock-server:mockserver-junit-rule:5.11.2",
@@ -185,9 +195,9 @@ maven_install(
         "org.hamcrest:hamcrest-library:1.3",
         "org.mockito:mockito-core:3.11.2",
         "org.mockito:mockito-inline:3.11.2",
-        "org.slf4j:slf4j-api:1.7.30",
-        "org.slf4j:slf4j-simple:1.7.30",
-        "org.slf4j:slf4j-log4j12:1.7.30",
+        "org.slf4j:slf4j-api:2.0.16",
+        "org.slf4j:slf4j-simple:2.0.16",
+        "org.slf4j:slf4j-log4j12:2.0.16",
         "org.testcontainers:testcontainers:1.15.3",
         "org.testcontainers:localstack:1.15.3",
         "software.amazon.awssdk:apigateway:" + AWS_SDK_VERSION,
@@ -330,6 +340,12 @@ opentelemetry_cpp_deps()
 load("@io_opentelemetry_cpp//bazel:extra_deps.bzl", "opentelemetry_extra_deps")
 
 opentelemetry_extra_deps()
+
+# This loads the libpfm transitive dependency.
+# See https://github.com/google/benchmark/pull/1520
+load("@com_github_google_benchmark//:bazel/benchmark_deps.bzl", "benchmark_deps")
+
+benchmark_deps()
 
 ################################################################################
 # Download Indirect Dependencies: End
@@ -565,3 +581,5 @@ http_file(
 load("@build_bazel_rules_nodejs//toolchains/esbuild:esbuild_repositories.bzl", "esbuild_repositories")
 
 esbuild_repositories(npm_repository = "npm")
+
+# gazelle:repo bazel_gazelle

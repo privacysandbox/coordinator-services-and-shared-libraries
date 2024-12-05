@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pbs/pbs_client/src/pbs_client.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -22,16 +22,16 @@
 #include <memory>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/authorization_service/src/error_codes.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_client/mock/mock_http_client.h"
-#include "core/interface/authorization_service_interface.h"
-#include "core/token_provider_cache/mock/token_provider_cache_mock.h"
-#include "pbs/front_end_service/src/error_codes.h"
-#include "pbs/pbs_client/mock/mock_pbs_client_with_overrides.h"
-#include "pbs/pbs_client/src/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/authorization_service/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_client/mock/mock_http_client.h"
+#include "cc/core/interface/authorization_service_interface.h"
+#include "cc/core/token_provider_cache/mock/token_provider_cache_mock.h"
+#include "cc/pbs/front_end_service/src/error_codes.h"
+#include "cc/pbs/pbs_client/mock/mock_pbs_client_with_overrides.h"
+#include "cc/pbs/pbs_client/src/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;

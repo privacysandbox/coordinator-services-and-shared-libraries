@@ -20,9 +20,9 @@
 #include <memory>
 #include <string_view>
 
-#include "core/interface/checkpoint_service_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/checkpoint_service_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::transaction_manager {
 /**

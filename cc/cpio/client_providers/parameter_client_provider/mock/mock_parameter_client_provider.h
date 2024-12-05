@@ -20,7 +20,7 @@
 
 #include <memory>
 
-#include "cpio/client_providers/interface/parameter_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/parameter_client_provider_interface.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockParameterClientProvider : public ParameterClientProviderInterface {

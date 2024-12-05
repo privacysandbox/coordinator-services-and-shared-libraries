@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
         "//cc/core/authorization_service/src:core_authorization_service",
         "//cc/core/interface:interface_lib",

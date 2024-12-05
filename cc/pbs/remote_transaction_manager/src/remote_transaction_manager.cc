@@ -21,11 +21,11 @@
 #include <string>
 #include <utility>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_client/src/http2_client.h"
-#include "pbs/front_end_service/src/front_end_utils.h"
-#include "pbs/interface/type_def.h"
-#include "pbs/pbs_client/src/pbs_client.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/pbs/front_end_service/src/front_end_utils.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
 
 #include "error_codes.h"
 

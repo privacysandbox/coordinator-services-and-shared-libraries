@@ -18,7 +18,7 @@
 
 #include <memory>
 
-#include "core/transaction_manager/interface/transaction_phase_manager_interface.h"
+#include "cc/core/transaction_manager/interface/transaction_phase_manager_interface.h"
 
 namespace google::scp::core {
 /*! @copydoc TransactionManagerInterface

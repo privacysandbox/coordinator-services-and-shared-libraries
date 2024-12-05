@@ -19,12 +19,12 @@
 #include <memory>
 #include <utility>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/errors.h"
-#include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/job_service/v1/job_service.pb.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/errors.h"
+#include "cc/cpio/client_providers/global_cpio/src/global_cpio.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/job_service/v1/job_service.pb.h"
 
 using google::cmrt::sdk::job_service::v1::DeleteOrphanedJobMessageRequest;
 using google::cmrt::sdk::job_service::v1::DeleteOrphanedJobMessageResponse;

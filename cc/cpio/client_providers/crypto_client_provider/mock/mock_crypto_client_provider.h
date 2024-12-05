@@ -20,7 +20,7 @@
 
 #include <memory>
 
-#include "cpio/client_providers/interface/crypto_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/crypto_client_provider_interface.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockCryptoClientProvider : public CryptoClientProviderInterface {

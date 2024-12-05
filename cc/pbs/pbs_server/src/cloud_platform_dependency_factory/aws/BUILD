@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
         "//cc/core/authorization_service/src:core_authorization_service",
@@ -49,5 +48,6 @@ cc_library(
         "//cc/public/cpio/interface/metric_client",
         "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
         "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
+        "@com_google_absl//absl/base:nullability",
     ],
 )

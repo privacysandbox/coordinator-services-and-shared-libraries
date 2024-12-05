@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/interface:interface_lib",
     ],

@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "core/telemetry/mock/in_memory_metric_router.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
 
 #include <chrono>
 #include <future>
@@ -21,11 +21,11 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/telemetry/mock/error_codes.h"
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
-#include "core/telemetry/mock/in_memory_metric_reader.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/telemetry/mock/error_codes.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/core/telemetry/mock/in_memory_metric_reader.h"
 #include "opentelemetry/exporters/ostream/metric_exporter.h"
 #include "opentelemetry/sdk/metrics/meter_context_factory.h"
 #include "opentelemetry/sdk/metrics/meter_provider_factory.h"

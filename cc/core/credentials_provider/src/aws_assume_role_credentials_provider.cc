@@ -22,8 +22,8 @@
 
 #include <aws/sts/model/AssumeRoleRequest.h>
 
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/common/time_provider/src/time_provider.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
 
 #include "error_codes.h"
 

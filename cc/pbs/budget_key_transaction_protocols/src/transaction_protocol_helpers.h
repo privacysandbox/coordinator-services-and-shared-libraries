@@ -20,8 +20,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "pbs/interface/budget_key_timeframe_manager_interface.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/pbs/interface/budget_key_timeframe_manager_interface.h"
 
 namespace google::scp::pbs {
 

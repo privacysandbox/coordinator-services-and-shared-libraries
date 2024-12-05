@@ -22,11 +22,11 @@
 #include <aws/core/auth/AWSCredentialsProvider.h>
 #include <aws/core/auth/AWSCredentialsProviderChain.h>
 
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/utils/src/base64.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
-#include "cpio/common/src/aws/aws_utils.h"
-#include "public/cpio/interface/kms_client/type_def.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/cpio/common/src/aws/aws_utils.h"
+#include "cc/public/cpio/interface/kms_client/type_def.h"
 
 #include "aws_kms_aead.h"
 #include "nontee_error_codes.h"

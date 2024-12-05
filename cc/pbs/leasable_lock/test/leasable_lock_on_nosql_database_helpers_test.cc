@@ -23,10 +23,10 @@ using std::to_string;
 using std::vector;
 using std::chrono::milliseconds;
 
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
-#include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
+#include "cc/pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/queue_client_provider/src/aws/sqs_error_converter.h"
+#include "cc/cpio/client_providers/queue_client_provider/src/aws/sqs_error_converter.h"
 
 #include <gtest/gtest.h>
 
@@ -21,9 +21,9 @@
 #include <aws/core/Aws.h>
 #include <aws/sqs/SQSErrors.h>
 
-#include "cpio/common/src/aws/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::Client::AWSError;
 using Aws::SQS::SQSErrors;

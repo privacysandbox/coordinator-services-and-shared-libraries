@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -24,15 +24,15 @@
 #include <variant>
 #include <vector>
 
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/common/serialization/src/error_codes.h"
-#include "core/common/serialization/src/serialization.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_serialization.h"
-#include "pbs/budget_key_timeframe_manager/src/error_codes.h"
-#include "pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/common/serialization/src/error_codes.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_serialization.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/error_codes.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;

@@ -23,7 +23,7 @@
 
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 #include "typedef.h"
@@ -284,4 +284,15 @@ ExecutionResult AsyncExecutor::ScheduleFor(
                                     task_load_balancing_scheme_));
   return task_executor->ScheduleFor(work, timestamp, cancellation_callback);
 }
+
+absl::flat_hash_map<std::thread::id, absl::Span<const absl::Duration>>
+AsyncExecutor::SchedulingLatencyPerThreadForTesting() const {
+  absl::flat_hash_map<std::thread::id, absl::Span<const absl::Duration>> result;
+  for (const auto& executor : normal_task_executor_pool_) {
+    result[executor->GetThreadId().value()] =
+        executor->scheduling_latency_for_testing();
+  }
+  return result;
+}
+
 }  // namespace google::scp::core

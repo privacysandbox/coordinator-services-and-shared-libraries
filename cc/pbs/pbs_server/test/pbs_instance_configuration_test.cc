@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
 
 #include <gtest/gtest.h>
 
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/config_provider/src/env_config_provider.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_server/src/pbs_instance/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/config_provider/src/env_config_provider.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::ConfigProviderInterface;
 using google::scp::core::EnvConfigProvider;
@@ -65,6 +65,7 @@ static void SetAllConfigs() {
   setenv(kServiceMetricsNamespace, "ns", 1);
   setenv(kTotalHttp2ServerThreadsCount, "10", 1);
   setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table", 1);
+  setenv(kContainerType, "compute_engine", 1);
   // NOTE: Any sets here should accompany the Unsets at UnsetAllConfigs.
 }
 
@@ -93,6 +94,7 @@ static void UnsetAllConfigs() {
   unsetenv(kHttp2ServerUseTls);
   unsetenv(kHttp2ServerPrivateKeyFilePath);
   unsetenv(kHttp2ServerCertificateFilePath);
+  unsetenv(kContainerType);
 }
 
 class PBSInstanceConfiguration : public ::testing::Test {
@@ -247,6 +249,7 @@ TEST_F(PBSInstanceConfiguration, ReadConfigurationReadsAllConfigs) {
   config_provider->Set(kPBSPartitionLockTableNameConfigName, "partition_lock");
   config_provider->SetInt(kPBSPartitionLeaseDurationInSeconds, 20);
   config_provider->SetInt(kPBSVNodeLeaseDurationInSeconds, 30);
+  config_provider->Set(kContainerType, kComputeEngine);
 
   core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
       GetPBSInstanceConfigFromConfigProvider(config_provider);
@@ -295,6 +298,7 @@ TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
   config_provider->Set(kHttp2ServerPrivateKeyFilePath, "/key/path");
   config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
   config_provider->Set(kPBSPartitionLockTableNameConfigName, "partition_lock");
+  config_provider->Set(kContainerType, kComputeEngine);
 
   core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
       GetPBSInstanceConfigFromConfigProvider(config_provider);

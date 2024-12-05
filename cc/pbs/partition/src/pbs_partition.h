@@ -19,18 +19,18 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/interface/checkpoint_service_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/interface/partition_types.h"
-#include "core/interface/remote_transaction_manager_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "pbs/interface/budget_key_provider_interface.h"
-#include "pbs/interface/pbs_partition_interface.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/interface/checkpoint_service_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/interface/partition_types.h"
+#include "cc/core/interface/remote_transaction_manager_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/pbs/interface/budget_key_provider_interface.h"
+#include "cc/pbs/interface/pbs_partition_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
 

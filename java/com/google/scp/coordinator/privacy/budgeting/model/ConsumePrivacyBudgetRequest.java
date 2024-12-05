@@ -46,10 +46,6 @@ public abstract class ConsumePrivacyBudgetRequest {
   @JsonProperty("claimed_identity")
   public abstract String claimedIdentity();
 
-  /** Version of the trusted services client that is invoking PrivacyBudgetService */
-  @JsonProperty("trusted_services_client_version")
-  public abstract String trustedServicesClientVersion();
-
   /**
    * Optional field for advertisers to set a higher limit for privacy budgets. When this field is
    * set, it overrides the default privacy budget limit that each privacy budget unit is allowed to
@@ -75,9 +71,6 @@ public abstract class ConsumePrivacyBudgetRequest {
 
     @JsonProperty("claimed_identity")
     public abstract Builder claimedIdentity(String claimedIdentity);
-
-    @JsonProperty("trusted_services_client_version")
-    public abstract Builder trustedServicesClientVersion(String trustedServicesClientVersion);
 
     @JsonProperty("reporting_origin_to_privacy_budget_unit_list")
     public abstract Builder reportingOriginToPrivacyBudgetUnitsList(

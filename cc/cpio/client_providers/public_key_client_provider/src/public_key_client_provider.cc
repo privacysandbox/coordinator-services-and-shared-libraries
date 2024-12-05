@@ -23,16 +23,16 @@
 
 #include <google/protobuf/util/time_util.h>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/http_types.h"
-#include "cpio/client_providers/interface/public_key_client_provider_interface.h"
-#include "cpio/client_providers/interface/type_def.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/cpio/client_providers/interface/public_key_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/public_key_client/type_def.h"
+#include "cc/public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/public_key_client/type_def.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 #include "error_codes.h"
 #include "public_key_client_utils.h"

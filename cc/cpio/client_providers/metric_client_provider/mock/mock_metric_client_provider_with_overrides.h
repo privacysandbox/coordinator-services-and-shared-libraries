@@ -18,11 +18,11 @@
 #include <memory>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/metric_client_provider/src/metric_client_provider.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/metric_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockMetricClientWithOverrides : public MetricClientProvider {

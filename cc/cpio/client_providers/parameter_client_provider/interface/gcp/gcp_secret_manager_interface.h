@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/service_interface.h"
+#include "cc/core/interface/service_interface.h"
 #include "google/cloud/future.h"
 #include "google/cloud/secretmanager/secret_manager_client.h"
 

@@ -16,7 +16,7 @@
 
 #include "errors.h"
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::errors {
 std::map<uint64_t, std::map<uint64_t, SCPError>>& GetGlobalErrorCodes() {

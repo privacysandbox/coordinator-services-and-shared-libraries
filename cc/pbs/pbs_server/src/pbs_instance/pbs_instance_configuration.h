@@ -20,12 +20,13 @@
 #include <string>
 #include <utility>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/config_provider_interface.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
-#include "public/core/interface/execution_result.h"
+#include "absl/strings/str_format.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 
@@ -33,6 +34,7 @@ namespace google::scp::pbs {
 
 inline constexpr int kDefaultLeaseDurationInSeconds = 10;
 inline constexpr int kDefaultVnodeLeaseDurationInSeconds = 20;
+inline constexpr char kComputeEngine[] = "compute_engine";
 
 /**
  * PBS Instance Configuration Knobs.
@@ -168,13 +170,17 @@ GetPBSInstanceConfigFromConfigProvider(
     return execution_result;
   }
 
-  pbs_instance_config.health_port = std::make_shared<std::string>();
-  execution_result = config_provider->Get(kPrivacyBudgetServiceHealthPort,
-                                          *pbs_instance_config.health_port);
-  if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
-                 "Failed to read health port.");
-    return execution_result;
+  if (std::string container_type;
+      !config_provider->Get(kContainerType, container_type).Successful() ||
+      container_type == kComputeEngine) {
+    pbs_instance_config.health_port = std::make_shared<std::string>();
+    execution_result = config_provider->Get(kPrivacyBudgetServiceHealthPort,
+                                            *pbs_instance_config.health_port);
+    if (!execution_result.Successful()) {
+      SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+                   "Failed to read health port.");
+      return execution_result;
+    }
   }
 
   pbs_instance_config.external_exposed_host_port =
@@ -246,9 +252,10 @@ GetPBSInstanceConfigFromConfigProvider(
   if (!execution_result.Successful()) {
     SCP_ERROR(
         kPBSInstance, core::common::kZeroUuid, execution_result,
-        "Failed to obtain kPBSPartitionLeaseDurationInSeconds from config. "
-        "Using a default value of '%llu' seconds",
-        configured_partition_lease_duration_in_seconds);
+        absl::StrFormat(
+            "Failed to obtain kPBSPartitionLeaseDurationInSeconds from config. "
+            "Using a default value of '%llu' seconds",
+            configured_partition_lease_duration_in_seconds));
   }
   pbs_instance_config.partition_lease_duration_in_seconds =
       std::chrono::seconds(configured_partition_lease_duration_in_seconds);
@@ -270,10 +277,12 @@ GetPBSInstanceConfigFromConfigProvider(
       config_provider->Get(pbs::kPBSVNodeLeaseDurationInSeconds,
                            configured_vnode_lease_duration_in_seconds);
   if (!execution_result.Successful()) {
-    SCP_ERROR(kPBSInstance, core::common::kZeroUuid, execution_result,
-              "Failed to obtain kPBSVNodeLeaseDurationInSeconds from config. "
-              "Using a default value of '%llu' seconds",
-              configured_vnode_lease_duration_in_seconds);
+    SCP_ERROR(
+        kPBSInstance, core::common::kZeroUuid, execution_result,
+        absl::StrFormat(
+            "Failed to obtain kPBSVNodeLeaseDurationInSeconds from config. "
+            "Using a default value of '%llu' seconds",
+            configured_vnode_lease_duration_in_seconds));
   }
   pbs_instance_config.vnode_lease_duration_in_seconds =
       std::chrono::seconds(configured_vnode_lease_duration_in_seconds);

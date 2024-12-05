@@ -18,9 +18,9 @@
 
 #include <memory>
 
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
 class LocalMetricClient : public cpio::MetricClientInterface {

@@ -16,6 +16,7 @@
 #define CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3
 
 #include <memory>
+#include <string>
 
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/authorization_proxy_interface.h"
@@ -73,7 +74,8 @@ class PBSInstanceV3 : public core::ServiceInterface {
   std::unique_ptr<CloudPlatformDependencyFactoryInterface>
       cloud_platform_dependency_factory_;
 
-  std::shared_ptr<core::MetricRouter> metric_router_;
+  std::unique_ptr<core::MetricRouter> metric_router_;
+  std::string container_type_;
 };
 
 }  // namespace google::scp::pbs

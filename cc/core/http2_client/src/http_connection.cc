@@ -30,14 +30,13 @@
 
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_client/src/error_codes.h"
 #include "cc/core/http2_client/src/http_client_def.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/utils/src/http.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
-#include "public/core/interface/execution_result.h"
-
-#include "error_codes.h"
 
 namespace google::scp::core {
 namespace {
@@ -69,26 +68,14 @@ static constexpr char kContentLengthHeader[] = "content-length";
 static constexpr char kHttp2Client[] = "Http2Client";
 static constexpr char kHttpMethodGetTag[] = "GET";
 static constexpr char kHttpMethodPostTag[] = "POST";
-constexpr auto kHistogramType = MetricRouter::InstrumentType::kHistogram;
 
-absl::string_view GetClaimedIdentity(
-    const AsyncContext<HttpRequest, HttpResponse>& http_context) {
-  absl::string_view claimed_identity = kUnknownValue;
-  if (http_context.request->headers) {
-    ExecutionResultOr<absl::string_view> claimed_identity_extraction_result =
-        utils::ExtractRequestClaimedIdentity(*http_context.request->headers);
-    if (claimed_identity_extraction_result.Successful()) {
-      claimed_identity = *claimed_identity_extraction_result;
-    }
-  }
-  return claimed_identity;
-}
 }  // namespace
 
 HttpConnection::HttpConnection(
     const std::shared_ptr<AsyncExecutorInterface>& async_executor,
     const std::string& host, const std::string& service, bool is_https,
-    MetricRouter* metric_router, TimeDuration http2_read_timeout_in_sec)
+    absl::Nullable<MetricRouter*> metric_router,
+    TimeDuration http2_read_timeout_in_sec)
     : async_executor_(async_executor),
       host_(host),
       service_(service),
@@ -113,8 +100,8 @@ ExecutionResult HttpConnection::Init() noexcept {
       auto result =
           FailureExecutionResult(errors::SC_HTTP2_CLIENT_TLS_CTX_ERROR);
       SCP_ERROR(kHttp2Client, kZeroUuid, result,
-                "Failed to initialize with tls ctx error %s.",
-                ec.message().c_str());
+                absl::StrFormat("Failed to initialize with tls ctx error %s.",
+                                ec.message().c_str()));
       return result;
     }
 
@@ -139,7 +126,8 @@ ExecutionResult HttpConnection::Init() noexcept {
     return result;
   }
 
-  SCP_INFO(kHttp2Client, kZeroUuid, "Initialized connection with ID: %p", this);
+  SCP_INFO(kHttp2Client, kZeroUuid,
+           absl::StrFormat("Initialized connection with ID: %p", this));
 }
 
 ExecutionResult HttpConnection::Run() noexcept {
@@ -205,10 +193,13 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
       0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25,
       0.5,   0.75, 1,     2.5,  5,     7.5, 10};
 
-  metric_router_->CreateHistogramViewForInstrument(
-      /*metric_name=*/kClientServerLatencyMetric,
-      /*view_name=*/kClientServerLatencyView,
-      /*instrument_type=*/kHistogramType,
+  metric_router_->CreateViewForInstrument(
+      /*meter_name=*/kHttpConnectionMeter,
+      /*instrument_name=*/kClientServerLatencyMetric,
+      /*instrument_type=*/
+      opentelemetry::sdk::metrics::InstrumentType::kHistogram,
+      /*aggregation_type=*/
+      opentelemetry::sdk::metrics::AggregationType::kHistogram,
       /*boundaries=*/kClientServerLatencyBoundaries,
       /*version=*/"", /*schema=*/"",
       /*view_description=*/"Client Server Latency histogram",
@@ -219,10 +210,13 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
       0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25,
       0.5,   0.75, 1,     2.5,  5,     7.5, 10};
 
-  metric_router_->CreateHistogramViewForInstrument(
-      /*metric_name=*/kClientRequestDurationMetric,
-      /*view_name=*/kClientRequestDurationView,
-      /*instrument_type=*/kHistogramType,
+  metric_router_->CreateViewForInstrument(
+      /*meter_name=*/kHttpConnectionMeter,
+      /*instrument_name=*/kClientRequestDurationMetric,
+      /*instrument_type=*/
+      opentelemetry::sdk::metrics::InstrumentType::kHistogram,
+      /*aggregation_type=*/
+      opentelemetry::sdk::metrics::AggregationType::kHistogram,
       /*boundaries=*/kClientRequestDurationBoundaries,
       /*version=*/"", /*schema=*/"",
       /*view_description=*/"Client Request Duration histogram",
@@ -232,10 +226,13 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
   static std::vector<double> kClientConnectionDurationBoundaries = {
       0.1, 0.5, 1, 2, 5, 10, 20, 30, 60};
 
-  metric_router_->CreateHistogramViewForInstrument(
-      /*metric_name=*/kClientConnectionDurationMetric,
-      /*view_name=*/kClientConnectionDurationView,
-      /*instrument_type=*/kHistogramType,
+  metric_router_->CreateViewForInstrument(
+      /*meter_name=*/kHttpConnectionMeter,
+      /*instrument_name=*/kClientConnectionDurationMetric,
+      /*instrument_type=*/
+      opentelemetry::sdk::metrics::InstrumentType::kHistogram,
+      /*aggregation_type=*/
+      opentelemetry::sdk::metrics::AggregationType::kHistogram,
       /*boundaries=*/kClientConnectionDurationBoundaries,
       /*version=*/"", /*schema=*/"",
       /*view_description=*/"Connection duration histogram",
@@ -298,17 +295,6 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
                     kByteUnit);
               }));
 
-  client_response_counter_ = std::static_pointer_cast<
-      opentelemetry::metrics::Counter<uint64_t>>(
-      metric_router_->GetOrCreateSyncInstrument(
-          kClientResponseMetric,
-          [&]() -> std::shared_ptr<
-                    opentelemetry::metrics::SynchronousInstrument> {
-            return meter_->CreateUInt64Counter(
-                kClientResponseMetric,
-                "Total number of client-server response after the client call");
-          }));
-
   client_connection_duration_ =
       std::static_pointer_cast<opentelemetry::metrics::Histogram<double>>(
           metric_router_->GetOrCreateSyncInstrument(
@@ -326,7 +312,8 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
 void HttpConnection::OnConnectionCreated(tcp::resolver::iterator) noexcept {
   post(*io_service_, [this]() mutable {
     SCP_INFO(kHttp2Client, kZeroUuid,
-             "Connection %p for host %s is established.", this, host_.c_str());
+             absl::StrFormat("Connection %p for host %s is established.", this,
+                             host_.c_str()));
     is_ready_ = true;
     connection_creation_time_ = std::chrono::steady_clock::now();
   });
@@ -337,7 +324,8 @@ void HttpConnection::OnConnectionError() noexcept {
     auto failure =
         FailureExecutionResult(errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED);
     SCP_ERROR(kHttp2Client, kZeroUuid, failure,
-              "Connection %p for host %s got an error.", this, host_.c_str());
+              absl::StrFormat("Connection %p for host %s got an error.", this,
+                              host_.c_str()));
 
     IncrementClientConnectError();
 
@@ -504,9 +492,11 @@ void HttpConnection::SendHttpRequest(
 
     http_context.result = RetryExecutionResult(
         errors::SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
-    SCP_ERROR_CONTEXT(kHttp2Client, http_context, http_context.result,
-                      "Http request failed for the client with error code %s!",
-                      ec.message().c_str());
+    SCP_ERROR_CONTEXT(
+        kHttp2Client, http_context, http_context.result,
+        absl::StrFormat(
+            "Http request failed for the client with error code %s!",
+            ec.message().c_str()));
 
     FinishContext(http_context.result, http_context, async_executor_);
 
@@ -535,16 +525,16 @@ void HttpConnection::OnRequestResponseClosed(
   auto result =
       ConvertHttpStatusCodeToExecutionResult(http_context.response->code);
 
-  IncrementClientResponseCounter(http_context);
   RecordClientResponseBodySize(http_context);
   RecordClientRequestDuration(http_context, submit_request_time);
 
   // `!error_code` means no error during on_close.
   if (!error_code) {
     http_context.result = result;
-    SCP_DEBUG_CONTEXT(kHttp2Client, http_context,
-                      "Response has status code: %d",
-                      static_cast<int>(http_context.response->code));
+    SCP_DEBUG_CONTEXT(
+        kHttp2Client, http_context,
+        absl::StrFormat("Response has status code: %d",
+                        static_cast<int>(http_context.response->code)));
   } else {
     // `!result.Successful() && result != FailureExecutionResult(SC_UNKNOWN)`
     // means http_context got failure response code.
@@ -556,10 +546,11 @@ void HttpConnection::OnRequestResponseClosed(
     }
     SCP_DEBUG_CONTEXT(
         kHttp2Client, http_context,
-        "Http request failed request on_close with error code %s, "
-        "and the context response has status code: %d",
-        std::to_string(error_code).c_str(),
-        static_cast<int>(http_context.response->code));
+        absl::StrFormat(
+            "Http request failed request on_close with error code %s, "
+            "and the context response has status code: %d",
+            std::to_string(error_code).c_str(),
+            static_cast<int>(http_context.response->code)));
   }
 
   FinishContext(http_context.result, http_context, async_executor_);
@@ -581,11 +572,13 @@ void HttpConnection::OnResponseCallback(
     for (auto header : http_response.header()) {
       headers_string += header.first + " " + header.second.value + "|";
     }
-    SCP_DEBUG_CONTEXT(kHttp2Client, http_context,
-                      "Http response is not OK. Endpoint: %s, status code: %d, "
-                      "Headers: %s",
-                      http_context.request->path->c_str(),
-                      http_response.status_code(), headers_string.c_str());
+    SCP_DEBUG_CONTEXT(
+        kHttp2Client, http_context,
+        absl::StrFormat(
+            "Http response is not OK. Endpoint: %s, status code: %d, "
+            "Headers: %s",
+            http_context.request->path->c_str(), http_response.status_code(),
+            headers_string.c_str()));
   }
 
   for (const auto& [header, value] : http_response.header()) {
@@ -722,183 +715,126 @@ ExecutionResult HttpConnection::ConvertHttpStatusCodeToExecutionResult(
 }
 
 void HttpConnection::IncrementClientConnectError() {
-  if (!metric_router_) {
+  if (!client_connect_error_counter_) {
     return;
   }
-  const absl::flat_hash_map<std::string, std::string>
-      client_connect_error_label_kv = {
-          {std::string(kServerAddress), host_},
-          {std::string(kServerPort), service_},
-          {std::string(kUrlScheme), is_https_ ? "https" : "http"},
-      };
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_},
+      {kServerPort, service_},
+      {kUrlScheme, is_https_ ? "https" : "http"},
+  };
 
-  client_connect_error_counter_->Add(1, client_connect_error_label_kv);
-}
-
-void HttpConnection::IncrementClientResponseCounter(
-    const AsyncContext<HttpRequest, HttpResponse>& http_context) {
-  if (!metric_router_) {
-    return;
-  }
-  absl::string_view claimed_identity = GetClaimedIdentity(http_context);
-  auto result =
-      ConvertHttpStatusCodeToExecutionResult(http_context.response->code);
-
-  absl::flat_hash_map<std::string, std::string> client_response_label_kv{
-      {std::string(kServerAddress), host_},
-      {std::string(kServerPort), service_},
-      {std::string(kUrlScheme), is_https_ ? "https" : "http"},
-      {std::string(kHttpResponseStatusCode),
-       std::to_string(static_cast<int>(http_context.response->code))},
-      {std::string(kResponseStatusLabel),
-       HttpStatusCodeToString(http_context.response->code)},
-      {std::string(kClientReturnCodeLabel),
-       std::to_string(result.status_code)}};
-
-  if (claimed_identity != kUnknownValue) {
-    client_response_label_kv.emplace(kClaimedIdentityHeader,
-                                     std::string(claimed_identity));
-  }
-
-  client_response_counter_->Add(1, client_response_label_kv);
+  client_connect_error_counter_->Add(1, labels);
 }
 
 void HttpConnection::RecordClientServerLatency(
     const AsyncContext<HttpRequest, HttpResponse>& http_context,
     std::chrono::time_point<std::chrono::steady_clock> submit_request_time) {
-  if (!metric_router_) {
+  if (!client_server_latency_) {
     return;
   }
   std::chrono::duration<double> latency =
       std::chrono::steady_clock::now() - submit_request_time;
   double latency_s = latency.count();
 
-  absl::string_view claimed_identity = GetClaimedIdentity(http_context);
   auto result =
       ConvertHttpStatusCodeToExecutionResult(http_context.response->code);
 
-  absl::flat_hash_map<std::string, std::string> client_server_latency_label_kv =
-      {{std::string(kServerAddress), host_},
-       {std::string(kServerPort), service_},
-       {std::string(kUrlScheme), is_https_ ? "https" : "http"},
-       {std::string(kHttpResponseStatusCode),
-        std::to_string(static_cast<int>(http_context.response->code))},
-       {std::string(kResponseStatusLabel),
-        HttpStatusCodeToString(http_context.response->code)},
-       {std::string(kClientReturnCodeLabel),
-        std::to_string(result.status_code)}};
-
-  if (claimed_identity != kUnknownValue) {
-    client_server_latency_label_kv.emplace(kClaimedIdentityHeader,
-                                           std::string(claimed_identity));
-  }
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_},
+      {kServerPort, service_},
+      {kUrlScheme, is_https_ ? "https" : "http"},
+      {kHttpResponseStatusCode,
+       std::to_string(static_cast<int>(http_context.response->code))},
+      {kClientReturnCodeLabel, std::to_string(result.status_code)},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
 
   opentelemetry::context::Context context;
-  client_server_latency_->Record(latency_s, client_server_latency_label_kv,
-                                 context);
+  client_server_latency_->Record(latency_s, labels, context);
 }
 
 void HttpConnection::RecordClientRequestDuration(
     const AsyncContext<HttpRequest, HttpResponse>& http_context,
     std::chrono::time_point<std::chrono::steady_clock> submit_request_time) {
-  if (!metric_router_) {
+  if (!client_request_duration_) {
     return;
   }
   std::chrono::duration<double> duration =
       std::chrono::steady_clock::now() - submit_request_time;
   double duration_s = duration / std::chrono::seconds(1);
 
-  absl::string_view claimed_identity = GetClaimedIdentity(http_context);
   auto result =
       ConvertHttpStatusCodeToExecutionResult(http_context.response->code);
 
-  absl::flat_hash_map<std::string, std::string>
-      client_request_duration_label_kv = {
-          {std::string(kServerAddress), host_},
-          {std::string(kServerPort), service_},
-          {std::string(kUrlScheme), is_https_ ? "https" : "http"},
-          {std::string(kHttpResponseStatusCode),
-           std::to_string(static_cast<int>(http_context.response->code))},
-          {std::string(kResponseStatusLabel),
-           HttpStatusCodeToString(http_context.response->code)},
-          {std::string(kClientReturnCodeLabel),
-           std::to_string(result.status_code)}};
-
-  if (claimed_identity != kUnknownValue) {
-    client_request_duration_label_kv.emplace(kClaimedIdentityHeader,
-                                             std::string(claimed_identity));
-  }
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_},
+      {kServerPort, service_},
+      {kUrlScheme, is_https_ ? "https" : "http"},
+      {kHttpResponseStatusCode,
+       std::to_string(static_cast<int>(http_context.response->code))},
+      {kClientReturnCodeLabel, std::to_string(result.status_code)},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
 
   opentelemetry::context::Context context;
-  client_request_duration_->Record(duration_s, client_request_duration_label_kv,
-                                   context);
+  client_request_duration_->Record(duration_s, labels, context);
 }
 
 void HttpConnection::RecordClientConnectionDuration() {
-  if (!metric_router_) {
+  if (!client_connection_duration_) {
     return;
   }
   std::chrono::duration<double> latency =
       std::chrono::steady_clock::now() - connection_creation_time_;
   double latency_s = latency / std::chrono::seconds(1);
 
-  const absl::flat_hash_map<std::string, std::string> http_request_label_kv = {
-      {std::string(kServerAddress), host_},
-      {std::string(kServerPort), service_},
-      {std::string(kUrlScheme), is_https_ ? "https" : "http"}};
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_},
+      {kServerPort, service_},
+      {kUrlScheme, is_https_ ? "https" : "http"}};
   opentelemetry::context::Context context;
-  client_connection_duration_->Record(latency_s, http_request_label_kv,
-                                      context);
+  client_connection_duration_->Record(latency_s, labels, context);
 }
 
 void HttpConnection::RecordClientRequestBodySize(
     const AsyncContext<HttpRequest, HttpResponse>& http_context) {
-  if (!metric_router_) {
+  if (!client_request_body_size_) {
     return;
   }
-  absl::string_view claimed_identity = GetClaimedIdentity(http_context);
-  absl::flat_hash_map<std::string, std::string> request_body_size_label_kv = {
-      {std::string(kServerAddress), host_},
-      {std::string(kServerPort), service_},
-      {std::string(kUrlScheme), is_https_ ? "https" : "http"}};
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_},
+      {kServerPort, service_},
+      {kUrlScheme, is_https_ ? "https" : "http"},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
 
-  if (claimed_identity != kUnknownValue) {
-    request_body_size_label_kv.emplace(kClaimedIdentityHeader,
-                                       std::string(claimed_identity));
-  }
   opentelemetry::context::Context context;
-  client_request_body_size_->Record(http_context.request->body.length,
-                                    request_body_size_label_kv, context);
+  client_request_body_size_->Record(http_context.request->body.length, labels,
+                                    context);
 }
 
 void HttpConnection::RecordClientResponseBodySize(
     const AsyncContext<HttpRequest, HttpResponse>& http_context) {
-  if (!metric_router_) {
+  if (!client_response_body_size_) {
     return;
   }
-  absl::string_view claimed_identity = GetClaimedIdentity(http_context);
-
   auto result =
       ConvertHttpStatusCodeToExecutionResult(http_context.response->code);
 
-  absl::flat_hash_map<std::string, std::string> response_body_size_label_kv = {
-      {std::string(kServerAddress), host_},
-      {std::string(kServerPort), service_},
-      {std::string(kUrlScheme), is_https_ ? "https" : "http"},
-      {std::string(kHttpResponseStatusCode),
+  absl::flat_hash_map<absl::string_view, std::string> labels = {
+      {kServerAddress, host_},
+      {kServerPort, service_},
+      {kUrlScheme, is_https_ ? "https" : "http"},
+      {kHttpResponseStatusCode,
        std::to_string(static_cast<int>(http_context.response->code))},
-      {std::string(kResponseStatusLabel),
-       HttpStatusCodeToString(http_context.response->code)},
-      {std::string(kClientReturnCodeLabel),
-       std::to_string(result.status_code)}};
+      {kClientReturnCodeLabel, std::to_string(result.status_code)},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
 
-  if (claimed_identity != kUnknownValue) {
-    response_body_size_label_kv.emplace(kClaimedIdentityHeader,
-                                        std::string(claimed_identity));
-  }
   opentelemetry::context::Context context;
-  client_response_body_size_->Record(http_context.response->body.length,
-                                     response_body_size_label_kv, context);
+  client_response_body_size_->Record(http_context.response->body.length, labels,
+                                     context);
 }
 
 }  // namespace google::scp::core

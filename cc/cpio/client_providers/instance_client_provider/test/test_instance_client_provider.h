@@ -21,10 +21,10 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/service_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/test/global_cpio/test_cpio_options.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/test/global_cpio/test_cpio_options.h"
 
 namespace google::scp::cpio::client_providers {
 /// Configurations for Test InstanceClientProvider.

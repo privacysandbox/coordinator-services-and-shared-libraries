@@ -19,8 +19,8 @@
 #include <functional>
 #include <memory>
 
-#include "core/nosql_database_provider/mock/aws/mock_aws_dynamo_db_client.h"
-#include "core/nosql_database_provider/src/aws/aws_dynamo_db.h"
+#include "cc/core/nosql_database_provider/mock/aws/mock_aws_dynamo_db_client.h"
+#include "cc/core/nosql_database_provider/src/aws/aws_dynamo_db.h"
 
 namespace google::scp::core::nosql_database_provider::aws::mock {
 class MockAwsDynamoDB : public nosql_database_provider::AwsDynamoDB {

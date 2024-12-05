@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_request_router/src/http_request_route_resolver_for_partition.h"
+#include "cc/pbs/partition_request_router/src/http_request_route_resolver_for_partition.h"
 
-#include "core/interface/partition_types.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/type_def.h"
-#include "pbs/partition_request_router/src/error_codes.h"
+#include "cc/core/interface/partition_types.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/pbs/partition_request_router/src/error_codes.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;

@@ -15,8 +15,8 @@
 #ifndef SCP_CPIO_INTERFACE_ERROR_CODES_H_
 #define SCP_CPIO_INTERFACE_ERROR_CODES_H_
 
-#include "core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::errors {
 /// Registers component code as 0x0214 for CPIO common errors.

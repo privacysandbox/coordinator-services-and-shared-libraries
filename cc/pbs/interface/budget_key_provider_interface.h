@@ -20,9 +20,9 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "core/interface/checkpoint_service_interface.h"
-#include "core/interface/service_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/checkpoint_service_interface.h"
+#include "cc/core/interface/service_interface.h"
 
 #include "budget_key_interface.h"
 #include "type_def.h"

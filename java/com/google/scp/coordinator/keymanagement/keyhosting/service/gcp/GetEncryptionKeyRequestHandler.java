@@ -40,9 +40,9 @@ public class GetEncryptionKeyRequestHandler
         .setName(
             ENCRYPTION_KEY_RESOURCE
                 + getVariableFromPath(
-                    /* pathTemplate = */ PATH_TEMPLATE,
-                    /* path = */ httpRequest.getPath(),
-                    /* variableName = */ "keyId"))
+                    /* pathTemplate= */ PATH_TEMPLATE,
+                    /* path= */ httpRequest.getPath(),
+                    /* variableName= */ "keyId"))
         .build();
   }
 

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "core/interface/errors.h"
+#include "cc/core/interface/errors.h"
 
 namespace google::scp::core::errors {
 

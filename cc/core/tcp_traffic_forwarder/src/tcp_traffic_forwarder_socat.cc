@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
+#include "cc/core/tcp_traffic_forwarder/src/tcp_traffic_forwarder_socat.h"
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -24,9 +24,9 @@
 #include <string>
 #include <thread>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/tcp_traffic_forwarder/src/error_codes.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/tcp_traffic_forwarder/src/error_codes.h"
 
 using google::scp::core::common::kZeroUuid;
 using std::cerr;
@@ -96,7 +96,7 @@ ExecutionResult TCPTrafficForwarderSocat::Run() noexcept {
 
   if (child_pid == 0) {
     // Register handler to properly terminate socat processes that die.
-    struct sigaction sigchild_action {};
+    struct sigaction sigchild_action{};
 
     sigchild_action.sa_handler = SigChildHandler;
     sigaction(SIGCHLD, &sigchild_action, nullptr);

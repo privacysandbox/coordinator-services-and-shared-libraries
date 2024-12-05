@@ -67,6 +67,16 @@ variable "get_public_key_cloudfunction_max_instances" {
   type        = number
 }
 
+variable "get_public_key_request_concurrency" {
+  description = "The maximum number of request to allow to be concurrently processed by a function instance."
+  type        = number
+}
+
+variable "get_public_key_cpus" {
+  description = "The number of CPUs used in a single container instance."
+  type        = number
+}
+
 variable "cloudfunction_timeout_seconds" {
   description = "Number of seconds after which a function instance times out."
   type        = number
@@ -105,6 +115,21 @@ variable "application_name" {
 variable "public_key_load_balancer_logs_enabled" {
   description = "Whether to enable logs for Load Balancer in Public Key Hosting Service."
   type        = bool
+}
+
+variable "use_cloud_run" {
+  description = "Whether to use Cloud Run or Cloud Functions."
+  type        = bool
+}
+
+variable "cloud_run_revision_force_replace" {
+  description = "Whether to create a new Cloud Run revision for every deployment."
+  type        = bool
+}
+
+variable "public_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Public Key Service."
+  type        = string
 }
 
 ################################################################################
@@ -154,4 +179,13 @@ variable "get_public_key_lb_max_latency_ms" {
 variable "get_public_key_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
+}
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Use OpenTelemetry to export metrics from Public Key Service."
+  type        = bool
 }

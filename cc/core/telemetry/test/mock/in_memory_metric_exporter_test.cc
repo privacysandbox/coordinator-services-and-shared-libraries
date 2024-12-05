@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
 
 #include "include/gtest/gtest.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
@@ -60,7 +60,9 @@ class InMemoryMetricExporterTest : public ::testing::Test {
 
     opentelemetry::sdk::metrics::PointDataAttributes point_data_attr;
     point_data_attr.attributes = {{"fake_key", "fake_value"}};
-    point_data_attr.point_data = opentelemetry::sdk::metrics::SumPointData{10};
+    opentelemetry::sdk::metrics::SumPointData point;
+    point.value_ = 10;
+    point_data_attr.point_data = point;
 
     metric_data.point_data_attr_.push_back(point_data_attr);
 

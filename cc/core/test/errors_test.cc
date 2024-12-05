@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/interface/errors.h"
+#include "cc/core/interface/errors.h"
 
 #include <gtest/gtest.h>
 
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
 
 using std::string;
 
@@ -45,6 +45,16 @@ TEST(ERRORS, ErrorMessageReturn) {
 
   static string error_message = GetErrorMessage(COMPONENT_NAME_ERROR);
   EXPECT_EQ(error_message, "Component error message test");
+}
+
+TEST(ERRORS, ErrorNameReturn) {
+  REGISTER_COMPONENT_CODE(COMPONENT_NAME, 0x7FFF)
+
+  DEFINE_ERROR_CODE(COMPONENT_NAME_ERROR, COMPONENT_NAME, 0xFFFF,
+                    "Component error message test", HttpStatusCode::BAD_REQUEST)
+
+  absl::string_view error_name = GetErrorName(COMPONENT_NAME_ERROR);
+  EXPECT_EQ(error_name, "COMPONENT_NAME_ERROR");
 }
 
 TEST(ERRORS, ErrorMessageSuccessErrorCode) {

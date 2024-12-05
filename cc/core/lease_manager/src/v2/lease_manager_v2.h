@@ -21,9 +21,9 @@
 #include <thread>
 #include <unordered_map>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/lease_manager_interface.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/lease_manager_interface.h"
 
 namespace google::scp::core {
 

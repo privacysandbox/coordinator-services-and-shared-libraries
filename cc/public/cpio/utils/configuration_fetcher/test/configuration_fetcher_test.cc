@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/cpio/utils/configuration_fetcher/src/configuration_fetcher.h"
+#include "cc/public/cpio/utils/configuration_fetcher/src/configuration_fetcher.h"
 
 #include <gtest/gtest.h>
 
@@ -23,23 +23,23 @@
 #include <utility>
 
 #include "absl/strings/str_cat.h"
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/server/interface/configuration_keys.h"
-#include "cpio/server/interface/crypto_service/configuration_keys.h"
-#include "cpio/server/interface/job_service/configuration_keys.h"
-#include "cpio/server/interface/nosql_database_service/configuration_keys.h"
-#include "cpio/server/interface/queue_service/configuration_keys.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/mock/instance_client/mock_instance_client.h"
-#include "public/cpio/mock/parameter_client/mock_parameter_client.h"
-#include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
-#include "public/cpio/proto/instance_service/v1/instance_service.pb.h"
-#include "public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
-#include "public/cpio/utils/configuration_fetcher/interface/configuration_keys.h"
-#include "public/cpio/utils/configuration_fetcher/src/error_codes.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/server/interface/configuration_keys.h"
+#include "cc/cpio/server/interface/crypto_service/configuration_keys.h"
+#include "cc/cpio/server/interface/job_service/configuration_keys.h"
+#include "cc/cpio/server/interface/nosql_database_service/configuration_keys.h"
+#include "cc/cpio/server/interface/queue_service/configuration_keys.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/mock/instance_client/mock_instance_client.h"
+#include "cc/public/cpio/mock/parameter_client/mock_parameter_client.h"
+#include "cc/public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
+#include "cc/public/cpio/proto/instance_service/v1/instance_service.pb.h"
+#include "cc/public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
+#include "cc/public/cpio/utils/configuration_fetcher/interface/configuration_keys.h"
+#include "cc/public/cpio/utils/configuration_fetcher/src/error_codes.h"
 
 using google::cmrt::sdk::crypto_service::v1::HpkeAead;
 using google::cmrt::sdk::crypto_service::v1::HpkeKdf;

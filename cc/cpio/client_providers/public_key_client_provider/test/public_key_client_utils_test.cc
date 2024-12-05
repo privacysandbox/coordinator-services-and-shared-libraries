@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "cpio/client_providers/public_key_client_provider/src/public_key_client_utils.h"
+#include "cc/cpio/client_providers/public_key_client_provider/src/public_key_client_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -23,10 +23,10 @@
 #include <regex>
 #include <utility>
 
-#include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 using google::cmrt::sdk::public_key_service::v1::PublicKey;
 using google::scp::core::BytesBuffer;

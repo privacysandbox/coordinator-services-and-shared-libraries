@@ -12,14 +12,14 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "core/telemetry/src/metric/metric_router.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 
 #include <memory>
 
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
-#include "core/telemetry/mock/in_memory_metric_reader.h"
-#include "core/telemetry/src/common/telemetry_configuration.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/core/telemetry/mock/in_memory_metric_reader.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "include/gtest/gtest.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
@@ -406,40 +406,45 @@ TEST_F(MetricRouterTest, HandlesInvalidObservableInstrumentType) {
 }
 
 TEST_F(MetricRouterTest, CreateHistogramViewForInstrumentReturnsSuccess) {
-  std::string metric_name = "test_metric";
-  std::string view_name = "test_view";
+  std::string meter_name = "test_metric";
+  std::string instrument_name = "test_instrument";
   std::string description = "Test histogram view";
   std::string unit = "ms";
-  MetricRouter::InstrumentType instrument_type =
-      MetricRouter::InstrumentType::kHistogram;
+  std::string version = "1.0";
+  std::string schema_url = "http://example.com/schema";
   std::vector<double> boundaries = {0.0, 10.0, 20.0};
 
-  auto execution_result = metric_router_->CreateHistogramViewForInstrument(
-      metric_name, view_name, instrument_type, boundaries, "1.0",
-      "http://example.com/schema", description, unit);
+  auto execution_result = metric_router_->CreateViewForInstrument(
+      meter_name, instrument_name, /*instrument_type=*/
+      opentelemetry::sdk::metrics::InstrumentType::kHistogram,
+      /*aggregation_type=*/
+      opentelemetry::sdk::metrics::AggregationType::kHistogram, boundaries,
+      version, schema_url, description, unit);
 
   EXPECT_EQ(execution_result, SuccessExecutionResult());
 }
 
 TEST_F(MetricRouterTest,
        CreateHistogramViewForInstrumentWithNoopMeterProvider) {
-  std::string metric_name = "test_metric";
-  std::string view_name = "test_view";
+  std::string meter_name = "test_metric";
+  std::string instrument_name = "test_instrument";
   std::string description = "Test histogram view";
   std::string unit = "ms";
-  MetricRouter::InstrumentType instrument_type =
-      MetricRouter::InstrumentType::kHistogram;
+  std::string version = "1.0";
+  std::string schema_url = "http://example.com/schema";
   std::vector<double> boundaries = {0.0, 10.0, 20.0};
 
   // Ensure that a NoopMeterProvider is being used.
-  opentelemetry::nostd::shared_ptr<opentelemetry::metrics::MeterProvider>
-      meter_provider =
-          std::make_shared<opentelemetry::metrics::NoopMeterProvider>();
+  std::shared_ptr<opentelemetry::metrics::MeterProvider> meter_provider =
+      std::make_shared<opentelemetry::metrics::NoopMeterProvider>();
   opentelemetry::metrics::Provider::SetMeterProvider(meter_provider);
 
-  auto execution_result = metric_router_->CreateHistogramViewForInstrument(
-      metric_name, view_name, instrument_type, boundaries, "1.0",
-      "http://example.com/schema", description, unit);
+  auto execution_result = metric_router_->CreateViewForInstrument(
+      meter_name, instrument_name, /*instrument_type=*/
+      opentelemetry::sdk::metrics::InstrumentType::kHistogram,
+      /*aggregation_type=*/
+      opentelemetry::sdk::metrics::AggregationType::kHistogram, boundaries,
+      version, schema_url, description, unit);
 
   EXPECT_EQ(execution_result, FailureExecutionResult(
                                   SC_TELEMETRY_METER_PROVIDER_NOT_INITIALIZED));

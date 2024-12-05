@@ -29,12 +29,12 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "core/blob_storage_provider/src/common/error_codes.h"
-#include "core/common/sized_or_timed_bytes_buffer/src/sized_or_timed_bytes_buffer.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/metrics_def.h"
-#include "core/journal_service/src/journal_serialization.h"
-#include "core/journal_service/src/journal_utils.h"
+#include "cc/core/blob_storage_provider/src/common/error_codes.h"
+#include "cc/core/common/sized_or_timed_bytes_buffer/src/sized_or_timed_bytes_buffer.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/metrics_def.h"
+#include "cc/core/journal_service/src/journal_serialization.h"
+#include "cc/core/journal_service/src/journal_utils.h"
 #include "google/protobuf/any.pb.h"
 
 using google::scp::core::common::SizedOrTimedBytesBuffer;

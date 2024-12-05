@@ -20,6 +20,5 @@ cc_library(
     name = "streaming_context_errors_lib",
     hdrs = ["error_codes.h"],
     deps = [
-        "//cc:cc_base_include_dir",
     ],
 )

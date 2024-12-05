@@ -16,13 +16,13 @@
 
 #pragma once
 
-#include <nghttp2/asio_http2_server.h>
-
 #include <atomic>
 #include <memory>
 #include <string>
 #include <thread>
 #include <utility>
+
+#include <nghttp2/asio_http2_server.h>
 
 #include "cc/core/common/concurrent_map/src/concurrent_map.h"
 #include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
@@ -36,21 +36,12 @@
 #include "cc/core/interface/http_request_route_resolver_interface.h"
 #include "cc/core/interface/http_request_router_interface.h"
 #include "cc/core/interface/http_server_interface.h"
-#include "core/common/concurrent_map/src/concurrent_map.h"
-#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_server/src/http2_request.h"
-#include "core/http2_server/src/http2_response.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/http_request_route_resolver_interface.h"
-#include "core/interface/http_request_router_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "opentelemetry/metrics/meter.h"
-#include "opentelemetry/metrics/provider.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/metrics/provider.h"
 
 namespace google::scp::core {
 
@@ -103,7 +94,8 @@ class Http2Server : public HttpServerInterface {
           nullptr,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
           nullptr,
-      Http2ServerOptions options = Http2ServerOptions())
+      Http2ServerOptions options = Http2ServerOptions(),
+      MetricRouter* metric_router = nullptr)
       : host_address_(host_address),
         port_(port),
         thread_pool_size_(thread_pool_size),
@@ -122,7 +114,8 @@ class Http2Server : public HttpServerInterface {
         private_key_file_(*options.private_key_file),
         certificate_chain_file_(*options.certificate_chain_file),
         tls_context_(boost::asio::ssl::context::sslv23),
-        request_routing_enabled_(false) {}
+        request_routing_enabled_(false),
+        metric_router_(metric_router) {}
 
   // Construct HTTP Server with Request Routing capabilities.
   Http2Server(
@@ -135,13 +128,16 @@ class Http2Server : public HttpServerInterface {
           request_route_resolver,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
-      Http2ServerOptions options = Http2ServerOptions())
+      Http2ServerOptions options = Http2ServerOptions(),
+      MetricRouter* metric_router = nullptr)
       : Http2Server(host_address, port, thread_pool_size, async_executor,
                     authorization_proxy, aws_authorization_proxy, metric_client,
-                    config_provider, options) {
+                    config_provider, options, metric_router) {
     request_router_ = request_router;
     request_route_resolver_ = request_route_resolver;
   }
+
+  ~Http2Server();
 
   ExecutionResult Init() noexcept override;
 
@@ -195,11 +191,15 @@ class Http2Server : public HttpServerInterface {
   virtual ExecutionResult MetricStop() noexcept;
 
   /**
-   * @brief A handler for ng2 native request response and converting them to
-   * Http2Request and Http2Response behind the scenes.
+   * @brief Handles the incoming nghttp2 native request and response. This is
+   * the first function to receive the HTTP request. It initializes the
+   * asynchronous context to store the request and response, binds the
+   * OnHttp2Response callback, and creates a synchronous context to track active
+   * requests. Finally, it sets up the request handler. The request is then
+   * forwarded for further processing in RouteOrHandleHttp2Request.
    *
-   * @param request The nghttp2 request.
-   * @param response The nghttp2 response.
+   * @param request The nghttp2 server request object.
+   * @param response The nghttp2 server response object.
    */
   virtual void OnHttp2Request(
       const nghttp2::asio_http2::server::request& request,
@@ -254,7 +254,17 @@ class Http2Server : public HttpServerInterface {
       HttpHandler& http_handler) noexcept;
 
   /**
-   * @brief A handler for the http2 request.
+   * @brief Handles the processing of an HTTP2 request. This function retrieves
+   * the synchronization context adds details to it. It also creates an
+   * authorization context to manage request authorization (dispatching
+   * asynchronously).
+   *
+   * Additionally, this function sets up key callbacks:
+   * - `SetOnRequestBodyDataReceivedCallback` triggers `OnHttp2PendingCallback`
+   * when PBS receives the request body data.
+   * - `SetOnCloseCallback` triggers `OnHttp2Cleanup` when PBS is finalizing the
+   * request and sending the response back to the client (closing
+   * connection/stream).
    *
    * @param http2_context The context of the ng http2 operation.
    * @param http_handler The http handler to handle the request.
@@ -279,8 +289,15 @@ class Http2Server : public HttpServerInterface {
           sync_context) noexcept;
 
   /**
-   * @brief Is called when any of the http2 internal callbacks are complete.
+   * @brief Called upon the completion of any HTTP2 internal callback. This
+   * function is triggered when PBS receives data or when
+   * OnAuthorizationCallback completes. Using the synchronization context, it
+   * manages the request flow by updating `pending_callbacks` to reflect the
+   * current state.
    *
+   * This function also sets up the context required for request processing
+   * (e.g., budget consumption) and initializes the `OnHttp2Response` callback
+   * to handle the final response.
    * @param execution_result The execution result of the callback.
    * @param request_id The request id associated with the operation.
    */
@@ -320,111 +337,175 @@ class Http2Server : public HttpServerInterface {
    */
   bool IsRequestForwardingEnabled() const;
 
-  void RecordServerLatency(const common::Uuid& activity_id,
-                           const common::Uuid& request_id);
-
-  /// Callback to be used with an OTel ObservableInstrument for active requests.
-  static void ObserveActiveRequestsCallback(
-      opentelemetry::metrics::ObserverResult observer_result,
-      Http2Server* self_ptr);
-
-  /// The host address to run the http server on.
+  // The host address to run the http server on.
   std::string host_address_;
 
-  /// The port of the http server.
+  // The port of the http server.
   std::string port_;
 
-  /// The ngHttp2 http server instance.
+  // The ngHttp2 http server instance.
   nghttp2::asio_http2::server::http2 http2_server_;
 
-  /// The total http server thread pool size.
+  // The total http server thread pool size.
   size_t thread_pool_size_;
 
-  /// Registry of all the paths and handlers.
+  // Registry of all the paths and handlers.
   common::ConcurrentMap<
       std::string,
       std::shared_ptr<common::ConcurrentMap<HttpMethod, HttpHandler>>>
       resource_handlers_;
 
-  /// Registry of all the active requests.
+  // Registry of all the active requests.
   common::ConcurrentMap<common::Uuid,
                         std::shared_ptr<Http2SynchronizationContext>,
                         common::UuidCompare>
       active_requests_;
 
-  /// Indicates whether the http server is running.
+  // Indicates whether the http server is running.
   std::atomic<bool> is_running_;
 
-  /// An instance to the authorization proxy.
+  // An instance to the authorization proxy.
   std::shared_ptr<AuthorizationProxyInterface> authorization_proxy_;
 
   std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy_;
 
-  /// Metric client instance for custom metric recording.
+  // Metric client instance for custom metric recording.
   std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
-  /// An instance of the config provider.
+  // An instance of the config provider.
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
 
-  /// The time interval for metrics aggregation.
+  // The time interval for metrics aggregation.
   TimeDuration aggregated_metric_interval_ms_;
 
-  /// Feature flag for otel server metrics
+  // Feature flag for otel server metrics
   bool otel_server_metrics_enabled_;
 
-  /// An instance of the async executor.
+  // An instance of the async executor.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
 
-  /// The AggregateMetric instance for http request metrics.
+  // The AggregateMetric instance for http request metrics.
   std::shared_ptr<cpio::AggregateMetricInterface> http_request_metrics_;
 
-  /// An instance of the operation dispatcher.
+  // An instance of the operation dispatcher.
   common::OperationDispatcher operation_dispatcher_;
 
-  /// Whether to use TLS.
+  // Whether to use TLS.
   bool use_tls_;
 
-  /// The path and filename to the server private key file.
+  // The path and filename to the server private key file.
   std::string private_key_file_;
 
-  /// The path and filename of the server certificate chain file.
+  // The path and filename of the server certificate chain file.
   std::string certificate_chain_file_;
 
-  /// The TLS context of the server.
+  // The TLS context of the server.
   boost::asio::ssl::context tls_context_;
 
-  /// @brief Router to forward a request to a remote instance if needed.
+  // @brief Router to forward a request to a remote instance if needed.
   std::shared_ptr<HttpRequestRouterInterface> request_router_;
 
-  /// @brief Resolves target route of a request.
+  // @brief Resolves target route of a request.
   std::shared_ptr<HttpRequestRouteResolverInterface> request_route_resolver_;
 
-  /// @brief enables disables request routing.
+  // @brief enables disables request routing.
   bool request_routing_enabled_;
 
-  /// @brief enables use of adtech site value as authorized_domain.
+  // @brief enables use of adtech site value as authorized_domain.
   bool adtech_site_authorized_domain_enabled_;
 
-  /// OpenTelemetry Meter used for creating and managing metrics.
+ private:
+  /**
+   * Initializes the OpenTelemetry metrics collection system. This function
+   * sets up the necessary configurations and resources for capturing and
+   * exporting metrics.
+   *
+   * @return ExecutionResult indicating the success or failure of the
+   * initialization process.
+   *
+   * @noexcept This function guarantees not to throw exceptions.
+   */
+  ExecutionResult OtelMetricInit() noexcept;
+
+  /**
+   * Records the server latency for a given activity and request. It measures
+   * the latency of a request coming to the PBS server (OnHttp2Request) until
+   * the request is fully complete (OnHttp2Cleanup).
+   *
+   * @param request_id The unique identifier for the request whose latency is
+   * being recorded.
+   */
+  void RecordServerLatency(const common::Uuid& request_id);
+
+  /**
+   * Records the size of the request body (uncompressed) sent by the client.
+   *
+   * @param request_id The unique identifier for the request whose body size is
+   * being recorded.
+   */
+  void RecordRequestBodySize(const common::Uuid& request_id);
+
+  /**
+   * Records the size of the response body (uncompressed) when request is
+   * complete when complete (OnHttp2Response) and sent back to the client.
+   *
+   * @param http_context The http context containing the request and response
+   * objects.
+   */
+  void RecordResponseBodySize(
+      const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
+
+  /**
+   * Records the number of PBS requests when complete (OnHttp2Response),
+   * including information related to the request and response.
+   *
+   * @param http_context The http context containing the request and response
+   * objects.
+   */
+  void RecordPbsRequests(
+      const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
+
+  /**
+   * Callback function used by OpenTelemetry to observe the number of active
+   * Http2 requests.
+   *
+   * This function is passed as a callback to an OTel ObservableInstrument,
+   * which monitors metrics related to active requests on the server.
+   *
+   * @param observer_result The result object used to observe and report active
+   * request counts.
+   * @param self_ptr A pointer to the HTTP/2 server instance, used to access
+   * request data.
+   */
+  static void ObserveActiveRequestsCallback(
+      opentelemetry::metrics::ObserverResult observer_result,
+      Http2Server* self_ptr);
+
+  // An instance of metric router which will provide APIs to create metrics.
+  MetricRouter* metric_router_;
+
+  // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
 
-  /// OpenTelemetry Instrument for measuring req-response latency.
-  std::unique_ptr<opentelemetry::metrics::Histogram<double>>
+  // OpenTelemetry Instrument for measuring req-response latency.
+  std::shared_ptr<opentelemetry::metrics::Histogram<double>>
       server_request_duration_;
 
-  /// OpenTelemetry Instrument for active Http server requests.
+  // OpenTelemetry Instrument for active Http server requests.
   std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
       active_requests_instrument_;
 
-  /// OpenTelemetry Instrument for measuring request body size.
-  std::unique_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+  // OpenTelemetry Instrument for measuring request body size (uncompressed).
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
       server_request_body_size_;
 
-  /// OpenTelemetry Instrument for measuring response body size.
-  std::unique_ptr<opentelemetry::metrics::Histogram<uint64_t>>
+  // OpenTelemetry Instrument for measuring response body size (uncompressed).
+  std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
       server_response_body_size_;
 
-  /// OpenTelemetry Instrument for measuring response body size.
-  std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>> pbs_transactions_;
+  // OpenTelemetry Instrument for counting the number of completed PBS
+  // requests.
+  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>> pbs_requests_;
 };
+
 }  // namespace google::scp::core

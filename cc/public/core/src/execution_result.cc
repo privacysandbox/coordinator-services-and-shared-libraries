@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include <map>
 
-#include "core/common/proto/common.pb.h"
+#include "cc/core/common/proto/common.pb.h"
 
 using std::map;
 

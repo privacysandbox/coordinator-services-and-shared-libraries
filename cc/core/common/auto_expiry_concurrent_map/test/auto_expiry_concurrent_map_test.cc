@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "cc/core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 
 #include <gtest/gtest.h>
 
@@ -26,13 +26,13 @@
 #include <memory>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncExecutor;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;

@@ -22,11 +22,11 @@
 
 #include <google/protobuf/util/message_differencer.h>
 
-#include "core/interface/async_context.h"
-#include "core/message_router/src/message_router.h"
-#include "cpio/client_providers/interface/private_key_fetcher_provider_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/message_router/src/message_router.h"
+#include "cc/cpio/client_providers/interface/private_key_fetcher_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockPrivateKeyFetcherProvider

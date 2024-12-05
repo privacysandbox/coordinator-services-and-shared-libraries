@@ -25,9 +25,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "core/interface/async_executor_interface.h"
-#include "cpio/client_providers/interface/nosql_database_client_provider_interface.h"
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/cpio/client_providers/interface/nosql_database_client_provider_interface.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
 #include "google/cloud/spanner/admin/database_admin_client.h"
 #include "google/cloud/spanner/client.h"
 #include "google/cloud/spanner/mutations.h"

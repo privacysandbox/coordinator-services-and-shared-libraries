@@ -18,9 +18,9 @@
 
 #include <memory>
 
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
 
 namespace google::scp::cpio {
 class MockSimpleMetric : public SimpleMetricInterface {

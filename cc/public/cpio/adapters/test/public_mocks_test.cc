@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
+#include "cc/public/cpio/mock/blob_storage_client/mock_blob_storage_client.h"
+#include "cc/public/cpio/mock/crypto_client/mock_crypto_client.h"
+#include "cc/public/cpio/mock/instance_client/mock_instance_client.h"
+#include "cc/public/cpio/mock/kms_client/mock_kms_client.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/public/cpio/mock/parameter_client/mock_parameter_client.h"
+#include "cc/public/cpio/mock/private_key_client/mock_private_key_client.h"
+#include "cc/public/cpio/mock/public_key_client/mock_public_key_client.h"
+#include "cc/public/cpio/utils/configuration_fetcher/mock/mock_configuration_fetcher.h"
 #include "gtest/gtest.h"
-#include "public/cpio/mock/blob_storage_client/mock_blob_storage_client.h"
-#include "public/cpio/mock/crypto_client/mock_crypto_client.h"
-#include "public/cpio/mock/instance_client/mock_instance_client.h"
-#include "public/cpio/mock/kms_client/mock_kms_client.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
-#include "public/cpio/mock/parameter_client/mock_parameter_client.h"
-#include "public/cpio/mock/private_key_client/mock_private_key_client.h"
-#include "public/cpio/mock/public_key_client/mock_public_key_client.h"
-#include "public/cpio/utils/configuration_fetcher/mock/mock_configuration_fetcher.h"
 
 namespace google::scp::cpio {
 TEST(PublicMocksTest, CreateMocks) {

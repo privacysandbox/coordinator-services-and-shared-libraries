@@ -21,16 +21,17 @@
 #include <iterator>
 #include <map>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "core/authorization_service/src/error_codes.h"
-#include "core/http2_client/src/aws/aws_v4_signer.h"
-#include "core/interface/type_def.h"
-#include "core/utils/src/base64.h"
-#include "public/core/interface/execution_result.h"
+#include <nlohmann/json.hpp>
+
+#include "cc/core/authorization_service/src/error_codes.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::scp::core::AuthorizationMetadata;
 using google::scp::core::AuthorizedMetadata;
@@ -133,8 +134,7 @@ AwsHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
   try {
     body_json = json::parse(body_str);
     parse_fail = false;
-  } catch (...) {
-  }
+  } catch (...) {}
   if (parse_fail || !body_json.contains(kAuthorizedDomain)) {
     return FailureExecutionResult(
         core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);

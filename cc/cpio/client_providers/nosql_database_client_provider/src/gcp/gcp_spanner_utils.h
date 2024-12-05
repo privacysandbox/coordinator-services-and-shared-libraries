@@ -21,9 +21,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
 #include "google/cloud/spanner/value.h"
-#include "public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
 
 namespace google::scp::cpio::client_providers {
 /**

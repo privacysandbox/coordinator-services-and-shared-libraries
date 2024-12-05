@@ -22,7 +22,7 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/authorization_proxy_interface.h"
+#include "cc/core/interface/authorization_proxy_interface.h"
 
 namespace google::scp::core::authorization_proxy::mock {
 

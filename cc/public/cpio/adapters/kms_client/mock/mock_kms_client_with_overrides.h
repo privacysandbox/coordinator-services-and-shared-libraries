@@ -18,9 +18,9 @@
 
 #include <memory>
 
-#include "cpio/client_providers/kms_client_provider/mock/mock_kms_client_provider.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/adapters/kms_client/src/kms_client.h"
+#include "cc/cpio/client_providers/kms_client_provider/mock/mock_kms_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/adapters/kms_client/src/kms_client.h"
 
 namespace google::scp::cpio::mock {
 class MockKmsClientWithOverrides : public KmsClient {

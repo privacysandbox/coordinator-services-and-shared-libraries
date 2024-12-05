@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/kms_client_provider/src/gcp/gcp_kms_client_provider.h"
+#include "cc/cpio/client_providers/kms_client_provider/src/gcp/gcp_kms_client_provider.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -20,13 +20,13 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/utils/src/base64.h"
-#include "cpio/client_providers/kms_client_provider/mock/gcp/mock_gcp_key_management_service_client.h"
-#include "cpio/client_providers/kms_client_provider/src/gcp/error_codes.h"
-#include "cpio/client_providers/kms_client_provider/src/gcp/gcp_kms_aead.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/cpio/client_providers/kms_client_provider/mock/gcp/mock_gcp_key_management_service_client.h"
+#include "cc/cpio/client_providers/kms_client_provider/src/gcp/error_codes.h"
+#include "cc/cpio/client_providers/kms_client_provider/src/gcp/gcp_kms_aead.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using crypto::tink::Aead;
 using crypto::tink::util::StatusOr;

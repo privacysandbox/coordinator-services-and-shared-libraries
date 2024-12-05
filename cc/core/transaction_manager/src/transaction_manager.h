@@ -25,23 +25,23 @@
 
 #include "absl/base/nullability.h"
 #include "absl/synchronization/mutex.h"
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/interface/partition_types.h"
-#include "core/interface/remote_transaction_manager_interface.h"
-#include "core/interface/transaction_command_serializer_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "core/transaction_manager/interface/transaction_engine_interface.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/interface/partition_types.h"
+#include "cc/core/interface/remote_transaction_manager_interface.h"
+#include "cc/core/interface/transaction_command_serializer_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/core/transaction_manager/interface/transaction_engine_interface.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/observer_result.h"
 #include "opentelemetry/metrics/sync_instruments.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 
 namespace google::scp::core {
 
@@ -62,6 +62,8 @@ class TransactionManager : public TransactionManagerInterface {
       std::shared_ptr<MetricRouter> metric_router,
       std::shared_ptr<ConfigProviderInterface> config_provider,
       const PartitionId& partition_id = kGlobalPartitionId);
+
+  ~TransactionManager();
 
   ExecutionResult Init() noexcept override;
 

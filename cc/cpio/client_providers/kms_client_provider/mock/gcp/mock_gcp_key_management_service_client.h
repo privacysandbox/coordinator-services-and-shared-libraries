@@ -18,7 +18,7 @@
 
 #include <gmock/gmock.h>
 
-#include "cpio/client_providers/kms_client_provider/interface/gcp/gcp_key_management_service_client_interface.h"
+#include "cc/cpio/client_providers/kms_client_provider/interface/gcp/gcp_key_management_service_client_interface.h"
 
 namespace google::scp::cpio::client_providers::mock {
 /*! @copydoc GcpKeyManagementServiceClientInterface

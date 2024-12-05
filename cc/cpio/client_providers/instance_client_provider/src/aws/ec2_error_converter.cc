@@ -20,9 +20,9 @@
 
 #include <aws/ec2/EC2Client.h>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "cpio/common/src/aws/error_codes.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
 
 #include "error_codes.h"
 

@@ -20,11 +20,11 @@
 #include <utility>
 #include <vector>
 
-#include "core/interface/async_executor_interface.h"
-#include "pbs/interface/metrics_def.h"
-#include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
-#include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
-#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/pbs/interface/metrics_def.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/metric_utils.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;

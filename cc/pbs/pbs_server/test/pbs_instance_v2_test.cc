@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance_v2.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_v2.h"
 
 #include <gtest/gtest.h>
 
@@ -23,25 +23,25 @@
 #include <filesystem>
 #include <string>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/config_provider/src/env_config_provider.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/lease_manager_interface.h"
-#include "core/lease_manager/src/lease_manager.h"
-#include "core/tcp_traffic_forwarder/mock/mock_traffic_forwarder.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/logging_utils.h"
-#include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/leasable_lock/mock/mock_leasable_lock.h"
-#include "pbs/pbs_client/src/pbs_client.h"
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/config_provider/src/env_config_provider.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/lease_manager_interface.h"
+#include "cc/core/lease_manager/src/lease_manager.h"
+#include "cc/core/tcp_traffic_forwarder/mock/mock_traffic_forwarder.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/logging_utils.h"
+#include "cc/core/token_provider_cache/mock/token_provider_cache_dummy.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/leasable_lock/mock/mock_leasable_lock.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;

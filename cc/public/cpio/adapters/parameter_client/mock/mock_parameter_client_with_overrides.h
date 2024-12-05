@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "cpio/client_providers/parameter_client_provider/mock/mock_parameter_client_provider.h"
-#include "public/cpio/adapters/parameter_client/src/parameter_client.h"
+#include "cc/cpio/client_providers/parameter_client_provider/mock/mock_parameter_client_provider.h"
+#include "cc/public/cpio/adapters/parameter_client/src/parameter_client.h"
 
 namespace google::scp::cpio::mock {
 class MockParameterClientWithOverrides : public ParameterClient {

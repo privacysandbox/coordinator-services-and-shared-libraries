@@ -30,24 +30,35 @@
 #include "cc/core/http2_client/src/error_codes.h"
 #include "cc/core/http2_client/src/http_client_def.h"
 #include "cc/core/http2_client/src/http_connection.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/metrics/provider.h"
-#include "public/core/interface/execution_result.h"
 
 using boost::algorithm::to_lower;
 using boost::system::error_code;
 using google::scp::core::common::kZeroUuid;
 using nghttp2::asio_http2::host_service_from_uri;
-using std::lock_guard;
-using std::make_shared;
-using std::shared_ptr;
-using std::string;
-using std::vector;
 
 static constexpr char kHttpsTag[] = "https";
 static constexpr char kHttpTag[] = "http";
 static constexpr char kHttpConnection[] = "HttpConnection";
 
 namespace google::scp::core {
+
+HttpConnectionPool::~HttpConnectionPool() {
+  if (client_active_requests_instrument_) {
+    client_active_requests_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HttpConnectionPool::ObserveClientActiveRequestsCallback),
+        this);
+  }
+  if (client_open_connections_instrument_) {
+    client_open_connections_instrument_->RemoveCallback(
+        reinterpret_cast<opentelemetry::metrics::ObservableCallbackPtr>(
+            &HttpConnectionPool::ObserveClientOpenConnectionsCallback),
+        this);
+  }
+}
+
 ExecutionResult HttpConnectionPool::Init() noexcept {
   if (metric_router_) {
     meter_ = metric_router_->GetOrCreateMeter(kHttpConnectionPoolMeter);
@@ -101,14 +112,14 @@ ExecutionResult HttpConnectionPool::Run() noexcept {
 
 ExecutionResult HttpConnectionPool::Stop() noexcept {
   is_running_ = false;
-  vector<string> keys;
+  std::vector<std::string> keys;
   auto execution_result = connections_.Keys(keys);
   if (!execution_result.Successful()) {
     return execution_result;
   }
 
   for (const auto& key : keys) {
-    shared_ptr<HttpConnectionPoolEntry> entry;
+    std::shared_ptr<HttpConnectionPoolEntry> entry;
     execution_result = connections_.Find(key, entry);
     if (!execution_result.Successful()) {
       return execution_result;
@@ -125,26 +136,26 @@ ExecutionResult HttpConnectionPool::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
-shared_ptr<HttpConnection> HttpConnectionPool::CreateHttpConnection(
-    string host, string service, bool is_https,
+std::shared_ptr<HttpConnection> HttpConnectionPool::CreateHttpConnection(
+    std::string host, std::string service, bool is_https,
     TimeDuration http2_read_timeout_in_sec) {
   return make_shared<HttpConnection>(async_executor_, host, service, is_https,
-                                     metric_router_.get(),
+                                     metric_router_,
                                      http2_read_timeout_in_sec_);
 }
 
 ExecutionResult HttpConnectionPool::GetConnection(
-    const shared_ptr<Uri>& uri,
-    shared_ptr<HttpConnection>& connection) noexcept {
+    const std::shared_ptr<Uri>& uri,
+    std::shared_ptr<HttpConnection>& connection) noexcept {
   if (!is_running_) {
     return FailureExecutionResult(
         errors::SC_HTTP2_CLIENT_CONNECTION_POOL_IS_NOT_AVAILABLE);
   }
 
   error_code ec;
-  string scheme;
-  string host;
-  string service;
+  std::string scheme;
+  std::string host;
+  std::string service;
   if (host_service_from_uri(ec, scheme, host, service, *uri)) {
     IncrementClientAddressError(uri->c_str());
     return FailureExecutionResult(errors::SC_HTTP2_CLIENT_INVALID_URI);
@@ -161,7 +172,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
     return FailureExecutionResult(errors::SC_HTTP2_CLIENT_INVALID_URI);
   }
 
-  auto http_connection_entry = make_shared<HttpConnectionPoolEntry>();
+  auto http_connection_entry = std::make_shared<HttpConnectionPoolEntry>();
   auto pair = std::make_pair(host + ":" + service, http_connection_entry);
   if (connections_.Insert(pair, http_connection_entry).Successful()) {
     for (size_t i = 0; i < max_connections_per_host_; ++i) {
@@ -190,9 +201,10 @@ ExecutionResult HttpConnectionPool::GetConnection(
         connections_.Erase(pair.first);
         return execution_result;
       }
-      SCP_INFO(kHttpConnection, kZeroUuid,
-               "Successfully initialized a connection %p for %s",
-               http_connection.get(), pair.first.c_str());
+      SCP_INFO(
+          kHttpConnection, kZeroUuid,
+          absl::StrFormat("Successfully initialized a connection %p for %s",
+                          http_connection.get(), pair.first.c_str()));
     }
     http_connection_entry->is_initialized = true;
   }
@@ -235,7 +247,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
 
 void HttpConnectionPool::RecycleConnection(
     std::shared_ptr<HttpConnection>& connection) noexcept {
-  lock_guard lock(connection_lock_);
+  std::lock_guard lock(connection_lock_);
 
   if (!connection->IsDropped()) {
     return;
@@ -246,8 +258,9 @@ void HttpConnectionPool::RecycleConnection(
   connection->Init();
   connection->Run();
 
-  SCP_DEBUG(kHttpConnection, common::kZeroUuid,
-            "Successfully recycled connection %p", connection.get());
+  SCP_DEBUG(
+      kHttpConnection, common::kZeroUuid,
+      absl::StrFormat("Successfully recycled connection %p", connection.get()));
 }
 
 void HttpConnectionPool::ObserveClientActiveRequestsCallback(
@@ -271,8 +284,9 @@ void HttpConnectionPool::ObserveClientActiveRequestsCallback(
     execution_result = self_ptr->connections_.Find(key, entry);
     if (!execution_result.Successful()) {
       SCP_DEBUG(kHttpConnection, common::kZeroUuid,
-                "Could not fetch the connection pool entry for key %s",
-                key.c_str());
+                absl::StrFormat(
+                    "Could not fetch the connection pool entry for key %s",
+                    key.c_str()));
       return;
     }
 
@@ -322,11 +336,13 @@ void HttpConnectionPool::ObserveClientOpenConnectionsCallback(
 }
 
 void HttpConnectionPool::IncrementClientAddressError(absl::string_view uri) {
+  if (!client_address_errors_counter_) {
+    return;
+  }
   const absl::flat_hash_map<std::string, std::string>
       client_address_errors_label_kv = {
           {std::string(kUriLabel), std::string(uri)}};
-  if (metric_router_) {
-    client_address_errors_counter_->Add(1, client_address_errors_label_kv);
-  }
+  client_address_errors_counter_->Add(1, client_address_errors_label_kv);
 }
+
 }  // namespace google::scp::core

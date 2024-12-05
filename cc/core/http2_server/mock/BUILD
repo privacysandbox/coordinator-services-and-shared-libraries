@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/http2_server/src:core_http2_server_lib",
         "//cc/core/interface:interface_lib",
         "//cc/public/cpio/utils/metric_aggregation/mock:metric_aggregation_mock",

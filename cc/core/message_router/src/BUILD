@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/concurrent_map/src:concurrent_map_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",

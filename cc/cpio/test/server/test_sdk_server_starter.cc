@@ -25,7 +25,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "core/test/utils/docker_helper/docker_helper.h"
+#include "cc/core/test/utils/docker_helper/docker_helper.h"
 
 using google::scp::core::test::CreateNetwork;
 using google::scp::core::test::LoadImage;

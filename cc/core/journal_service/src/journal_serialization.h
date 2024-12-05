@@ -21,13 +21,13 @@
 #include <set>
 #include <string>
 
-#include "core/common/serialization/src/serialization.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/journal_service_interface.h"
-#include "core/journal_service/src/error_codes.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/journal_service_interface.h"
+#include "cc/core/journal_service/src/error_codes.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
 
 static constexpr uint64_t kCheckpointMetadataMagicNumber = 0x123456789;
 static constexpr size_t kLogHeaderByteLength =

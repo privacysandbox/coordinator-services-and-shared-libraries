@@ -31,11 +31,12 @@
 #include "cc/core/http2_client/src/http_connection.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/provider.h"
-#include "public/core/interface/execution_result.h"
 
 namespace google::scp::core {
+
 /**
  * @brief Provides connection pool functionality. Once the object is created,
  * the caller can get a connection to the remote host by calling get connection.
@@ -79,12 +80,15 @@ class HttpConnectionPool : public ServiceInterface {
    * @brief Constructs a new Http Connection Pool object
    *
    * @param async_executor An instance of the async executor.
+   * @param metric_router An instance of metric router to create metrics. It can
+   * be a nullptr as passed from HttpClient or in testing from
+   * MockHttpConnectionPool.
    * @param max_connections_per_host The max number of connections created per
    * host.
    */
   explicit HttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<core::MetricRouter> metric_router,
+      absl::Nullable<MetricRouter*> metric_router,
       size_t max_connections_per_host = kDefaultMaxConnectionsPerHost,
       TimeDuration http2_read_timeout_in_sec =
           kDefaultHttp2ReadTimeoutInSeconds)
@@ -93,6 +97,8 @@ class HttpConnectionPool : public ServiceInterface {
         http2_read_timeout_in_sec_(http2_read_timeout_in_sec),
         is_running_(false),
         metric_router_(metric_router) {}
+
+  ~HttpConnectionPool();
 
   ExecutionResult Init() noexcept;
   ExecutionResult Run() noexcept;
@@ -151,7 +157,7 @@ class HttpConnectionPool : public ServiceInterface {
   std::mutex connection_lock_;
 
   /// An instance of metric router which will provide APIs to create metrics.
-  std::shared_ptr<core::MetricRouter> metric_router_;
+  MetricRouter* metric_router_;
 
   /// OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
@@ -168,4 +174,5 @@ class HttpConnectionPool : public ServiceInterface {
   std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
       client_address_errors_counter_;
 };
+
 }  // namespace google::scp::core

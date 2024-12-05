@@ -19,13 +19,13 @@
 #include <memory>
 #include <string>
 
-#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/credentials_provider_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/remote_transaction_manager_interface.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "pbs/interface/type_def.h"
+#include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/credentials_provider_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/remote_transaction_manager_interface.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/pbs/interface/type_def.h"
 
 namespace google::scp::pbs {
 /*! @copydoc RemoteTransactionManagerInterface

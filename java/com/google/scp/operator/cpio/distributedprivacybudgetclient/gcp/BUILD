@@ -22,6 +22,7 @@ java_library(
         "*.java",
     ]),
     deps = [
+        "//java/com/google/scp/operator/cpio/configclient",
         "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
         "//java/com/google/scp/shared/api/util",
         "//java/com/google/scp/shared/gcp/util",

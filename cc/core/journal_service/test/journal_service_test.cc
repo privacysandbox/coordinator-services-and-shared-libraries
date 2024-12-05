@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/journal_service/src/journal_service.h"
+#include "cc/core/journal_service/src/journal_service.h"
 
 #include <gtest/gtest.h>
 
@@ -24,25 +24,25 @@
 #include <vector>
 
 #include "absl/synchronization/notification.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/config_provider/src/env_config_provider.h"
 #include "cc/core/interface/metrics_def.h"
+#include "cc/core/journal_service/mock/mock_journal_input_stream.h"
+#include "cc/core/journal_service/mock/mock_journal_output_stream.h"
+#include "cc/core/journal_service/mock/mock_journal_service_with_overrides.h"
+#include "cc/core/journal_service/src/error_codes.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/journal_service/mock/mock_journal_input_stream.h"
-#include "core/journal_service/mock/mock_journal_output_stream.h"
-#include "core/journal_service/mock/mock_journal_service_with_overrides.h"
-#include "core/journal_service/src/error_codes.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
-#include "core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;
@@ -675,6 +675,21 @@ TEST_F(JournalServiceTests, OTelReturnsJournalRecoveryTime) {
       std::move(std::get<opentelemetry::sdk::metrics::HistogramPointData>(
           journal_recovery_time_metric_point_data.value()));
   EXPECT_EQ(journal_recovery_time_histogram_point_data.count_, 1);
+
+  std::vector<double> journal_recovery_time_boundaries = {
+      0, 50, 100, 150, 250, 500, 750, 1000, 1500, 2500, 5000, 7500, 10000};
+
+  const std::vector<double>& boundaries =
+      journal_recovery_time_histogram_point_data.boundaries_;
+
+  // Check if the boundaries vector matches the expected boundaries.
+  ASSERT_EQ(boundaries.size(), journal_recovery_time_boundaries.size())
+      << "Boundaries vector size mismatch.";
+
+  for (size_t i = 0; i < boundaries.size(); ++i) {
+    EXPECT_DOUBLE_EQ(boundaries[i], journal_recovery_time_boundaries[i])
+        << "Mismatch at index " << i;
+  }
 }
 
 TEST_F(JournalServiceTests, OTelReturnsCorrectJournalRecoveryCount) {

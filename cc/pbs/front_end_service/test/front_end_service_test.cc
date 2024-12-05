@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pbs/front_end_service/src/front_end_service.h"
+#include "cc/pbs/front_end_service/src/front_end_service.h"
 
 #include <gtest/gtest.h>
 
@@ -37,6 +37,7 @@
 #include "cc/core/interface/transaction_command_serializer_interface.h"
 #include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider.h"
 #include "cc/core/telemetry/mock/instrument_mock.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/pbs/front_end_service/mock/mock_front_end_service_with_overrides.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
@@ -50,7 +51,6 @@
 #include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 #include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
-#include "core/telemetry/src/metric/metric_router.h"
 
 namespace google::scp::pbs::test {
 

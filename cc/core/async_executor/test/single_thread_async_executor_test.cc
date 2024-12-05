@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/async_executor/src/single_thread_async_executor.h"
+#include "cc/core/async_executor/src/single_thread_async_executor.h"
 
 #include <gtest/gtest.h>
 
@@ -21,16 +21,16 @@
 #include <string>
 #include <thread>
 
-#include "core/async_executor/mock/mock_async_executor_with_internals.h"
-#include "core/async_executor/src/error_codes.h"
-#include "core/async_executor/src/typedef.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/test/test_config.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor_with_internals.h"
+#include "cc/core/async_executor/src/error_codes.h"
+#include "cc/core/async_executor/src/typedef.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/test/test_config.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::common::TimeProvider;
 using std::atomic;

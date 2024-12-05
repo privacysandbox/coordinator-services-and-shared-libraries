@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/authorization_service_interface.h"
+#include "cc/core/interface/authorization_service_interface.h"
 
 namespace google::scp::core::authorization_service::mock {
 

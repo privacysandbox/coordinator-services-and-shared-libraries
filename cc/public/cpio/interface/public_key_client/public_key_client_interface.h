@@ -21,10 +21,10 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/service_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 #include "type_def.h"
 

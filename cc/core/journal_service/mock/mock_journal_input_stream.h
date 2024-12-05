@@ -23,8 +23,8 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/journal_service/src/journal_input_stream.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/journal_service/src/journal_input_stream.h"
 
 namespace google::scp::core::journal_service::mock {
 class MockJournalInputStream : public core::JournalInputStream {

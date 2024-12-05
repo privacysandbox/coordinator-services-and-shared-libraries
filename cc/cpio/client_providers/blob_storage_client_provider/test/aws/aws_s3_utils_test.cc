@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/blob_storage_client_provider/src/aws/aws_s3_utils.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/src/aws/aws_s3_utils.h"
 
 #include <gtest/gtest.h>
 
 #include <aws/s3/S3Errors.h>
 
-#include "cpio/common/src/aws/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::S3::S3Errors;
 using google::scp::core::FailureExecutionResult;

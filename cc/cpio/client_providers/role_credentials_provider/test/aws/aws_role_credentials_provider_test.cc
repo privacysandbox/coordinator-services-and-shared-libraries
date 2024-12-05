@@ -22,15 +22,15 @@
 #include <aws/sts/STSErrors.h>
 #include <aws/sts/model/AssumeRoleRequest.h>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/role_credentials_provider/mock/aws/mock_aws_role_credentials_provider_with_overrides.h"
-#include "cpio/client_providers/role_credentials_provider/mock/aws/mock_aws_sts_client.h"
-#include "cpio/client_providers/role_credentials_provider/src/aws/error_codes.h"
-#include "cpio/common/src/aws/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/cpio/client_providers/role_credentials_provider/mock/aws/mock_aws_role_credentials_provider_with_overrides.h"
+#include "cc/cpio/client_providers/role_credentials_provider/mock/aws/mock_aws_sts_client.h"
+#include "cc/cpio/client_providers/role_credentials_provider/src/aws/error_codes.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;

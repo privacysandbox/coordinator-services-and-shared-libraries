@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
+#include "cc/pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
 
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <thread>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "pbs/leasable_lock/src/error_codes.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/pbs/leasable_lock/src/error_codes.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;

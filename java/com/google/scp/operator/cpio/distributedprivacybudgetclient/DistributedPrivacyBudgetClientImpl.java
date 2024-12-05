@@ -94,7 +94,6 @@ public final class DistributedPrivacyBudgetClientImpl implements DistributedPriv
         TransactionRequest.builder()
             .setTransactionId(UUID.randomUUID())
             .setClaimedIdentity(request.claimedIdentity())
-            .setTrustedServicesClientVersion(request.trustedServicesClientVersion())
             .setReportingOriginToPrivacyBudgetUnitsList(
                 request.reportingOriginToPrivacyBudgetUnitsList())
             .setTimeout(Timestamp.from(expiryTime))

@@ -5,7 +5,12 @@ import com.google.auth.oauth2.IdTokenCredentials;
 import com.google.auth.oauth2.IdTokenProvider;
 import com.google.auth.oauth2.IdTokenProvider.Option;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Arrays;
+import org.apache.hc.core5.http.EntityDetails;
+import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.protocol.HttpContext;
 
 /** Provide gcp http interceptors */
 public final class GcpHttpInterceptorUtil {
@@ -26,11 +31,9 @@ public final class GcpHttpInterceptorUtil {
    * @return A HttpRequestInterceptor that applies the generated GCP AccessToken to the intercepted
    *     HTTP request.
    */
-  public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(
-      String url) {
-    return (request, entityDetails, context) -> {
-      request.addHeader("x-auth-token", getIdTokenFromMetadataServer(url));
-    };
+  public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(String url)
+      throws IOException {
+    return new PbsHttpRequestInterceptor(url);
   }
 
   private static IdTokenCredentials getIdTokenCredentials(String url) throws IOException {
@@ -47,6 +50,26 @@ public final class GcpHttpInterceptorUtil {
 
   private static String getIdTokenFromMetadataServer(String url) throws IOException {
     IdTokenCredentials idTokenCredentials = getIdTokenCredentials(url);
-    return idTokenCredentials.refreshAccessToken().getTokenValue();
+    idTokenCredentials.refreshIfExpired();
+    return idTokenCredentials.getIdToken().getTokenValue();
+  }
+
+  private static class PbsHttpRequestInterceptor
+      implements org.apache.hc.core5.http.HttpRequestInterceptor {
+    private IdTokenCredentials idTokenCredentials;
+
+    PbsHttpRequestInterceptor(String url) throws IOException {
+      IdTokenCredentials.Builder builder = getIdTokenCredentials(url).toBuilder();
+      builder.setExpirationMargin(Duration.ofMinutes(10));
+      builder.setRefreshMargin(Duration.ofMinutes(1));
+      idTokenCredentials = builder.build();
+    }
+
+    @Override
+    public void process(HttpRequest request, EntityDetails entity, HttpContext context)
+        throws HttpException, IOException {
+      idTokenCredentials.refreshIfExpired();
+      request.addHeader("x-auth-token", idTokenCredentials.getIdToken().getTokenValue());
+    }
   }
 }

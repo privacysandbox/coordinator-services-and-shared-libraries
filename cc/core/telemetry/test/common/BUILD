@@ -23,7 +23,6 @@ cc_test(
         "metric_utils_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/telemetry/src/common:telemetry_metric_utils",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",

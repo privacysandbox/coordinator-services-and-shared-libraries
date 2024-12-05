@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "core/lease_manager/src/lease_manager.h"
+#include "cc/core/lease_manager/src/lease_manager.h"
 
 namespace google::scp::core::lease_manager::mock {
 class MockLeaseManagerWithOverrides : public LeaseManager {

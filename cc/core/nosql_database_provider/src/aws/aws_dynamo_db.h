@@ -26,10 +26,10 @@
 #include <aws/dynamodb/model/QueryRequest.h>
 #include <aws/dynamodb/model/UpdateItemRequest.h>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
-#include "core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
+#include "cc/core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
 
 namespace google::scp::core::nosql_database_provider {
 /*! @copydoc NoSQLDatabaseProviderInterface

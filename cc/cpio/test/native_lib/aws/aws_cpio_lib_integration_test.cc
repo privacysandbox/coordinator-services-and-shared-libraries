@@ -23,21 +23,21 @@
 #include <utility>
 #include <vector>
 
-#include "core/test/utils/aws_helper/aws_helper.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/docker_helper/docker_helper.h"
-#include "core/utils/src/base64.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/adapters/blob_storage_client/test/test_aws_blob_storage_client.h"
-#include "public/cpio/adapters/kms_client/test/test_aws_kms_client.h"
-#include "public/cpio/adapters/metric_client/test/test_aws_metric_client.h"
-#include "public/cpio/adapters/parameter_client/test/test_aws_parameter_client.h"
-#include "public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
-#include "public/cpio/test/global_cpio/test_cpio_options.h"
-#include "public/cpio/test/global_cpio/test_lib_cpio.h"
-#include "public/cpio/test/kms_client/test_aws_kms_client_options.h"
-#include "public/cpio/test/parameter_client/test_aws_parameter_client_options.h"
+#include "cc/core/test/utils/aws_helper/aws_helper.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/docker_helper/docker_helper.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/adapters/blob_storage_client/test/test_aws_blob_storage_client.h"
+#include "cc/public/cpio/adapters/kms_client/test/test_aws_kms_client.h"
+#include "cc/public/cpio/adapters/metric_client/test/test_aws_metric_client.h"
+#include "cc/public/cpio/adapters/parameter_client/test/test_aws_parameter_client.h"
+#include "cc/public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
+#include "cc/public/cpio/test/global_cpio/test_cpio_options.h"
+#include "cc/public/cpio/test/global_cpio/test_lib_cpio.h"
+#include "cc/public/cpio/test/kms_client/test_aws_kms_client_options.h"
+#include "cc/public/cpio/test/parameter_client/test_aws_parameter_client_options.h"
 
 using google::cmrt::sdk::blob_storage_service::v1::PutBlobRequest;
 using google::cmrt::sdk::blob_storage_service::v1::PutBlobResponse;

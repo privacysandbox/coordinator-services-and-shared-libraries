@@ -24,10 +24,10 @@
 #include <aws/core/auth/AWSCredentialsProvider.h>
 #include <aws/core/auth/AWSCredentialsProviderChain.h>
 
-#include "core/utils/src/base64.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
-#include "cpio/common/src/aws/aws_utils.h"
-#include "public/cpio/interface/kms_client/type_def.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/cpio/common/src/aws/aws_utils.h"
+#include "cc/public/cpio/interface/kms_client/type_def.h"
 
 #include "tee_aws_kms_client_provider_utils.h"
 #include "tee_error_codes.h"

@@ -20,8 +20,8 @@
 
 #include <memory>
 
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/parameter_client/parameter_client_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/parameter_client/parameter_client_interface.h"
 
 namespace google::scp::cpio {
 class MockParameterClient : public ParameterClientInterface {

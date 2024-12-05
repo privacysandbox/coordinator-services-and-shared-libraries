@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider_utils.h"
+#include "cc/cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -22,9 +22,9 @@
 #include <string>
 #include <utility>
 
-#include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::BytesBuffer;
 using google::scp::core::ExecutionResult;

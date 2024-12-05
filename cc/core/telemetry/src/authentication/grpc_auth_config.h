@@ -19,7 +19,7 @@
 #include <string>
 
 #include "absl/strings/string_view.h"
-#include "core/interface/config_provider_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
 
 namespace google::scp::core {
 

@@ -27,9 +27,9 @@
 #include <aws/dynamodb/model/QueryRequest.h>
 #include <aws/dynamodb/model/UpdateItemRequest.h>
 
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/interface/configuration_keys.h"
-#include "core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
 
 #include "aws_dynamo_db_utils.h"
 

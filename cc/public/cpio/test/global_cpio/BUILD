@@ -22,7 +22,6 @@ cc_library(
         "test_cpio_options.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface:type_def",
     ],
 )
@@ -41,7 +40,6 @@ cc_library(
         "-DTEST_CPIO=1",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/src:logger_lib",
         "//cc/core/logger/src/log_providers:log_providers_lib",

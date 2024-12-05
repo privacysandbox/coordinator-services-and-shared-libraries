@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
 
 #include <gtest/gtest.h>
 
@@ -24,33 +24,33 @@
 #include <variant>
 #include <vector>
 
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/common/serialization/src/error_codes.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/journal_service/mock/mock_journal_service.h"
+#include "cc/core/journal_service/mock/mock_journal_service_with_overrides.h"
+#include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider.h"
+#include "cc/core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/pbs/budget_key/src/budget_key.h"
+#include "cc/pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager_with_override.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_serialization.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/error_codes.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
+#include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/metrics_def.h"
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/common/serialization/src/error_codes.h"
-#include "core/common/serialization/src/serialization.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/interface/async_context.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/journal_service/mock/mock_journal_service.h"
-#include "core/journal_service/mock/mock_journal_service_with_overrides.h"
-#include "core/nosql_database_provider/mock/mock_nosql_database_provider.h"
-#include "core/nosql_database_provider/mock/mock_nosql_database_provider_no_overrides.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
-#include "core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "pbs/budget_key/src/budget_key.h"
-#include "pbs/budget_key_timeframe_manager/mock/mock_budget_key_timeframe_manager_with_override.h"
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_serialization.h"
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
-#include "pbs/budget_key_timeframe_manager/src/error_codes.h"
-#include "pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
-#include "pbs/interface/configuration_keys.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;

@@ -40,6 +40,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -212,7 +214,7 @@ public final class CreateJobApiGatewayHandlerTest {
         ErrorResponse.newBuilder()
             .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
             .setMessage(
-                "Missing required properties: jobRequestId inputDataBlobPrefix"
+                "Missing required properties: jobRequestId"
                     + " inputDataBucketName outputDataBlobPrefix outputDataBucketName\r\n in: {}")
             .addAllDetails(
                 List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
@@ -246,6 +248,88 @@ public final class CreateJobApiGatewayHandlerTest {
             .build();
     assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
     assertThatResponseBodyContains(responseEvent, errorResponse);
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenBothInputPrefixAndInputPrefixListMissing() {
+    CreateJobRequest createJobRequest = ServiceJobGenerator.createFakeCreateJobRequest("123");
+    createJobRequest = createJobRequest.toBuilder().setInputDataBlobPrefix("").build();
+    APIGatewayProxyRequestEvent request =
+        APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest);
+    ;
+
+    APIGatewayProxyResponseEvent responseEvent = target.handleRequest(request, null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage(
+                "Exactly one of the properties input_data_blob_prefix and"
+                    + " input_data_blob_prefixes must be provided")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenBothInputPrefixAndInputPrefixListProvided() {
+    CreateJobRequest createJobRequest = ServiceJobGenerator.createFakeCreateJobRequest("123");
+    createJobRequest =
+        createJobRequest.toBuilder()
+            .addAllInputDataBlobPrefixes(List.of("prefix1", "prefix2"))
+            .build();
+    APIGatewayProxyRequestEvent request =
+        APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest);
+    ;
+
+    APIGatewayProxyResponseEvent responseEvent = target.handleRequest(request, null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage(
+                "Exactly one of the properties input_data_blob_prefix and"
+                    + " input_data_blob_prefixes must be provided")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenInputPrefixListLongerThanMaxLimit() {
+    CreateJobRequest createJobRequest = ServiceJobGenerator.createFakeCreateJobRequest("123");
+    List<String> tooManyInputPrefixes =
+        IntStream.range(0, 51)
+            .boxed()
+            .map(integer -> integer.toString())
+            .collect(Collectors.toList());
+    createJobRequest =
+        createJobRequest.toBuilder()
+            .setInputDataBlobPrefix("")
+            .addAllInputDataBlobPrefixes(tooManyInputPrefixes)
+            .build();
+    APIGatewayProxyRequestEvent request =
+        APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest);
+    ;
+
+    APIGatewayProxyResponseEvent responseEvent = target.handleRequest(request, null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage("Property input_data_blob_prefixes should contain a maximum of 50 items:")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
     assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
   }
 }

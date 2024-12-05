@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["aws_authorizer_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/authorization_service/mock:core_authorization_service_mock",
         "//cc/core/authorization_service/src:core_authorization_service",

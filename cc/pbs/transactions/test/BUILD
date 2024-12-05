@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = glob(["*.cc"]),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/common/auto_expiry_concurrent_map/mock:auto_expiry_concurrent_map_mock",
         "//cc/core/config_provider/mock:core_config_provider_mock",

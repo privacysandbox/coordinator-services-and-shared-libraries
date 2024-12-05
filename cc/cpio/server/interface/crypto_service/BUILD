@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/proto/crypto_service/v1:crypto_service_cc_proto",
     ],
 )

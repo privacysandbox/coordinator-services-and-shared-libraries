@@ -17,11 +17,11 @@
 #include <memory>
 #include <utility>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/logger/src/log_providers/console_log_provider.h"
-#include "core/logger/src/log_providers/syslog/syslog_log_provider.h"
-#include "core/logger/src/logger.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/logger/src/log_providers/console_log_provider.h"
+#include "cc/core/logger/src/log_providers/syslog/syslog_log_provider.h"
+#include "cc/core/logger/src/logger.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::LoggerInterface;
 using google::scp::core::common::GlobalLogger;

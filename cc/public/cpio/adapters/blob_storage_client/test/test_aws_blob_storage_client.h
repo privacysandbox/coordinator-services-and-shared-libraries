@@ -18,10 +18,10 @@
 
 #include <memory>
 
-#include "cpio/client_providers/blob_storage_client_provider/test/aws/test_aws_blob_storage_client_provider.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/adapters/blob_storage_client/src/blob_storage_client.h"
-#include "public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/test/aws/test_aws_blob_storage_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/adapters/blob_storage_client/src/blob_storage_client.h"
+#include "cc/public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
 
 namespace google::scp::cpio {
 /*! @copydoc BlobStorageClientInterface

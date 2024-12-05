@@ -23,19 +23,19 @@
 #include <utility>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
-#include "core/common/serialization/src/error_codes.h"
-#include "core/common/serialization/src/serialization.h"
-#include "core/journal_service/mock/mock_journal_service.h"
-#include "core/journal_service/mock/mock_journal_service_with_overrides.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/transaction_manager/mock/mock_transaction_command_serializer.h"
-#include "core/transaction_manager/mock/mock_transaction_engine.h"
-#include "core/transaction_manager/src/proto/transaction_engine.pb.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
+#include "cc/core/common/serialization/src/error_codes.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/core/journal_service/mock/mock_journal_service.h"
+#include "cc/core/journal_service/mock/mock_journal_service_with_overrides.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/transaction_manager/mock/mock_transaction_command_serializer.h"
+#include "cc/core/transaction_manager/mock/mock_transaction_engine.h"
+#include "cc/core/transaction_manager/src/proto/transaction_engine.pb.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::FailureExecutionResult;

@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("//build_defs/cc:google_benchmark.bzl", "google_benchmark")
 load("//build_defs/cc/shared:bazel_rules_cpp.bzl", "bazel_rules_cpp")
 load("//build_defs/cc/shared:boost.bzl", "boost")
 load("//build_defs/cc/shared:boringssl.bzl", "boringssl")
 load("//build_defs/cc/shared:cc_utils.bzl", "cc_utils")
 load("//build_defs/cc/shared:google_cloud_cpp.bzl", "import_google_cloud_cpp")
+load("//build_defs/cc/shared:gperftools.bzl", "gperftools")
 load("//build_defs/cc/shared:gtest.bzl", "google_test")
 load("//build_defs/cc/shared:nghttp2.bzl", "nghttp2")
 load("//build_defs/cc/shared:opentelemetry_cpp.bzl", "opentelemetry_cpp")
+load("//build_defs/cc/shared:re2_cpp.bzl", "re2_cpp")
 load("//build_defs/shared:absl.bzl", "absl")
 load("//build_defs/shared:bazel_docker_rules.bzl", "bazel_docker_rules")
 load("//build_defs/shared:bazel_rules_java.bzl", "bazel_rules_java")
@@ -50,3 +53,6 @@ def sdk_common(protobuf_version, protobuf_repo_hash):
     protobuf(protobuf_version, protobuf_repo_hash)
     import_google_cloud_cpp()
     import_tink_git()
+    re2_cpp()
+    google_benchmark()
+    gperftools()

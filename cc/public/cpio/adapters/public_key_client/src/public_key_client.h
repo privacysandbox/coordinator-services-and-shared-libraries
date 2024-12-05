@@ -18,10 +18,10 @@
 
 #include <memory>
 
-#include "cpio/client_providers/interface/public_key_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/public_key_client/public_key_client_interface.h"
-#include "public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
+#include "cc/cpio/client_providers/interface/public_key_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/public_key_client/public_key_client_interface.h"
+#include "cc/public/cpio/proto/public_key_service/v1/public_key_service.pb.h"
 
 namespace google::scp::cpio {
 /*! @copydoc PublicKeyClientInterface

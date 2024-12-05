@@ -65,7 +65,8 @@ class GcpIntegrationTestDependencyFactory : public GcpDependencyFactory {
           instance_client_provider) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider) noexcept override;
 };
 

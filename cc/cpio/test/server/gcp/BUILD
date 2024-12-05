@@ -41,7 +41,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/docker_helper:docker_helper_lib",
@@ -63,7 +62,6 @@ cc_test(
     tags = ["manual"],
     deps = [
         ":test_gcp_sdk_server_starter_lib",
-        "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/docker_helper:docker_helper_lib",
         "//cc/core/test/utils/gcp_helper:gcp_helper_lib",

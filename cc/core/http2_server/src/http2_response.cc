@@ -22,7 +22,7 @@
 
 #include <boost/exception/diagnostic_information.hpp>
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;

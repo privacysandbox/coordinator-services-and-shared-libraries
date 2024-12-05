@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
+#include "cc/pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
 
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest-matchers.h>
@@ -26,21 +26,22 @@
 #include <initializer_list>
 #include <map>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
+#include <nlohmann/json.hpp>
+
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
-#include "core/authorization_service/src/error_codes.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/http2_client/src/aws/aws_v4_signer.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/type_def.h"
-#include "core/utils/src/base64.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/authorization_service/src/error_codes.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 namespace google::scp::pbs {
 namespace {

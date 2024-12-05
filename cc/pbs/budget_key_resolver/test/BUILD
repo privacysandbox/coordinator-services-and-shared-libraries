@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["budget_key_resolver_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/pbs/budget_key_resolver/src:pbs_budget_key_resolver_lib",

@@ -18,7 +18,7 @@
 
 #include <gmock/gmock.h>
 
-#include "core/interface/transaction_request_router_interface.h"
+#include "cc/core/interface/transaction_request_router_interface.h"
 
 namespace google::scp::pbs::partition_request_router::mock {
 class MockTransactionRequestRouter

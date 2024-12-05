@@ -20,8 +20,8 @@
 #include <string>
 #include <utility>
 
-#include "core/interface/credentials_provider_interface.h"
-#include "core/interface/token_fetcher_interface.h"
+#include "cc/core/interface/credentials_provider_interface.h"
+#include "cc/core/interface/token_fetcher_interface.h"
 
 namespace google::scp::pbs {
 class AwsAuthorizationTokenFetcher : public core::TokenFetcherInterface {

@@ -45,7 +45,6 @@ cc_library(
         "gcp_instance_client_utils.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",

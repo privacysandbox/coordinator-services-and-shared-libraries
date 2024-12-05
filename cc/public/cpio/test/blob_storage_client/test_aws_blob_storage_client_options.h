@@ -20,8 +20,8 @@
 #include <memory>
 #include <string>
 
-#include "public/cpio/interface/blob_storage_client/type_def.h"
-#include "public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
+#include "cc/public/cpio/interface/blob_storage_client/type_def.h"
+#include "cc/public/cpio/test/blob_storage_client/test_aws_blob_storage_client_options.h"
 
 namespace google::scp::cpio {
 /// BlobStorageClientOptions for testing on AWS.

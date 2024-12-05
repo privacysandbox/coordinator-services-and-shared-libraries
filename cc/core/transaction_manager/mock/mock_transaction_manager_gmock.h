@@ -19,7 +19,7 @@
 #include <list>
 #include <memory>
 
-#include "core/interface/transaction_manager_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionManagerGMock : public TransactionManagerInterface {

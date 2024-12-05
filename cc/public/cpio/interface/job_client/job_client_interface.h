@@ -20,10 +20,10 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/type_def.h"
-#include "public/cpio/proto/job_service/v1/job_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/type_def.h"
+#include "cc/public/cpio/proto/job_service/v1/job_service.pb.h"
 
 namespace google::scp::cpio {
 

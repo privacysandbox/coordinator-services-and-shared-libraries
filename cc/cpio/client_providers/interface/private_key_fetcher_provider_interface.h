@@ -21,13 +21,13 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/async_context.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/service_interface.h"
-#include "core/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/private_key_client/type_def.h"
-#include "public/cpio/interface/type_def.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/private_key_client/type_def.h"
+#include "cc/public/cpio/interface/type_def.h"
 
 #include "auth_token_provider_interface.h"
 #include "role_credentials_provider_interface.h"

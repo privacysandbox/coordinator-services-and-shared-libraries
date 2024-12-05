@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/async_executor/src/async_task.h"
+#include "cc/core/async_executor/src/async_task.h"
 
 #include <gtest/gtest.h>
 
-#include "core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
 
 using google::scp::core::common::TimeProvider;
 

@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["sized_or_timed_bytes_buffer_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/common/sized_or_timed_bytes_buffer/src:bytes_buffer_lib",
         "//cc/core/interface:type_def_lib",

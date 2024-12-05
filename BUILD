@@ -23,7 +23,7 @@ package(default_visibility = ["//visibility:public"])
 # Gazelle is used to import target and create build rule automatically. It supports many
 # languages but this repo only uses it for Golang. To use this tool, please run:
 #
-#   bazel run //go:gazelle
+#   bazel run //:gazelle
 #
 # The following directive asks gazelle to only process Golang codes
 # gazelle:lang go
@@ -31,18 +31,19 @@ package(default_visibility = ["//visibility:public"])
 # gazelle:prefix github.com/privacysandbox/coordinator-services-and-shared-libraries
 gazelle(name = "gazelle")
 
-# The following build rule can be used to update WORKSPACE file to include Golang
-# dependency.
+# The following build rule can be used to sync go_repositories.bzl file with necessary Golang
+# dependencies for modules used in go.work file. To use this tool, please run:
 #
-# gazelle(
-#     name = "gazelle-update-repos",
-#     args = [
-#         "-from_file=go/helloworld/go.mod",
-#         "-to_macro=./build_defs/go/go_repositories.bzl%go_dependencies",
-#         "-prune",
-#     ],
-#     command = "update-repos",
-# )
+#   bazel run //:gazelle-update-repos
+gazelle(
+    name = "gazelle-update-repos",
+    args = [
+        "-from_file=go/go.work",
+        "-to_macro=build_defs/go/go_repositories.bzl%go_repositories",
+        "--build_file_proto_mode=disable_global",
+    ],
+    command = "update-repos",
+)
 
 buildifier(
     name = "buildifier_check",

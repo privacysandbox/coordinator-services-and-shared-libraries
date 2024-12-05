@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pbs/budget_key_resolver/src/budget_key_resolver.h"
+#include "cc/pbs/budget_key_resolver/src/budget_key_resolver.h"
 
 #include <gtest/gtest.h>
 
@@ -20,9 +20,9 @@
 #include <chrono>
 #include <utility>
 
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::SuccessExecutionResult;

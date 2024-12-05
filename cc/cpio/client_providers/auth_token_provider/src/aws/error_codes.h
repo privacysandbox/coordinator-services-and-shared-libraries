@@ -17,8 +17,8 @@
 #pragma once
 
 #include "cc/core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/error_codes.h"
 
 namespace google::scp::core::errors {
 

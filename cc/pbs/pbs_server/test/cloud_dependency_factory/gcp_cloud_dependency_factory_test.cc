@@ -20,19 +20,19 @@
 #include <memory>
 #include <vector>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/http2_client/mock/mock_http_client.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/token_provider_cache_interface.h"
-#include "core/token_provider_cache/mock/token_provider_cache_dummy.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/http2_client/mock/mock_http_client.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/token_provider_cache_interface.h"
+#include "cc/core/token_provider_cache/mock/token_provider_cache_dummy.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/http2_forwarder/src/http2_forwarder.h"
+#include "cc/core/http2_forwarder/src/http2_forwarder.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -25,11 +25,10 @@
 #include <openssl/sha.h>
 
 #include "absl/strings/str_cat.h"
+#include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/http2_client/src/http2_client.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using namespace nghttp2::asio_http2;          // NOLINT
 using namespace nghttp2::asio_http2::server;  // NOLINT

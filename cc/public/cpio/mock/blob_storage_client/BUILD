@@ -24,7 +24,6 @@ cc_library(
             "mock_blob_storage_client.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/blob_storage_client",
         "@com_google_googletest//:gtest",
     ],

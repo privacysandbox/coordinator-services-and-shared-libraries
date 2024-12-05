@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider.h"
+#include "cc/cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider.h"
 
 #include <gtest/gtest.h>
 
@@ -21,13 +21,13 @@
 #include <memory>
 #include <string>
 
-#include "core/http2_client/mock/mock_http_client.h"
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/private_key_fetcher_provider/mock/mock_private_key_fetcher_provider_with_overrides.h"
-#include "cpio/client_providers/private_key_fetcher_provider/src/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/http2_client/mock/mock_http_client.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/private_key_fetcher_provider/mock/mock_private_key_fetcher_provider_with_overrides.h"
+#include "cc/cpio/client_providers/private_key_fetcher_provider/src/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::Byte;

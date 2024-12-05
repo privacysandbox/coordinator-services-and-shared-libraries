@@ -29,7 +29,6 @@ cc_test(
     ],
     deps = [
         ":test_util",
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
         "//cc/core/common/serialization/src:serialization_lib",

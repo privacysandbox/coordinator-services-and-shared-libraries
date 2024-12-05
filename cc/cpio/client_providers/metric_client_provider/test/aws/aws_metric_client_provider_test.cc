@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
 
 #include <gtest/gtest.h>
 
@@ -25,17 +25,17 @@
 #include <aws/monitoring/model/PutMetricDataRequest.h>
 #include <google/protobuf/util/time_util.h>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/metric_client_provider/mock/aws/mock_aws_metric_client_provider_with_overrides.h"
-#include "cpio/client_providers/metric_client_provider/mock/aws/mock_cloud_watch_client.h"
-#include "cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_utils.h"
-#include "cpio/client_providers/metric_client_provider/src/aws/error_codes.h"
-#include "cpio/common/src/aws/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/metric_client_provider/mock/aws/mock_aws_metric_client_provider_with_overrides.h"
+#include "cc/cpio/client_providers/metric_client_provider/mock/aws/mock_cloud_watch_client.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_utils.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/aws/error_codes.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;

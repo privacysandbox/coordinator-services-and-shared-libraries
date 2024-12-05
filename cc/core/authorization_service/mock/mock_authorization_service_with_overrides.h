@@ -21,8 +21,8 @@
 #include <string>
 #include <utility>
 
-#include "core/authorization_service/src/aws_authorizer.h"
-#include "core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
+#include "cc/core/authorization_service/src/aws_authorizer.h"
+#include "cc/core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
 
 namespace google::scp::core::authorization_service::mock {
 

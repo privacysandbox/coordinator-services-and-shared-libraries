@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 
-#include "public/cpio/interface/private_key_client/type_def.h"
+#include "cc/public/cpio/interface/private_key_client/type_def.h"
 
 namespace google::scp::cpio {
 /// PrivateKeyClientOptions for testing on AWS.

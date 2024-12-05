@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/cpio/adapters/job_client/src/job_client.h"
+#include "cc/public/cpio/adapters/job_client/src/job_client.h"
 
 #include <gtest/gtest.h>
 
-#include "core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/adapters/job_client/mock/mock_job_client_with_overrides.h"
-#include "public/cpio/interface/job_client/job_client_interface.h"
-#include "public/cpio/proto/job_service/v1/job_service.pb.h"
+#include "cc/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/adapters/job_client/mock/mock_job_client_with_overrides.h"
+#include "cc/public/cpio/interface/job_client/job_client_interface.h"
+#include "cc/public/cpio/proto/job_service/v1/job_service.pb.h"
 
 using google::cmrt::sdk::job_service::v1::DeleteOrphanedJobMessageRequest;
 using google::cmrt::sdk::job_service::v1::DeleteOrphanedJobMessageResponse;

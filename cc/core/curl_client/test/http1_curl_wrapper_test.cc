@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "core/curl_client/src/http1_curl_wrapper.h"
+#include "cc/core/curl_client/src/http1_curl_wrapper.h"
 
 #include <gtest/gtest.h>
 
-#include "core/curl_client/src/error_codes.h"
-#include "core/test/utils/http1_helper/test_http1_server.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/curl_client/src/error_codes.h"
+#include "cc/core/test/utils/http1_helper/test_http1_server.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using boost::beast::http::status;
 using std::get;

@@ -19,7 +19,7 @@
 #include <functional>
 #include <memory>
 
-#include "core/interface/async_executor_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
 
 namespace google::scp::core::async_executor::mock {
 class MockAsyncExecutor : public core::AsyncExecutorInterface {

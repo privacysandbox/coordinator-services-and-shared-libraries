@@ -21,9 +21,9 @@
 
 #include <aws/sts/STSClient.h>
 
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "cc/cpio/client_providers/role_credentials_provider/src/aws/aws_role_credentials_provider.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 
 #include "mock_aws_sts_client.h"
 

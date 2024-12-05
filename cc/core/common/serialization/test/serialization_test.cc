@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-#include "core/common/serialization/src/serialization.h"
+#include "cc/core/common/serialization/src/serialization.h"
 
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <vector>
 
-#include "core/common/serialization/src/error_codes.h"
-#include "core/common/serialization/test/test.pb.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/type_def.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/serialization/src/error_codes.h"
+#include "cc/core/common/serialization/test/test.pb.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::protobuf::Message;
 using google::scp::core::common::Uuid;

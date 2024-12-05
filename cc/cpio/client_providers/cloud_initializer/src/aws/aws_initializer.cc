@@ -20,7 +20,7 @@
 
 #include <aws/core/Aws.h>
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using Aws::InitAPI;
 using Aws::ShutdownAPI;

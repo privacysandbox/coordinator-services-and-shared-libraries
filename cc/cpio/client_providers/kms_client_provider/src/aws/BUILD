@@ -22,7 +22,6 @@ cc_library(
         ":nontee_aws_kms_client_provider_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/common/uuid/src:uuid_lib",
         "//cc/core/interface:async_context_lib",
@@ -44,7 +43,6 @@ cc_library(
         ":tee_aws_kms_client_provider_srcs",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/uuid/src:uuid_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",

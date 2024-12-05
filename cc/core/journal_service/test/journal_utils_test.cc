@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/journal_service/src/journal_utils.h"
+#include "cc/core/journal_service/src/journal_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::journal_service::JournalUtils;
 using std::make_shared;

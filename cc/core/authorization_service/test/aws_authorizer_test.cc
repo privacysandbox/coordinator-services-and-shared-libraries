@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/authorization_service/src/aws_authorizer.h"
+#include "cc/core/authorization_service/src/aws_authorizer.h"
 
 #include <gtest/gtest.h>
 
@@ -30,15 +30,15 @@
 
 #include <nghttp2/asio_http2_server.h>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/authorization_service/mock/mock_authorization_service_with_overrides.h"
-#include "core/authorization_service/src/error_codes.h"
-#include "core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
-#include "core/http2_client/mock/mock_http_client.h"
-#include "core/http2_client/src/error_codes.h"
-#include "core/test/utils/conditional_wait.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/authorization_service/mock/mock_authorization_service_with_overrides.h"
+#include "cc/core/authorization_service/src/error_codes.h"
+#include "cc/core/common/auto_expiry_concurrent_map/mock/mock_auto_expiry_concurrent_map.h"
+#include "cc/core/http2_client/mock/mock_http_client.h"
+#include "cc/core/http2_client/src/error_codes.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using namespace nghttp2::asio_http2;          // NOLINT
 using namespace nghttp2::asio_http2::server;  // NOLINT

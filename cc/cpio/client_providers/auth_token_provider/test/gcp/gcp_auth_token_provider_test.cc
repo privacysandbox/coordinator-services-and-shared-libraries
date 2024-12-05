@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
+#include "cc/cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -24,10 +24,10 @@
 #include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
-#include "core/curl_client/mock/mock_curl_client.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/auth_token_provider/src/gcp/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/curl_client/mock/mock_curl_client.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/auth_token_provider/src/gcp/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;

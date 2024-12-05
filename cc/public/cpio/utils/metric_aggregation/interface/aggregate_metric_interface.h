@@ -19,8 +19,8 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/service_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::cpio {
 

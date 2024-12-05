@@ -51,6 +51,15 @@ pbs_remote_coordinator_service_account_email = ""
 # # See https://cloud.google.com/run/docs/configuring/max-instances
 # pbs_auth_cloudfunction_min_instances   = 1
 # pbs_auth_cloudfunction_max_instances   = 1
+# pbs_cloud_run_max_instances = 1
+# pbs_cloud_run_min_instances = 1
+# pbs_cloud_run_max_concurrency = 1000
+# deploy_pbs_cloud_run = true
+# enable_pbs_cloud_run = false
+#
+#
+# pbs_gce_traffic_weight = 100
+# pbs_cloud_run_traffic_percentage = 0
 ## END - development default configuration values.
 
 ## BEGIN - production default configuration values.
@@ -78,6 +87,15 @@ pbs_remote_coordinator_service_account_email = ""
 # # See https://cloud.google.com/run/docs/configuring/max-instances
 # pbs_auth_cloudfunction_min_instances   = 1
 # pbs_auth_cloudfunction_max_instances   = 10
+# pbs_cloud_run_max_instances = 20
+# pbs_cloud_run_min_instances = 10
+# pbs_cloud_run_max_concurrency = 1000
+# deploy_pbs_cloud_run = false
+# enable_pbs_cloud_run = true
+#
+#
+# pbs_gce_traffic_weight = 100
+# pbs_cloud_run_traffic_percentage = 0
 ## END - production default configuration values.
 
 # Domain management:

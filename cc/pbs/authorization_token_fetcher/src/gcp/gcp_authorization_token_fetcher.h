@@ -19,9 +19,9 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/token_fetcher_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/token_fetcher_interface.h"
 
 namespace google::scp::pbs {
 class GcpAuthorizationTokenFetcher : public core::TokenFetcherInterface {

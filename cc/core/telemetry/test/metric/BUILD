@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["metric_router_in_memory_integration_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/telemetry/mock:telemetry_fake",
         "//cc/core/telemetry/src/common:telemetry_common",
@@ -46,7 +45,6 @@ cc_test(
         "otlp_grpc_authed_metric_exporter_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/telemetry/mock:telemetry_fake",
         "//cc/core/telemetry/src/metric:telemetry_metric",

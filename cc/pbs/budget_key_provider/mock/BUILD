@@ -24,7 +24,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/auto_expiry_concurrent_map/mock:auto_expiry_concurrent_map_mock",
         "//cc/core/interface:interface_lib",
         "//cc/pbs/budget_key_provider/src:pbs_budget_key_provider_lib",

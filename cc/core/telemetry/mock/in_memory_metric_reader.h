@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "absl/synchronization/notification.h"
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
 #include "opentelemetry/exporters/ostream/metric_exporter.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"

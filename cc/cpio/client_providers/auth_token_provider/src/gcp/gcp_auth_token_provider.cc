@@ -27,7 +27,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "cc/core/common/uuid/src/uuid.h"
-#include "core/utils/src/base64.h"
+#include "cc/core/utils/src/base64.h"
 
 #include "error_codes.h"
 

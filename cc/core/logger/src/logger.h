@@ -22,10 +22,10 @@
 #include <string_view>
 #include <utility>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/logger_interface.h"
-#include "core/logger/interface/log_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/logger_interface.h"
+#include "cc/core/logger/interface/log_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::logger {
 

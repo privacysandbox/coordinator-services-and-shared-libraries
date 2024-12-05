@@ -21,11 +21,11 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "pbs/transactions/src/batch_consume_budget_command.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs::transactions::mock {
 

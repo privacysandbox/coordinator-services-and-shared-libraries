@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "core/utils/src/hashing.h"
+#include "cc/core/utils/src/hashing.h"
 
 #include <gtest/gtest.h>
 
@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 
-#include "core/utils/src/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/utils/src/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::Byte;
 using google::scp::core::BytesBuffer;

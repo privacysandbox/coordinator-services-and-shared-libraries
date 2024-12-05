@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/core/interface/errors.h"
+#include "cc/public/core/interface/errors.h"
 
 #include <gtest/gtest.h>
 
-#include "public/cpio/interface/error_codes.h"
+#include "cc/public/cpio/interface/error_codes.h"
 
 using google::scp::core::errors::SC_CPIO_INTERNAL_ERROR;
 using std::string;

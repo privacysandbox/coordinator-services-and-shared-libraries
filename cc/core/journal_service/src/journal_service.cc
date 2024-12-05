@@ -24,17 +24,17 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/metrics_def.h"
-#include "core/journal_service/src/error_codes.h"
-#include "core/journal_service/src/journal_input_stream.h"
-#include "core/journal_service/src/journal_output_stream.h"
-#include "core/journal_service/src/journal_serialization.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/metrics_def.h"
+#include "cc/core/journal_service/src/error_codes.h"
+#include "cc/core/journal_service/src/journal_input_stream.h"
+#include "cc/core/journal_service/src/journal_output_stream.h"
+#include "cc/core/journal_service/src/journal_serialization.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/metric_utils.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/simple_metric.h"
 #include "opentelemetry/context/context.h"
-#include "public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
-#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::Uuid;
@@ -109,6 +109,20 @@ ExecutionResult JournalService::Init() noexcept {
   if (metric_router_) {
     meter_ = metric_router_->GetOrCreateMeter(kJournalService);
 
+    std::vector<double> boundaries = {0,    50,   100,  150,  250,  500,  750,
+                                      1000, 1500, 2500, 5000, 7500, 10000};
+    metric_router_->CreateViewForInstrument(
+        /*meter_name=*/kJournalService,
+        /*instrument_name=*/kMetricNameJournalRecoveryTime,
+        /*instrument_type=*/
+        opentelemetry::sdk::metrics::InstrumentType::kHistogram,
+        /*aggregation_type=*/
+        opentelemetry::sdk::metrics::AggregationType::kHistogram,
+        /*boundaries=*/boundaries,
+        /*version=*/"", /*schema=*/"",
+        /*view_description=*/"Journal recovery time",
+        /*unit=*/kMilliSecondUnit);
+
     journal_recovery_time_instrument_ =
         std::static_pointer_cast<opentelemetry::metrics::Histogram<uint64_t>>(
             metric_router_->GetOrCreateSyncInstrument(
@@ -117,7 +131,7 @@ ExecutionResult JournalService::Init() noexcept {
                           opentelemetry::metrics::SynchronousInstrument> {
                   return meter_->CreateUInt64Histogram(
                       kMetricNameJournalRecoveryTime, "Journal recovery time",
-                      "ms");
+                      kMilliSecondUnit);
                 }));
     journal_recovery_count_instrument_ =
         std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
@@ -129,16 +143,6 @@ ExecutionResult JournalService::Init() noexcept {
                       kMetricNameJournalRecoveryCount,
                       "Journal recovery count");
                 }));
-
-    std::vector<double> boundaries = {0,    50,   100,  150,  250,  500,  750,
-                                      1000, 1500, 2500, 5000, 7500, 10000};
-    metric_router_->CreateHistogramViewForInstrument(
-        /*metric_name=*/kMetricNameJournalRecoveryTime,
-        /*view_name=*/kMetricNameJournalRecoveryTime,
-        /*instrument_type=*/core::MetricRouter::InstrumentType::kHistogram,
-        /*boundaries=*/boundaries,
-        /*version=*/"", /*schema=*/"",
-        /*view_description=*/"Journal recovery time", /*unit=*/"ms");
   }
 
   RETURN_IF_FAILURE(InitMetricClientInterface());

@@ -18,6 +18,7 @@ package com.google.scp.operator.cpio.distributedprivacybudgetclient.gcp;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.scp.operator.cpio.configclient.Annotations.TrustedServicesClientVersion;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClient;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientImpl;
@@ -25,6 +26,7 @@ import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudget
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.PrivacyBudgetClientV2;
 import com.google.scp.shared.api.util.HttpClientWithInterceptor;
 import com.google.scp.shared.gcp.util.GcpHttpInterceptorUtil;
+import java.io.IOException;
 import org.apache.hc.core5.http.HttpRequestInterceptor;
 
 public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
@@ -37,7 +39,9 @@ public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
       @CoordinatorAPrivacyBudgetServiceAuthEndpoint
           String coordinatorAPrivacyBudgetServiceAuthEndpoint,
       @CoordinatorBPrivacyBudgetServiceAuthEndpoint
-          String coordinatorBPrivacyBudgetServiceAuthEndpoint) {
+          String coordinatorBPrivacyBudgetServiceAuthEndpoint,
+      @TrustedServicesClientVersion String trustedServicesClientVersion)
+      throws IOException {
     HttpRequestInterceptor coordinatorATokenInterceptor =
         GcpHttpInterceptorUtil.createPbsHttpInterceptor(
             coordinatorAPrivacyBudgetServiceAuthEndpoint);
@@ -46,10 +50,10 @@ public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
             coordinatorBPrivacyBudgetServiceAuthEndpoint);
 
     HttpClientWithInterceptor coordinatorAGcpHttpClient =
-        new HttpClientWithInterceptor(coordinatorATokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorATokenInterceptor, trustedServicesClientVersion);
 
     HttpClientWithInterceptor coordinatorBGcpHttpClient =
-        new HttpClientWithInterceptor(coordinatorBTokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorBTokenInterceptor, trustedServicesClientVersion);
 
     return ImmutableList.of(
         new PrivacyBudgetClientImpl(
@@ -66,7 +70,9 @@ public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
       @CoordinatorAPrivacyBudgetServiceAuthEndpoint
           String coordinatorAPrivacyBudgetServiceAuthEndpoint,
       @CoordinatorBPrivacyBudgetServiceAuthEndpoint
-          String coordinatorBPrivacyBudgetServiceAuthEndpoint) {
+          String coordinatorBPrivacyBudgetServiceAuthEndpoint,
+      @TrustedServicesClientVersion String trustedServicesClientVersion)
+      throws IOException {
     HttpRequestInterceptor coordinatorATokenInterceptor =
         GcpHttpInterceptorUtil.createPbsHttpInterceptor(
             coordinatorAPrivacyBudgetServiceAuthEndpoint);
@@ -75,10 +81,10 @@ public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
             coordinatorBPrivacyBudgetServiceAuthEndpoint);
 
     HttpClientWithInterceptor coordinatorAGcpHttpClient =
-        new HttpClientWithInterceptor(coordinatorATokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorATokenInterceptor, trustedServicesClientVersion);
 
     HttpClientWithInterceptor coordinatorBGcpHttpClient =
-        new HttpClientWithInterceptor(coordinatorBTokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorBTokenInterceptor, trustedServicesClientVersion);
 
     return ImmutableList.of(
         new PrivacyBudgetClientImplV2(

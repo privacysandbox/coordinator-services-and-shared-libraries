@@ -16,7 +16,7 @@
 
 #include "component_lifecycle_lease_event_sink.h"
 
-#include "core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::LeasableLockId;

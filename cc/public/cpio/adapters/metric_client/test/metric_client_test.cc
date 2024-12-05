@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "public/cpio/adapters/metric_client/src/metric_client.h"
+#include "cc/public/cpio/adapters/metric_client/src/metric_client.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -21,13 +21,13 @@
 #include <string>
 #include <utility>
 
-#include "core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/adapters/metric_client/mock/mock_metric_client_with_overrides.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/interface/metric_client/type_def.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/adapters/metric_client/mock/mock_metric_client_with_overrides.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/interface/metric_client/type_def.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;

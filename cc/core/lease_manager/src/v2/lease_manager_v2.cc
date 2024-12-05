@@ -18,10 +18,10 @@
 #include <optional>
 #include <vector>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/lease_manager_interface.h"
-#include "core/lease_manager/src/v2/lease_refresh_liveness_enforcer.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/lease_manager_interface.h"
+#include "cc/core/lease_manager/src/v2/lease_refresh_liveness_enforcer.h"
 
 #include "error_codes.h"
 

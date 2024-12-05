@@ -12,19 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 
 package(default_visibility = ["//visibility:public"])
-
-# This library is to be used as a dummy dependency of all cc targets under this
-# directory, so that we don't need to type the full include path containing
-# "cc/".
-cc_library(
-    name = "cc_base_include_dir",
-    includes = ["."],
-    visibility = [":__subpackages__"],
-)
 
 package_group(
     name = "scp_internal_pkg",
@@ -68,4 +58,19 @@ config_setting(
 config_setting(
     name = "cloud_platform_local",
     flag_values = {"platform": "local"},
+)
+
+bool_flag(
+    name = "enable_benchmarking",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "disable_benchmarking_setting",
+    flag_values = {":enable_benchmarking": "False"},
+)
+
+config_setting(
+    name = "enable_benchmarking_setting",
+    flag_values = {":enable_benchmarking": "True"},
 )

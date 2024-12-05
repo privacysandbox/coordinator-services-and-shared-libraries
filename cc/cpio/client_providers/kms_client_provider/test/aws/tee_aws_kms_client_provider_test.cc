@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/kms_client_provider/src/aws/tee_aws_kms_client_provider.h"
+#include "cc/cpio/client_providers/kms_client_provider/src/aws/tee_aws_kms_client_provider.h"
 
 #include <gtest/gtest.h>
 
@@ -23,16 +23,16 @@
 
 #include <aws/core/Aws.h>
 
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/utils/src/base64.h"
-#include "core/utils/src/error_codes.h"
-#include "cpio/client_providers/kms_client_provider/mock/aws/mock_tee_aws_kms_client_provider_with_overrides.h"
-#include "cpio/client_providers/kms_client_provider/src/aws/tee_error_codes.h"
-#include "cpio/client_providers/role_credentials_provider/mock/mock_role_credentials_provider.h"
-#include "cpio/common/src/aws/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/core/utils/src/error_codes.h"
+#include "cc/cpio/client_providers/kms_client_provider/mock/aws/mock_tee_aws_kms_client_provider_with_overrides.h"
+#include "cc/cpio/client_providers/kms_client_provider/src/aws/tee_error_codes.h"
+#include "cc/cpio/client_providers/role_credentials_provider/mock/mock_role_credentials_provider.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;

@@ -40,7 +40,6 @@ cc_test(
     ],
     deps = [
         ":hello_world_cc_proto",
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",

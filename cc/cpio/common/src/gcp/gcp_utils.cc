@@ -16,7 +16,7 @@
 
 #include "gcp_utils.h"
 
-#include "core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
 
 #include "error_codes.h"
 

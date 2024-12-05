@@ -24,7 +24,6 @@ cc_test(
             "gcp_instance_client_provider_test.cc",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/curl_client/mock:mock_curl_client",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
@@ -43,7 +42,6 @@ cc_test(
             "gcp_instance_client_utils_test.cc",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
@@ -60,7 +58,6 @@ cc_library(
         "test_gcp_instance_client_provider.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/instance_client_provider/test:test_instance_client_provider_lib",

@@ -208,6 +208,46 @@ variable "key_storage_service_cloudfunction_max_instances" {
 }
 
 ################################################################################
+# Cloud Run Variables.
+################################################################################
+
+variable "use_cloud_run" {
+  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
+  type        = bool
+  default     = false
+}
+
+variable "cloud_run_revision_force_replace" {
+  description = "Whether to create a new Cloud Run revision for every deployment."
+  type        = bool
+  default     = false
+}
+
+variable "private_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Private Key Service."
+  type        = string
+  default     = null
+}
+
+variable "private_key_service_custom_audiences" {
+  description = "List of custom audiences for Private Key Service on Cloud Run."
+  type        = list(string)
+  default     = []
+}
+
+variable "key_storage_service_image" {
+  description = "The container image of Cloud Run service deployment for Key Storage Service."
+  type        = string
+  default     = null
+}
+
+variable "key_storage_service_custom_audiences" {
+  description = "List of custom audiences for Key Storage Service on Cloud Run."
+  type        = list(string)
+  default     = []
+}
+
+################################################################################
 # Workload Identity Pool Provider Variables.
 ################################################################################
 
@@ -348,4 +388,14 @@ variable "encryptionkeyservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
   default     = 60
+}
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Enable exporting OTEL metrics from MPKHS."
+  type        = bool
+  default     = false
 }

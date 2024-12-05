@@ -15,10 +15,11 @@
  */
 #include "auto_refresh_token_provider.h"
 
+#include <mutex>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "core/interface/token_fetcher_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/token_fetcher_interface.h"
 
 #include "error_codes.h"
 

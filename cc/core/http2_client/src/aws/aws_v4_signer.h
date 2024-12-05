@@ -18,8 +18,8 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core {
 /**

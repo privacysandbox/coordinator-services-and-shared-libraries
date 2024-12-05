@@ -23,7 +23,6 @@ cc_test(
             "public_mocks_test.cc",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/mock/blob_storage_client:blob_storage_client_mock",
         "//cc/public/cpio/mock/crypto_client:crypto_client_mock",
         "//cc/public/cpio/mock/instance_client:instance_client_mock",

@@ -19,7 +19,7 @@
 #include <memory>
 #include <utility>
 
-#include "cpio/client_providers/interface/cpio_provider_interface.h"
+#include "cc/cpio/client_providers/interface/cpio_provider_interface.h"
 
 using std::move;
 using std::unique_ptr;

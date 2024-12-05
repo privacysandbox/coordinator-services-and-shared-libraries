@@ -18,10 +18,10 @@
 
 #include <gmock/gmock.h>
 
-#include "core/interface/async_context.h"
-#include "core/interface/http_client_interface.h"
-#include "cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::client_providers::mock {
 

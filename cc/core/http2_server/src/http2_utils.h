@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/http_server_interface.h"
+#include "cc/core/interface/http_server_interface.h"
 
 #include "error_codes.h"
 

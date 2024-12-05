@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// #include "core/logger/src/logger.h"
+// #include "cc/core/logger/src/logger.h"
 
-#include "core/logger/src/logger.h"
+#include "cc/core/logger/src/logger.h"
 
 #include <gtest/gtest.h>
 
@@ -22,10 +22,10 @@
 #include <string_view>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/logger/mock/mock_logger.h"
-#include "core/logger/src/log_utils.h"
-#include "core/test/scp_test_base.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/logger/mock/mock_logger.h"
+#include "cc/core/logger/src/log_utils.h"
+#include "cc/core/test/scp_test_base.h"
 
 using google::scp::core::LogLevel;
 using google::scp::core::common::ToString;

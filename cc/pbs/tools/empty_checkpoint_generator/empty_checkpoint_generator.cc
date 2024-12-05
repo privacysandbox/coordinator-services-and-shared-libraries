@@ -21,12 +21,12 @@
 #include <string>
 #include <vector>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/journal_service/src/error_codes.h"
-#include "core/journal_service/src/journal_serialization.h"
-#include "core/journal_service/src/journal_utils.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/journal_service/src/error_codes.h"
+#include "cc/core/journal_service/src/journal_serialization.h"
+#include "cc/core/journal_service/src/journal_utils.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
 
 using google::scp::core::JournalLogStatus;
 

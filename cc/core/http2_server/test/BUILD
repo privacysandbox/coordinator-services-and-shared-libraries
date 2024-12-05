@@ -27,7 +27,6 @@ cc_test(
         "//cc/core/http2_server/test/certs:csr.conf",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/authorization_proxy/mock:core_authorization_proxy_mock",
@@ -58,7 +57,6 @@ cc_test(
         "//cc/core/http2_server/test/certs:csr.conf",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/authorization_proxy/mock:core_authorization_proxy_mock",

@@ -67,6 +67,45 @@ function push_pbs_container_image() {
     docker push $new_image_tag
 }
 
+function push_pbs_cloud_run_container_image() {
+    local default_pbs_image_repo
+    local container_registry
+    default_pbs_image_repo="bazel/cc/pbs/deploy/pbs_server/build_defs"
+    container_registry="$gcp_region-docker.pkg.dev"
+
+    # Validate that repository exists
+    gcloud artifacts repositories describe "$artifact_registry_name" --project "$gcp_project_id" --location "$gcp_region" || \
+    (echo "" && \
+    echo "ERROR: Repository [$artifact_registry_name] does not exist for project $gcp_project_id in region $gcp_region" && \
+    exit 1)
+
+    # Remove all previously loaded pbs container images if any exist
+    if [ $(docker images -f "reference=$default_pbs_image_repo" -aq | wc -l) -gt 0 ]; then
+        # Let's try to remove it, but not fail if this does not succeed
+        docker rmi -f $(docker images -f "reference=$default_pbs_image_repo" -aq) || true
+    fi
+
+    # Remove all previously loaded tagged images if any exist
+    if [ $(docker images -f "reference=$container_registry" -aq | wc -l) -gt 0 ]; then
+        # Let's try to remove it, but not fail if this does not succeed
+        docker rmi -f $(docker images -f "reference=$container_registry" -aq) || true
+    fi
+
+    # Load the PBS container image
+    docker load < "$pbs_cloud_run_container_image_tar_path"
+
+    # Setup the docker repository credentials helper
+    gcloud --quiet auth configure-docker $container_registry
+
+    # Create new image tag name
+    local new_image_tag
+    new_image_tag="$container_registry/$gcp_project_id/$artifact_registry_name/pbs-cloud-run-image:$release_version"
+
+    # Tag image to push to the registry
+    docker tag $default_pbs_image_repo:pbs_cloud_run_container_gcp $new_image_tag
+    docker push $new_image_tag
+}
+
 if [[ "$#" -lt 1 || $1 == "help" ]]; then
 help_msg=$(cat <<-END
   \n
@@ -126,6 +165,14 @@ if [ ! -f "$pbs_container_image_tar_path" ]; then
 fi
 
 push_pbs_container_image
+
+pbs_cloud_run_container_image_tar_path="./dist/reproducible_pbs_cloud_run_container_gcp.tar"
+if [ ! -f "$pbs_cloud_run_container_image_tar_path" ]; then
+    echo "ERROR: PBS container image tar [$pbs_cloud_run_container_image_tar_path] does not exist."
+    exit 1
+fi
+
+push_pbs_cloud_run_container_image
 
 echo ""
 echo "Pushed container image with tag: $release_version"

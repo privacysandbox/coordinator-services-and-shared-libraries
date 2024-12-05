@@ -23,12 +23,12 @@
 #include <vector>
 
 #include "absl/strings/str_format.h"
-#include "core/test/utils/aws_helper/aws_helper.h"
-#include "core/test/utils/docker_helper/docker_helper.h"
-#include "cpio/server/interface/configuration_keys.h"
-#include "cpio/server/src/blob_storage_service/test_aws/test_configuration_keys.h"
-#include "cpio/server/src/metric_service/test_aws/test_configuration_keys.h"
-#include "cpio/server/src/parameter_service/test_aws/test_configuration_keys.h"
+#include "cc/core/test/utils/aws_helper/aws_helper.h"
+#include "cc/core/test/utils/docker_helper/docker_helper.h"
+#include "cc/cpio/server/interface/configuration_keys.h"
+#include "cc/cpio/server/src/blob_storage_service/test_aws/test_configuration_keys.h"
+#include "cc/cpio/server/src/metric_service/test_aws/test_configuration_keys.h"
+#include "cc/cpio/server/src/parameter_service/test_aws/test_configuration_keys.h"
 
 using Aws::Map;
 using Aws::String;

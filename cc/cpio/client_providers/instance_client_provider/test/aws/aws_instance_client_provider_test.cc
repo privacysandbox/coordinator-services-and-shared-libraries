@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_provider.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_provider.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -28,15 +28,15 @@
 #include <aws/ec2/model/DescribeTagsRequest.h>
 
 #include "absl/strings/str_format.h"
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/curl_client/mock/mock_curl_client.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/auth_token_provider/mock/mock_auth_token_provider.h"
-#include "cpio/client_providers/instance_client_provider/mock/aws/mock_ec2_client.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
-#include "cpio/common/src/aws/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/curl_client/mock/mock_curl_client.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/auth_token_provider/mock/mock_auth_token_provider.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/aws/mock_ec2_client.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;

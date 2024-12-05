@@ -21,8 +21,8 @@
 #include <unordered_map>
 #include <utility>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
 
 namespace google::scp::core::common {
 /**

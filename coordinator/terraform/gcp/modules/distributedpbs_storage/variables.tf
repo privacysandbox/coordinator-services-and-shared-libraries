@@ -47,11 +47,22 @@ variable "pbs_spanner_database_retention_period" {
 variable "pbs_spanner_instance_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
-  nullable    = false
+  default     = null
 }
 
 variable "pbs_spanner_database_deletion_protection" {
   description = "Prevents destruction of a table when it is not empty."
   type        = bool
   nullable    = false
+}
+
+variable "pbs_spanner_autoscaling_config" {
+  description = "Defines the auto-scaling config for Spanner."
+  type = object({
+    max_nodes                             = number
+    min_nodes                             = number
+    high_priority_cpu_utilization_percent = number
+    storage_utilization_percent           = number
+  })
+  default = null
 }

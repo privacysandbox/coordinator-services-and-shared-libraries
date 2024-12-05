@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_lease_preference_applier/src/partition_lease_preference_applier.h"
+#include "cc/pbs/partition_lease_preference_applier/src/partition_lease_preference_applier.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/lease_manager/mock/mock_lease_acquistion_preference.h"
-#include "core/lease_manager/mock/mock_lease_statistics.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/logging_utils.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/lease_manager/mock/mock_lease_acquistion_preference.h"
+#include "cc/core/lease_manager/mock/mock_lease_statistics.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/logging_utils.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::LeaseAcquisitionPreference;
 using google::scp::core::SuccessExecutionResult;

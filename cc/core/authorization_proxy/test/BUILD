@@ -26,7 +26,6 @@ cc_test(
     srcs =
         TEST_SRCS,
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
         "//cc/core/interface:interface_lib",

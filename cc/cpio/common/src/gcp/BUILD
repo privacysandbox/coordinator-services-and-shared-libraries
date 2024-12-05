@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/public/cpio/interface:cpio_errors",
         "@com_github_googleapis_google_cloud_cpp//:common",

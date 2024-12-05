@@ -27,13 +27,13 @@
 #include <vector>
 
 #include "absl/strings/str_join.h"
-#include "core/blob_storage_provider/src/common/error_codes.h"
-#include "core/interface/type_def.h"
-#include "core/journal_service/interface/journal_service_stream_interface.h"
-#include "core/journal_service/src/journal_serialization.h"
-#include "core/journal_service/src/journal_utils.h"
-#include "core/journal_service/src/proto/journal_service.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/blob_storage_provider/src/common/error_codes.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/core/journal_service/interface/journal_service_stream_interface.h"
+#include "cc/core/journal_service/src/journal_serialization.h"
+#include "cc/core/journal_service/src/journal_utils.h"
+#include "cc/core/journal_service/src/proto/journal_service.pb.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core {
 

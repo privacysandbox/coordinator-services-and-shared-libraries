@@ -33,7 +33,6 @@ cc_test(
     srcs = ["message_router_test.cc"],
     deps = [
         ":test_cc_proto",
-        "//cc:cc_base_include_dir",
         "//cc/core/common/concurrent_queue/src:concurrent_queue_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/message_router/src:message_router_lib",

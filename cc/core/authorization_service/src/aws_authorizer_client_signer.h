@@ -22,7 +22,7 @@
 
 #include <string>
 
-#include "core/http2_client/src/aws/aws_v4_signer.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
 
 namespace google::scp::core {
 class AwsAuthorizerClientSigner {

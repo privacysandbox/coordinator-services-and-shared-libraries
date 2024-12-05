@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/http2_forwarder/src/http2_forwarder.h"
+#include "cc/core/http2_forwarder/src/http2_forwarder.h"
 
 #include <memory>
 #include <utility>

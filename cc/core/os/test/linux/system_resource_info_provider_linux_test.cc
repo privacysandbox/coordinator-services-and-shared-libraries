@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/os/src/linux/system_resource_info_provider_linux.h"
+#include "cc/core/os/src/linux/system_resource_info_provider_linux.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

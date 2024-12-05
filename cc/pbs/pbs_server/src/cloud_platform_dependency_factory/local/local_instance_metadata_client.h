@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 
-#include "core/interface/service_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 using google::cmrt::sdk::instance_service::v1::
     GetCurrentInstanceResourceNameRequest;

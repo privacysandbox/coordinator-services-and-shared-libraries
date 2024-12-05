@@ -26,7 +26,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/cpio/client_providers/blob_storage_client_provider/mock:mock_blob_storage_provider_lib",
         "//cc/public/cpio/interface/blob_storage_client",

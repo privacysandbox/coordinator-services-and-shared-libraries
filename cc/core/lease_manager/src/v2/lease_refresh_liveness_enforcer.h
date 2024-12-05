@@ -21,7 +21,7 @@
 #include <thread>
 #include <vector>
 
-#include "core/interface/lease_manager_interface.h"
+#include "cc/core/interface/lease_manager_interface.h"
 
 namespace google::scp::core {
 /**

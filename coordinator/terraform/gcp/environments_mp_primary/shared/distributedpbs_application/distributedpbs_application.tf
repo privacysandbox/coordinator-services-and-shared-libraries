@@ -35,6 +35,7 @@ module "distributedpbs_application" {
   pbs_spanner_database_retention_period          = var.pbs_spanner_database_retention_period
   pbs_spanner_instance_processing_units          = var.pbs_spanner_instance_processing_units
   pbs_spanner_database_deletion_protection       = var.pbs_spanner_database_deletion_protection
+  pbs_spanner_autoscaling_config                 = var.pbs_spanner_autoscaling_config
   auth_cloud_function_handler_path               = var.auth_cloud_function_handler_path
   pbs_auth_cloudfunction_min_instances           = var.pbs_auth_cloudfunction_min_instances
   pbs_auth_cloudfunction_max_instances           = var.pbs_auth_cloudfunction_max_instances
@@ -65,4 +66,11 @@ module "distributedpbs_application" {
   enable_domain_management                       = var.enable_domain_management
   enable_health_check                            = var.enable_health_check
   pbs_tls_alternate_names                        = var.pbs_tls_alternate_names
+  pbs_cloud_run_min_instances                    = var.pbs_cloud_run_min_instances
+  pbs_cloud_run_max_instances                    = var.pbs_cloud_run_max_instances
+  pbs_cloud_run_max_concurrency                  = var.pbs_cloud_run_max_concurrency
+  pbs_cloud_run_traffic_percentage               = var.pbs_cloud_run_traffic_percentage
+  deploy_pbs_cloud_run                           = var.deploy_pbs_cloud_run
+  enable_pbs_cloud_run                           = var.enable_pbs_cloud_run
+  pbs_image_override                             = var.pbs_image_override
 }

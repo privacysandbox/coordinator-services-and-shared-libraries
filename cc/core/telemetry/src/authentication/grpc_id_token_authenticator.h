@@ -20,7 +20,7 @@
 #include <string>
 
 #include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
-#include "core/telemetry/src/authentication/token_fetcher.h"
+#include "cc/core/telemetry/src/authentication/token_fetcher.h"
 #include "grpcpp/security/credentials.h"
 
 namespace google::scp::core {

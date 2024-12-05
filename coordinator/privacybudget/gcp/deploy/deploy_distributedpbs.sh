@@ -78,6 +78,65 @@ function push_container_image() {
   --gcp_project_id=$gcp_project_id
 }
 
+function update_pbs_spanner_proto_bundle_and_column() {
+  echo "Updating PBS Spanner Proto bundle..."
+  proto_bundle_file_path="./dist/budget_value_proto-descriptor-set.proto.bin"
+  if [ ! -f "$proto_bundle_file_path" ]; then
+      echo "WARNING: PBS proto bundle [$proto_bundle_file_path] does not exist."
+      return
+  fi
+
+  # Check whether the proto bundle already exists in the PBS Spanner database.
+  has_proto_bundle=$(gcloud spanner databases execute-sql $pbs_database_name \
+  --instance=$pbs_database_instance_name \
+  --sql='SELECT COUNT(PROTO_BUNDLE) as proto_bundle_count FROM `INFORMATION_SCHEMA`.`SCHEMATA` WHERE PROTO_BUNDLE IS NOT NULL' \
+  --project=$gcp_project_id \
+  --quiet)
+  exit_status=$?
+
+  if [ $exit_status -ne 0 ]; then
+    echo "Failed to read information schema for BudgetKey Spanner DB."
+    exit $exit_status
+  fi
+
+  # All proto messages that need to be used by PBS Spanner database.
+  all_bundles="
+  (
+    \`privacy_sandbox_pbs.BudgetValue\`
+  )
+  "
+
+  has_proto_bundle=$(echo $has_proto_bundle | sed -n '1p')
+  if [ "$has_proto_bundle" = "proto_bundle_count 1" ]; then
+    echo "Proto bundle found in BudgetKey DB. Updating proto bundle..."
+    gcloud spanner databases ddl update $pbs_database_name --instance=$pbs_database_instance_name \
+    --ddl="ALTER PROTO BUNDLE UPDATE $all_bundles;" \
+    --proto-descriptors-file=$proto_bundle_file_path \
+    --project=$gcp_project_id \
+    --quiet
+    exit_status=$?
+  else
+    echo "No proto bundle in BudgetKey DB. Creating proto bundle..."
+    gcloud spanner databases ddl update $pbs_database_name --instance=$pbs_database_instance_name \
+    --ddl="CREATE PROTO BUNDLE $all_bundles;" \
+    --proto-descriptors-file=$proto_bundle_file_path \
+    --project=$gcp_project_id \
+    --quiet
+    exit_status=$?
+  fi
+
+  if [ $exit_status -ne 0 ]; then
+    echo "Failed to create or update proto bundle for BudgetKey DB."
+    exit $exit_status
+  fi
+
+  echo "Creating ValueProto column if it does not exist in PBS Spanner database..."
+  gcloud spanner databases ddl update $pbs_database_name --instance=$pbs_database_instance_name \
+  --ddl="ALTER TABLE $pbs_spanner_budget_key_table_name ADD COLUMN IF NOT EXISTS ValueProto privacy_sandbox_pbs.BudgetValue;" \
+  --project=$gcp_project_id \
+  --quiet
+}
+
 function deploy_pbs_application() {
   local generated_version_tf_vars_file
   generated_version_tf_vars_file=$environment_dir/distributedpbs_application/version.auto.tfvars
@@ -93,7 +152,7 @@ function deploy_pbs_application() {
   echo "pbs_service_account_email = \"$pbs_service_account_email\"" >> $generated_version_tf_vars_file
   echo "pbs_image_tag             = \"$version_tag\"" >> $generated_version_tf_vars_file
 
-  terraform -chdir=$environment_dir/distributedpbs_application init --upgrade -input=false
+  terraform -chdir=$environment_dir/distributedpbs_application init -input=false
 
   if [ "$auto_approve" = true ]; then
       if [ "$use_tf_plan" = true ]; then
@@ -116,6 +175,7 @@ function capture_application_deployment_outputs() {
   # Captures this deployment's outputs for setting a default entry into the partition lock.
   pbs_database_instance_name="$(terraform -chdir=$environment_dir/distributedpbs_application output -raw pbs_spanner_instance_name)"
   pbs_database_name="$(terraform -chdir=$environment_dir/distributedpbs_application output -raw pbs_spanner_database_name)"
+  pbs_spanner_budget_key_table_name="$(terraform -chdir=$environment_dir/distributedpbs_application output -raw pbs_spanner_budget_key_table_name)"
 
   # Captures this deployment's outputs for inserting the remote coordinator service account email into this coordinator's auth table.
   pbs_remote_service_account_email="$(terraform -chdir=$environment_dir/distributedpbs_application output -raw pbs_remote_coordinator_service_account_email)"
@@ -265,8 +325,14 @@ auth_database_instance_name=''
 auth_database_name=''
 pbs_database_instance_name=''
 pbs_database_name=''
+pbs_spanner_budget_key_table_name=''
 pbs_remote_service_account_email=''
 capture_application_deployment_outputs
+
+# Update proto bundle and proto column for PBS Spanner database. This step must happen after PBS
+# application deployment because the pbs_database_name and pbs_database_instance_name are known
+# after the deployment.
+update_pbs_spanner_proto_bundle_and_column
 
 # Insert a default entry into the Spanner partition lock.
 insert_default_partition_lock_entry

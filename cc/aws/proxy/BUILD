@@ -97,6 +97,7 @@ genrule(
         cd /scp
         # Remove clang flags
         sed -i '/fbracket-depth=512/d' .bazelrc
+        sed -i 's/std=c++20/std=c++17/g' .bazelrc
         bazel build \
           //cc/aws/proxy/src:proxify \
           //cc/aws/proxy/src:proxy \

@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_request_router/src/http_request_route_resolver_for_partition.h"
+#include "cc/pbs/partition_request_router/src/http_request_route_resolver_for_partition.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <vector>
 
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/interface/partition_namespace_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/type_def.h"
-#include "pbs/partition/mock/pbs_partition_mock.h"
-#include "pbs/partition_manager/mock/pbs_partition_manager_mock.h"
-#include "pbs/partition_namespace/mock/partition_namespace_mock.h"
-#include "pbs/partition_request_router/src/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/interface/partition_namespace_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/type_def.h"
+#include "cc/pbs/partition/mock/pbs_partition_mock.h"
+#include "cc/pbs/partition_manager/mock/pbs_partition_manager_mock.h"
+#include "cc/pbs/partition_namespace/mock/partition_namespace_mock.h"
+#include "cc/pbs/partition_request_router/src/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::ConfigProviderInterface;

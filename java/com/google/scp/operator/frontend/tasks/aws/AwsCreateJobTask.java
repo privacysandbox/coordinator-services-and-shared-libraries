@@ -108,6 +108,7 @@ public final class AwsCreateJobTask extends CreateJobTaskBase {
                 requestInfo.getJobParametersMap().getOrDefault(JOB_PARAM_REPORTING_SITE, ""))
             .setInputDataBucketName(requestInfo.getInputDataBucketName())
             .setInputDataBlobPrefix(requestInfo.getInputDataBlobPrefix())
+            .addAllInputDataBlobPrefixes(requestInfo.getInputDataBlobPrefixesList())
             .setOutputDataBucketName(requestInfo.getOutputDataBucketName())
             .setOutputDataBlobPrefix(requestInfo.getOutputDataBlobPrefix())
             .setPostbackUrl(requestInfo.getPostbackUrl())

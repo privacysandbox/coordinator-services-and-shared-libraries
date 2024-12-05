@@ -18,10 +18,10 @@
 
 #include <memory>
 
-#include "core/blob_storage_provider/src/aws/aws_s3.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/interface/config_provider_interface.h"
+#include "cc/core/blob_storage_provider/src/aws/aws_s3.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
 
 namespace google::scp::pbs {
 /*! @copydoc AwsS3Provider

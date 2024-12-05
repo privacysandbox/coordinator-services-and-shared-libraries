@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/nosql_database_client_provider/src/aws/aws_dynamo_db_client_provider.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/aws/aws_dynamo_db_client_provider.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -29,12 +29,12 @@
 #include <aws/core/utils/Outcome.h>
 #include <aws/dynamodb/DynamoDBErrors.h>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
 using Aws::Map;

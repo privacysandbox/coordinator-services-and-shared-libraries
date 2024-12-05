@@ -25,9 +25,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/config_provider_interface.h"
-#include "core/interface/nosql_database_provider_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/nosql_database_provider_interface.h"
 #include "google/cloud/spanner/client.h"
 #include "google/cloud/spanner/mutations.h"
 

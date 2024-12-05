@@ -12,14 +12,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
+#include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
 
 #include <memory>
 #include <string>
 
-#include <core/config_provider/mock/mock_config_provider.h>
-
-#include "core/telemetry/src/common/telemetry_configuration.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "include/gtest/gtest.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"

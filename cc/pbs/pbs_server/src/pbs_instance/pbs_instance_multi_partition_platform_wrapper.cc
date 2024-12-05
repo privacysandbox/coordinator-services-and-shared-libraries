@@ -21,15 +21,15 @@
 #include "pbs_instance_multi_partition.h"
 
 #if defined(PBS_GCP)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
 #elif defined(PBS_GCP_INTEGRATION_TEST)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/gcp_integration_test_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/gcp_integration_test_dependency_factory.h"
 #elif defined(PBS_AWS)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
 #elif defined(PBS_AWS_INTEGRATION_TEST)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/aws_integration_test_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/aws_integration_test_dependency_factory.h"
 #elif defined(PBS_LOCAL)
-#include "pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
 #endif
 
 using google::scp::core::ConfigProviderInterface;

@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include "core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::errors {
 REGISTER_COMPONENT_CODE(SYSTEM_RESOURCE_INFO_PROVIDER_LINUX, 0x0F00)

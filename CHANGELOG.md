@@ -1,5 +1,157 @@
 # Changelog
 
+## Unreleased
+
+## [1.14.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.13.0...v1.14.0) (2024-12-05)
+
+### Important note
+- **[GCP only]** Configure the maximum number of concurrent requests processed by each Public Key API Cloud Function instance by setting below Terraform variables
+    ```
+    get_public_key_cpus = 2
+    get_public_key_request_concurrency = 10
+    ```
+- **[GCP only]** Manually update the Spanner database **only when not using** the `deploy_distributedpbs.sh` script.
+    ```
+    pbs_database_name=<customize this>
+    pbs_database_instance_name=<customize this>
+    proto_bundle_file_path=<customize this>
+    gcp_project_id=<customize this>
+    pbs_spanner_budget_key_table_name=<customize this>
+    all_bundles="(\`privacy_sandbox_pbs.BudgetValue\`)"
+
+    gcloud spanner databases ddl update $pbs_database_name \
+        --instance=$pbs_database_instance_name \
+        --ddl="CREATE PROTO BUNDLE $all_bundles;" \
+        --proto-descriptors-file=$proto_bundle_file_path \
+        --project=$gcp_project_id
+
+    gcloud spanner databases ddl update $pbs_database_name \
+        --instance=$pbs_database_instance_name \
+        --ddl="ALTER TABLE $pbs_spanner_budget_key_table_name ADD COLUMN IF NOT EXISTS ValueProto privacy_sandbox_pbs.BudgetValue;" \
+        --project=$gcp_project_id
+    ```
+- **[GCP only]** If rolling back from this version with Cloud Functions enabled for MPKHS, the following commands must be run manually for `mpkhs_secondary`.
+    ```
+    terraform state mv module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_url_map.key_storage[0] module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_url_map.key_storage
+    terraform state mv module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_backend_service.key_storage[0] module.multipartykeyhosting_secondary.module.keystorageservice.google_compute_backend_service.key_storage
+    ```
+
+### Changes
+
+- Added `benchmark_deps.bzl` function to load dependencies of `google_benchmark`.
+- Documented the PBS metrics in `METRICS.md`.
+- Enabled OTel for the PBS local debugging script.
+- Introduced a new `JobParameters` proto.
+- Optimized the performance of the `x-auth-token` refresh token implementation by refreshing tokens only when expired.
+- Refactored logging statements across the codebase to use `absl::StrFormat()` for compile-time format string validation.
+- Standardized C++ includes in the codebase to consistently use the `cc/` prefix.
+- Updated `FSBlobStorageClient` to include full paths in blob keys for improved accuracy.
+- Updated container dependencies.
+- Updated the CreateJob request and GetJob response API schemas to accept an optional input prefix list.
+- Updated the bucket boundaries of histogram metrics to better capture data distribution.
+- Updated the method of specifying PBS requests' `User-Agent` header. The new method involves setting the value via the `@TrustedServicesClientVersion` annotation. Users of the library should bind a value to this annotation.
+- [AWS only] Added optional Terraform to send metrics to Google Cloud, using CloudWatch Metric Streams.
+- [AWS only] Configured Terraform to ignore changes in `read_capacity` and `write_capacity` because an autoscaling policy is attached to the table.
+- [AWS only] Fixed `setup_enclave.sh` script to terminate immediately upon any error.
+- [AWS only] Removed partitioned PBS code in `pbs_server`.
+- [AWS only] Set the explicit volume size of aggregation worker AMI.
+- [GCP Only] Added KMS Key rotation period set to 31536000s (1 year).
+- [GCP only] Added Golang module backupfunction, responsible for initiating a Spanner Backup against PBS and MPKHS databases.
+- [GCP only] Added a Bazel build target for a KHS-only tarball.
+- [GCP only] Added a helper script and Bazel rule for building and uploading the PBS container.
+- [GCP only] Added the Terraform `get_public_key_cpus` and `get_public_key_request_concurrency` variables to control the number of CPUs used by and the maximum number of concurrent requests processed by each Public Key API Cloud Function instance.
+- [GCP only] Configured the dedicated load balancer resources for Cloud Run MPKHS to allow streamlined switching between Cloud Functions and Cloud Run.
+- [GCP only] Disabled module and plugin upgrades during PBS Terraform deployments.
+- [GCP only] Introduced a new `BudgetValue` proto. The proto descriptor is included in the coordinator tarball at `dist/budget_value_proto-descriptor-set.proto.bin`. The PBS deployment script now updates the proto bundle and creates a corresponding `ValueProto` column in the PBS Spanner database.
+- [GCP only] Removed unused `VERSION` and `LOG_EXECUTION_ID` environment variables from Cloud Run services. Added an `EXPORT_OTEL_METRICS` environment variable and a `version` label to these services.
+- [GCP only] Set the explicit region for `the key_generation_cron` Cloud Scheduler job to ensure it uses the same region as the key generation VM.
+- [GCP only] Updated the Cloud Run configuration to align container resources, scaling, and timeout settings with those of Cloud Functions.
+- [GCP only] Updated the PBS VM update policy to ensure new machines are created and running before old ones are removed.
+- [GCP only] Updated the minimum allowed GCP Terraform provider version to `5.37.0` for all modules.
+
+## [1.13.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.12.0...v1.13.0) (2024-11-06)
+
+- **Important note**
+    - **[GCP only]** Cloud Run PBS
+      - In the `auto.tfvars` for `distributedpbs_application`, add the following variables:
+        ```
+        pbs_cloud_run_max_instances = 20
+        pbs_cloud_run_min_instances = 10
+        pbs_cloud_run_traffic_percentage = 0
+        deploy_pbs_cloud_run = false
+        enable_pbs_cloud_run = false
+        ```
+        These terraform variables are needed to configure the Cloud Run PBS backend and Load Balancer. `deploy_pbs_cloud_run = true` will
+        instantiate the Cloud Run PBS backend but will not link it to the Load balancer. `enable_pbs_cloud_run = true` requires `deploy_pbs_cloud_run = true`
+        and will link the Cloud Run PBS backend to the Load balancer.
+          - In a separate, second deployment, set `deploy_pbs_cloud_run = true` and `enable_pbs_cloud_run = true` to configure
+            Cloud Run PBS to serve traffic
+
+      - Rollback for **distributedpbs_application** requires two separate deployments:
+        1. Set `enable_pbs_cloud_run = false`, run `terraform apply`
+        2. Set `deploy_pbs_cloud_run = false`, run `terraform apply`
+
+      - Manual Deployment Steps Required
+        - Added optional Spanner autoscaling configuration for PBS storage.
+          `pbs_spanner_instance_processing_units` no longer defaults to 1000. Either
+          set this explicitly to disable autoscaling, or set
+          `pbs_spanner_autoscaling_config` to enable it.
+
+### Changes
+  - [GCP only] Renamed Cloud Build substitution variable from `_OUTPUT_IMAGE_NAME` to `_OUTPUT_KEYGEN_IMAGE_NAME` for the artifacts build
+  - [GCP only] Added support of Cloud Run for MPKHS
+  - [GCP only] Created helper script for building MPKHS components
+  - [GCP only] Enabled Cloud Run as an option in addition to GCE for running PBS services
+  - [GCP only] Improved metric collection for http.server.request.duration
+  - Added default values for deploy and enable tfvars for Cloud Run PBS migration
+  - Added metric_router for pbs instance
+  - Added missing default value for PBS Cloud Run max concurrency config
+  - Corrected README.md file for GCP deployment by removing references to AWS
+  - Created benchmark test for UUID FromString method
+  - Created benchmark tests for AsyncExecutor
+  - Enabled gperftools in the unit tests
+  - Enabled health checks according to container type
+  - Implemented new LogProvider that writes structured JSON logs to stdout
+  - Improved metric collection for PBS services
+  - Improved UUID FromString by optimizing hex to int method
+  - Refactored GCP Instance Client Provider to be platform-agnostic (should be able to run on GCE and Cloud Run)
+  - Refactored Load Balancer config to use one variable for traffic splitting between GCE and Cloud Run
+  - Removed counter metric http.client.response
+  - Removed default values for PBS traffic split config from module level
+  - Removed Http server specific otel flag
+  - Updated auth function so that only necessary variables are globalized
+  - Updated container dependencies
+  - Updated HTTP metric labels
+  - Updated the pbs request header to specify AgS version as "User-Agent"
+  - Upgraded google-cloud-cpp dependency
+  - Upgraded Java dependency slf4j to the latest STABLE release
+
+## [1.12.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.11.0...v1.12.0) (2024-10-21)
+
+- **Important note**
+  - **[GCP only]** Provider definitions have been removed from MPKHS Terraform. Ensure that the default project and region are set appropriately at the root module level
+
+### Changes
+
+  - Added KHS http request duration metric for private key fetching
+  - Addressed crash in BudgetKeyTimeframeManager
+  - Addressed crash in ListRecentEncryptionKeys when invalid keys present in database
+  - Addressed UAF triggered by observable metric callbacks
+  - Created Http server metrics labels in the terraform
+  - Updated dependencies to address security vulnerabilities
+  - [Aggregatable Report Accounting] Addressed dependency cycle in PBSInstanceV3 initialization
+  - [Aggregatable Report Accounting] Cleaned up the Terraform flag "google_scp_pbs_adtech_site_as_authorized_domain_enabled"
+  - [Aggregatable Report Accounting] Reduced the severity of logs when async context received error status due to false alarms
+  - [Aggregatable Report Accounting] Replaced absl::bind_front with std::bind_front
+  - [Aggregatable Report Accounting] Updated C++ version to C++20, except for `//cc/aws/proxy/...`
+  - [Aggregatable Report Accounting] Updated consume_budget.cc to reduce map lookup operations
+  - [Aggregatable Report Accounting] Updated documentation for PBS Cloud Spanner schema
+  - [AWS only] Added missing SSM permissions for SSH access for AWS PBS
+  - [GCP only] Added missing project in domain_a_records module
+  - [GCP only] Added terraform code to enable OTel metrics for public key, private key, and key storage services
+          - To enable, add `export_otel_metrics = true` to the corresponding `mpkhs/<env>.auto.tfvars`
+  - [GCP only] Removed provider definitions from MPKHS modules
+
 ## [1.11.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.10.0...v1.11.0) (2024-10-07)
 
 - **Important note**

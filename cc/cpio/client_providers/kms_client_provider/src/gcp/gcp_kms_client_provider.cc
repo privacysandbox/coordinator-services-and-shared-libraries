@@ -21,10 +21,10 @@
 
 #include <tink/aead.h>
 
-#include "core/utils/src/base64.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/public/cpio/interface/kms_client/type_def.h"
 #include "google/cloud/kms/key_management_client.h"
-#include "public/cpio/interface/kms_client/type_def.h"
 
 #include "error_codes.h"
 #include "gcp_key_management_service_client.h"

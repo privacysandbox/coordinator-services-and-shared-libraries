@@ -106,10 +106,11 @@ resource "google_compute_backend_service" "pbs_auth_loadbalancer_backend" {
   count                           = var.enable_domain_management ? 1 : 0
   name                            = "${var.environment}-pbs-auth-backend"
   project                         = var.project_id
-  description                     = "Backend service to point to PBS auth Clound Function"
+  description                     = "Backend service to point to PBS auth Cloud Function"
   enable_cdn                      = false
   protocol                        = "HTTP2"
   connection_draining_timeout_sec = 30
+  load_balancing_scheme           = "EXTERNAL_MANAGED"
 
   backend {
     description = var.environment
@@ -119,7 +120,6 @@ resource "google_compute_backend_service" "pbs_auth_loadbalancer_backend" {
   log_config {
     enable = true
   }
-  load_balancing_scheme = "EXTERNAL_MANAGED"
 }
 
 # Backend service that maps to the PBS managed instance group for the load balancer to use
@@ -132,8 +132,8 @@ resource "google_compute_backend_service" "pbs_backend_service" {
   port_name                       = var.pbs_named_port
   timeout_sec                     = 3600
   connection_draining_timeout_sec = 30
-
-  health_checks = [google_compute_health_check.pbs_health_check.id]
+  health_checks                   = [google_compute_health_check.pbs_health_check.id]
+  load_balancing_scheme           = "EXTERNAL_MANAGED"
 
   backend {
     description    = var.environment
@@ -144,7 +144,46 @@ resource "google_compute_backend_service" "pbs_backend_service" {
   log_config {
     enable = true
   }
-  load_balancing_scheme = "EXTERNAL_MANAGED"
+}
+
+# Network Endpoint Group to route to Cloud Run PBS
+resource "google_compute_region_network_endpoint_group" "pbs_network_endpoint_group" {
+  count                 = var.deploy_pbs_cloud_run ? 1 : 0
+  name                  = "${var.environment}-${var.region}-pbs"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+
+  dynamic "cloud_run" {
+    for_each = var.deploy_pbs_cloud_run ? ["true"] : []
+    content {
+      service = var.pbs_cloud_run_name
+    }
+  }
+}
+
+# Backend service that maps to the PBS Network Endpoint Groups for the load balancer to use
+resource "google_compute_backend_service" "pbs_cloud_run_backend_service" {
+  count                           = var.deploy_pbs_cloud_run ? 1 : 0
+  name                            = "${var.environment}-pbs-cloud-run-backend"
+  project                         = var.project_id
+  description                     = "Backend service to point to Cloud Run PBS"
+  enable_cdn                      = false
+  protocol                        = var.enable_domain_management ? "HTTP2" : "TCP"
+  connection_draining_timeout_sec = 30
+  load_balancing_scheme           = "EXTERNAL_MANAGED"
+
+  dynamic "backend" {
+    for_each = var.deploy_pbs_cloud_run ? ["true"] : []
+    content {
+      description    = var.environment
+      group          = google_compute_region_network_endpoint_group.pbs_network_endpoint_group[0].id
+      balancing_mode = "UTILIZATION"
+    }
+  }
+
+  log_config {
+    enable = true
+  }
 }
 
 resource "google_compute_health_check" "pbs_health_check" {
@@ -217,9 +256,20 @@ resource "google_compute_url_map" "pbs_load_balancer_managed" {
         "/v1/transactions:end",
         "/v1/transactions:status"
       ]
-      service = google_compute_backend_service.pbs_backend_service.id
+      route_action {
+        weighted_backend_services {
+          backend_service = google_compute_backend_service.pbs_backend_service.id
+          weight          = 100 - var.pbs_cloud_run_traffic_percentage
+        }
+        dynamic "weighted_backend_services" {
+          for_each = var.enable_pbs_cloud_run ? ["true"] : []
+          content {
+            backend_service = google_compute_backend_service.pbs_cloud_run_backend_service[0].id
+            weight          = var.pbs_cloud_run_traffic_percentage
+          }
+        }
+      }
     }
-
     path_rule {
       paths = [
         "/v1/auth"

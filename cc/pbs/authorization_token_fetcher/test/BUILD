@@ -24,7 +24,6 @@ cc_test(
         "gcp_authorization_token_fetcher_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/curl_client/mock:mock_curl_client",
         "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/http1_helper:test_http1_server",

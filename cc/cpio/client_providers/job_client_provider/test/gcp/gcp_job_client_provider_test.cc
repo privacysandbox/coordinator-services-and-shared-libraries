@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/job_client_provider/src/gcp/gcp_job_client_provider.h"
+#include "cc/cpio/client_providers/job_client_provider/src/gcp/gcp_job_client_provider.h"
 
 #include <gtest/gtest.h>
 
 #include "cc/cpio/client_providers/job_client_provider/src/error_codes.h"
-#include "cpio/client_providers/nosql_database_client_provider/mock/mock_nosql_database_client_provider.h"
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
-#include "cpio/client_providers/queue_client_provider/mock/mock_queue_client_provider.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/mock/mock_nosql_database_client_provider.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/queue_client_provider/mock/mock_queue_client_provider.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::errors::
     SC_JOB_CLIENT_PROVIDER_DUPLICATE_JOB_ENTRY_CREATION;

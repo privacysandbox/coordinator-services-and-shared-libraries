@@ -14,10 +14,10 @@
 
 #pragma once
 
-#include "core/interface/async_context.h"
-#include "core/interface/service_interface.h"
-#include "core/interface/transaction_manager_interface.h"
-#include "pbs/interface/front_end_service_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/pbs/interface/front_end_service_interface.h"
 
 namespace google::scp::pbs {
 /**

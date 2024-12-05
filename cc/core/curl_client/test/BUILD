@@ -24,7 +24,6 @@ cc_test(
             "http1_curl_wrapper_test.cc",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/curl_client/src:http1_curl_client_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils/http1_helper:test_http1_server",
@@ -42,7 +41,6 @@ cc_test(
             "http1_curl_client_test.cc",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/curl_client/src:http1_curl_client_lib",
         "//cc/core/interface:interface_lib",

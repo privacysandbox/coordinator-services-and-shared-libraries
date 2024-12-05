@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/parameter_client_provider/mock:parameter_client_provider_mock",
         "//cc/public/cpio/interface/parameter_client",
     ],

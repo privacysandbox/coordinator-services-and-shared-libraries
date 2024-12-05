@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "absl/base/nullability.h"
 #include "cc/core/interface/authorization_proxy_interface.h"
 #include "cc/core/interface/blob_storage_provider_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
@@ -173,11 +174,12 @@ class CloudPlatformDependencyFactoryInterface
 
   /**
    * @brief Construct Metric Router for Otel metrics collection
-   * @param instance_client_provider
+   * @param Optional instance_client_provider
    * @return std::unique_ptr<core::MetricRouter>
    */
   virtual std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+      absl::Nullable<std::shared_ptr<
+          cpio::client_providers::InstanceClientProviderInterface>>
           instance_client_provider) noexcept = 0;
 
   /**

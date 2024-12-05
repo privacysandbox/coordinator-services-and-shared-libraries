@@ -19,33 +19,33 @@
 
 #include <aws/core/Aws.h>
 
+#include "cc/core/authorization_proxy/src/authorization_proxy.h"
+#include "cc/core/blob_storage_provider/src/aws/aws_s3.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/credentials_provider/src/aws_assume_role_credentials_provider.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/token_fetcher_interface.h"
+#include "cc/core/nosql_database_provider/src/aws/aws_dynamo_db.h"
+#include "cc/core/telemetry/src/authentication/aws_token_fetcher.h"
+#include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
+#include "cc/core/telemetry/src/authentication/grpc_id_token_authenticator.h"
+#include "cc/core/telemetry/src/authentication/token_fetcher.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
+#include "cc/core/token_provider_cache/src/auto_refresh_token_provider.h"
+#include "cc/cpio/client_providers/auth_token_provider/src/aws/aws_auth_token_provider.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_provider.h"
 #include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
-#include "core/authorization_proxy/src/authorization_proxy.h"
-#include "core/blob_storage_provider/src/aws/aws_s3.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/credentials_provider/src/aws_assume_role_credentials_provider.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/token_fetcher_interface.h"
-#include "core/nosql_database_provider/src/aws/aws_dynamo_db.h"
-#include "core/telemetry/src/authentication/aws_token_fetcher.h"
-#include "core/telemetry/src/authentication/grpc_auth_config.h"
-#include "core/telemetry/src/authentication/grpc_id_token_authenticator.h"
-#include "core/telemetry/src/authentication/token_fetcher.h"
-#include "core/telemetry/src/common/telemetry_configuration.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
-#include "core/token_provider_cache/src/auto_refresh_token_provider.h"
-#include "cpio/client_providers/auth_token_provider/src/aws/aws_auth_token_provider.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_provider.h"
-#include "cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
+#include "cc/pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
+#include "cc/pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/pbs_client_interface.h"
+#include "cc/pbs/pbs_client/src/pbs_client.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
-#include "pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
-#include "pbs/authorization_token_fetcher/src/aws/aws_authorization_token_fetcher.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/interface/pbs_client_interface.h"
-#include "pbs/pbs_client/src/pbs_client.h"
 
 using Aws::InitAPI;
 using Aws::SDKOptions;
@@ -298,10 +298,12 @@ AwsDependencyFactory::ConstructRemoteCoordinatorPBSClient(
 }
 
 std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider) noexcept {
   std::string current_instance_resource_name;
-  auto execution_result =
+  CHECK(instance_client_provider != nullptr);
+  ExecutionResult execution_result =
       instance_client_provider->GetCurrentInstanceResourceNameSync(
           current_instance_resource_name);
 
@@ -310,6 +312,7 @@ std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
        "aws"},
       {opentelemetry::sdk::resource::SemanticConventions::kCloudPlatform,
        "aws_ec2"},
+      {opentelemetry::sdk::resource::SemanticConventions::kServiceName, "pbs"},
   };
   if (execution_result.Successful()) {
     auto cloud_region_or = AwsInstanceClientUtils::ParseRegionFromResourceName(
@@ -355,7 +358,8 @@ std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
 }
 
 std::unique_ptr<core::MetricRouter> AwsDependencyFactory::ConstructMetricRouter(
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
+    absl::Nullable<std::shared_ptr<
+        cpio::client_providers::InstanceClientProviderInterface>>
         instance_client_provider,
     opentelemetry::sdk::resource::Resource resource) noexcept {
   std::unique_ptr<GrpcAuthConfig> metric_auth_config =

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "process_launcher/argument_parser/src/json_arg_parser.h"
+#include "cc/process_launcher/argument_parser/src/json_arg_parser.h"
 
 #include <gtest/gtest.h>
 
-#include "core/test/scp_test_base.h"
-#include "process_launcher/argument_parser/src/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/test/scp_test_base.h"
+#include "cc/process_launcher/argument_parser/src/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;

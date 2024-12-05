@@ -21,7 +21,6 @@ cc_library(
     testonly = True,
     srcs = ["mock_lib_cpio.h"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/global_cpio/mock:global_cpio_mock",
         "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
     ],

@@ -21,7 +21,7 @@
 
 #include <openssl/md5.h>
 
-#include "core/interface/type_def.h"
+#include "cc/core/interface/type_def.h"
 
 #include "error_codes.h"
 

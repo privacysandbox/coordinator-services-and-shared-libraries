@@ -19,7 +19,6 @@ cc_test(
     size = "small",
     srcs = ["logger_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/interface:logger_interface_lib",
         "//cc/core/logger/mock:logger_mock",

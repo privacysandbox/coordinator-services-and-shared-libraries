@@ -19,12 +19,12 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/partition_manager_interface.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/partition_manager_interface.h"
 
 #include "error_codes.h"
 

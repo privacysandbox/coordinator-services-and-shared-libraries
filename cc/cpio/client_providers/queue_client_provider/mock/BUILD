@@ -23,7 +23,6 @@ cc_library(
         "mock_queue_client_provider.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
     ],
 )

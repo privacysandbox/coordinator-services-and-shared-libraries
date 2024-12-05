@@ -25,17 +25,17 @@
 #include <aws/monitoring/CloudWatchErrors.h>
 #include <aws/monitoring/model/PutMetricDataRequest.h>
 
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
-#include "cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cpio/common/src/aws/aws_utils.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/interface/metric_client/type_def.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
+#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cc/cpio/common/src/aws/aws_utils.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
+#include "cc/public/cpio/interface/metric_client/type_def.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 #include "aws_metric_client_utils.h"
 #include "cloud_watch_error_converter.h"

@@ -82,6 +82,26 @@ variable "allowed_operator_user_group" {
   type        = string
 }
 
+variable "use_cloud_run" {
+  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
+  type        = bool
+}
+
+variable "cloud_run_revision_force_replace" {
+  description = "Whether to create a new Cloud Run revision for every deployment."
+  type        = bool
+}
+
+variable "private_key_service_image" {
+  description = "The container image of Cloud Run service deployment for Private Key Service."
+  type        = string
+}
+
+variable "private_key_service_custom_audiences" {
+  description = "List of custom audiences for Private Key Service on Cloud Run."
+  type        = list(string)
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################
@@ -129,4 +149,13 @@ variable "lb_max_latency_ms" {
 variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
+}
+
+################################################################################
+# OpenTelemetry Variables
+################################################################################
+
+variable "export_otel_metrics" {
+  description = "Use OpenTelemetry to export metrics from Encryption Key Service."
+  type        = bool
 }

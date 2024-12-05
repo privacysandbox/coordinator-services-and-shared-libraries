@@ -36,7 +36,6 @@ cc_library(
             ":global_cpio_srcs",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/logger/src:logger_lib",
         "//cc/core/logger/src/log_providers:log_providers_lib",
         "//cc/core/logger/src/log_providers/syslog:syslog_lib",

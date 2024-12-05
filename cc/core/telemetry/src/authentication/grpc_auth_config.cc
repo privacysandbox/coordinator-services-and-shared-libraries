@@ -16,7 +16,7 @@
 
 #include <utility>
 
-#include "core/telemetry/src/common/telemetry_configuration.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
 
 namespace google::scp::core {
 GrpcAuthConfig::GrpcAuthConfig(std::string service_account,

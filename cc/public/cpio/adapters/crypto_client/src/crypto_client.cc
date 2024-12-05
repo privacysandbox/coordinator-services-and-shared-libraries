@@ -18,15 +18,15 @@
 
 #include <memory>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/async_context.h"
-#include "core/interface/errors.h"
-#include "core/utils/src/error_utils.h"
-#include "cpio/client_providers/crypto_client_provider/src/crypto_client_provider.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/adapters/common/adapter_utils.h"
-#include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/utils/src/error_utils.h"
+#include "cc/cpio/client_providers/crypto_client_provider/src/crypto_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/adapters/common/adapter_utils.h"
+#include "cc/public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
 
 using google::cmrt::sdk::crypto_service::v1::AeadDecryptRequest;
 using google::cmrt::sdk::crypto_service::v1::AeadDecryptResponse;

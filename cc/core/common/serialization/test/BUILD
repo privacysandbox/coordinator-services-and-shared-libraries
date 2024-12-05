@@ -33,7 +33,6 @@ cc_test(
     srcs = ["serialization_test.cc"],
     deps = [
         ":test_cc_proto",
-        "//cc:cc_base_include_dir",
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/interface:type_def_lib",
         "//cc/core/test/utils:utils_lib",

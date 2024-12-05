@@ -18,7 +18,7 @@
 
 #include <string_view>
 
-#include "core/common/uuid/src/uuid.h"
+#include "cc/core/common/uuid/src/uuid.h"
 
 #include "service_interface.h"
 #include "type_def.h"

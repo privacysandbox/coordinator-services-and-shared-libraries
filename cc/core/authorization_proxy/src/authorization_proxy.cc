@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "core/authorization_proxy/src/authorization_proxy.h"
+#include "cc/core/authorization_proxy/src/authorization_proxy.h"
 
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "core/authorization_proxy/src/error_codes.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/http2_client/src/http2_client.h"
+#include "cc/core/authorization_proxy/src/error_codes.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/http2_client/src/http2_client.h"
 
 using boost::system::error_code;
 using google::scp::core::common::AutoExpiryConcurrentMap;
@@ -58,8 +58,8 @@ ExecutionResult AuthorizationProxy::Init() noexcept {
     auto execution_result =
         FailureExecutionResult(errors::SC_AUTHORIZATION_PROXY_INVALID_CONFIG);
     SCP_ERROR(kAuthorizationProxy, kZeroUuid, execution_result,
-              "Failed to parse URI with boost error_code: %s",
-              http2_error_code.message().c_str());
+              absl::StrFormat("Failed to parse URI with boost error_code: %s",
+                              http2_error_code.message().c_str()));
     return execution_result;
   }
   return cache_.Init();

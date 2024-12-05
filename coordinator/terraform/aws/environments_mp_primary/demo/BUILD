@@ -20,6 +20,7 @@ pkg_filegroup(
     name = "mp_primary_coordinator_demo",
     srcs = [
         "//coordinator/terraform/aws/environments_mp_primary/demo/adtechmanagement_application:adtechmanagement_demo",
+        "//coordinator/terraform/aws/environments_mp_primary/demo/cloudwatch_metric_stream",
         "//coordinator/terraform/aws/environments_mp_primary/demo/distributedpbs_application:distributedpbs_application_demo",
         "//coordinator/terraform/aws/environments_mp_primary/demo/distributedpbs_application:distributedpbs_application_link",
         "//coordinator/terraform/aws/environments_mp_primary/demo/distributedpbs_application:distributedpbs_application_outputs_link",

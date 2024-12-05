@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include "core/interface/errors.h"
-#include "public/cpio/interface/error_codes.h"
+#include "cc/core/interface/errors.h"
+#include "cc/public/cpio/interface/error_codes.h"
 
 namespace google::scp::core::errors {
 /// Registers component code as 0x0224 for gcp queue client provider.

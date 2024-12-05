@@ -22,7 +22,6 @@ cc_library(
         "test_aws_private_key_client_options.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/private_key_client:type_def",
     ],
 )

@@ -20,7 +20,6 @@ cc_binary(
     name = "scp_process_launcher",
     srcs = ["launcher.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/process_launcher/daemonizer/src:daemonizer_lib",
     ],
 )

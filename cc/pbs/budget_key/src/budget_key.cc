@@ -22,11 +22,11 @@
 #include <utility>
 #include <vector>
 
-#include "core/common/serialization/src/serialization.h"
-#include "core/common/uuid/src/uuid.h"
-#include "pbs/budget_key/src/proto/budget_key.pb.h"
-#include "pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
-#include "pbs/budget_key_transaction_protocols/src/consume_budget_transaction_protocol.h"
+#include "cc/core/common/serialization/src/serialization.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/pbs/budget_key/src/proto/budget_key.pb.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_manager.h"
+#include "cc/pbs/budget_key_transaction_protocols/src/consume_budget_transaction_protocol.h"
 
 #include "error_codes.h"
 

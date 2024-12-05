@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["aggregate_metric_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/interface:interface_lib",
@@ -45,7 +44,6 @@ cc_test(
     size = "small",
     srcs = ["simple_metric_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/message_router/src:message_router_lib",
@@ -67,7 +65,6 @@ cc_test(
     size = "small",
     srcs = ["metric_utils_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/message_router/src:message_router_lib",

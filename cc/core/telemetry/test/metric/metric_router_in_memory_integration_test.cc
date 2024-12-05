@@ -15,11 +15,11 @@
 #include <thread>
 #include <variant>
 
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/telemetry/mock/in_memory_metric_exporter.h"
-#include "core/telemetry/mock/in_memory_metric_router.h"
-#include "core/telemetry/src/common/telemetry_configuration.h"
-#include "core/telemetry/src/metric/metric_router.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
+#include "cc/core/telemetry/mock/in_memory_metric_router.h"
+#include "cc/core/telemetry/src/common/telemetry_configuration.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "include/gtest/gtest.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"

@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-#include "pbs/partition_lease_event_sink/src/partition_lease_event_sink.h"
+#include "cc/pbs/partition_lease_event_sink/src/partition_lease_event_sink.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/async_executor/src/async_executor.h"
-#include "core/common/concurrent_map/src/error_codes.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/interface/partition_manager_interface.h"
-#include "core/lease_manager/mock/mock_lease_release_notification.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/logging_utils.h"
-#include "pbs/partition_manager/mock/pbs_partition_manager_mock.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/common/concurrent_map/src/error_codes.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/interface/partition_manager_interface.h"
+#include "cc/core/lease_manager/mock/mock_lease_release_notification.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/logging_utils.h"
+#include "cc/pbs/partition_manager/mock/pbs_partition_manager_mock.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncExecutor;
 using google::scp::core::AsyncExecutorInterface;

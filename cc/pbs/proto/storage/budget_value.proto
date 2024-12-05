@@ -1,0 +1,48 @@
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Defines the data structure for BudgetValue that is intended to be stored in
+// the BudgetKey Spanner table for Privacy Budget Service (PBS). All proto
+// messages defined in this file are only intended to be used in storage, and
+// should never be sent to other systems or clients.
+//
+// NOTE: Cloud Spanner officially supports proto2 in their documentation.
+// Proto3 is also supported since it is wire-compatible with proto2, but this
+// support is undocumented and comes with many issues.
+syntax = "proto2";
+
+package privacy_sandbox_pbs;
+
+// Represents the budget value for a given privacy budget key. The privacy
+// budget key is represented as a different string column and is not shown here.
+//
+// The inputs to most noising functions are floating-point numbers. To
+// keep track of the budget for these floating-point numbers correctly, they are
+// scaled to an integer representation before performing arithmetic and storing
+// them in the database. Hence, all `budgets` fields in this proto are of
+// integer type. This approach helps maintain precision and avoid potential
+// floating-point arithmetic errors.
+//
+// See:
+// https://cloud.google.com/spanner/docs/storing-numeric-data#store_application-scaled_integer_values
+message BudgetValue {
+  message LaplaceDpBudgets {
+    // Fixed-point representation of Laplace budgets with two decimal places.
+    // For example, a budget of "8.25" (in float) from a PBS request will be
+    // scaled by 100 to 825 and stored in this field.
+    repeated int32 budgets = 1 [packed = true];
+  }
+
+  optional LaplaceDpBudgets laplace_dp_budgets = 1;
+}

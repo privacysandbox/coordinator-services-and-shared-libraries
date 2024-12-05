@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/instance_client_provider/src/aws/ec2_error_converter.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/ec2_error_converter.h"
 
 #include <gtest/gtest.h>
 
-#include "cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
-#include "cpio/common/src/aws/error_codes.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/error_codes.h"
+#include "cc/cpio/common/src/aws/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using Aws::EC2::EC2Errors;
 using google::scp::core::FailureExecutionResult;

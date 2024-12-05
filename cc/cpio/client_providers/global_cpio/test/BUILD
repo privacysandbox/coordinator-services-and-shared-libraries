@@ -51,7 +51,6 @@ cc_library(
             },
             no_match_error = "Please build for AWS or GCP",
         ) + [
-            "//cc:cc_base_include_dir",
             "//cc/cpio/client_providers/global_cpio/src/cpio_provider:cpio_provider_lib",
             "//cc/public/cpio/test/global_cpio:test_cpio_options",
         ],
@@ -68,7 +67,6 @@ cc_library(
     ],
     deps = [
         ":test_lib_cpio_provider",
-        "//cc:cc_base_include_dir",
         "//cc/core/logger/src:logger_lib",
         "//cc/core/logger/src/log_providers:log_providers_lib",
         "//cc/core/logger/src/log_providers/syslog:syslog_lib",
@@ -80,7 +78,6 @@ cc_test(
     size = "small",
     srcs = ["lib_cpio_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/global_cpio/mock:global_cpio_mock",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface:cpio",

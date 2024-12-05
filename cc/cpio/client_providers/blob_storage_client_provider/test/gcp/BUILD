@@ -23,7 +23,6 @@ cc_test(
         "gcp_cloud_storage_client_provider_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/blob_storage_client_provider/src/gcp:gcp_blob_storage_provider_lib",
@@ -42,7 +41,6 @@ cc_test(
         "gcp_cloud_storage_client_provider_stream_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/blob_storage_client_provider/src/gcp:gcp_blob_storage_provider_lib",

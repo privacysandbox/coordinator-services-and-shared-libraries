@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "core/journal_service/test/test_util.h"
+#include "cc/core/journal_service/test/test_util.h"
 
 #include <gmock/gmock-matchers.h>
 
@@ -24,9 +24,9 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/synchronization/notification.h"
+#include "cc/core/blob_storage_provider/mock/mock_blob_storage_provider.h"
+#include "cc/core/journal_service/src/journal_serialization.h"
 #include "cc/core/journal_service/src/journal_utils.h"
-#include "core/blob_storage_provider/mock/mock_blob_storage_provider.h"
-#include "core/journal_service/src/journal_serialization.h"
 
 namespace google::scp::core::journal_service::test_util {
 

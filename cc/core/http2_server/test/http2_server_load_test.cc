@@ -20,18 +20,18 @@
 #include <memory>
 #include <string>
 
-#include "core/async_executor/src/async_executor.h"
-#include "core/authorization_proxy/src/pass_thru_authorization_proxy.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/http2_server/src/http2_server.h"
-#include "core/interface/configuration_keys.h"
-#include "core/interface/errors.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/logging_utils.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/authorization_proxy/src/pass_thru_authorization_proxy.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/http2_server/src/http2_server.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/logging_utils.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;

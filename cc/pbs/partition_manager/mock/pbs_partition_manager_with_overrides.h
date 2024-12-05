@@ -15,7 +15,7 @@
 #pragma once
 #include <memory>
 
-#include "pbs/partition_manager/src/pbs_partition_manager.h"
+#include "cc/pbs/partition_manager/src/pbs_partition_manager.h"
 
 namespace google::scp::pbs::partition_manager::mock {
 

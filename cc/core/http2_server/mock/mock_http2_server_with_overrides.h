@@ -19,8 +19,8 @@
 #include <memory>
 #include <string>
 
-#include "core/http2_server/src/http2_server.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/core/http2_server/src/http2_server.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::http2_server::mock {
 
@@ -33,10 +33,12 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
       std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
-          nullptr)
+          nullptr,
+      MetricRouter* metric_router = nullptr)
       : Http2Server(host_address, port, 2 /* thread_pool_size */,
                     async_executor, authorization_proxy,
-                    aws_authorization_proxy, metric_client, config_provider) {}
+                    aws_authorization_proxy, metric_client, config_provider,
+                    Http2ServerOptions(), metric_router) {}
 
   // Construct HTTP Server with Request Routing capabilities.
   MockHttp2ServerWithOverrides(
@@ -49,10 +51,11 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
           request_route_resolver,
       const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
-      Http2ServerOptions options = Http2ServerOptions())
+      Http2ServerOptions options = Http2ServerOptions(),
+      MetricRouter* metric_router = nullptr)
       : Http2Server(host_address, port, thread_pool_size, async_executor,
                     authorization_proxy, aws_authorization_proxy, metric_client,
-                    config_provider, options) {
+                    config_provider, options, metric_router) {
     request_router_ = request_router;
     request_route_resolver_ = request_route_resolver;
   }

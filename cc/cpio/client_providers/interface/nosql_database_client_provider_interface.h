@@ -21,10 +21,10 @@
 #include <unordered_map>
 #include <utility>
 
-#include "core/interface/async_context.h"
-#include "core/interface/service_interface.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
 
 namespace google::scp::cpio::client_providers {
 

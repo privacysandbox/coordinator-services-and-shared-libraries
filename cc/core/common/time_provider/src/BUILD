@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:type_def_lib",
         "//cc/public/core/interface:execution_result",
     ],

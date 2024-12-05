@@ -24,7 +24,6 @@ cc_test(
         "aws_dynamo_db_utils_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",

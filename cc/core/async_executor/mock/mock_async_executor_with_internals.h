@@ -20,7 +20,7 @@
 #include <functional>
 #include <memory>
 
-#include "core/async_executor/src/async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
 
 namespace google::scp::core::async_executor::mock {
 class MockAsyncExecutorWithInternals : public core::AsyncExecutor {

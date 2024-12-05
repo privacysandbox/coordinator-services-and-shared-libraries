@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/private_key_client_provider/src/private_key_client_provider.h"
+#include "cc/cpio/client_providers/private_key_client_provider/src/private_key_client_provider.h"
 
 #include <gtest/gtest.h>
 
@@ -26,18 +26,18 @@
 
 #include <google/protobuf/util/time_util.h>
 
-#include "core/interface/async_context.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/test/utils/proto_test_utils.h"
-#include "core/test/utils/timestamp_test_utils.h"
-#include "core/utils/src/base64.h"
-#include "cpio/client_providers/kms_client_provider/mock/mock_kms_client_provider.h"
-#include "cpio/client_providers/private_key_client_provider/mock/mock_private_key_client_provider_with_overrides.h"
-#include "cpio/client_providers/private_key_client_provider/src/private_key_client_utils.h"
-#include "cpio/client_providers/private_key_fetcher_provider/mock/mock_private_key_fetcher_provider.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/test/utils/proto_test_utils.h"
+#include "cc/core/test/utils/timestamp_test_utils.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/cpio/client_providers/kms_client_provider/mock/mock_kms_client_provider.h"
+#include "cc/cpio/client_providers/private_key_client_provider/mock/mock_private_key_client_provider_with_overrides.h"
+#include "cc/cpio/client_providers/private_key_client_provider/src/private_key_client_utils.h"
+#include "cc/cpio/client_providers/private_key_fetcher_provider/mock/mock_private_key_fetcher_provider.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
 using google::cmrt::sdk::kms_service::v1::DecryptRequest;
 using google::cmrt::sdk::kms_service::v1::DecryptResponse;

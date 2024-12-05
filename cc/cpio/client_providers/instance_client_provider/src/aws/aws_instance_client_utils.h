@@ -19,9 +19,9 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/http_types.h"
-#include "cpio/client_providers/interface/instance_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

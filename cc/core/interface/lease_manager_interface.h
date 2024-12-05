@@ -22,9 +22,9 @@
 #include <string>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/service_interface.h"
-#include "core/interface/type_def.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/core/interface/type_def.h"
 
 namespace google::scp::core {
 

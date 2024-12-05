@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/common/time_provider/src/stopwatch.h"
+#include "cc/core/common/time_provider/src/stopwatch.h"
 
 #include <gtest/gtest.h>
 

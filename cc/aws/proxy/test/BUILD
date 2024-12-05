@@ -21,6 +21,9 @@ cc_test(
     name = "socks5_state_test",
     size = "small",
     srcs = ["socks5_state_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc/aws/proxy/src:proxy_lib",
         "@com_google_googletest//:gtest_main",
@@ -31,6 +34,9 @@ cc_test(
     name = "socks5_state_input_test",
     size = "small",
     srcs = ["socks5_state_input_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc/aws/proxy/src:proxy_lib",
         "@com_google_googletest//:gtest_main",
@@ -41,6 +47,9 @@ cc_test(
     name = "protocol_test",
     size = "small",
     srcs = ["protocol_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc/aws/proxy/src:proxy_lib",
         "@com_google_googletest//:gtest_main",
@@ -51,6 +60,9 @@ cc_test(
     name = "preload_test",
     size = "small",
     srcs = ["preload_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     linkopts = ["-ldl"],
     deps = [
         "//cc/aws/proxy/src:preload",
@@ -101,6 +113,9 @@ cc_test(
     name = "buffer_test",
     size = "small",
     srcs = ["buffer_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc/aws/proxy/src:proxy_lib",
         "@com_google_googletest//:gtest_main",
@@ -111,6 +126,9 @@ cc_test(
     name = "proxy_bridge_test",
     size = "small",
     srcs = ["proxy_bridge_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc/aws/proxy/src:proxy_lib",
         "@com_google_googletest//:gtest_main",
@@ -121,6 +139,9 @@ cc_test(
     name = "client_session_pool_test",
     size = "small",
     srcs = ["client_session_pool_test.cc"],
+    copts = [
+        "-std=c++17",
+    ],
     deps = [
         "//cc/aws/proxy/src:proxy_lib",
         "@com_google_googletest//:gtest_main",

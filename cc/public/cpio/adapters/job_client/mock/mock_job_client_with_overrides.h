@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "cpio/client_providers/job_client_provider/mock/mock_job_client_provider.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/cpio/client_providers/job_client_provider/mock/mock_job_client_provider.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::cpio::mock {
 class MockJobClientWithOverrides : public JobClient {

@@ -20,7 +20,6 @@ cc_library(
     name = "gcp_blob_storage_provider_lib",
     srcs = [":gcp_blob_storage_client_provider_srcs"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/time_provider/src:time_provider_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/utils/src:core_utils",

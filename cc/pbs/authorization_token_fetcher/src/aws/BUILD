@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/authorization_service/src:core_authorization_service",
         "//cc/core/credentials_provider/src:core_credentials_provider_lib",
         "//cc/core/http2_client/src:http2_client_lib",

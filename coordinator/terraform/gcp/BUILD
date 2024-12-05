@@ -18,7 +18,7 @@ load("@rules_pkg//:pkg.bzl", "pkg_tar")
 package(default_visibility = ["//visibility:public"])
 
 pkg_files(
-    name = "multiparty_dist_jars",
+    name = "khs_dist_jars",
     srcs = [
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyServiceHttpCloudFunctionDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyServiceHttpCloudFunctionDeploy",
@@ -28,16 +28,18 @@ pkg_files(
 )
 
 pkg_files(
-    name = "multiparty_dist_files",
+    name = "pbs_dist_files",
     srcs = [
+        "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_cloud_run_container_gcp",
         "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_container_gcp",
+        "//cc/pbs/proto/storage:budget_value_proto_descriptor",
         "//python/privacybudget/gcp/pbs_auth_handler:auth_cloud_function_handler",
     ],
     prefix = "dist",
 )
 
 pkg_files(
-    name = "multiparty_dist_scripts",
+    name = "pbs_dist_scripts",
     srcs = [
         "//coordinator/privacybudget/gcp/deploy:deploy_distributedpbs",
     ],
@@ -47,24 +49,42 @@ pkg_files(
     ),
 )
 
+# Set of Terraform files for deployment without binaries.
+common_files = [
+    "//coordinator/terraform/gcp/util_scripts:util_scripts_pkg",
+    "//:version_file",
+]
+
+mpkhs_files = [
+    "//coordinator/terraform/gcp/applications:multipartykeyhosting_applications_pkg",
+    "//coordinator/terraform/gcp/environments_mp_primary/demo:mp_primary_coordinator_demo",
+    "//coordinator/terraform/gcp/environments_mp_primary/shared:mp_primary_coordinator_shared",
+    "//coordinator/terraform/gcp/environments_mp_secondary/demo:mp_secondary_coordinator_demo",
+    "//coordinator/terraform/gcp/environments_mp_secondary/shared:mp_secondary_coordinator_shared",
+    "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_pkg",
+    "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_shared_pkg",
+    ":khs_dist_jars",
+]
+
+pbs_files = [
+    "//coordinator/terraform/gcp/applications:distributedpbs_applications_pkg",
+    "//coordinator/terraform/gcp/modules:distributedpbs_modules_pkg",
+    ":pbs_dist_files",
+    ":pbs_dist_scripts",
+]
+
+# Tarball containing files for KHS and PBS deployment.
 pkg_tar(
     name = "multiparty_coordinator_tar",
-    srcs = [
-        ":multiparty_dist_files",
-        ":multiparty_dist_jars",
-        ":multiparty_dist_scripts",
-        "//:version_file",
-        "//coordinator/terraform/gcp/applications:distributedpbs_applications_pkg",
-        "//coordinator/terraform/gcp/applications:multipartykeyhosting_applications_pkg",
-        "//coordinator/terraform/gcp/environments_mp_primary/demo:mp_primary_coordinator_demo",
-        "//coordinator/terraform/gcp/environments_mp_primary/shared:mp_primary_coordinator_shared",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo:mp_secondary_coordinator_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/shared:mp_secondary_coordinator_shared",
-        "//coordinator/terraform/gcp/modules:distributedpbs_modules_pkg",
-        "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_pkg",
-        "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_shared_pkg",
-        "//coordinator/terraform/gcp/util_scripts:util_scripts_pkg",
-    ],
+    srcs = common_files + mpkhs_files + pbs_files,
+    extension = "tgz",
+    strip_prefix = "/",
+)
+
+# Tarball containing only files for KHS deployment.
+pkg_tar(
+    name = "khs_coordinator_tar",
+    srcs = common_files + mpkhs_files,
     extension = "tgz",
     strip_prefix = "/",
 )

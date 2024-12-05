@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["budget_key_provider_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/common/serialization/src:serialization_lib",
         "//cc/core/config_provider/mock:core_config_provider_mock",

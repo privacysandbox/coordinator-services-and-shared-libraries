@@ -18,11 +18,11 @@
 
 #include <memory>
 
+#include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/http_client_interface.h"
-#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
-#include "core/interface/async_executor_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 #include "http1_curl_wrapper.h"

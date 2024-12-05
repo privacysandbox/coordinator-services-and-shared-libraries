@@ -25,7 +25,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/blob_storage_provider/src/common:core_blob_storage_provider_common_lib",
         "//cc/core/common/concurrent_queue/src:concurrent_queue_lib",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",

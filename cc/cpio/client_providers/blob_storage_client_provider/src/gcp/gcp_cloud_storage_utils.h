@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
 #include "google/cloud/status.h"
 
 namespace google::scp::cpio::client_providers {

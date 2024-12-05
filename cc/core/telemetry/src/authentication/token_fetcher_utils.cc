@@ -18,10 +18,10 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/telemetry/src/authentication/error_codes.h"
 #include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/telemetry/src/authentication/error_codes.h"
 
 namespace google::scp::core {
 

@@ -21,10 +21,10 @@
 #include <string>
 #include <type_traits>
 
-#include "core/common/uuid/src/uuid.h"
-#include "core/interface/type_def.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/type_def.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "google/protobuf/any.pb.h"
-#include "public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

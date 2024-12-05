@@ -66,6 +66,12 @@ variable "pbs_auth_cloudfunction_name" {
   nullable    = false
 }
 
+variable "pbs_cloud_run_name" {
+  description = "The Cloud Run PBS name."
+  type        = string
+  nullable    = false
+}
+
 variable "pbs_managed_instance_group_url" {
   description = "The URL of the PBS managed instance group."
   type        = string
@@ -112,4 +118,22 @@ variable "pbs_tls_alternate_names" {
   description = "PBS Subject Alternative Names for the TLS cert"
   type        = list(string)
   nullable    = true
+}
+
+variable "pbs_cloud_run_traffic_percentage" {
+  description = "Specifies the percent of traffic sent to Cloud Run PBS."
+  type        = number
+  nullable    = false
+}
+
+variable "deploy_pbs_cloud_run" {
+  description = "If true, a Cloud Run PBS backend will be instantiated and attached to the PBS load balancer"
+  type        = bool
+  nullable    = false
+}
+
+variable "enable_pbs_cloud_run" {
+  description = "If true, the Cloud Run PBS backend will be linked to the PBS load balancer and will be able to serve traffi"
+  type        = bool
+  nullable    = false
 }

@@ -23,7 +23,6 @@ cc_test(
         "gcp_job_client_provider_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/cpio/client_providers/job_client_provider/src/gcp:gcp_job_client_provider_lib",
         "//cc/cpio/client_providers/nosql_database_client_provider/mock:mock_nosql_database_client_provider_lib",

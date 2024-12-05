@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "pbs/interface/budget_key_resolver_interface.h"
+#include "cc/pbs/interface/budget_key_resolver_interface.h"
 
 namespace google::scp::pbs {
 /*! @copydoc BudgetKeyResolverInterface

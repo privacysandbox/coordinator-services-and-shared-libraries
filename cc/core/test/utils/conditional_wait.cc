@@ -20,8 +20,8 @@
 #include <thread>
 
 #include "absl/strings/str_cat.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

@@ -24,7 +24,7 @@
 #include <nghttp2/asio_http2_client.h>
 #include <openssl/base64.h>
 
-#include "core/interface/authorization_service_interface.h"
+#include "cc/core/interface/authorization_service_interface.h"
 
 #include "error_codes.h"
 

@@ -20,6 +20,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorARegionBinding;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBRegionBinding;
+import com.google.scp.operator.cpio.configclient.Annotations.TrustedServicesClientVersion;
 import com.google.scp.operator.cpio.configclient.aws.Annotations.CoordinatorACredentialsProvider;
 import com.google.scp.operator.cpio.configclient.aws.Annotations.CoordinatorBCredentialsProvider;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule;
@@ -57,7 +58,8 @@ public class AwsPbsClientModule extends DistributedPrivacyBudgetClientModule {
       @CoordinatorBCredentialsProvider
           AwsSessionCredentialsProvider coordinatorBCredentialsProvider,
       @CoordinatorARegionBinding Region coordinatorARegion,
-      @CoordinatorBRegionBinding Region coordinatorBRegion) {
+      @CoordinatorBRegionBinding Region coordinatorBRegion,
+      @TrustedServicesClientVersion String trustedServicesClientVersion) {
     Optional<AwsCredentialsProvider> staticCredentialProvider = Optional.empty();
     if (!accessKey.isEmpty() && !secretKey.isEmpty()) {
       // Doesn't use STS, so requests can't be signed (no session token).
@@ -79,10 +81,10 @@ public class AwsPbsClientModule extends DistributedPrivacyBudgetClientModule {
             staticCredentialProvider.orElse(coordinatorBCredentialsProvider));
 
     HttpClientWithInterceptor coordinatorAAwsHttpClient =
-        new HttpClientWithInterceptor(coordinatorATokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorATokenInterceptor, trustedServicesClientVersion);
 
     HttpClientWithInterceptor coordinatorBAwsHttpClient =
-        new HttpClientWithInterceptor(coordinatorBTokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorBTokenInterceptor, trustedServicesClientVersion);
 
     return ImmutableList.of(
         new PrivacyBudgetClientImpl(
@@ -107,7 +109,8 @@ public class AwsPbsClientModule extends DistributedPrivacyBudgetClientModule {
       @CoordinatorBCredentialsProvider
           AwsSessionCredentialsProvider coordinatorBCredentialsProvider,
       @CoordinatorARegionBinding Region coordinatorARegion,
-      @CoordinatorBRegionBinding Region coordinatorBRegion) {
+      @CoordinatorBRegionBinding Region coordinatorBRegion,
+      @TrustedServicesClientVersion String trustedServicesClientVersion) {
     Optional<AwsCredentialsProvider> staticCredentialProvider = Optional.empty();
     if (!accessKey.isEmpty() && !secretKey.isEmpty()) {
       // Doesn't use STS, so requests can't be signed (no session token).
@@ -129,10 +132,10 @@ public class AwsPbsClientModule extends DistributedPrivacyBudgetClientModule {
             staticCredentialProvider.orElse(coordinatorBCredentialsProvider));
 
     HttpClientWithInterceptor coordinatorAAwsHttpClient =
-        new HttpClientWithInterceptor(coordinatorATokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorATokenInterceptor, trustedServicesClientVersion);
 
     HttpClientWithInterceptor coordinatorBAwsHttpClient =
-        new HttpClientWithInterceptor(coordinatorBTokenInterceptor);
+        new HttpClientWithInterceptor(coordinatorBTokenInterceptor, trustedServicesClientVersion);
 
     return ImmutableList.of(
         new PrivacyBudgetClientImplV2(

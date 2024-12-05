@@ -19,7 +19,7 @@
 
 #include <aws/sts/STSClient.h>
 
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

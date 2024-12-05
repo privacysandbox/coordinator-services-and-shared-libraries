@@ -24,8 +24,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "process_launcher/argument_parser/src/json_arg_parser.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/process_launcher/argument_parser/src/json_arg_parser.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::process_launcher {
 class Daemonizer {

@@ -21,7 +21,6 @@ cc_test(
         "tcp_traffic_forwarder_socat_test.cc",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/tcp_traffic_forwarder/src:core_tcp_traffic_forwarder",
         "//cc/core/test:core_test_lib",

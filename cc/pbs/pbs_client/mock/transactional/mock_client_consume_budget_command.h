@@ -19,9 +19,9 @@
 #include <string>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "pbs/pbs_client/src/transactional/client_consume_budget_command.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/pbs/pbs_client/src/transactional/client_consume_budget_command.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs::client::mock {
 class MockClientConsumeBudgetCommand : public ClientConsumeBudgetCommand {

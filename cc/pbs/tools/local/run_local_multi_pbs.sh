@@ -45,9 +45,11 @@ function run_server() {
     [ ! -d "$bucket_path" ] && mkdir "$bucket_path"
 
     docker -D run -d -i \
+    --rm \
     --privileged \
     --network host \
     --ipc host \
+    --user $(id -u):$(id -g) \
     --name "$coordinator_role"-local-pbs \
     -v "$PWD/$log_file":/var/log/syslog \
     -v "$PWD:$PWD" \
@@ -78,6 +80,7 @@ function run_server() {
     --env google_scp_pbs_remote_claimed_identity=remote-id \
     --env google_scp_pbs_remote_assume_role_arn=remote-arn \
     --env google_scp_pbs_remote_assume_role_external_id=ext-id \
+    --env google_scp_otel_enabled=true \
     "$container_image_name"
 }
 
@@ -100,7 +103,7 @@ repo_top_level_dir=$(git rev-parse --show-toplevel)
 
 "$repo_top_level_dir"/cc/tools/build/local/start_container_local.sh
 "$repo_top_level_dir"/cc/tools/build/local/bazel_build_within_container.sh \
-    --bazel_command="bazel build --//cc:platform=local //cc/pbs/deploy/pbs_server/build_defs:pbs_container_local.tar"
+    --bazel_command="bazel build --config=asan -c dbg --//cc:platform=local //cc/pbs/deploy/pbs_server/build_defs:pbs_container_local.tar"
 
 docker load < "$repo_top_level_dir/bazel-bin/cc/pbs/deploy/pbs_server/build_defs/pbs_container_local.tar"
 

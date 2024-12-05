@@ -19,10 +19,10 @@
 #include <memory>
 #include <string>
 
-#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
-#include "core/interface/authorization_proxy_interface.h"
-#include "core/interface/http_client_interface.h"
-#include "core/interface/http_request_response_auth_interceptor_interface.h"
+#include "cc/core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "cc/core/interface/authorization_proxy_interface.h"
+#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/http_request_response_auth_interceptor_interface.h"
 
 namespace google::scp::core {
 

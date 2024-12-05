@@ -16,14 +16,9 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.36"
+      version = ">= 5.37.0"
     }
   }
-}
-
-provider "google" {
-  project = var.project_id
-  region  = var.primary_region
 }
 
 locals {
@@ -51,6 +46,7 @@ module "vpc" {
 
 # Storage bucket containing cloudfunction JARs
 resource "google_storage_bucket" "mpkhs_primary_package_bucket" {
+  project = var.project_id
   # GCS names are globally unique
   name                        = local.package_bucket_name
   location                    = var.mpkhs_package_bucket_location
@@ -59,7 +55,9 @@ resource "google_storage_bucket" "mpkhs_primary_package_bucket" {
 }
 
 resource "google_monitoring_notification_channel" "alarm_email" {
-  count        = var.alarms_enabled ? 1 : 0
+  count = var.alarms_enabled ? 1 : 0
+
+  project      = var.project_id
   display_name = "${var.environment} Coordinator A Key Hosting Alarms Notification Email"
   type         = "email"
   labels = {
@@ -77,7 +75,9 @@ resource "google_monitoring_notification_channel" "alarm_email" {
 }
 
 module "keydb" {
-  source                   = "../../modules/keydb"
+  source = "../../modules/keydb"
+
+  project_id               = var.project_id
   environment              = var.environment
   spanner_instance_config  = var.spanner_instance_config
   spanner_processing_units = var.spanner_processing_units
@@ -134,7 +134,14 @@ module "publickeyhostingservice" {
   get_public_key_cloudfunction_memory_mb     = var.get_public_key_cloudfunction_memory_mb
   get_public_key_cloudfunction_min_instances = var.get_public_key_cloudfunction_min_instances
   get_public_key_cloudfunction_max_instances = var.get_public_key_cloudfunction_max_instances
+  get_public_key_request_concurrency         = var.get_public_key_request_concurrency
+  get_public_key_cpus                        = var.get_public_key_cpus
   application_name                           = var.application_name
+
+  # Cloud Run vars
+  use_cloud_run                    = var.use_cloud_run
+  cloud_run_revision_force_replace = var.cloud_run_revision_force_replace
+  public_key_service_image         = var.public_key_service_image
 
   # Load balance vars
   enable_get_public_key_cdn                    = var.enable_get_public_key_cdn
@@ -157,6 +164,9 @@ module "publickeyhostingservice" {
   get_public_key_cloudfunction_max_execution_time_max = var.get_public_key_cloudfunction_max_execution_time_max
   get_public_key_lb_5xx_threshold                     = var.get_public_key_lb_5xx_threshold
   get_public_key_lb_max_latency_ms                    = var.get_public_key_lb_max_latency_ms
+
+  # OTel Metrics
+  export_otel_metrics = var.export_otel_metrics
 }
 
 module "encryptionkeyservice" {
@@ -177,6 +187,12 @@ module "encryptionkeyservice" {
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
 
+  # Cloud Run vars
+  use_cloud_run                        = var.use_cloud_run
+  cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
+  private_key_service_image            = var.private_key_service_image
+  private_key_service_custom_audiences = var.private_key_service_custom_audiences
+
   # Domain Management
   enable_domain_management = var.enable_domain_management
   encryption_key_domain    = local.encryption_key_domain
@@ -191,6 +207,9 @@ module "encryptionkeyservice" {
   cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
   lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
   lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+
+  # OTel Metrics
+  export_otel_metrics = var.export_otel_metrics
 }
 
 module "domain_a_records" {
@@ -210,92 +229,118 @@ module "domain_a_records" {
 # parameters
 
 module "keydb_instance_id" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "SPANNER_INSTANCE"
   parameter_value = module.keydb.keydb_instance_name
 }
 
 module "keydb_name" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KEY_DB_NAME"
   parameter_value = module.keydb.keydb_name
 }
 
 module "kms_key_uri" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KMS_KEY_URI"
   parameter_value = "gcp-kms://${module.keygenerationservice.key_encryption_key_id}"
 }
 
 module "pubsub_id" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "SUBSCRIPTION_ID"
   parameter_value = module.keygenerationservice.subscription_id
 }
 
 module "key_generation_count" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "NUMBER_OF_KEYS_TO_CREATE"
   parameter_value = var.key_generation_count
 }
 
 module "key_generation_validity_in_days" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KEYS_VALIDITY_IN_DAYS"
   parameter_value = var.key_generation_validity_in_days
 }
 
 module "key_generation_ttl_in_days" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KEY_TTL_IN_DAYS"
   parameter_value = var.key_generation_ttl_in_days
 }
 
 module "peer_coordinator_kms_key_uri" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "PEER_COORDINATOR_KMS_KEY_URI"
   parameter_value = "gcp-kms://${var.peer_coordinator_kms_key_uri}"
 }
 
 module "key_storage_service_base_url" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KEY_STORAGE_SERVICE_BASE_URL"
   parameter_value = var.key_storage_service_base_url
 }
 
 module "key_storage_service_cloudfunction_url" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL"
   parameter_value = var.key_storage_service_cloudfunction_url
 }
 
 module "peer_coordinator_wip_provider" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "PEER_COORDINATOR_WIP_PROVIDER"
   parameter_value = var.peer_coordinator_wip_provider
 }
 
 module "peer_coordinator_service_account" {
-  source          = "../../modules/parameters"
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "PEER_COORDINATOR_SERVICE_ACCOUNT"
   parameter_value = var.peer_coordinator_service_account
 }
 
 module "key_id_type" {
-  count           = var.key_id_type == "" ? 0 : 1
-  source          = "../../modules/parameters"
+  count  = var.key_id_type == "" ? 0 : 1
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KEY_ID_TYPE"
   parameter_value = var.key_id_type

@@ -20,7 +20,6 @@ cc_binary(
     name = "pbs_log_recovery_aws",
     srcs = ["pbs_log_recovery_on_aws.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/blob_storage_provider/src/aws:core_blob_storage_provider_aws_lib",
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/interface:interface_lib",

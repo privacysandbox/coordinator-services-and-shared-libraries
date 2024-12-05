@@ -19,13 +19,13 @@
 #include <memory>
 #include <vector>
 
-#include "core/common/uuid/src/uuid.h"
-#include "pbs/transactions/src/batch_consume_budget_command.h"
-#include "pbs/transactions/src/batch_consume_budget_command_serialization.h"
-#include "pbs/transactions/src/consume_budget_command.h"
-#include "pbs/transactions/src/consume_budget_command_serialization.h"
-#include "pbs/transactions/src/proto/transaction_command.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command.h"
+#include "cc/pbs/transactions/src/batch_consume_budget_command_serialization.h"
+#include "cc/pbs/transactions/src/consume_budget_command.h"
+#include "cc/pbs/transactions/src/consume_budget_command_serialization.h"
+#include "cc/pbs/transactions/src/proto/transaction_command.pb.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

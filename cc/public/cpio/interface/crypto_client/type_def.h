@@ -17,7 +17,7 @@
 #ifndef SCP_CPIO_INTERFACE_CRYPTO_CLIENT_TYPE_DEF_H_
 #define SCP_CPIO_INTERFACE_CRYPTO_CLIENT_TYPE_DEF_H_
 
-#include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
+#include "cc/public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
 
 namespace google::scp::cpio {
 

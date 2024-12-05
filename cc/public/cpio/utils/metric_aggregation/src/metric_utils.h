@@ -27,14 +27,14 @@
 #include <google/protobuf/map.h>
 #include <google/protobuf/util/time_util.h>
 
-#include "core/interface/async_executor_interface.h"
-#include "cpio/client_providers/metric_client_provider/src/metric_client_utils.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
-#include "public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
-#include "public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
-#include "public/cpio/utils/metric_aggregation/src/simple_metric.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/cpio/client_providers/metric_client_provider/src/metric_client_utils.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/simple_metric.h"
 
 namespace google::scp::cpio {
 class MetricUtils {

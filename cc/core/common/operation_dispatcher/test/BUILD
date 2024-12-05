@@ -21,7 +21,6 @@ cc_test(
     size = "small",
     srcs = ["operation_dispatcher_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
         "//cc/core/interface:type_def_lib",
@@ -36,7 +35,6 @@ cc_test(
     size = "small",
     srcs = ["retry_strategy_test.cc"],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
         "//cc/core/interface:type_def_lib",
         "//cc/core/test/utils:utils_lib",

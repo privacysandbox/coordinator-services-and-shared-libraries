@@ -21,8 +21,8 @@
 
 #include <aws/sts/STSClient.h>
 
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/credentials_provider_interface.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/credentials_provider_interface.h"
 
 namespace google::scp::core {
 

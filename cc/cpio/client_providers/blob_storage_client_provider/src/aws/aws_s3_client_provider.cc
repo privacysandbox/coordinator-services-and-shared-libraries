@@ -38,14 +38,14 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "core/async_executor/src/aws/aws_async_executor.h"
-#include "core/utils/src/base64.h"
-#include "core/utils/src/hashing.h"
-#include "cpio/client_providers/blob_storage_client_provider/src/aws/aws_s3_utils.h"
-#include "cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
-#include "cpio/common/src/aws/aws_utils.h"
-#include "public/cpio/interface/blob_storage_client/type_def.h"
+#include "cc/core/async_executor/src/aws/aws_async_executor.h"
+#include "cc/core/utils/src/base64.h"
+#include "cc/core/utils/src/hashing.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/src/aws/aws_s3_utils.h"
+#include "cc/cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
+#include "cc/cpio/common/src/aws/aws_utils.h"
+#include "cc/public/cpio/interface/blob_storage_client/type_def.h"
 
 using Aws::MakeShared;
 using Aws::String;

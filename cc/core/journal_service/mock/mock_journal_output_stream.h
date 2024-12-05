@@ -23,10 +23,10 @@
 #include <string>
 
 #include "absl/base/nullability.h"
-#include "core/interface/blob_storage_provider_interface.h"
-#include "core/journal_service/src/journal_output_stream.h"
-#include "core/telemetry/src/metric/metric_router.h"
-#include "public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
+#include "cc/core/interface/blob_storage_provider_interface.h"
+#include "cc/core/journal_service/src/journal_output_stream.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::journal_service::mock {
 class MockJournalOutputStream : public core::JournalOutputStream {

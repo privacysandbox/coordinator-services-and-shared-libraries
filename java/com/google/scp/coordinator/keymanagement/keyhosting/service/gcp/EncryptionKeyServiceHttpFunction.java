@@ -2,6 +2,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import io.opentelemetry.api.OpenTelemetry;
 
 /** Handles requests to EncryptionKeyService and returns HTTP Response. */
 public final class EncryptionKeyServiceHttpFunction extends EncryptionKeyServiceHttpFunctionBase {
@@ -12,8 +13,9 @@ public final class EncryptionKeyServiceHttpFunction extends EncryptionKeyService
    */
   public EncryptionKeyServiceHttpFunction(
       GetEncryptionKeyRequestHandler getEncryptionKeyRequestHandler,
-      ListRecentEncryptionKeysRequestHandler ListRecentEncryptionKeysRequestHandler) {
-    super(getEncryptionKeyRequestHandler, ListRecentEncryptionKeysRequestHandler);
+      ListRecentEncryptionKeysRequestHandler ListRecentEncryptionKeysRequestHandler,
+      OpenTelemetry OTel) {
+    super(getEncryptionKeyRequestHandler, ListRecentEncryptionKeysRequestHandler, OTel);
   }
 
   /** Creates a new instance of the {@code PrivateKeyServiceHttpFunction} class. */
@@ -28,6 +30,7 @@ public final class EncryptionKeyServiceHttpFunction extends EncryptionKeyService
   private EncryptionKeyServiceHttpFunction(Injector injector) {
     this(
         injector.getInstance(GetEncryptionKeyRequestHandler.class),
-        injector.getInstance(ListRecentEncryptionKeysRequestHandler.class));
+        injector.getInstance(ListRecentEncryptionKeysRequestHandler.class),
+        injector.getInstance(OpenTelemetry.class));
   }
 }

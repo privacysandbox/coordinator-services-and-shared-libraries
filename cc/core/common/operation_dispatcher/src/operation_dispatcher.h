@@ -20,9 +20,9 @@
 #include <functional>
 #include <memory>
 
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/streaming_context.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/streaming_context.h"
 
 #include "error_codes.h"
 #include "retry_strategy.h"
@@ -176,10 +176,10 @@ class OperationDispatcher {
 
     if (async_context.retry_count >=
         retry_strategy_.GetMaximumAllowedRetryCount()) {
-      SCP_ERROR_CONTEXT(kOperationDispatcher, async_context,
-                        async_context.result,
-                        "Max retries exceeded. Total retries: %lld",
-                        async_context.retry_count);
+      SCP_ERROR_CONTEXT(
+          kOperationDispatcher, async_context, async_context.result,
+          absl::StrFormat("Max retries exceeded. Total retries: %lld",
+                          async_context.retry_count));
       async_context.result =
           FailureExecutionResult(core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES);
       async_context.Finish();
@@ -190,10 +190,12 @@ class OperationDispatcher {
         TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks();
 
     if (async_context.expiration_time <= current_time) {
-      SCP_ERROR_CONTEXT(
-          kOperationDispatcher, async_context, async_context.result,
-          "Async Context expired. Total retries: %lld, Expiration time: %lld",
-          async_context.retry_count, async_context.expiration_time);
+      SCP_ERROR_CONTEXT(kOperationDispatcher, async_context,
+                        async_context.result,
+                        absl::StrFormat("Async Context expired. Total retries: "
+                                        "%lld, Expiration time: %lld",
+                                        async_context.retry_count,
+                                        async_context.expiration_time));
       async_context.result =
           FailureExecutionResult(core::errors::SC_DISPATCHER_OPERATION_EXPIRED);
       async_context.Finish();
@@ -208,9 +210,10 @@ class OperationDispatcher {
     if (async_context.expiration_time - current_time <= back_off_duration_ns) {
       SCP_ERROR_CONTEXT(
           kOperationDispatcher, async_context, async_context.result,
-          "Not enough time available for a retry in Async Context. "
-          "Total retries: %lld, Expiration time: %lld",
-          async_context.retry_count, async_context.expiration_time);
+          absl::StrFormat(
+              "Not enough time available for a retry in Async Context. "
+              "Total retries: %lld, Expiration time: %lld",
+              async_context.retry_count, async_context.expiration_time));
       async_context.result = FailureExecutionResult(
           core::errors::SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION);
       async_context.Finish();

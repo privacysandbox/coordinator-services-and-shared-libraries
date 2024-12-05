@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
 
 #include "type_def.h"
 

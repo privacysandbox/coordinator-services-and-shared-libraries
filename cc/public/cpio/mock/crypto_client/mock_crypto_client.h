@@ -20,8 +20,8 @@
 
 #include <memory>
 
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/crypto_client/crypto_client_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/crypto_client/crypto_client_interface.h"
 
 namespace google::scp::cpio {
 class MockCryptoClient : public CryptoClientInterface {

@@ -15,9 +15,9 @@
  */
 #include "aws_authorization_token_fetcher.h"
 
-#include "core/authorization_service/src/aws_authorizer_client_signer.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/http2_client/src/aws/aws_v4_signer.h"
+#include "cc/core/authorization_service/src/aws_authorizer_client_signer.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AwsAuthorizerClientSigner;

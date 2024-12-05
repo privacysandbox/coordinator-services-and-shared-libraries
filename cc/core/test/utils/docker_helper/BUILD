@@ -28,7 +28,6 @@ cc_library(
         ],
     ),
     deps = [
-        "//cc:cc_base_include_dir",
         "@com_google_absl//absl/strings:str_format",
     ],
 )
@@ -39,7 +38,6 @@ cc_test(
     srcs = ["docker_helper_test.cc"],
     deps = [
         ":docker_helper_lib",
-        "//cc:cc_base_include_dir",
         "@com_google_googletest//:gtest_main",
     ],
 )

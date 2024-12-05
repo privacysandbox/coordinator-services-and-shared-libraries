@@ -22,19 +22,19 @@
 #include <string>
 #include <vector>
 
-#include "core/common/global_logger/src/global_logger.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/config_provider/mock/mock_config_provider.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/authorization_service_interface.h"
-#include "core/interface/configuration_keys.h"
-#include "core/logger/src/log_providers/syslog/syslog_log_provider.h"
-#include "core/logger/src/logger.h"
-#include "core/test/utils/conditional_wait.h"
-#include "pbs/interface/configuration_keys.h"
-#include "pbs/pbs_client/src/pbs_transactional_client.h"
-#include "pbs/pbs_server/src/pbs_instance/pbs_instance.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/authorization_service_interface.h"
+#include "cc/core/interface/configuration_keys.h"
+#include "cc/core/logger/src/log_providers/syslog/syslog_log_provider.h"
+#include "cc/core/logger/src/logger.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/pbs_client/src/pbs_transactional_client.h"
+#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::Byte;

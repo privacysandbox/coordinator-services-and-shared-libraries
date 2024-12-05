@@ -23,7 +23,6 @@ cc_library(
             "type_def.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface:type_def",
     ],
 )
@@ -37,7 +36,6 @@ cc_library(
         ],
     deps = [
         ":type_def",
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",

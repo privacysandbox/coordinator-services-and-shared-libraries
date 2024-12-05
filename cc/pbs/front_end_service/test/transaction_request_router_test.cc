@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "pbs/front_end_service/src/transaction_request_router.h"
+#include "cc/pbs/front_end_service/src/transaction_request_router.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/interface/transaction_manager_interface.h"
-#include "core/transaction_manager/mock/mock_transaction_manager_gmock.h"
-#include "public/core/test/interface/execution_result_matchers.h"
+#include "cc/core/interface/transaction_manager_interface.h"
+#include "cc/core/transaction_manager/mock/mock_transaction_manager_gmock.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::CheckpointLog;

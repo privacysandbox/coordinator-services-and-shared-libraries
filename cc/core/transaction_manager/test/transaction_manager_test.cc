@@ -21,17 +21,17 @@
 #include <utility>
 #include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
-#include "core/common/uuid/src/uuid.h"
-#include "core/journal_service/mock/mock_journal_service.h"
-#include "core/test/utils/conditional_wait.h"
-#include "core/transaction_manager/mock/mock_transaction_command_serializer.h"
-#include "core/transaction_manager/mock/mock_transaction_engine.h"
-#include "core/transaction_manager/mock/mock_transaction_manager.h"
-#include "core/transaction_manager/src/error_codes.h"
-#include "public/core/interface/execution_result.h"
-#include "public/core/test/interface/execution_result_matchers.h"
-#include "public/cpio/mock/metric_client/mock_metric_client.h"
+#include "cc/core/async_executor/mock/mock_async_executor.h"
+#include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/journal_service/mock/mock_journal_service.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/core/transaction_manager/mock/mock_transaction_command_serializer.h"
+#include "cc/core/transaction_manager/mock/mock_transaction_engine.h"
+#include "cc/core/transaction_manager/mock/mock_transaction_manager.h"
+#include "cc/core/transaction_manager/src/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncOperation;
 using google::scp::core::CheckpointLog;

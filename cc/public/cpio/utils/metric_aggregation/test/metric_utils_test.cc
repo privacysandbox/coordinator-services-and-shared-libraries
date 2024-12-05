@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "public/cpio/utils/metric_aggregation/src/metric_utils.h"
+#include "cc/public/cpio/utils/metric_aggregation/src/metric_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -22,9 +22,9 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/async_context.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;

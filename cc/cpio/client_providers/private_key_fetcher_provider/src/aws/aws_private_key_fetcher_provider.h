@@ -17,11 +17,11 @@
 #include <memory>
 #include <string>
 
-#include "core/http2_client/src/aws/aws_v4_signer.h"
-#include "core/interface/async_context.h"
-#include "cpio/client_providers/interface/role_credentials_provider_interface.h"
-#include "cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cc/cpio/client_providers/private_key_fetcher_provider/src/private_key_fetcher_provider.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

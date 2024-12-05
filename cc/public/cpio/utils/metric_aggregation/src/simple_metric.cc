@@ -23,12 +23,12 @@
 #include <utility>
 
 #include "absl/strings/str_join.h"
-#include "core/common/time_provider/src/time_provider.h"
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
-#include "public/cpio/utils/metric_aggregation/interface/type_def.h"
+#include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
 
 #include "metric_utils.h"
 

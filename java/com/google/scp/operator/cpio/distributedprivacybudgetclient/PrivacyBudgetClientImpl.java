@@ -65,7 +65,7 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
       "x-gscp-transaction-last-execution-timestamp";
   private static final String TRANSACTION_SECRET_HEADER_KEY = "x-gscp-transaction-secret";
   private static final String CLAIMED_IDENTITY_HEADER_KEY = "x-gscp-claimed-identity";
-  private static final String CLIENT_VERSION_HEADER_KEY = "x-trusted-services-client-version";
+  private static final String USER_AGENT_HEADER_KEY = "User-Agent";
 
   private static final List<Integer> HTTP_CODES_FOR_STATUS_CHECK_INVOCATION =
       ImmutableList.of(HttpStatus.SC_CLIENT_ERROR, HttpStatus.SC_PRECONDITION_FAILED);
@@ -178,7 +178,6 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
             .put(TRANSACTION_ID_HEADER_KEY, transaction.getId().toString().toUpperCase())
             .put(TRANSACTION_SECRET_HEADER_KEY, transaction.getRequest().transactionSecret())
             .put(CLAIMED_IDENTITY_HEADER_KEY, transaction.getRequest().claimedIdentity())
-            .put(CLIENT_VERSION_HEADER_KEY, transaction.getRequest().trustedServicesClientVersion())
             .build();
     logger.info(
         "[{}] Making GET request to {}",
@@ -194,8 +193,6 @@ public final class PrivacyBudgetClientImpl implements PrivacyBudgetClient {
     mapBuilder.put(TRANSACTION_ID_HEADER_KEY, transaction.getId().toString().toUpperCase());
     mapBuilder.put(TRANSACTION_SECRET_HEADER_KEY, transaction.getRequest().transactionSecret());
     mapBuilder.put(CLAIMED_IDENTITY_HEADER_KEY, transaction.getRequest().claimedIdentity());
-    mapBuilder.put(
-        CLIENT_VERSION_HEADER_KEY, transaction.getRequest().trustedServicesClientVersion());
     if (!transaction.getCurrentPhase().equals(BEGIN)) {
       String lastExecTimestamp = transaction.getLastExecutionTimestamp(baseUrl);
       mapBuilder.put(TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY, lastExecTimestamp);

@@ -24,7 +24,6 @@ cc_library(
         "error_codes.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/process_launcher/argument_parser/src:argument_parser_lib",
     ],

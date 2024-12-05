@@ -25,7 +25,6 @@
 #include "cc/core/curl_client/src/http1_curl_client.h"
 #include "cc/core/http2_client/src/http2_client.h"
 #include "cc/core/http2_server/src/http2_server.h"
-#include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "cc/pbs/front_end_service/src/front_end_service_v2.h"
 #include "cc/pbs/health_service/src/health_service.h"
@@ -58,7 +57,17 @@ PBSInstanceV3::PBSInstanceV3(
         cloud_platform_dependency_factory)
     : config_provider_(std::move(config_provider)),
       cloud_platform_dependency_factory_(
-          std::move(cloud_platform_dependency_factory)) {}
+          std::move(cloud_platform_dependency_factory)) {
+  auto execution_result =
+      config_provider_->Get(google::scp::pbs::kContainerType, container_type_);
+  if (!execution_result.Successful()) {
+    container_type_ = kComputeEngine;
+    SCP_INFO(kPBSInstance, kZeroUuid,
+             absl::StrFormat("%s flag not specified. Defaulting to Compute "
+                             "Engine startup preferences.",
+                             kContainerType));
+  }
+}
 
 ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
   // Factory should be initialized before the other components are constructed.
@@ -69,16 +78,21 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
   if (!execution_result.Successful()) {
     SCP_INFO(
         kPBSInstance, kZeroUuid,
-        "%s flag not specified. Not using OpenTelemetry for observability.",
-        kOtelEnabled);
+        absl::StrFormat(
+            "%s flag not specified. Not using OpenTelemetry for observability.",
+            kOtelEnabled));
   }
 
   if (is_otel_enabled) {
     // On initialization of metric_router_, Meter Provider would be set globally
     // for PBS. Services can access the Meter Provider using
     // opentelemetry::metrics::Provider::GetMeterProvider()
+    //
+    // instance_client_provider here is passed as nullptr to avoid a dependency
+    // cycle. This is okay because PBSInstanceV3 is only used by PBS on GCP,
+    // which doesn't use instance_client_provider.
     metric_router_ = cloud_platform_dependency_factory_->ConstructMetricRouter(
-        instance_client_provider_);
+        /*instance_client_provider=*/nullptr);
   }
 
   // Construct foundational components.
@@ -91,7 +105,7 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
   http1_client_ =
       std::make_shared<Http1CurlClient>(async_executor_, io_async_executor_);
   http2_client_ = std::make_shared<HttpClient>(
-      async_executor_, core::HttpClientOptions(), metric_router_);
+      async_executor_, core::HttpClientOptions(), metric_router_.get());
 
   authorization_proxy_ =
       cloud_platform_dependency_factory_->ConstructAuthorizationProxyClient(
@@ -121,16 +135,17 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
       authorization_proxy_, aws_authorization_proxy, metric_client_,
-      config_provider_, http2_server_options);
+      config_provider_, http2_server_options, metric_router_.get());
 
-  health_http_server_ = std::make_shared<Http2Server>(
-      *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
-      /*thread_pool_size=*/1, async_executor_, pass_thru_authorization_proxy_,
-      aws_authorization_proxy,
-      /*metric_client=*/nullptr, config_provider_, http2_server_options);
-
-  health_service_ = std::make_shared<HealthService>(
-      health_http_server_, config_provider_, async_executor_, metric_client_);
+  if (container_type_ == kComputeEngine) {
+    health_http_server_ = std::make_shared<Http2Server>(
+        *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
+        /*thread_pool_size=*/1, async_executor_, pass_thru_authorization_proxy_,
+        aws_authorization_proxy,
+        /*metric_client=*/nullptr, config_provider_, http2_server_options);
+    health_service_ = std::make_shared<HealthService>(
+        health_http_server_, config_provider_, async_executor_, metric_client_);
+  }
 
   budget_consumption_helper_ =
       cloud_platform_dependency_factory_->ConstructBudgetConsumptionHelper(
@@ -143,7 +158,7 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
 
   front_end_service_ = std::make_shared<FrontEndServiceV2>(
       http_server_, async_executor_, metric_client_, config_provider_,
-      budget_consumption_helper_.get());
+      budget_consumption_helper_.get(), nullptr, metric_router_.get());
 
   return SuccessExecutionResult();
 }
@@ -167,10 +182,13 @@ ExecutionResult PBSInstanceV3::Init() noexcept {
   INIT_PBS_COMPONENT(metric_client_);
   INIT_PBS_COMPONENT(pass_thru_authorization_proxy_);
   INIT_PBS_COMPONENT(http_server_);
-  INIT_PBS_COMPONENT(health_http_server_);
-  INIT_PBS_COMPONENT(health_service_);
   INIT_PBS_COMPONENT(budget_consumption_helper_);
   INIT_PBS_COMPONENT(front_end_service_);
+
+  if (container_type_ == kComputeEngine) {
+    INIT_PBS_COMPONENT(health_http_server_);
+    INIT_PBS_COMPONENT(health_service_);
+  }
 
   SCP_INFO(kPBSInstance, kZeroUuid, "PBSInstanceV3 has been initialized.");
 
@@ -190,10 +208,13 @@ ExecutionResult PBSInstanceV3::Run() noexcept {
   RUN_PBS_COMPONENT(metric_client_);
   RUN_PBS_COMPONENT(pass_thru_authorization_proxy_);
   RUN_PBS_COMPONENT(http_server_);
-  RUN_PBS_COMPONENT(health_http_server_);
-  RUN_PBS_COMPONENT(health_service_);
   RUN_PBS_COMPONENT(budget_consumption_helper_);
   RUN_PBS_COMPONENT(front_end_service_);
+
+  if (container_type_ == kComputeEngine) {
+    RUN_PBS_COMPONENT(health_http_server_);
+    RUN_PBS_COMPONENT(health_service_);
+  }
 
   SCP_INFO(kPBSInstance, kZeroUuid, "PBSInstanceV3 components have been run.");
 
@@ -207,8 +228,6 @@ ExecutionResult PBSInstanceV3::Stop() noexcept {
   STOP_PBS_COMPONENT(front_end_service_);
   STOP_PBS_COMPONENT(budget_consumption_helper_);
   STOP_PBS_COMPONENT(health_service_);
-  STOP_PBS_COMPONENT(health_http_server_);
-  STOP_PBS_COMPONENT(http_server_);
   STOP_PBS_COMPONENT(pass_thru_authorization_proxy_);
   STOP_PBS_COMPONENT(metric_client_);
   STOP_PBS_COMPONENT(instance_client_provider_);
@@ -217,6 +236,11 @@ ExecutionResult PBSInstanceV3::Stop() noexcept {
   STOP_PBS_COMPONENT(http1_client_);
   STOP_PBS_COMPONENT(io_async_executor_);
   STOP_PBS_COMPONENT(async_executor_);
+
+  if (container_type_ == kComputeEngine) {
+    STOP_PBS_COMPONENT(health_http_server_);
+    STOP_PBS_COMPONENT(http_server_);
+  }
 
   SCP_INFO(kPBSInstance, kZeroUuid, "PBSInstanceV3 components have stopped.");
 

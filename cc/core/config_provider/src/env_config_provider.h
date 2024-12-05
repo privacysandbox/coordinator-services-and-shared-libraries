@@ -24,7 +24,7 @@
 
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/utils/src/string_util.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

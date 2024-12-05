@@ -274,12 +274,12 @@ std::tuple<cloud::Status, ExecutionResult> UpdatePbsMutationsToConsumeBudgets(
         *metadata.budget_key_name,
         absl::StrCat(budget_key_timeframe_manager::Utils::GetTimeGroup(
             metadata.time_bucket))};
-    auto pbs_mutation = pbs_mutations.find(primary_key);
-    if (pbs_mutation == pbs_mutations.end()) {
-      PbsBudgetKeyMutation& m = pbs_mutations[primary_key];
-      m.ResetTokenCount();
-      m.set_is_insertion(true);
-      pbs_mutation = pbs_mutations.find(primary_key);
+
+    auto [pbs_mutation, inserted] =
+        pbs_mutations.insert({primary_key, PbsBudgetKeyMutation()});
+    if (inserted) {
+      pbs_mutation->second.ResetTokenCount();
+      pbs_mutation->second.set_is_insertion(true);
     }
 
     TimeBucket hours_of_the_day =

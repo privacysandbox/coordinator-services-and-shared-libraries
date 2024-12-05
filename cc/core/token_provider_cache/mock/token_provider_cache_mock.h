@@ -21,7 +21,7 @@
 #include <memory>
 #include <string>
 
-#include "core/interface/token_provider_cache_interface.h"
+#include "cc/core/interface/token_provider_cache_interface.h"
 
 namespace google::scp::core::token_provider_cache::mock {
 class MockTokenProviderCache : public TokenProviderCacheInterface {

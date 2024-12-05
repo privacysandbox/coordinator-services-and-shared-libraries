@@ -88,7 +88,6 @@ cc_library(
             "type_def.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
     ],
 )
@@ -101,7 +100,6 @@ cc_library(
     ],
     deps = [
         ":type_def",
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/src:logger_lib",
         "//cc/core/logger/src/log_providers:log_providers_lib",
@@ -120,7 +118,6 @@ cc_library(
         "error_codes.h",
     ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
     ],
 )

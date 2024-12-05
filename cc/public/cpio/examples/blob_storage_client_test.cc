@@ -17,13 +17,13 @@
 #include <mutex>
 #include <utility>
 
-#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
-#include "core/test/utils/conditional_wait.h"
-#include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "public/core/interface/errors.h"
-#include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/blob_storage_client/blob_storage_client_interface.h"
-#include "public/cpio/interface/cpio.h"
+#include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
+#include "cc/core/test/utils/conditional_wait.h"
+#include "cc/cpio/client_providers/global_cpio/src/global_cpio.h"
+#include "cc/public/core/interface/errors.h"
+#include "cc/public/core/interface/execution_result.h"
+#include "cc/public/cpio/interface/blob_storage_client/blob_storage_client_interface.h"
+#include "cc/public/cpio/interface/cpio.h"
 
 using google::cmrt::sdk::blob_storage_service::v1::DeleteBlobRequest;
 using google::cmrt::sdk::blob_storage_service::v1::DeleteBlobResponse;

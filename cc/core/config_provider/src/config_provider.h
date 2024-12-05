@@ -22,7 +22,7 @@
 #include <nlohmann/json.hpp>
 
 #include "cc/core/interface/config_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 

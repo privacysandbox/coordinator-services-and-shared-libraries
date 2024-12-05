@@ -17,8 +17,8 @@
 #include <chrono>
 #include <functional>
 
-#include "core/test/test_config.h"
-#include "public/core/interface/execution_result.h"
+#include "cc/core/test/test_config.h"
+#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::test {
 

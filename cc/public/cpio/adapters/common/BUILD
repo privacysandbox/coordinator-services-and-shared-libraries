@@ -23,7 +23,6 @@ cc_library(
             "adapter_utils.h",
         ],
     deps = [
-        "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",
         "//cc/core/utils/src:core_utils",
         "//cc/public/core/interface:execution_result",

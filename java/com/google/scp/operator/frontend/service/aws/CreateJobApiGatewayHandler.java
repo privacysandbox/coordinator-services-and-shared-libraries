@@ -38,6 +38,7 @@ import java.util.List;
 public final class CreateJobApiGatewayHandler
     extends ApiGatewayHandler<CreateJobRequest, CreateJobResponse> {
 
+  private static final int INPUT_PREFIXES_LIST_MAX_ITEMS = 50;
   private final FrontendService frontendService;
 
   /** Creates a new instance of the {@code CreateJobApiGatewayHandler} class. */
@@ -80,9 +81,6 @@ public final class CreateJobApiGatewayHandler
     if (request.getJobRequestId().isEmpty()) {
       missingProps.add("jobRequestId");
     }
-    if (request.getInputDataBlobPrefix().isEmpty()) {
-      missingProps.add("inputDataBlobPrefix");
-    }
     if (request.getInputDataBucketName().isEmpty()) {
       missingProps.add("inputDataBucketName");
     }
@@ -98,6 +96,29 @@ public final class CreateJobApiGatewayHandler
           Code.INVALID_ARGUMENT,
           ErrorReasons.JSON_ERROR.toString(),
           "Missing required properties: " + String.join(" ", missingProps) + "\r\n in: " + json);
+    }
+    /**
+     * Exactly one of "input_data_blob_prefix" and "input_data_blob_prefixes" should be specified.
+     * Throw error otherwise
+     */
+    if (!request.getInputDataBlobPrefixesList().isEmpty()
+        == !request.getInputDataBlobPrefix().isEmpty()) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "Exactly one of the properties input_data_blob_prefix and input_data_blob_prefixes"
+              + " must be provided\r\n"
+              + " in: "
+              + json);
+    }
+    if (request.getInputDataBlobPrefixesCount() > INPUT_PREFIXES_LIST_MAX_ITEMS) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "Property input_data_blob_prefixes should contain a maximum of "
+              + INPUT_PREFIXES_LIST_MAX_ITEMS
+              + " items: "
+              + json);
     }
   }
 }

@@ -21,8 +21,9 @@
 #include <memory>
 #include <utility>
 
-#include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/common/streaming_context/src/error_codes.h"
+#include "absl/strings/str_format.h"
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include "cc/core/common/streaming_context/src/error_codes.h"
 
 #include "async_context.h"
 
@@ -202,10 +203,11 @@ struct ConsumerStreamingContext : public StreamingContext<TRequest, TResponse> {
         // typeid(TRequest).name() is an approximation of the context's template
         // types mangled in compiler defined format, mainly for debugging
         // purposes.
-        SCP_ERROR_CONTEXT("AsyncContext", (*this), this->result,
-                          "AsyncContext Finished. Mangled RequestType: '%s', "
-                          "Mangled ResponseType: '%s'",
-                          typeid(TRequest).name(), typeid(TResponse).name());
+        SCP_ERROR_CONTEXT(
+            "AsyncContext", (*this), this->result,
+            absl::StrFormat("AsyncContext Finished. Mangled RequestType: '%s', "
+                            "Mangled ResponseType: '%s'",
+                            typeid(TRequest).name(), typeid(TResponse).name()));
       }
       process_callback(*this, true);
     }

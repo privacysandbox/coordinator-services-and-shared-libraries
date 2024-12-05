@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpio/client_providers/nosql_database_client_provider/src/gcp/gcp_spanner_utils.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/gcp/gcp_spanner_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -21,9 +21,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "google/cloud/spanner/value.h"
-#include "public/core/test/interface/execution_result_matchers.h"
 
 using google::cloud::spanner::Value;
 using google::scp::core::SuccessExecutionResult;

@@ -19,12 +19,12 @@
 #include <memory>
 #include <string>
 
-#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
-#include "core/http2_client/src/http2_client.h"
-#include "core/interface/async_context.h"
-#include "core/interface/async_executor_interface.h"
-#include "core/interface/authorization_service_interface.h"
-#include "core/interface/http_types.h"
+#include "cc/core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "cc/core/http2_client/src/http2_client.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/async_executor_interface.h"
+#include "cc/core/interface/authorization_service_interface.h"
+#include "cc/core/interface/http_types.h"
 
 namespace google::scp::core {
 /**

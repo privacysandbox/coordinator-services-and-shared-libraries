@@ -19,7 +19,7 @@
 #include <functional>
 #include <memory>
 
-#include "core/interface/journal_service_interface.h"
+#include "cc/core/interface/journal_service_interface.h"
 
 namespace google::scp::core::journal_service::mock {
 class MockJournalService : public JournalServiceInterface {
