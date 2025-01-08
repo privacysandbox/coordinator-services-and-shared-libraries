@@ -51,7 +51,7 @@ Uuid Uuid::GenerateUuid() noexcept {
   return Uuid{.high = high, .low = low};
 }
 
-void AppendHex(int byte, std::string& string_to_append) {
+inline void AppendHex(uint64_t byte, std::string& string_to_append) {
   int first_digit = byte >> 4;
   string_to_append += kHexMap[first_digit];
 
@@ -71,11 +71,11 @@ inline uint64_t ReadHex(const std::string& string_to_read, int offset) {
 std::string ToString(const Uuid& uuid) noexcept {
   // Uuid has two 8 bytes variable, high and low. Printing each byte to a
   // hexadecimal value a guid can be generated.
-  string uuid_string;
+  std::string uuid_string;
   uuid_string.reserve(36);
 
-  auto high = uuid.high;
-  auto low = uuid.low;
+  const uint64_t& high = uuid.high;
+  const uint64_t& low = uuid.low;
 
   // Guid format is 00000000-0000-0000-0000-000000000000
   // 4 bytes

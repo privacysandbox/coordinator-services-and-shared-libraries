@@ -52,46 +52,6 @@ cc_test(
 )
 
 cc_test(
-    name = "pbs_instance_v2_test",
-    srcs = [
-        "pbs_instance_v2_test.cc",
-    ],
-    flaky = 1,
-    tags = ["manual"],
-    deps = [
-        "//cc/core/config_provider/src:config_provider_lib",
-        "//cc/core/tcp_traffic_forwarder/mock:tcp_traffic_forwarder_mock",
-        "//cc/core/test/utils:utils_lib",
-        "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
-        "//cc/pbs/leasable_lock/mock:pbs_leasable_lock_mock",
-        "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local:pbs_local_cloud_platform_dependency_factory_lib",
-        "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_v2",
-        "//cc/public/core/test/interface:execution_result_matchers",
-    ],
-)
-
-cc_test(
-    name = "pbs_instance_multi_partition_test",
-    size = "large",
-    timeout = "long",
-    srcs = [
-        "pbs_instance_multi_partition_test.cc",
-    ],
-    tags = ["manual"],
-    deps = [
-        "//cc/core/config_provider/src:config_provider_lib",
-        "//cc/core/tcp_traffic_forwarder/mock:tcp_traffic_forwarder_mock",
-        "//cc/core/test/utils:utils_lib",
-        "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
-        "//cc/pbs/leasable_lock/mock:pbs_leasable_lock_mock",
-        "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local:pbs_local_cloud_platform_dependency_factory_lib",
-        "//cc/pbs/pbs_server/src/pbs_instance:pbs_instance_multi_partition_lib",
-        "//cc/public/core/test/interface:execution_result_matchers",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "pbs_instance_v3_test",
     size = "small",
     srcs = [

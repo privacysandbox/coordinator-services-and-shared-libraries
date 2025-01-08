@@ -349,13 +349,19 @@ ExecutionResult Http2Server::Init() noexcept {
     RETURN_IF_FAILURE(MetricInit());
   }
 
-  bool request_routing_enabled = false;
-  if (config_provider_ &&
-      config_provider_
-          ->Get(kHTTPServerRequestRoutingEnabled, request_routing_enabled)
-          .Successful()) {
-    SCP_INFO(kHttp2Server, kZeroUuid, "Request routing is enabled");
-    request_routing_enabled_ = request_routing_enabled;
+  if (config_provider_) {
+    auto result = config_provider_->Get(std::string(kMigrateHttpStatusCode),
+                                        migrate_http_status_code_);
+    if (result.Successful()) {
+      SCP_INFO(
+          kHttp2Server, kZeroUuid,
+          absl::StrFormat("google_scp_migrate_http_status_code is set to %s",
+                          migrate_http_status_code_ ? "true" : "false"));
+    } else {
+      SCP_INFO(kHttp2Server, kZeroUuid,
+               "google_scp_migrate_http_status_code could not be get from the "
+               "configuration, using the default value false.");
+    }
   }
 
   // Otel metrics setup.
@@ -439,10 +445,6 @@ ExecutionResult Http2Server::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
-bool Http2Server::IsRequestForwardingEnabled() const {
-  return request_routing_enabled_ && request_route_resolver_ && request_router_;
-}
-
 ExecutionResult Http2Server::RegisterResourceHandler(
     HttpMethod http_method, std::string& path, HttpHandler& handler) noexcept {
   if (is_running_) {
@@ -474,10 +476,7 @@ void Http2Server::OnHttp2Request(const request& request,
       std::chrono::steady_clock::now();
   auto parent_activity_id = Uuid::GenerateUuid();
   auto http2Request = std::make_shared<NgHttp2Request>(request);
-  auto request_endpoint_type = RequestTargetEndpointType::Unknown;
-  if (!IsRequestForwardingEnabled()) {
-    request_endpoint_type = RequestTargetEndpointType::Local;
-  }
+  auto request_endpoint_type = RequestTargetEndpointType::Local;
 
   // This is the entry point of a Http2Request.
   // The Http2Request ID that we generate here is used as the correlation ID
@@ -532,100 +531,7 @@ void Http2Server::OnHttp2Request(const request& request,
     return;
   }
 
-  return RouteOrHandleHttp2Request(http2_context, http_handler);
-}
-
-void Http2Server::RouteOrHandleHttp2Request(
-    AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-    HttpHandler& http_handler) noexcept {
-  if (IsRequestForwardingEnabled()) {
-    auto endpoint_info =
-        request_route_resolver_->ResolveRoute(*http2_context.request);
-    if (!endpoint_info.has_value()) {
-      SCP_ERROR_CONTEXT(kHttp2Server, http2_context, endpoint_info.result(),
-                        "Cannot resolve request endpoint");
-      // Set a retriable error and send it back to the client.
-      auto execution_result = FailureExecutionResult(
-          core::errors::SC_HTTP2_SERVER_FAILED_TO_RESOLVE_ROUTE);
-      FinishContext(execution_result, http2_context);
-      return;
-    }
-
-    SCP_DEBUG_CONTEXT(
-        kHttp2Server, http2_context,
-        absl::StrFormat(
-            "Resolved route to endpoint '%s', IsLocalEndpoint: '%d'",
-            endpoint_info->uri->c_str(), endpoint_info->is_local_endpoint));
-
-    if (!endpoint_info->is_local_endpoint) {
-      // Rebind the callback with the updated request target type
-      http2_context.callback =
-          std::bind(&Http2Server::OnHttp2Response, this, std::placeholders::_1,
-                    RequestTargetEndpointType::Remote);
-      // Perform routing when request data is obtained on the connection. If the
-      // connection is closed, do OnHttp2CleanupRoutedRequest.
-      http2_context.request->SetOnRequestBodyDataReceivedCallback(
-          std::bind(&Http2Server::OnHttp2RequestDataObtainedRoutedRequest, this,
-                    http2_context, *endpoint_info, std::placeholders::_1));
-      http2_context.response->SetOnCloseCallback(
-          std::bind(&Http2Server::OnHttp2CleanupOfRoutedRequest, this,
-                    http2_context.request->id, http2_context.request->id,
-                    std::placeholders::_1));
-      return;
-    }
-    // Rebind the callback with the updated request target type
-    http2_context.callback =
-        std::bind(&Http2Server::OnHttp2Response, this, std::placeholders::_1,
-                  RequestTargetEndpointType::Local);
-    // Local endpoint handling continues below.
-  }
-
   return HandleHttp2Request(http2_context, http_handler);
-}
-
-void Http2Server::OnHttp2RequestDataObtainedRoutedRequest(
-    AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-    const RequestRouteEndpointInfo& endpoint_info,
-    ExecutionResult request_body_received_result) noexcept {
-  if (!request_body_received_result.Successful()) {
-    // If request data is not obtained fully, the request cannot be routed.
-    FinishContext(request_body_received_result, http2_context);
-    return;
-  }
-
-  // Typecast to avoid copying data when constructing a new context.
-  AsyncContext<HttpRequest, HttpResponse> routing_context(
-      std::static_pointer_cast<HttpRequest>(http2_context.request),
-      std::bind(&Http2Server::OnRoutingResponseReceived, this, http2_context,
-                std::placeholders::_1),
-      http2_context);
-  // The target path should reflect the forwarding endpoint.
-  routing_context.request->path = std::make_shared<std::string>(
-      absl::StrCat(*endpoint_info.uri, http2_context.request->handler_path));
-
-  auto execution_result = request_router_->RouteRequest(routing_context);
-  if (!execution_result.Successful()) {
-    SCP_ERROR_CONTEXT(kHttp2Server, http2_context, execution_result,
-                      "Cannot route request");
-    // Set a retriable error and send it back to the client.
-    execution_result =
-        FailureExecutionResult(core::errors::SC_HTTP2_SERVER_FAILED_TO_ROUTE);
-    FinishContext(execution_result, http2_context);
-  }
-}
-
-void Http2Server::OnRoutingResponseReceived(
-    AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-    AsyncContext<HttpRequest, HttpResponse>& routing_context) noexcept {
-  if (!routing_context.result.Successful()) {
-    FinishContext(routing_context.result, http2_context);
-    return;
-  }
-  http2_context.result = routing_context.result;
-  http2_context.response->body = routing_context.response->body;
-  http2_context.response->headers = routing_context.response->headers;
-  http2_context.response->code = routing_context.response->code;
-  FinishContext(http2_context.result, http2_context);
 }
 
 void Http2Server::HandleHttp2Request(
@@ -857,7 +763,8 @@ void Http2Server::OnHttp2Response(
     RequestTargetEndpointType endpoint_type) noexcept {
   http_context.response->code = HttpStatusCode::OK;
   if (!http_context.result.Successful()) {
-    auto error_code = GetErrorHttpStatusCode(http_context.result.status_code);
+    auto error_code = GetErrorHttpStatusCode(http_context.result.status_code,
+                                             migrate_http_status_code_);
     http_context.response->code = error_code;
     SCP_ERROR_CONTEXT(
         kHttp2Server, http_context, http_context.result,
@@ -1040,19 +947,6 @@ void Http2Server::RecordPbsRequests(
   }
   opentelemetry::context::Context context;
   pbs_requests_->Add(1, labels);
-}
-
-void Http2Server::OnHttp2CleanupOfRoutedRequest(Uuid activity_id,
-                                                Uuid request_id,
-                                                uint32_t error_code) noexcept {
-  if (error_code != 0) {
-    auto request_id_str = ToString(request_id);
-    SCP_DEBUG(
-        kHttp2Server, activity_id,
-        absl::StrFormat(
-            "The connection for request ID %s was closed with status code %d",
-            request_id_str.c_str(), error_code));
-  }
 }
 
 void Http2Server::ObserveActiveRequestsCallback(

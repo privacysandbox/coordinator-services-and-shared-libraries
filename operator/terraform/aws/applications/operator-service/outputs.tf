@@ -30,3 +30,8 @@ output "notifications_sns_topic_arn" {
   value       = one(module.notifications[*].notifications_sns_topic_arn)
   description = "The ARN of the SNS notifications topic."
 }
+
+output "worker_role_name" {
+  value       = module.worker_service.worker_role_name
+  description = "Name of the role used by the worker service."
+}

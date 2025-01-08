@@ -22,6 +22,7 @@ import static com.google.scp.shared.aws.util.LambdaHandlerUtil.createApiGatewayR
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.common.primitives.Longs;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.scp.operator.frontend.injection.factories.FrontendServicesFactory;
 import com.google.scp.operator.frontend.service.FrontendService;
@@ -33,12 +34,19 @@ import com.google.scp.shared.api.model.Code;
 import com.google.scp.shared.aws.util.ApiGatewayHandler;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /** CreateJobApiGatewayHandler handles CreateJobRequests for the front end service rest api */
 public final class CreateJobApiGatewayHandler
     extends ApiGatewayHandler<CreateJobRequest, CreateJobResponse> {
 
   private static final int INPUT_PREFIXES_LIST_MAX_ITEMS = 50;
+
+  public static final String JOB_PARAM_ATTRIBUTION_REPORT_TO = "attribution_report_to";
+
+  public static final String JOB_PARAM_REPORTING_SITE = "reporting_site";
+
+  public static final String JOB_PARAM_INPUT_REPORT_COUNT = "input_report_count";
   private final FrontendService frontendService;
 
   /** Creates a new instance of the {@code CreateJobApiGatewayHandler} class. */
@@ -76,7 +84,8 @@ public final class CreateJobApiGatewayHandler
     return createApiGatewayResponseFromProto(response, ACCEPTED.getHttpStatusCode(), allHeaders());
   }
 
-  private void validateProperties(CreateJobRequest request, String json) throws ServiceException {
+  private static void validateProperties(CreateJobRequest request, String json)
+      throws ServiceException {
     List<String> missingProps = new ArrayList<>();
     if (request.getJobRequestId().isEmpty()) {
       missingProps.add("jobRequestId");
@@ -120,5 +129,97 @@ public final class CreateJobApiGatewayHandler
               + " items: "
               + json);
     }
+    validateReportingOriginAndSite(request, json);
+    validateJobParamInputReportCount(request, json);
+  }
+
+  private static void validateJobParamInputReportCount(CreateJobRequest request, String json)
+      throws ServiceException {
+    if (!isAValidCount(request.getJobParametersMap().get(JOB_PARAM_INPUT_REPORT_COUNT))) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "Job parameter input_report_count should have a valid non-negative value: " + json);
+    }
+  }
+
+  /**
+   * Validates that exactly one of the two fields 'JOB_PARAM_ATTRIBUTION_REPORT_TO' and
+   * 'reporting_site' is specified and the specified field is non-empty and not a comma-separated
+   * list.
+   */
+  private static void validateReportingOriginAndSite(CreateJobRequest request, String json)
+      throws ServiceException {
+    Map<String, String> jobParams = request.getJobParametersMap();
+    boolean bothSiteAndOriginSpecified =
+        jobParams.containsKey(JOB_PARAM_ATTRIBUTION_REPORT_TO)
+            && jobParams.containsKey(JOB_PARAM_REPORTING_SITE);
+    boolean neitherSiteOrOriginSpecified =
+        !jobParams.containsKey(JOB_PARAM_ATTRIBUTION_REPORT_TO)
+            && !jobParams.containsKey(JOB_PARAM_REPORTING_SITE);
+    if (bothSiteAndOriginSpecified || neitherSiteOrOriginSpecified) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "Exactly one of attribution_report_to and reporting_site fields should be"
+              + " specified for the job. It is recommended to use"
+              + " reporting_site"
+              + " parameter. Parameter attribution_report_to will be"
+              + " deprecated in the next"
+              + " major version upgrade of the API: "
+              + json);
+    }
+    // Verify that either the field 'JOB_PARAM_ATTRIBUTION_REPORT_TO' is not specified or is
+    // non-empty.
+    boolean emptyAttributionReportToSpecified =
+        jobParams.containsKey(JOB_PARAM_ATTRIBUTION_REPORT_TO)
+            && jobParams.get(JOB_PARAM_ATTRIBUTION_REPORT_TO).trim().isEmpty();
+    if (emptyAttributionReportToSpecified) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "The attribution_report_to field in the job parameters is empty: " + json);
+    }
+    // Verify that either the field 'reporting_site' is not specified or is non-empty.
+    boolean emptyReportingSiteSpecified =
+        jobParams.containsKey(JOB_PARAM_REPORTING_SITE)
+            && jobParams.get(JOB_PARAM_REPORTING_SITE).trim().isEmpty();
+    if (emptyReportingSiteSpecified) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "The reporting_site field in the job parameters is empty: " + json);
+    }
+    // Verify that either the field 'attribution_report_to' is not specified or is
+    // a single value and not a comma-separated list of strings.
+    boolean commaSeparatedStringListAttributionReportToSpecified =
+        jobParams.containsKey(JOB_PARAM_ATTRIBUTION_REPORT_TO)
+            && jobParams.get(JOB_PARAM_ATTRIBUTION_REPORT_TO).contains(",");
+    if (commaSeparatedStringListAttributionReportToSpecified) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "The attribution_report_to field in the job parameters should contain a single value: "
+              + json);
+    }
+    // Verify that either the field 'reporting_site' is not specified or is
+    // a single value and not a comma-separated list of strings.
+    boolean commaSeparatedStringListReportingSiteSpecified =
+        jobParams.containsKey(JOB_PARAM_REPORTING_SITE)
+            && jobParams.get(JOB_PARAM_REPORTING_SITE).contains(",");
+    if (commaSeparatedStringListReportingSiteSpecified) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          ErrorReasons.JSON_ERROR.toString(),
+          "The reporting_site field in the job parameters should contain a single value: " + json);
+    }
+  }
+
+  /** Checks if the string represents a non-negative number or is empty. */
+  private static boolean isAValidCount(String countInString) {
+    return countInString == null
+        || countInString.trim().isEmpty()
+        || (Longs.tryParse(countInString.trim()) != null
+            && Longs.tryParse(countInString.trim()) >= 0);
   }
 }

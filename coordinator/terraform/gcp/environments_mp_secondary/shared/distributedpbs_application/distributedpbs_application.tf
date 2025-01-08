@@ -73,4 +73,6 @@ module "distributedpbs_application" {
   deploy_pbs_cloud_run                           = var.deploy_pbs_cloud_run
   enable_pbs_cloud_run                           = var.enable_pbs_cloud_run
   pbs_image_override                             = var.pbs_image_override
+  pbs_auth_package_bucket                        = var.pbs_auth_package_bucket
+  pbs_auth_package_path                          = var.pbs_auth_package_path
 }

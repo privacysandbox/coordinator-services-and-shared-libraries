@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
+load("//build_defs/cc:benchmark.bzl", "BENCHMARK_COPT")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -82,5 +83,34 @@ cc_test(
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+# To run the benchmark tests:
+#
+#   sudo cpupower frequency-set --governor performance
+#   bazel test \
+#     -c opt \
+#     --dynamic_mode=off \
+#     --copt=-gmlt \
+#     --cache_test_results=no \
+#     --//cc:enable_benchmarking=True \
+#     //cc/pbs/budget_key_timeframe_manager/test:budget_key_timeframe_serialization_benchmark_test
+cc_test(
+    name = "budget_key_timeframe_serialization_benchmark_test",
+    size = "large",
+    srcs = ["budget_key_timeframe_serialization_benchmark_test.cc"],
+    args = [
+        "--benchmark_counters_tabular=true",
+    ],
+    copts = BENCHMARK_COPT,
+    linkopts = [
+        "-lprofiler",
+    ],
+    tags = ["manual"],
+    deps = [
+        "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
+        "@google_benchmark//:benchmark",
+        "@gperftools",
     ],
 )

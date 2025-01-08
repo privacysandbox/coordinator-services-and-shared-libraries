@@ -513,7 +513,7 @@ resource "google_cloud_run_v2_service" "pbs_instance" {
           memory = "32Gi"
         }
         startup_cpu_boost = true
-        cpu_idle          = true
+        cpu_idle          = false
       }
     }
     scaling {

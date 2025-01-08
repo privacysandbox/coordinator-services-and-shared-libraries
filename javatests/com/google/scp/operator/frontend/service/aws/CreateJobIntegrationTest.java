@@ -199,7 +199,8 @@ public final class CreateJobIntegrationTest {
             .setInputDataBucketName("Test input bucket name")
             .setOutputDataBlobPrefix("Test output blob prefix")
             .setOutputDataBucketName("Test output bucket name")
-            .putAllJobParameters(ImmutableMap.of("Test key", "Test value"))
+            .putAllJobParameters(
+                ImmutableMap.of("Test key", "Test value", "reporting_site", "https://foo.com"))
             .build();
 
     LambdaResponsePayload payload = invokeAndValidateLambdaResponse(request);

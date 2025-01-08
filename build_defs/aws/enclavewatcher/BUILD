@@ -70,7 +70,7 @@ pkg_tar2rpm(
     """,
     release = "0",
     requires = [
-        "PyYAML",
+        "python3-pyyaml",
     ],
     use_dir_allowlist = True,
     version = "0.0.1",

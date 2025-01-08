@@ -28,6 +28,7 @@
 #include <google/protobuf/util/time_util.h>
 #include <nlohmann/json.hpp>
 
+#include "absl/container/flat_hash_set.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/strip.h"
@@ -182,22 +183,47 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
     const nlohmann::json& transaction_request,
     const std::string& authorized_domain,
     std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list) {
-  if (!transaction_request.contains("data")) {
+  auto transaction_request_data_it = transaction_request.find("data");
+  if (transaction_request_data_it == transaction_request.end()) {
     return core::FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
 
-  std::unordered_set<std::string> visited;
-  std::unordered_set<std::string> visited_reporting_origin;
-  for (auto it = transaction_request["data"].begin();
-       it != transaction_request["data"].end(); ++it) {
-    if (!it->contains("reporting_origin") || !it->contains("keys")) {
+  consume_budget_metadata_list.clear();
+  size_t consume_budget_metadata_list_size = 0;
+  for (auto it = transaction_request_data_it->begin();
+       it != transaction_request_data_it->end(); ++it) {
+    auto keys_it = it->find("keys");
+    if (keys_it == it->end()) {
+      return core::FailureExecutionResult(
+          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+    for (auto key_it = keys_it->begin(); key_it != keys_it->end(); ++key_it) {
+      ++consume_budget_metadata_list_size;
+    }
+  }
+
+  if (consume_budget_metadata_list_size == 0) {
+    return core::FailureExecutionResult(
+        core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+  }
+
+  consume_budget_metadata_list.reserve(consume_budget_metadata_list_size);
+
+  absl::flat_hash_set<std::string> visited;
+  absl::flat_hash_set<std::string> visited_reporting_origin;
+  for (auto it = transaction_request_data_it->begin();
+       it != transaction_request_data_it->end(); ++it) {
+    auto reporting_origin_it = it->find("reporting_origin");
+    auto keys_it = it->find("keys");
+
+    if (reporting_origin_it == it->end() || keys_it == it->end()) {
       consume_budget_metadata_list.clear();
       return core::FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
     }
-    std::string reporting_origin =
-        it->at("reporting_origin").get<std::string>();
+    const std::string& reporting_origin =
+        reporting_origin_it->get<std::string>();
     if (reporting_origin.empty()) {
       consume_budget_metadata_list.clear();
       return core::FailureExecutionResult(
@@ -232,37 +258,34 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
     }
     visited_reporting_origin.emplace(reporting_origin);
 
-    for (auto key_it = it->at("keys").begin(); key_it != it->at("keys").end();
-         ++key_it) {
-      if (!key_it->contains("key") || !key_it->contains("token") ||
-          !key_it->contains("reporting_time")) {
+    for (auto key_it = keys_it->begin(); key_it != keys_it->end(); ++key_it) {
+      auto k_it = key_it->find("key");
+      auto token_it = key_it->find("token");
+      auto reporting_time_it = key_it->find("reporting_time");
+
+      if (k_it == key_it->end() || token_it == key_it->end() ||
+          reporting_time_it == key_it->end()) {
         consume_budget_metadata_list.clear();
         return core::FailureExecutionResult(
             core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
       }
 
-      auto budget_key_name = std::make_shared<std::string>(absl::StrCat(
-          reporting_origin, "/", key_it->at("key").get<std::string>()));
-      TokenCount token_count = key_it->at("token").get<TokenCount>();
-      std::string reporting_time =
-          key_it->at("reporting_time").get<std::string>();
+      auto budget_key_name = std::make_shared<std::string>(
+          absl::StrCat(reporting_origin, "/", k_it->get<std::string>()));
+      TokenCount token_count = token_it->get<TokenCount>();
+      const std::string& reporting_time = reporting_time_it->get<std::string>();
       auto reporting_timestamp = ReportingTimeToTimeBucket(reporting_time);
       if (!reporting_timestamp.Successful()) {
         return reporting_timestamp.result();
       }
 
-      // TODO: This is a temporary solution to prevent transaction
-      // commands belong to the same reporting hour to execute within the
-      // same transaction. The proper solution is to move this logic to
-      // the transaction commands.
       TimeGroup time_group = budget_key_timeframe_manager::Utils::GetTimeGroup(
           *reporting_timestamp);
       TimeBucket time_bucket =
           budget_key_timeframe_manager::Utils::GetTimeBucket(
               *reporting_timestamp);
       std::string visited_key =
-          absl::StrCat(*budget_key_name, "_", std::to_string(time_group) + "_",
-                       std::to_string(time_bucket));
+          absl::StrCat(*budget_key_name, "_", time_group, "_", time_bucket);
       if (visited.find(visited_key) != visited.end()) {
         return core::FailureExecutionResult(
             core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
@@ -272,11 +295,6 @@ core::ExecutionResult ParseBeginTransactionRequestBodyV2(
       consume_budget_metadata_list.emplace_back(ConsumeBudgetMetadata{
           budget_key_name, token_count, *reporting_timestamp});
     }
-  }
-
-  if (consume_budget_metadata_list.empty()) {
-    return core::FailureExecutionResult(
-        core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
 
   return core::SuccessExecutionResult();

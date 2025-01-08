@@ -31,6 +31,7 @@ import com.google.scp.operator.protos.frontend.api.v1.JobStatusProto.JobStatus;
 import com.google.scp.operator.protos.frontend.api.v1.ResultInfoProto.ResultInfo;
 import com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode;
 import com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory;
+import java.util.Map;
 
 /** Provides methods to generate fake frontend service model objects. */
 public final class ServiceJobGenerator {
@@ -86,6 +87,17 @@ public final class ServiceJobGenerator {
   }
 
   public static CreateJobRequest createFakeCreateJobRequest(String requestId) {
+    return createFakeCreateJobRequestWithJobParameters(
+        requestId,
+        ImmutableMap.of(
+            JOB_PARAM_ATTRIBUTION_REPORT_TO,
+            ATTRIBUTION_REPORT_TO,
+            JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
+            DEBUG_PRIVACY_BUDGET_LIMIT));
+  }
+
+  public static CreateJobRequest createFakeCreateJobRequestWithJobParameters(
+      String requestId, Map<String, String> jobParameters) {
     CreateJobRequest createJobRequest =
         CreateJobRequest.newBuilder()
             .setJobRequestId(requestId)
@@ -94,12 +106,7 @@ public final class ServiceJobGenerator {
             .setOutputDataBlobPrefix(DATA_HANDLE)
             .setOutputDataBucketName(DATA_HANDLE_BUCKET)
             .setPostbackUrl(POSTBACK_URL)
-            .putAllJobParameters(
-                ImmutableMap.of(
-                    JOB_PARAM_ATTRIBUTION_REPORT_TO,
-                    ATTRIBUTION_REPORT_TO,
-                    JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
-                    DEBUG_PRIVACY_BUDGET_LIMIT))
+            .putAllJobParameters(jobParameters)
             .build();
 
     return createJobRequest;

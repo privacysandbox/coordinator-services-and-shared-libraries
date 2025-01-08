@@ -19,7 +19,6 @@ pkg_filegroup(
     name = "multipartykeyhosting_modules_pkg",
     srcs = [
         "//coordinator/terraform/gcp/modules/allowedusergroup",
-        "//coordinator/terraform/gcp/modules/bazel",
         "//coordinator/terraform/gcp/modules/cloud-nat",
         "//coordinator/terraform/gcp/modules/domain_a_records",
         "//coordinator/terraform/gcp/modules/encryptionkeyservice",
@@ -48,7 +47,6 @@ pkg_filegroup(
 pkg_filegroup(
     name = "distributedpbs_modules_pkg",
     srcs = [
-        "//coordinator/terraform/gcp/modules/bazel",
         "//coordinator/terraform/gcp/modules/distributedpbs_artifact_registry",
         "//coordinator/terraform/gcp/modules/distributedpbs_auth_db",
         "//coordinator/terraform/gcp/modules/distributedpbs_auth_service",

@@ -52,4 +52,8 @@ static constexpr char kTransactionManagerSkipDuplicateTransactionInRecovery[] =
     "google_scp_transaction_manager_skip_duplicate_transaction_in_recovery";
 static constexpr char kSpannerEndpointOverride[] =
     "google_scp_core_spanner_endpoint_override";
+
+inline constexpr absl::string_view kMigrateHttpStatusCode =
+    "google_scp_migrate_http_status_code";
+
 }  // namespace google::scp::core

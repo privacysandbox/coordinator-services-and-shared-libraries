@@ -25,3 +25,7 @@ output "worker_template_version" {
 output "worker_enclave_role_arn" {
   value = aws_iam_role.enclave_role.arn
 }
+
+output "worker_role_name" {
+  value = aws_iam_role.enclave_role.name
+}

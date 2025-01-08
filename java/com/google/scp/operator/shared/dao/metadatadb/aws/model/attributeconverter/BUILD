@@ -21,9 +21,11 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/operator/shared/utils",
         "//java/external:aws_dynamodb",
         "//java/external:aws_dynamodb_enhanced",
         "//java/external:guava",
         "//operator/protos/shared/backend:java_proto",
+        "@com_google_protobuf//java/core",
     ],
 )

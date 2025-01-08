@@ -21,6 +21,7 @@ import static com.google.scp.operator.frontend.testing.ResponseEventAssertions.a
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.scp.operator.frontend.injection.factories.FrontendServicesFactory;
 import com.google.scp.operator.frontend.injection.modules.testing.FakeFrontendModule;
@@ -54,7 +55,6 @@ public final class CreateJobApiGatewayHandlerTest {
       "javatests/com/google/scp/operator/frontend/service/aws/resources/";
   private static final String INVALID_ARGUMENT_JSON = "invalid_argument.json";
   private static final String MISSING_REQUIRED_PROPERTY = "missing_required_property.json";
-  private static final String NULL_REQUIRED_PROPERTY = "null_required_property.json";
   private CreateJobApiGatewayHandler target;
   private FakeMetadataDb jobMetadataDb;
   private FakeRequestInfoValidator fakeRequestInfoValidator;
@@ -257,7 +257,6 @@ public final class CreateJobApiGatewayHandlerTest {
     createJobRequest = createJobRequest.toBuilder().setInputDataBlobPrefix("").build();
     APIGatewayProxyRequestEvent request =
         APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest);
-    ;
 
     APIGatewayProxyResponseEvent responseEvent = target.handleRequest(request, null);
 
@@ -284,7 +283,6 @@ public final class CreateJobApiGatewayHandlerTest {
             .build();
     APIGatewayProxyRequestEvent request =
         APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest);
-    ;
 
     APIGatewayProxyResponseEvent responseEvent = target.handleRequest(request, null);
 
@@ -306,10 +304,7 @@ public final class CreateJobApiGatewayHandlerTest {
   public void createJob_returnsSpecificError_whenInputPrefixListLongerThanMaxLimit() {
     CreateJobRequest createJobRequest = ServiceJobGenerator.createFakeCreateJobRequest("123");
     List<String> tooManyInputPrefixes =
-        IntStream.range(0, 51)
-            .boxed()
-            .map(integer -> integer.toString())
-            .collect(Collectors.toList());
+        IntStream.range(0, 51).boxed().map(Object::toString).collect(Collectors.toList());
     createJobRequest =
         createJobRequest.toBuilder()
             .setInputDataBlobPrefix("")
@@ -317,7 +312,6 @@ public final class CreateJobApiGatewayHandlerTest {
             .build();
     APIGatewayProxyRequestEvent request =
         APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest);
-    ;
 
     APIGatewayProxyResponseEvent responseEvent = target.handleRequest(request, null);
 
@@ -331,5 +325,247 @@ public final class CreateJobApiGatewayHandlerTest {
     assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
     assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
     assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenReportingSiteAndAttributionReportToBothPresent() {
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of("attribution_report_to", "someOrigin", "reporting_site", "someSite");
+    CreateJobRequest createJobRequest =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters("123", jobParams);
+
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest), null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage(
+                "Exactly one of attribution_report_to and reporting_site fields should be specified"
+                    + " for the job.")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void
+      createJob_returnsSpecificError_whenBothReportingSiteAndAttributionReportToNotPresent() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of();
+    CreateJobRequest createJobRequest =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters("123", jobParams);
+
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest), null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage(
+                "Exactly one of attribution_report_to and reporting_site fields should be specified"
+                    + " for the job.")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenAttributionReportToPresentButEmpty() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of("attribution_report_to", "");
+    CreateJobRequest createJobRequest =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters("123", jobParams);
+
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest), null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage("The attribution_report_to field in the job parameters is empty:")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenAttributionReportToPresentButMultipleValues() {
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of("attribution_report_to", "foo.com, bar.com");
+    CreateJobRequest createJobRequest =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters("123", jobParams);
+
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest), null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage(
+                "The attribution_report_to field in the job parameters should contain a single"
+                    + " value:")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenReportingSitePresentButEmpty() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of("reporting_site", "");
+    CreateJobRequest createJobRequest =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters("123", jobParams);
+
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest), null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage("The reporting_site field in the job parameters is empty:")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_whenReportingSitePresentButMultipleValues() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of("reporting_site", "foo.com, bar.com");
+    CreateJobRequest createJobRequest =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters("123", jobParams);
+
+    APIGatewayProxyResponseEvent responseEvent =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(createJobRequest), null);
+
+    ErrorResponse errorResponse =
+        ErrorResponse.newBuilder()
+            .setCode(Code.INVALID_ARGUMENT.getRpcStatusCode())
+            .setMessage(
+                "The reporting_site field in the job parameters should contain a single value:")
+            .addAllDetails(
+                List.of(Details.newBuilder().setReason(ErrorReasons.JSON_ERROR.toString()).build()))
+            .build();
+    assertThat(responseEvent.getHeaders().get("content-type")).isEqualTo("application/json");
+    assertThat(responseEvent.getBody()).contains(errorResponse.getMessage());
+    assertThat(responseEvent.getStatusCode()).isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSuccess_validInputReportCount() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of("reporting_site", "foo.com");
+    CreateJobRequest createJobRequestWithoutCount =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters("123", jobParams);
+    ImmutableMap<String, String> jobParamsWithEmptyString =
+        ImmutableMap.of("reporting_site", "foo.com", "input_report_count", " ");
+    CreateJobRequest createJobRequestWithEmptyString =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters(
+            "123", jobParamsWithEmptyString);
+    ImmutableMap<String, String> jobParamsWithTrailingSpace =
+        ImmutableMap.of("reporting_site", "foo.com", "input_report_count", "100    ");
+    CreateJobRequest createJobRequestWithTrailingSpace =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters(
+            "123", jobParamsWithTrailingSpace);
+    ImmutableMap<String, String> jobParamsWithZeroReportCount =
+        ImmutableMap.of("reporting_site", "foo.com", "input_report_count", "0");
+    CreateJobRequest createJobRequestWithZeroReportCount =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters(
+            "123", jobParamsWithZeroReportCount);
+
+    APIGatewayProxyResponseEvent responseEventWithoutCount =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(
+                createJobRequestWithoutCount),
+            null);
+    APIGatewayProxyResponseEvent responseEventWithEmptyString =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(
+                createJobRequestWithEmptyString),
+            null);
+    APIGatewayProxyResponseEvent responseEventWithTrailingSpace =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(
+                createJobRequestWithTrailingSpace),
+            null);
+    APIGatewayProxyResponseEvent responseEventWithZeroReportCount =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(
+                createJobRequestWithZeroReportCount),
+            null);
+
+    assertThat(responseEventWithoutCount.getStatusCode())
+        .isEqualTo(Code.ACCEPTED.getHttpStatusCode());
+    assertThat(responseEventWithEmptyString.getStatusCode())
+        .isEqualTo(Code.ACCEPTED.getHttpStatusCode());
+    assertThat(responseEventWithTrailingSpace.getStatusCode())
+        .isEqualTo(Code.ACCEPTED.getHttpStatusCode());
+    assertThat(responseEventWithZeroReportCount.getStatusCode())
+        .isEqualTo(Code.ACCEPTED.getHttpStatusCode());
+  }
+
+  @Test
+  public void createJob_returnsSpecificError_invalidInputReportCount() {
+    ImmutableMap<String, String> jobParamsNegativeReportCount =
+        ImmutableMap.of("reporting_site", "foo.com", "input_report_count", "-1");
+    CreateJobRequest createJobRequestNegativeReportCount =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters(
+            "123", jobParamsNegativeReportCount);
+    ImmutableMap<String, String> jobParamsNaNReportCount =
+        ImmutableMap.of("reporting_site", "foo.com", "input_report_count", "not a number");
+    CreateJobRequest createJobRequestNaNReportCount =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters(
+            "123", jobParamsNaNReportCount);
+    ImmutableMap<String, String> jobParamsFractionalReportCount =
+        ImmutableMap.of("reporting_site", "foo.com", "input_report_count", "100.1");
+    CreateJobRequest createJobRequestFractionalReportCount =
+        ServiceJobGenerator.createFakeCreateJobRequestWithJobParameters(
+            "123", jobParamsFractionalReportCount);
+
+    APIGatewayProxyResponseEvent responseEventNegativeReportCount =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(
+                createJobRequestNegativeReportCount),
+            null);
+    APIGatewayProxyResponseEvent responseEventNaNReportCount =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(
+                createJobRequestNaNReportCount),
+            null);
+    APIGatewayProxyResponseEvent responseEventFractionalReportCount =
+        target.handleRequest(
+            APIGatewayProxyRequestEventFakeFactory.createFromProtoPost(
+                createJobRequestFractionalReportCount),
+            null);
+
+    assertThat(responseEventNegativeReportCount.getBody())
+        .contains("Job parameter input_report_count should have a valid non-negative value:");
+    assertThat(responseEventNegativeReportCount.getStatusCode())
+        .isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+    assertThat(responseEventNaNReportCount.getBody())
+        .contains("Job parameter input_report_count should have a valid non-negative value:");
+    assertThat(responseEventNaNReportCount.getStatusCode())
+        .isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
+    assertThat(responseEventFractionalReportCount.getBody())
+        .contains("Job parameter input_report_count should have a valid non-negative value:");
+    assertThat(responseEventFractionalReportCount.getStatusCode())
+        .isEqualTo(Code.INVALID_ARGUMENT.getHttpStatusCode());
   }
 }

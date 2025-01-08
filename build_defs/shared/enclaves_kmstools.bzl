@@ -18,7 +18,10 @@ def import_aws_nitro_enclaves_sdk_c(repo_name = ""):
     http_archive(
         name = "aws_nitro_enclaves_sdk_c",
         build_file = Label("//build_defs/aws/kmstool:kmstool.BUILD"),
-        patches = [Label("//build_defs/aws/kmstool:kmstool.patch")],
+        patches = [
+            Label("//build_defs/aws/kmstool:kmstool.patch"),
+            Label("//build_defs/aws/kmstool:dockerfile_git_shallow_clone.patch"),
+        ],
         patch_args = ["-p1"],
         sha256 = "bc937626e1058c2464e60dde3a410855b87987e6da23433d78e77aedc8a152ec",
         strip_prefix = "aws-nitro-enclaves-sdk-c-e3425251b5fd573a730101b091f770ad21b9ee56",

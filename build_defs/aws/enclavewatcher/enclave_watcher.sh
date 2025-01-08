@@ -73,7 +73,7 @@ stop_enclave() {
 
 # Prints the YAML allocator config as JSON for being parsed by jq.
 get_allocator_config() {
-  python -c 'import sys, yaml, json; json.dump(yaml.load(sys.stdin), sys.stdout)' < "${ALLOCATOR_YAML_PATH}"
+  python3 -c 'import sys, yaml, json; json.dump(yaml.safe_load(sys.stdin), sys.stdout)' < "${ALLOCATOR_YAML_PATH}"
 }
 
 if [[ $# -ne 1 ]]; then

@@ -75,6 +75,8 @@ module "multipartykeyhosting_primary" {
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
+  encryption_key_service_request_concurrency         = var.encryption_key_service_request_concurrency
+  encryption_key_service_cpus                        = var.encryption_key_service_cpus
 
   mpkhs_package_bucket_location = var.mpkhs_package_bucket_location
   spanner_instance_config       = var.spanner_instance_config

@@ -41,6 +41,7 @@ resource "google_storage_bucket" "pbs_auth_package" {
   # Bucket names must be globally unique so we add a random part to the name.
   # Total must be max 63 characters
   name                        = "${var.environment}_pbs_auth_package_${random_id.gcs_bucket_random_part.hex}"
+  count                       = var.pbs_auth_package_bucket == "" ? 1 : 0
   location                    = var.region
   force_destroy               = var.pbs_auth_package_bucket_force_destroy
   uniform_bucket_level_access = true
@@ -48,8 +49,9 @@ resource "google_storage_bucket" "pbs_auth_package" {
 
 resource "google_storage_bucket_object" "pbs_auth_package_bucket_object" {
   # Need hash in name so cloudfunction knows to redeploy when code changes
-  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${filemd5(var.auth_cloud_function_handler_path)}"
-  bucket = google_storage_bucket.pbs_auth_package.name
+  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${filesha256(var.auth_cloud_function_handler_path)}"
+  count  = var.pbs_auth_package_path == "" ? 1 : 0
+  bucket = var.pbs_auth_package_bucket != "" ? var.pbs_auth_package_bucket : google_storage_bucket.pbs_auth_package[0].name
   source = var.auth_cloud_function_handler_path
 }
 
@@ -62,8 +64,8 @@ resource "google_cloudfunctions2_function" "pbs_auth_cloudfunction" {
     entry_point = "function_handler"
     source {
       storage_source {
-        bucket = google_storage_bucket.pbs_auth_package.name
-        object = google_storage_bucket_object.pbs_auth_package_bucket_object.name
+        bucket = var.pbs_auth_package_bucket != "" ? var.pbs_auth_package_bucket : google_storage_bucket.pbs_auth_package[0].name
+        object = var.pbs_auth_package_path != "" ? var.pbs_auth_package_path : google_storage_bucket_object.pbs_auth_package_bucket_object[0].name
       }
     }
   }

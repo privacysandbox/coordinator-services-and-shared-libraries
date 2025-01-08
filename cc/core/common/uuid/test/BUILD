@@ -32,24 +32,43 @@ cc_test(
     ],
 )
 
-# Run on (12 X 4346.94 MHz CPU s)
+# To run the test:
+#   sudo cpupower frequency-set --governor performance
+#   bazel test \
+#     -c opt \
+#     --dynamic_mode=off \
+#     --copt=-gmlt \
+#     --cache_test_results=no \
+#     --//cc:enable_benchmarking=True \
+#     //cc/core/common/uuid/test:uuid_benchmark_test
+#
+# Run on (12 X 4261.69 MHz CPU s)
 # CPU Caches:
 #   L1 Data 32 KiB (x6)
 #   L1 Instruction 32 KiB (x6)
 #   L2 Unified 1024 KiB (x6)
 #   L3 Unified 8448 KiB (x1)
-# Load Average: 0.70, 0.77, 0.92
+# Load Average: 1.34, 1.81, 1.15
 # -------------------------------------------------------------------
 # Benchmark                         Time             CPU   Iterations
 # -------------------------------------------------------------------
-# BM_UuidFromString/1             140 ns          140 ns      4383673
-# BM_UuidFromString/8            1108 ns         1108 ns       627080
-# BM_UuidFromString/64           8879 ns         8878 ns        79709
-# BM_UuidFromString/512         70148 ns        70143 ns         9981
-# BM_UuidFromString/4096       566055 ns       566044 ns         1240
-# BM_UuidFromString/32768     4550618 ns      4550611 ns          153
-# BM_UuidFromString/262144   36711956 ns     36709939 ns           19
-# BM_UuidFromString/524288   72041607 ns     72041217 ns           10
+# BM_UuidFromString/1             116 ns          116 ns      5976647
+# BM_UuidFromString/8            1015 ns         1015 ns       718066
+# BM_UuidFromString/64           7753 ns         7752 ns        90862
+# BM_UuidFromString/512         61760 ns        61759 ns        11329
+# BM_UuidFromString/4096       493619 ns       493617 ns         1407
+# BM_UuidFromString/32768     3947528 ns      3947020 ns          176
+# BM_UuidFromString/262144   32016917 ns     32014937 ns           22
+# BM_UuidFromString/524288   63297467 ns     63295117 ns           11
+# BM_UuidToString/1              42.4 ns         42.4 ns     16435631
+# BM_UuidToString/8               343 ns          343 ns      2038180
+# BM_UuidToString/64             2685 ns         2685 ns       260703
+# BM_UuidToString/512           21406 ns        21404 ns        32710
+# BM_UuidToString/4096         171177 ns       171170 ns         4088
+# BM_UuidToString/32768       1374535 ns      1374397 ns          510
+# BM_UuidToString/262144     11016479 ns     11015675 ns           63
+# BM_UuidToString/524288     21998510 ns     21996346 ns           32
+# ================================================================================
 cc_test(
     name = "uuid_benchmark_test",
     size = "large",

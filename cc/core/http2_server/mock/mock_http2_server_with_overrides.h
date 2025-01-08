@@ -40,26 +40,6 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
                     aws_authorization_proxy, metric_client, config_provider,
                     Http2ServerOptions(), metric_router) {}
 
-  // Construct HTTP Server with Request Routing capabilities.
-  MockHttp2ServerWithOverrides(
-      std::string& host_address, std::string& port, size_t thread_pool_size,
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
-      std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
-      std::shared_ptr<HttpRequestRouterInterface>& request_router,
-      std::shared_ptr<HttpRequestRouteResolverInterface>&
-          request_route_resolver,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
-      Http2ServerOptions options = Http2ServerOptions(),
-      MetricRouter* metric_router = nullptr)
-      : Http2Server(host_address, port, thread_pool_size, async_executor,
-                    authorization_proxy, aws_authorization_proxy, metric_client,
-                    config_provider, options, metric_router) {
-    request_router_ = request_router;
-    request_route_resolver_ = request_route_resolver;
-  }
-
   ExecutionResult MetricInit() noexcept { return SuccessExecutionResult(); }
 
   ExecutionResult MetricRun() noexcept { return SuccessExecutionResult(); }
@@ -92,21 +72,6 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
       return handle_http2_request_mock_(http2_context, http_handler);
     }
     return core::Http2Server::HandleHttp2Request(http2_context, http_handler);
-  }
-
-  void RouteOrHandleHttp2Request(
-      AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-      HttpHandler& http_handler) noexcept {
-    return core::Http2Server::RouteOrHandleHttp2Request(http2_context,
-                                                        http_handler);
-  }
-
-  void OnHttp2RequestDataObtainedRoutedRequest(
-      AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-      const RequestRouteEndpointInfo endpoint_info,
-      ExecutionResult request_body_received_result) noexcept {
-    return core::Http2Server::OnHttp2RequestDataObtainedRoutedRequest(
-        http2_context, endpoint_info, request_body_received_result);
   }
 
   void OnHttp2PendingCallback(ExecutionResult& execution_result,

@@ -23,21 +23,7 @@ terraform {
 
 locals {
   key_storage_package_zip = var.key_storage_service_zip
-
-  cloud_run_name = "key-storage-service"
-  # Generates a unique suffix for Cloud Run service revisions based on the
-  # container image url and optional timestamp. The timestamp part allows
-  # forcing the creation of a new revision when cloud_run_revision_force_replace
-  # is set to true.
-  cloud_run_revision_suffix = var.use_cloud_run ? substr(
-    sha256(
-      format(
-        "%s%s",
-        var.key_storage_service_image,
-        var.cloud_run_revision_force_replace ? timestamp() : ""
-      )
-    ), 0, 8
-  ) : ""
+  cloud_run_name          = "key-storage-service"
 }
 
 module "version" {
@@ -52,8 +38,9 @@ resource "google_service_account" "key_storage_service_account" {
 }
 
 resource "google_storage_bucket_object" "key_storage_archive" {
+  count = !var.use_cloud_run ? 1 : 0
   # Need hash in name so cloudfunction knows to redeploy when code changes
-  name   = "${var.environment}_key_storage_${filemd5(local.key_storage_package_zip)}"
+  name   = "${var.environment}_key_storage_${filesha256(local.key_storage_package_zip)}"
   bucket = var.package_bucket_name
   source = local.key_storage_package_zip
 }
@@ -72,7 +59,7 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
     source {
       storage_source {
         bucket = var.package_bucket_name
-        object = google_storage_bucket_object.key_storage_archive.name
+        object = google_storage_bucket_object.key_storage_archive[0].name
       }
     }
   }
@@ -131,6 +118,7 @@ resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
 resource "google_cloud_run_v2_service" "key_storage_service" {
   count = var.use_cloud_run ? 1 : 0
 
+  project  = var.project_id
   name     = "${var.environment}-${var.region}-${local.cloud_run_name}"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
@@ -162,6 +150,7 @@ resource "google_cloud_run_v2_service" "key_storage_service" {
 
       resources {
         limits = {
+          cpu    = 1
           memory = "${var.key_storage_cloudfunction_memory}M"
         }
       }
@@ -176,10 +165,12 @@ resource "google_cloud_run_v2_service" "key_storage_service" {
 
     labels = {
       version = lower(join("_", regexall("[a-zA-Z0-9\\-]+", module.version.version))),
+      # Create a new revision if cloud_run_revision_force_replace is true. This
+      # is done by applying a unique timestamp label on each deployment.
+      force_new_revision_timestamp = var.cloud_run_revision_force_replace ? formatdate("YYYY-MM-DD_hh_mm_ss", timestamp()) : null,
     }
 
     service_account = google_service_account.key_storage_service_account.email
-    revision        = "${var.environment}-${var.region}-${local.cloud_run_name}-${local.cloud_run_revision_suffix}"
   }
 
   custom_audiences = var.key_storage_service_custom_audiences

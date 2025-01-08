@@ -70,10 +70,6 @@ static constexpr char kPBSPartitionLeaseDurationInSeconds[] =
 static constexpr char kPBSMultiInstanceModeDisabledConfigKey[] =
     "google_scp_pbs_multi_instance_mode_disabled";
 static constexpr char kPBSPartitionLockTableRowKeyForGlobalPartition[] = "0";
-static constexpr char kPBSVNodeLockTableNameConfigName[] =
-    "google_scp_pbs_vnode_lock_table_name";
-static constexpr char kPBSVNodeLeaseDurationInSeconds[] =
-    "google_scp_pbs_vnode_lease_duration_in_seconds";
 
 // NOTE: The following is a breaking change if PBSInstance is upgraded to
 // PBSInstanceV2. Ensure that the table entry is updated from a "0"

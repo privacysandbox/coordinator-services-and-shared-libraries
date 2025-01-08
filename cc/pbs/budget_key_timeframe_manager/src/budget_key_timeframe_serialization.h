@@ -23,6 +23,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_split.h"
 #include "cc/core/common/serialization/src/serialization.h"
 #include "cc/pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
 #include "cc/pbs/interface/budget_key_timeframe_manager_interface.h"
@@ -707,26 +709,25 @@ class Serialization {
   static core::ExecutionResult DeserializeHourTokensInTimeGroup(
       const std::string& hour_token_in_time_group,
       std::vector<TokenCount>& hour_tokens) {
-    std::vector<std::string> tokens_per_hour;
-    boost::algorithm::split(tokens_per_hour, hour_token_in_time_group,
-                            boost::algorithm::is_any_of(" "),
-                            boost::algorithm::token_compress_on);
+    std::vector<absl::string_view> tokens_per_hour =
+        absl::StrSplit(hour_token_in_time_group, " ");
 
     if (tokens_per_hour.size() != kHoursPerDay) {
       return core::FailureExecutionResult(
           core::errors::SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
     }
 
-    hour_tokens.reserve(kHoursPerDay);
-    for (auto token_per_hour : tokens_per_hour) {
-      try {
-        auto value = stoi(token_per_hour);
-        hour_tokens.push_back(value);
-      } catch (...) {
+    if (hour_tokens.size() != kHoursPerDay) {
+      hour_tokens.resize(kHoursPerDay);
+    }
+    for (int i = 0; i < kHoursPerDay; ++i) {
+      int32_t value;
+      if (!absl::SimpleAtoi(tokens_per_hour[i], &value)) {
         return core::FailureExecutionResult(
             core::errors::
                 SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
       }
+      hour_tokens[i] = value;
     }
 
     return core::SuccessExecutionResult();

@@ -47,8 +47,6 @@ using google::scp::core::HttpClient;
 using google::scp::core::HttpClientInterface;
 using google::scp::core::HttpClientOptions;
 using google::scp::core::HttpRequest;
-using google::scp::core::HttpRequestRouteResolverInterface;
-using google::scp::core::HttpRequestRouterInterface;
 using google::scp::core::HttpResponse;
 using google::scp::core::HttpServerInterface;
 using google::scp::core::LoggerInterface;

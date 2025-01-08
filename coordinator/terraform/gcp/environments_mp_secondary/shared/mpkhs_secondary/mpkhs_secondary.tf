@@ -48,6 +48,8 @@ module "multipartykeyhosting_secondary" {
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
+  encryption_key_service_request_concurrency         = var.encryption_key_service_request_concurrency
+  encryption_key_service_cpus                        = var.encryption_key_service_cpus
   key_storage_service_cloudfunction_memory_mb        = var.key_storage_service_cloudfunction_memory_mb
   key_storage_service_cloudfunction_min_instances    = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances    = var.key_storage_service_cloudfunction_max_instances

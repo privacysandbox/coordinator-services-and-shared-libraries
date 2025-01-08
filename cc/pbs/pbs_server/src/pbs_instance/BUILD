@@ -47,7 +47,6 @@ deps = [
     "//cc/core/journal_service/src:core_journal_service_lib",
     "//cc/core/lease_manager/src:core_lease_manager_lib",
     "//cc/core/lease_manager/src/v2:core_lease_manager_v2_lib",
-    "//cc/pbs/partition_lease_event_sink/src:pbs_partition_lease_event_sink_lib",
     "//cc/core/tcp_traffic_forwarder/src:core_tcp_traffic_forwarder",
     "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
     "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
@@ -63,9 +62,6 @@ deps = [
     "//cc/public/cpio/interface/metric_client",
     "@com_google_absl//absl/strings",
     "//cc/core/http2_forwarder/src:core_http2_forwarder_lib",
-    "//cc/pbs/partition_namespace/src:pbs_partition_namespace_lib",
-    "//cc/pbs/partition_request_router/src:pbs_partition_request_router_lib",
-    "//cc/pbs/partition_lease_preference_applier/src:pbs_partition_lease_preference_applier_lib",
     "//cc/core/telemetry/src/metric:telemetry_metric",
     "//cc/core/telemetry/src/common:telemetry_common",
     "//cc/core/telemetry/src/authentication:telemetry_authentication",
@@ -128,37 +124,9 @@ cc_library(
 )
 
 cc_library(
-    name = "synchronous_executor",
-    hdrs = ["synchronous_executor.h"],
-    copts = cloud_platform_copts,
-    deps = [
-        "//cc/core/interface:interface_lib",
-    ],
-)
-
-cc_library(
     name = "pbs_instance",
     srcs = ["pbs_instance.cc"],
     hdrs = ["pbs_instance.h"],
-    copts = cloud_platform_copts,
-    deps = select({
-        "//cc:cloud_platform_aws": aws_deps,
-        "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,
-        "//cc:cloud_platform_gcp": gcp_deps,
-        "//cc:cloud_platform_gcp_integration_test": gcp_integration_test_deps,
-        "//cc:cloud_platform_local": local_deps,
-        "//conditions:default": [],
-    }) + [
-        ":error_codes",
-        ":pbs_instance_configuration",
-        ":pbs_instance_logging",
-    ],
-)
-
-cc_library(
-    name = "pbs_instance_v2",
-    srcs = ["pbs_instance_v2.cc"],
-    hdrs = ["pbs_instance_v2.h"],
     copts = cloud_platform_copts,
     deps = select({
         "//cc:cloud_platform_aws": aws_deps,
@@ -198,31 +166,5 @@ cc_library(
         "//cc/pbs/front_end_service/src:front_end_service_v2",
         "//cc/pbs/health_service/src:pbs_health_service_lib",
         "//cc/pbs/interface:pbs_interface_lib",
-    ],
-)
-
-cc_library(
-    name = "pbs_instance_multi_partition_lib",
-    srcs = glob(
-        [
-            "pbs_instance_multi_partition.cc",
-            "pbs_instance_multi_partition.h",
-            "pbs_instance_multi_partition_platform_wrapper.cc",
-            "pbs_instance_multi_partition_platform_wrapper.h",
-        ],
-    ),
-    copts = cloud_platform_copts,
-    deps = select({
-        "//cc:cloud_platform_aws": aws_deps,
-        "//cc:cloud_platform_aws_integration_test": aws_integration_test_deps,
-        "//cc:cloud_platform_gcp": gcp_deps,
-        "//cc:cloud_platform_gcp_integration_test": gcp_integration_test_deps,
-        "//cc:cloud_platform_local": local_deps,
-        "//conditions:default": [],
-    }) + [
-        ":error_codes",
-        ":pbs_instance_configuration",
-        ":pbs_instance_logging",
-        ":synchronous_executor",
     ],
 )

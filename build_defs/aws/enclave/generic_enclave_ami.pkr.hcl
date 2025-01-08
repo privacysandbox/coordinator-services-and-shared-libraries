@@ -15,7 +15,7 @@
 packer {
   required_plugins {
     amazon = {
-      version = ">= 0.0.1"
+      version = ">= 1.2.1"
       source  = "github.com/hashicorp/amazon"
     }
   }
@@ -41,13 +41,17 @@ source "amazon-ebs" "amzn2-ami" {
   // Custom Base AMI
   source_ami_filter {
     filters = {
-      name                = "amzn2-ami-hvm-*-x86_64-ebs"
+      name                = "al2023-ami-minimal-*-x86_64"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
     most_recent = true
     owners = [
       "amazon"]
+  }
+  launch_block_device_mappings {
+    device_name = "/dev/xvda"
+    volume_size = 8
   }
   ssh_username = "ec2-user"
   ssh_timeout = "15m"
@@ -94,13 +98,15 @@ build {
 
   provisioner "shell" {
     inline = [
+      # Install SSM Agent
+      "sudo yum install https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm -y",
       # Install and enable Docker.
-      "sudo amazon-linux-extras install docker",
+      "sudo yum install docker-24.0.5-1.amzn2023.0.3 -y",
       "sudo systemctl enable docker",
       "sudo systemctl start docker",
       # Build enclave
       "sudo docker load --input /tmp/{container_filename}",
-      "sudo amazon-linux-extras install aws-nitro-enclaves-cli",
+      "sudo yum install aws-nitro-enclaves-cli -y",
       "sudo yum install aws-nitro-enclaves-cli-devel -y",
       "sudo systemctl enable nitro-enclaves-allocator.service",
       # Install helper services
@@ -156,7 +162,7 @@ build {
       "sudo find / -name authorized_keys -delete -print",
       # Note: omitting deletion of shell history and VCS files because they are
       # not present in these AMIs.
-      "if ( $UNINSTALL_SSH_SERVER ); then sudo rpm -e ec2-instance-connect openssh-server; fi",
+      "if ( $UNINSTALL_SSH_SERVER ); then sudo rpm -e openssh-server; fi",
     ]
   }
 }

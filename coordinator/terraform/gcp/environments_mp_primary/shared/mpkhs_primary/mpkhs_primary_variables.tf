@@ -310,18 +310,18 @@ variable "cloudfunction_timeout_seconds" {
 
 variable "get_public_key_service_zip" {
   description = <<-EOT
-          Get Public key service cloud function path. If not provided defaults to locally built zip file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
-      EOT
+    Get Public key service cloud function path.
+    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
+  EOT
   type        = string
   default     = ""
 }
 
 variable "encryption_key_service_zip" {
   description = <<-EOT
-          Encryption key service cloud function path. If not provided defaults to locally built zip file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
-      EOT
+    Encryption key service cloud function path.
+    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
+  EOT
   type        = string
   default     = ""
 }
@@ -342,18 +342,6 @@ variable "get_public_key_cloudfunction_min_instances" {
   default     = 1
 }
 
-variable "get_public_key_request_concurrency" {
-  description = "The maximum number of request to allow to be concurrently processed by a function instance."
-  type        = number
-  default     = 10
-}
-
-variable "get_public_key_cpus" {
-  description = "The number of CPUs used in a single container instance."
-  type        = number
-  default     = 2
-}
-
 variable "encryption_key_service_cloudfunction_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
@@ -370,6 +358,30 @@ variable "encryption_key_service_cloudfunction_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
   default     = 100
+}
+
+variable "get_public_key_request_concurrency" {
+  description = "The maximum number of request to allow to be concurrently processed by a function instance."
+  type        = number
+  default     = 80
+}
+
+variable "encryption_key_service_request_concurrency" {
+  description = "The maximum number of request to allow to be concurrently processed by a function instance."
+  type        = number
+  default     = 80
+}
+
+variable "get_public_key_cpus" {
+  description = "The number of CPUs used in a single container instance."
+  type        = number
+  default     = 2
+}
+
+variable "encryption_key_service_cpus" {
+  description = "The number of CPUs used in a single container instance."
+  type        = number
+  default     = 1
 }
 
 variable "application_name" {

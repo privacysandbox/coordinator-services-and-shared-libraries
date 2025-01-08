@@ -111,7 +111,7 @@ resource "google_compute_region_autoscaler" "keygen_autoscaler" {
   project = var.project_id
   region  = var.region
 
-  name   = "keygen-auto-scaler"
+  name   = "${var.environment}-keygen-auto-scaler"
   target = google_compute_region_instance_group_manager.keygen_instance_group.id
 
   autoscaling_policy {

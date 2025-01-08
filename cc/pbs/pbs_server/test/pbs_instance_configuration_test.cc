@@ -248,7 +248,6 @@ TEST_F(PBSInstanceConfiguration, ReadConfigurationReadsAllConfigs) {
   config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
   config_provider->Set(kPBSPartitionLockTableNameConfigName, "partition_lock");
   config_provider->SetInt(kPBSPartitionLeaseDurationInSeconds, 20);
-  config_provider->SetInt(kPBSVNodeLeaseDurationInSeconds, 30);
   config_provider->Set(kContainerType, kComputeEngine);
 
   core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
@@ -275,8 +274,6 @@ TEST_F(PBSInstanceConfiguration, ReadConfigurationReadsAllConfigs) {
   EXPECT_EQ(pbs_config->http2_server_use_tls, true);
   EXPECT_EQ(pbs_config->partition_lease_duration_in_seconds,
             std::chrono::seconds(20));
-  EXPECT_EQ(pbs_config->vnode_lease_duration_in_seconds,
-            std::chrono::seconds(30));
 }
 
 TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
@@ -306,7 +303,5 @@ TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
 
   EXPECT_EQ(pbs_config->partition_lease_duration_in_seconds,
             std::chrono::seconds(kDefaultLeaseDurationInSeconds));
-  EXPECT_EQ(pbs_config->vnode_lease_duration_in_seconds,
-            std::chrono::seconds(kDefaultVnodeLeaseDurationInSeconds));
 }
 }  // namespace google::scp::pbs::test

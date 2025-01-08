@@ -147,3 +147,19 @@ java_test(
         "//operator/protos/shared/backend:java_proto",
     ],
 )
+
+java_test(
+    name = "JobParametersConverterTest",
+    srcs = [
+        "JobParametersConverterTest.java",
+    ],
+    deps = [
+        "//java/com/google/scp/operator/frontend/service/converter",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:guice",
+        "//javatests/com/google/scp/shared/testutils/common",
+        "//operator/protos/shared/backend:java_proto",
+    ],
+)

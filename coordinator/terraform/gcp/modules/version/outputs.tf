@@ -13,5 +13,5 @@
 # limitations under the License.
 
 output "version" {
-  value = data.local_file.version.content
+  value = trimspace(file("${path.module}/../../version.txt"))
 }

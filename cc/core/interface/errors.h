@@ -91,6 +91,7 @@ struct SCPError {
   absl::string_view name;
   std::string error_message;
   HttpStatusCode error_http_status_code;
+  HttpStatusCode new_http_status_code;
 };
 
 std::map<uint64_t, std::map<uint64_t, SCPError>>& GetGlobalErrorCodes();
@@ -127,14 +128,24 @@ inline uint64_t MakeErrorCode(uint64_t component, uint64_t error) {
  * @brief Defines an error code and emplaces the error code in
  * global_error_codes.
  *
- * @param error_name the global error code name.
- * @param component component code.
- * @param error component-specific error code.
- * @param message message about the error.
- * @param http_status_code Http status code.
+ * This macro generates a global error code by combining a component code
+ * and an error code, validates their ranges, and associates metadata like
+ * the error message and HTTP status code with the error. It also initializes
+ * the error in the global error registry.
+ *
+ * @param error_name The global error code name (used as a unique identifier).
+ * @param component The component code. Must be in the range [0x0001, 0x7FFF)
+ * and globally unique within a binary.
+ * @param error The component-specific error code (must be in the range [0x0001,
+ * 0xFFFF]).
+ * @param message A descriptive message about the error.
+ * @param http_status_code The HTTP status code associated with the error.
+ *
+ * `_1` in the macro name is used to indicate this is a specific variant of
+ * the `DEFINE_ERROR_CODE` macro.
  */
-#define DEFINE_ERROR_CODE(error_name, component, error, message,              \
-                          http_status_code)                                   \
+#define DEFINE_ERROR_CODE_1(error_name, component, error, message,            \
+                            http_status_code)                                 \
   static_assert(                                                              \
       component < 0x8000,                                                     \
       "Component code is too large! Valid range is [0x0001, 0x7FFF).");       \
@@ -148,10 +159,115 @@ inline uint64_t MakeErrorCode(uint64_t component, uint64_t error) {
     scp_error.name = std::string_view(error_name##_str);                      \
     scp_error.error_message = message;                                        \
     scp_error.error_http_status_code = http_status_code;                      \
+    scp_error.new_http_status_code = http_status_code;                        \
     ::google::scp::core::errors::GetGlobalErrorCodes()[component].emplace(    \
         error_name, scp_error);                                               \
     return true;                                                              \
   }();
+
+/**
+ * @brief Defines an error code and emplaces the error code in
+ * global_error_codes.
+ *
+ * This macro generates a global error code by combining a component code
+ * and an error code, validates their ranges, and associates metadata like
+ * the error message and HTTP status codes with the error. It also initializes
+ * the error in the global error registry.
+ *
+ * @param error_name The global error code name (used as a unique identifier).
+ * @param component The component code. Must be in the range [0x0001, 0x7FFF)
+ * and globally unique within a binary.
+ * @param error The component-specific error code (must be in the range [0x0001,
+ * 0xFFFF]).
+ * @param message A descriptive message about the error.
+ * @param http_status_code The primary HTTP status code associated with the
+ * error.
+ * @param new_http_status_code_arg New HTTP status code to provide
+ * additional context or fallback information about the error.
+ *
+ * `_2` in the macro name is used to indicate this is a specific variant of
+ * the `DEFINE_ERROR_CODE` macro which helps in the migration of http status
+ * codes.
+ */
+
+#define DEFINE_ERROR_CODE_2(error_name, component, error, message,            \
+                            http_status_code, new_http_status_code_arg)       \
+  static_assert(                                                              \
+      component < 0x8000,                                                     \
+      "Component code is too large! Valid range is [0x0001, 0x7FFF).");       \
+  static_assert(error < 0x10000,                                              \
+                "Error code is too large! Valid range is [0x0001, 0xFFFF]."); \
+  static constexpr const char* error_name##_str = #error_name;                \
+  static uint64_t error_name =                                                \
+      ::google::scp::core::errors::MakeErrorCode(component, error);           \
+  static bool initialized_##component##error = []() {                         \
+    ::google::scp::core::errors::SCPError scp_error;                          \
+    scp_error.name = std::string_view(error_name##_str);                      \
+    scp_error.error_message = message;                                        \
+    scp_error.error_http_status_code = http_status_code;                      \
+    scp_error.new_http_status_code = new_http_status_code_arg;                \
+    ::google::scp::core::errors::GetGlobalErrorCodes()[component].emplace(    \
+        error_name, scp_error);                                               \
+    return true;                                                              \
+  }();
+
+/**
+ * @brief Intermediate macro to select the appropriate macro
+ * (DEFINE_ERROR_CODE_1 or DEFINE_ERROR_CODE_2) based on the number of arguments
+ * provided.
+ *
+ * @param x A placeholder parameter to align the argument list.
+ * @param error_name The name of the error.
+ * @param component The component associated with the error.
+ * @param error The specific error code.
+ * @param message A descriptive error message.
+ * @param http_status_code The primary HTTP status code for this error.
+ * @param new_http_status_code_arg An additional HTTP status code.
+ * @param FUNC The selected macro to handle the provided arguments.
+ * @param ... Additional arguments passed to the macro.
+ */
+#define DEFINE_ERROR_CODE_INTERIM(x, error_name, component, error, message,   \
+                                  http_status_code, new_http_status_code_arg, \
+                                  FUNC, ...)                                  \
+  FUNC
+
+/**
+ * @brief Macro to define error codes with support for optional parameters.
+ *
+ * @details This macro selects either DEFINE_ERROR_CODE_1 (for 5 arguments) or
+ * DEFINE_ERROR_CODE_2 (for 6 arguments, with new http status code for used for
+ * http code migration) based on the provided input.
+ *
+ * Stack overflow link:
+ * https://stackoverflow.com/questions/3046889/optional-parameters-with-c-macros
+ *
+ * Example Usage:
+ * @code
+ * // Example 1: With 6 arguments (includes a new HTTP status code):
+ * DEFINE_ERROR_CODE(COMPONENT_NAME_ERROR, COMPONENT_NAME, 0x0001,
+ *                   "Component error message test",
+ * HttpStatusCode::BAD_REQUEST, HttpStatusCode::INTERNAL_SERVER_ERROR);
+ * // Resolves to DEFINE_ERROR_CODE_2.
+ *
+ * // Example 2: With 5 arguments (no new HTTP status code):
+ * DEFINE_ERROR_CODE(COMPONENT_NAME_ERROR, COMPONENT_NAME, 0x0001,
+ *                   "Component error message test",
+ * HttpStatusCode::BAD_REQUEST);
+ * // Resolves to DEFINE_ERROR_CODE_1.
+ * @endcode
+ *
+ * @param ... Variadic arguments representing:
+ * - error_name: The unique name for the error.
+ * - component: The component code (range: [0x0001, 0x7FFF) and globally unique
+ * within a binary).
+ * - error: The component-specific error code (range: [0x0001, 0xFFFF]).
+ * - message: A descriptive error message.
+ * - http_status_code: The primary HTTP status code associated with the error.
+ * - new_http_status_code_arg: A new secondary HTTP status code for migration.
+ */
+#define DEFINE_ERROR_CODE(...)                                                 \
+  DEFINE_ERROR_CODE_INTERIM(, ##__VA_ARGS__, DEFINE_ERROR_CODE_2(__VA_ARGS__), \
+                            DEFINE_ERROR_CODE_1(__VA_ARGS__), )
 
 /**
  * @brief Maps internal error code to public error code.
@@ -224,13 +340,20 @@ inline absl::string_view GetErrorName(uint64_t error_code) {
  * @brief Gets the error http status code.
  *
  * @param error_code The global error code.
+ * @param migrate_http_status_code Migration flag to handle to use of new http
+ * status code.
  * @return HttpStatusCode The http status code associated with the error.
  */
-inline HttpStatusCode GetErrorHttpStatusCode(uint64_t error_code) {
+inline HttpStatusCode GetErrorHttpStatusCode(uint64_t error_code,
+                                             bool migrate_http_status_code) {
   uint64_t component = ExtractComponentCode(error_code);
-  return GetGlobalErrorCodes()[component]
-      .find(error_code)
-      ->second.error_http_status_code;
+  const SCPError& error_entry =
+      GetGlobalErrorCodes()[component].find(error_code)->second;
+
+  if (migrate_http_status_code) {
+    return error_entry.new_http_status_code;
+  }
+  return error_entry.error_http_status_code;
 }
 
 /**

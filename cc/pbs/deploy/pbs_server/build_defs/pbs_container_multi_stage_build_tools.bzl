@@ -312,7 +312,7 @@ def load_pbs_container_multi_stage_container_build_tools():
         "local",
     ]
 
-    [
+    for platform in pbs_container_platforms:
         # Extract the dependencies and remove the tars
         container_run_and_commit_layer(
             name = "pbs_container_runtime_dependencies_layer_" + platform,
@@ -324,10 +324,8 @@ def load_pbs_container_multi_stage_container_build_tools():
             image = "pbs_container_base_image.tar",
             tags = ["manual"],
         )
-        for platform in pbs_container_platforms
-    ]
 
-    [
+    for platform in pbs_container_platforms:
         container_image(
             name = "pbs_container_" + platform,
             base = "@debian_11_runtime//image",
@@ -341,10 +339,8 @@ def load_pbs_container_multi_stage_container_build_tools():
             ],
             user = "root",
         )
-        for platform in pbs_container_platforms
-    ]
 
-    [
+    for platform in pbs_cloud_run_container_platforms:
         container_image(
             name = "pbs_cloud_run_container_" + platform,
             base = "@debian_11_runtime//image",
@@ -357,5 +353,3 @@ def load_pbs_container_multi_stage_container_build_tools():
             ],
             user = "root",
         )
-        for platform in pbs_cloud_run_container_platforms
-    ]

@@ -22,18 +22,12 @@ terraform {
 }
 
 locals {
-  service_subdomain_suffix   = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  encryption_key_service_zip = var.encryption_key_service_zip != "" ? var.encryption_key_service_zip : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/EncryptionKeyServiceHttpCloudFunctionDeploy.zip"
-  key_storage_service_zip    = var.key_storage_service_zip != "" ? var.key_storage_service_zip : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/KeyStorageServiceHttpCloudFunctionDeploy.zip"
-  key_storage_domain         = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
-  encryption_key_domain      = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
-  notification_channel_id    = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
-  package_bucket_prefix      = "${var.project_id}_${var.environment}"
-  package_bucket_name        = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
-}
-
-module "bazel" {
-  source = "../../modules/bazel"
+  service_subdomain_suffix = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
+  key_storage_domain       = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
+  encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
+  notification_channel_id  = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
+  package_bucket_prefix    = "${var.project_id}_${var.environment}"
+  package_bucket_name      = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
 }
 
 module "vpc" {
@@ -120,7 +114,7 @@ module "keystorageservice" {
   spanner_instance_name                           = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds                   = var.cloudfunction_timeout_seconds
   key_storage_cloudfunction_name                  = "key-storage-cloudfunction"
-  key_storage_service_zip                         = local.key_storage_service_zip
+  key_storage_service_zip                         = var.key_storage_service_zip
   key_storage_cloudfunction_memory                = var.key_storage_service_cloudfunction_memory_mb
   key_storage_service_cloudfunction_min_instances = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances = var.key_storage_service_cloudfunction_max_instances
@@ -163,10 +157,12 @@ module "encryptionkeyservice" {
   spanner_database_name                              = module.keydb.keydb_name
   spanner_instance_name                              = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
-  encryption_key_service_zip                         = local.encryption_key_service_zip
+  encryption_key_service_zip                         = var.encryption_key_service_zip
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
+  encryption_key_service_request_concurrency         = var.encryption_key_service_request_concurrency
+  encryption_key_service_cpus                        = var.encryption_key_service_cpus
 
   # Cloud Run vars
   use_cloud_run                        = var.use_cloud_run

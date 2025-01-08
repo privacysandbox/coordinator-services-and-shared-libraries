@@ -41,5 +41,6 @@ cc_library(
         "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@boost//:algorithm",
         "@com_google_absl//absl/base:nullability",
+        "@com_google_absl//absl/strings",
     ],
 )

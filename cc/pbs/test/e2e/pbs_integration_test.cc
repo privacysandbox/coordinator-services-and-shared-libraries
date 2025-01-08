@@ -227,7 +227,7 @@ static void EnsureBothPBSServersAreTakingClientRequests(
                                                GetTransactionStatusResponse>
                                       response_context) {
     auto http_code =
-        GetErrorHttpStatusCode(response_context.result.status_code);
+        GetErrorHttpStatusCode(response_context.result.status_code, false);
     if (http_code < core::errors::HttpStatusCode::INTERNAL_SERVER_ERROR) {
       cout << "PBS-1 endpoint accepts client requests. Status code: "
            << static_cast<int>(http_code) << endl;
@@ -261,7 +261,7 @@ static void EnsureBothPBSServersAreTakingClientRequests(
                                                GetTransactionStatusResponse>
                                       response_context) {
     auto http_code =
-        GetErrorHttpStatusCode(response_context.result.status_code);
+        GetErrorHttpStatusCode(response_context.result.status_code, false);
     if (http_code < core::errors::HttpStatusCode::INTERNAL_SERVER_ERROR) {
       cout << "PBS-2 endpoint accepts client requests. Status Code: "
            << static_cast<int>(http_code) << endl;

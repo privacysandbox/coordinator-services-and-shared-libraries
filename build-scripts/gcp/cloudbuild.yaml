@@ -22,6 +22,7 @@ steps:
     $_TAR_PUBLISH_BUCKET $_TAR_PUBLISH_BUCKET_PATH
   automapSubstitutions: true
 options:
+  logging: CLOUD_LOGGING_ONLY
   machineType: "E2_HIGHCPU_32"
 # If image names are not specified, they will default to "skip".
 substitutions:

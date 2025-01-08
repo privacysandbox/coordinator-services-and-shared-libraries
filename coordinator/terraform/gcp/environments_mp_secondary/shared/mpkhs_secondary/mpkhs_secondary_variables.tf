@@ -157,9 +157,9 @@ variable "cloudfunction_timeout_seconds" {
 
 variable "encryption_key_service_zip" {
   description = <<-EOT
-          Encryption key service cloud function path. If not provided defaults to locally built zip file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
-      EOT
+    Encryption key service cloud function path.
+    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
+  EOT
   type        = string
   default     = ""
 }
@@ -181,11 +181,23 @@ variable "encryption_key_service_cloudfunction_max_instances" {
   default     = 100
 }
 
+variable "encryption_key_service_request_concurrency" {
+  description = "The maximum number of request to allow to be concurrently processed by a function instance."
+  type        = number
+  default     = 80
+}
+
+variable "encryption_key_service_cpus" {
+  description = "The number of CPUs used in a single container instance."
+  type        = number
+  default     = 1
+}
+
 variable "key_storage_service_zip" {
   description = <<-EOT
-          Key storage service cloud function path. If not provided defaults to locally built jar file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
-      EOT
+    Key storage service cloud function path.
+    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
+  EOT
   type        = string
   default     = ""
 }

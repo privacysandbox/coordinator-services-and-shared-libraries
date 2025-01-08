@@ -525,4 +525,15 @@ TEST(BudgetKeyTimeframeManagerTest, DeserializeHourTokensInTimeGroup) {
                     SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA));
 }
 
+TEST(BudgetKeyTimeframeManagerTest,
+     DeserializeHourTokensInTimeGroupTokenCountMoreThan24) {
+  vector<TokenCount> tokens = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2,
+                               3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5};
+  string hour_token_in_time_group =
+      "0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 1 2 3 4";
+  EXPECT_EQ(Serialization::DeserializeHourTokensInTimeGroup(
+                hour_token_in_time_group, tokens),
+            SuccessExecutionResult());
+}
+
 }  // namespace google::scp::pbs::test

@@ -33,8 +33,6 @@
 #include "cc/core/interface/authorization_proxy_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/configuration_keys.h"
-#include "cc/core/interface/http_request_route_resolver_interface.h"
-#include "cc/core/interface/http_request_router_interface.h"
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
@@ -114,28 +112,8 @@ class Http2Server : public HttpServerInterface {
         private_key_file_(*options.private_key_file),
         certificate_chain_file_(*options.certificate_chain_file),
         tls_context_(boost::asio::ssl::context::sslv23),
-        request_routing_enabled_(false),
-        metric_router_(metric_router) {}
-
-  // Construct HTTP Server with Request Routing capabilities.
-  Http2Server(
-      std::string& host_address, std::string& port, size_t thread_pool_size,
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
-      std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
-      std::shared_ptr<HttpRequestRouterInterface>& request_router,
-      std::shared_ptr<HttpRequestRouteResolverInterface>&
-          request_route_resolver,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
-      Http2ServerOptions options = Http2ServerOptions(),
-      MetricRouter* metric_router = nullptr)
-      : Http2Server(host_address, port, thread_pool_size, async_executor,
-                    authorization_proxy, aws_authorization_proxy, metric_client,
-                    config_provider, options, metric_router) {
-    request_router_ = request_router;
-    request_route_resolver_ = request_route_resolver;
-  }
+        metric_router_(metric_router),
+        migrate_http_status_code_(false) {}
 
   ~Http2Server();
 
@@ -230,30 +208,6 @@ class Http2Server : public HttpServerInterface {
                               uint32_t error_code) noexcept;
 
   /**
-   * @brief Is called when the http connection/stream is closed on a request
-   * routed to a remote endpoint.
-   *
-   * @param activity_id Correlation ID for this request.
-   * @param request_id The ID of the request.
-   * @param error_code The error code that the connection/stream was closed
-   * with.
-   */
-  virtual void OnHttp2CleanupOfRoutedRequest(common::Uuid activity_id,
-                                             common::Uuid request_id,
-                                             uint32_t error_code) noexcept;
-
-  /**
-   * @brief Decide whether to route to another instance or handle the http2
-   * request on local instance.
-   *
-   * @param http2_context The context of the ng http2 operation.
-   * @param http_handler The http handler to handle the request.
-   */
-  virtual void RouteOrHandleHttp2Request(
-      AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-      HttpHandler& http_handler) noexcept;
-
-  /**
    * @brief Handles the processing of an HTTP2 request. This function retrieves
    * the synchronization context adds details to it. It also creates an
    * authorization context to manage request authorization (dispatching
@@ -303,39 +257,6 @@ class Http2Server : public HttpServerInterface {
    */
   virtual void OnHttp2PendingCallback(ExecutionResult execution_result,
                                       const common::Uuid& request_id) noexcept;
-
-  /**
-   * @brief Is called when the data is obtained on the http2 request and is
-   * ready to be routed. Routing is done in this function to the endpoint.
-   *
-   * @param context context of the request to be routed.
-   * @param endpoint_info The endpoint to route the request to.
-   * @param request_body_received_result Result of obtaining request data on the
-   * connection.
-   */
-  virtual void OnHttp2RequestDataObtainedRoutedRequest(
-      AsyncContext<NgHttp2Request, NgHttp2Response>& context,
-      const RequestRouteEndpointInfo& endpoint_info,
-      ExecutionResult request_body_received_result) noexcept;
-
-  /**
-   * @brief Is called when routing is completed with response.
-   *
-   * @param http2_context original http2 context for which routing was
-   * requested.
-   * @param context context of the routing request
-   */
-  virtual void OnRoutingResponseReceived(
-      AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-      AsyncContext<HttpRequest, HttpResponse>& context) noexcept;
-
-  /**
-   * @brief Is the request forwarding feature enabled?
-   *
-   * @return true
-   * @return false
-   */
-  bool IsRequestForwardingEnabled() const;
 
   // The host address to run the http server on.
   std::string host_address_;
@@ -401,18 +322,6 @@ class Http2Server : public HttpServerInterface {
 
   // The TLS context of the server.
   boost::asio::ssl::context tls_context_;
-
-  // @brief Router to forward a request to a remote instance if needed.
-  std::shared_ptr<HttpRequestRouterInterface> request_router_;
-
-  // @brief Resolves target route of a request.
-  std::shared_ptr<HttpRequestRouteResolverInterface> request_route_resolver_;
-
-  // @brief enables disables request routing.
-  bool request_routing_enabled_;
-
-  // @brief enables use of adtech site value as authorized_domain.
-  bool adtech_site_authorized_domain_enabled_;
 
  private:
   /**
@@ -506,6 +415,9 @@ class Http2Server : public HttpServerInterface {
   // OpenTelemetry Instrument for counting the number of completed PBS
   // requests.
   std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>> pbs_requests_;
+
+  // Flag to handle the safe migration of the http status codes from 4xx to 5xx.
+  bool migrate_http_status_code_;
 };
 
 }  // namespace google::scp::core

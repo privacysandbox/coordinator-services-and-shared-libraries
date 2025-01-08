@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is a catch-all configuration. Each directory that wants to change the
-# root should have a separate CPPLINT.cfg in the corresponding directory.
-set noparent
-filter=-build/include_order,-build/c++11
-filter=-runtime/references
-filter=-readability/todo
-root=.
+load("@rules_java//java:defs.bzl", "java_library")
+
+package(default_visibility = ["//visibility:public"])
+
+java_library(
+    name = "utils",
+    srcs = glob(["*.java"]),
+    deps = [
+        "//operator/protos/shared/backend:java_proto",
+        "@com_google_protobuf//java/core",
+    ],
+)

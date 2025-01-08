@@ -62,6 +62,16 @@ variable "encryption_key_service_cloudfunction_max_instances" {
   type        = number
 }
 
+variable "encryption_key_service_request_concurrency" {
+  description = "The maximum number of request to allow to be concurrently processed by a function instance."
+  type        = number
+}
+
+variable "encryption_key_service_cpus" {
+  description = "The number of CPUs used in a single container instance."
+  type        = number
+}
+
 variable "cloudfunction_timeout_seconds" {
   description = "Number of seconds after which a function instance times out."
   type        = number

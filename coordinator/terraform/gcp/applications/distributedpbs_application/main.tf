@@ -87,6 +87,8 @@ module "pbs_auth" {
   pbs_auth_spanner_database_name                = module.pbs_auth_storage.pbs_auth_spanner_database_name
   pbs_auth_v2_spanner_table_name                = module.pbs_auth_storage.pbs_auth_spanner_authorization_v2_table_name
   pbs_auth_allowed_principals                   = local.pbs_auth_allowed_principals
+  pbs_auth_package_bucket                       = var.pbs_auth_package_bucket
+  pbs_auth_package_path                         = var.pbs_auth_package_path
   limit_traffic_to_internal_and_lb              = var.enable_domain_management
 
   depends_on = [

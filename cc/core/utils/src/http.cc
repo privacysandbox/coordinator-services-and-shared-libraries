@@ -30,6 +30,13 @@
 #include "re2/re2.h"
 
 namespace google::scp::core::utils {
+
+constexpr std::string_view kUserAgentPrefix = "aggregation-service/";
+
+// Regular expression to match 'aggregation-service/x.y.z', where x, y, and z
+// are digits.
+constexpr LazyRE2 kVersionRegex = {R"(^([0-9]+\.[0-9]+\.[0-9]+))"};
+
 ExecutionResultOr<std::string> GetEscapedUriWithQuery(
     const HttpRequest& request) {
   if (!request.query || request.query->empty()) {
@@ -80,22 +87,18 @@ ExecutionResultOr<std::string> ExtractUserAgent(
         core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
   }
 
-  // Regular expression to match 'aggregation-service/x.y.z', where x, y, and z
-  // are digits.
-  RE2 user_agent_regex(R"((aggregation-service/[0-9]+\.[0-9]+\.[0-9]+))");
-  auto user_agent = header_iter->second;
-
-  // Match position and length variables.
-  std::string match;
-
-  // Search for the regex pattern in the User-Agent string.
-  if (RE2::PartialMatch(user_agent, user_agent_regex, &match)) {
-    // Return only the matched portion: 'aggregation-service/x.y.z'.
-    return match;
+  const std::string& user_agent = header_iter->second;
+  if (user_agent.empty() || !absl::StartsWith(user_agent, kUserAgentPrefix)) {
+    return std::string(kUnknownValue);
   }
 
-  // Return unknown if pattern is not found.
-  return std::string(kUnknownValue);
+  // Search for the regex pattern in the User-Agent string.
+  std::string_view match;
+  if (!RE2::PartialMatch(std::string_view(&user_agent[kUserAgentPrefix.size()]),
+                         *kVersionRegex, &match)) {
+    return std::string(kUnknownValue);
+  }
+  return absl::StrCat(kUserAgentPrefix, match);
 }
 
 std::string HttpMethodToString(HttpMethod method) {

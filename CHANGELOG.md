@@ -1,6 +1,38 @@
 # Changelog
 
-## Unreleased
+## [1.15.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.14.0...v1.15.0) (2025-01-07)
+
+### Important Note
+- PBS no longer reads the following environment variables. If provided during deployment, these environment variables will be ignored by PBS.
+  - `google_scp_pbs_vnode_lock_table_name`
+  - `google_scp_pbs_vnode_lease_duration_in_seconds`
+- **[GCP only]** Migration of HTTP status codes from the 4xx series to the 5xx series is being introduced. This behavior is controlled by the feature flag `google_scp_migrate_http_status_code`, which is set to `false` by default. This default setting ensures that the current behavior remains unchanged unless explicitly enabled.
+
+### Changes
+
+- Added build/include_order into cpplint filter
+- Added validations for fields "attribution_report_to", "reporting_site" and "input_report_count" from job_parameters json object
+- Cleanup of rules in pbs_container_multi_stage_build_tools.bzl
+- Enabled instance based billing for Cloud Run
+- Improved performance of DeserializeHourTokensInTimeGroup, Uuid ToString method, ParseBeginTransactionRequestBodyV2 and ExtractUserAgent
+- Removed multi partition code
+- Removed obsolete HTTP server routing code
+- Updated rules_boost patch with mirror for boost_1_79_0
+- [AWS only] Added worker role names in terraform output
+- [AWS only] Patched aws_nitro_enclave_sdk_c with git shallow clone to reduce AMI build time
+- [GCP only] Added an option to override PBS Auth GCS bucket and object name
+- [GCP only] Added environment scope to GCP keygen autoscaler resource
+- [GCP only] Added variables to configure concurrency and cpu allocation for Private Key Service
+- [GCP only] Addressed terraform permadiff for cloud run
+- [GCP only] Configured Cloud Build to store logs in Cloud Logging
+- [GCP only] Copied public key default variable values to applications
+- [GCP only] Migrated Cloud Function params to Cloud Run
+- [GCP only] Remove customized revision naming logic for Cloud Run services to avoid revision name conflicts
+- [GCP only] Removed "bazel" terraform module
+- [GCP only] Replaced local_file with file function
+- [GCP only] Replaced MD5 with SHA-256 hash for cloud functions object names
+- [GCP only] Set up foundational infrastructure for HTTP status code migration from 4xx to 5xx
+- [GCP only] Skipped uploading zip files if Cloud Run is enabled
 
 ## [1.14.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.13.0...v1.14.0) (2024-12-05)
 

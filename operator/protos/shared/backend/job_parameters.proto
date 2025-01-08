@@ -21,6 +21,9 @@ option java_outer_classname = "JobParametersProto";
 
 /**
  * The job parameters for the job requested by the operator.
+ *
+ * <p><b>Important:</b> Add conversion logic for the new field's type in
+ *   {@link AttributeConverterUtils}.
  */
 message JobParameters {
   // For a single domain file, it's a file path in the bucket. For multiple

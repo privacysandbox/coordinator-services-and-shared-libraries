@@ -22,6 +22,7 @@ java_library(
     deps = [
         "//java/com/google/scp/operator/frontend/service/model",
         "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/operator/shared/utils",
         "//java/com/google/scp/shared/proto",
         "//java/external:guava",
         "//java/external:guice",
@@ -29,5 +30,6 @@ java_library(
         "//operator/protos/frontend/api/v1:java_proto",
         "//operator/protos/shared/backend:java_proto",
         "//operator/protos/shared/backend/metadatadb:java_proto",
+        "@com_google_protobuf//java/core",
     ],
 )

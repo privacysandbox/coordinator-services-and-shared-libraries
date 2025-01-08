@@ -20,7 +20,6 @@ cc_test(
     name = "http2_server_test",
     size = "small",
     srcs = [
-        "http2_server_request_routing_test.cc",
         "http2_server_test.cc",
     ],
     data = [

@@ -88,7 +88,6 @@ cc_test(
         "//cc/pbs/front_end_service/src:error_codes",
         "//cc/pbs/front_end_service/src:front_end_service_v2",
         "//cc/pbs/interface:pbs_interface_lib",
-        "//cc/pbs/partition_request_router/mock:transaction_request_router_mock",
         "//cc/pbs/transactions/mock:pbs_transactions_mock",
         "//cc/public/cpio/utils/metric_aggregation/mock:metric_aggregation_mock",
         "@com_google_googletest//:gtest_main",

@@ -99,3 +99,15 @@ variable "limit_traffic_to_internal_and_lb" {
   description = "Whether to limit traffic to internal and load balancer only."
   type        = bool
 }
+
+variable "pbs_auth_package_path" {
+  description = "The package path of the PBS Auth Cloud Function which will override the built-in path"
+  type        = string
+  default     = ""
+}
+
+variable "pbs_auth_package_bucket" {
+  description = "The name of the bucket containing the PBS Auth Cloud Function which will override the built-in bucket"
+  type        = string
+  default     = ""
+}
