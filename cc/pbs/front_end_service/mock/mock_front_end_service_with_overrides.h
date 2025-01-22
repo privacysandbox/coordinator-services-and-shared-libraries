@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "cc/pbs/front_end_service/src/front_end_service.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::front_end_service::mock {
 
@@ -36,11 +35,10 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
       std::unique_ptr<core::TransactionRequestRouterInterface>
           transaction_request_router,
       std::unique_ptr<ConsumeBudgetCommandFactoryInterface> command_factory,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
-      : FrontEndService(
-            http_server, async_executor, std::move(transaction_request_router),
-            std::move(command_factory), metric_client, config_provider) {
+      : FrontEndService(http_server, async_executor,
+                        std::move(transaction_request_router),
+                        std::move(command_factory), config_provider) {
     remote_coordinator_claimed_identity_ = "remote-coordinator.com";
   }
 
@@ -50,7 +48,6 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
       std::unique_ptr<core::TransactionRequestRouterInterface>
           transaction_request_router,
       std::unique_ptr<ConsumeBudgetCommandFactoryInterface> command_factory,
-      std::shared_ptr<cpio::MetricClientInterface> metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
           total_request_counter,
@@ -60,53 +57,29 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
           server_error_counter)
       : FrontEndService(
             http_server, async_executor, std::move(transaction_request_router),
-            std::move(command_factory), metric_client, config_provider,
+            std::move(command_factory), config_provider,
             std::move(total_request_counter), std::move(client_error_counter),
             std::move(server_error_counter)) {
     remote_coordinator_claimed_identity_ = "remote-coordinator.com";
   }
 
   std::function<core::ExecutionResult(
-      const std::shared_ptr<cpio::AggregateMetricInterface>&,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>&,
       core::common::Uuid&, std::shared_ptr<std::string>& transaction_secret,
       std::shared_ptr<std::string>& transaction_origin, core::Timestamp,
       core::TransactionExecutionPhase)>
       execution_transaction_phase_mock;
 
-  core::ExecutionResultOr<std::shared_ptr<cpio::AggregateMetricInterface>>
-  RegisterAggregateMetric(const std::string& name,
-                          const std::string& phase) noexcept {
-    std::shared_ptr<cpio::AggregateMetricInterface> metrics_instance =
-        std::make_shared<cpio::MockAggregateMetric>();
-    return metrics_instance;
-  }
-
-  core::ExecutionResult InitMetricInstances() noexcept {
-    return FrontEndService::InitMetricInstances();
-  }
-
   core::ExecutionResult Init() noexcept { return FrontEndService::Init(); }
 
   void OnTransactionCallback(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionRequest, core::TransactionResponse>&
           transaction_context) noexcept {
-    FrontEndService::OnTransactionCallback(metric_instance, http_context,
-                                           transaction_context);
-  }
-
-  std::shared_ptr<cpio::MockAggregateMetric> GetMetricsInstance(
-      const std::string& method_name, const std::string& phase) {
-    std::shared_ptr<cpio::AggregateMetricInterface> metrics_instance =
-        metrics_instances_map_.at(method_name).at(phase);
-    return std::dynamic_pointer_cast<cpio::MockAggregateMetric>(
-        metrics_instance);
+    FrontEndService::OnTransactionCallback(http_context, transaction_context);
   }
 
   core::ExecutionResult ExecuteTransactionPhase(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::common::Uuid& transaction_id,
       std::shared_ptr<std::string>& transaction_secret,
@@ -116,26 +89,23 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
       const std::string& metric_label) noexcept override {
     if (execution_transaction_phase_mock) {
       return execution_transaction_phase_mock(
-          metric_instance, http_context, transaction_id, transaction_secret,
-          transaction_origin, last_transaction_execution_timestamp,
-          transaction_phase);
+          http_context, transaction_id, transaction_secret, transaction_origin,
+          last_transaction_execution_timestamp, transaction_phase);
     }
 
     return FrontEndService::ExecuteTransactionPhase(
-        metric_instance, http_context, transaction_id, transaction_secret,
-        transaction_origin, last_transaction_execution_timestamp,
-        transaction_phase, metric_label);
+        http_context, transaction_id, transaction_secret, transaction_origin,
+        last_transaction_execution_timestamp, transaction_phase, metric_label);
   }
 
   void OnExecuteTransactionPhaseCallback(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionPhaseRequest,
                          core::TransactionPhaseResponse>&
           transaction_phase_context,
       const std::string& metric_label) noexcept {
     FrontEndService::OnExecuteTransactionPhaseCallback(
-        metric_instance, http_context, transaction_phase_context, metric_label);
+        http_context, transaction_phase_context, metric_label);
   }
 
   core::ExecutionResult BeginTransaction(
@@ -187,15 +157,13 @@ class MockFrontEndServiceWithOverrides : public FrontEndService {
   }
 
   void OnGetTransactionStatusCallback(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::GetTransactionStatusRequest,
                          core::GetTransactionStatusResponse>&
           get_transaction_status_context,
       const std::string& metric_label) noexcept {
     FrontEndService::OnGetTransactionStatusCallback(
-        metric_instance, http_context, get_transaction_status_context,
-        metric_label);
+        http_context, get_transaction_status_context, metric_label);
   }
 
   std::vector<std::shared_ptr<core::TransactionCommand>>

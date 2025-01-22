@@ -24,6 +24,7 @@ java_test(
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/mapper",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:jackson_core",
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",

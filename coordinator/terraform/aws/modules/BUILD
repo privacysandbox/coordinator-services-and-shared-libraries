@@ -71,22 +71,6 @@ pkg_files(
 )
 
 pkg_files(
-    name = "distributed_pbs_access_policy_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/distributedpbs_access_policy",
-    ],
-    prefix = "modules/distributedpbs_access_policy",
-)
-
-pkg_files(
-    name = "distributed_pbs_alarms_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/distributedpbs_alarms",
-    ],
-    prefix = "modules/distributedpbs_alarms",
-)
-
-pkg_files(
     name = "distributed_pbs_auth_db_pkg",
     srcs = [
         "//coordinator/terraform/aws/modules/distributedpbs_auth_db",
@@ -127,27 +111,11 @@ pkg_files(
 )
 
 pkg_files(
-    name = "distributed_pbs_beanstalk_storage_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/distributedpbs_beanstalk_storage",
-    ],
-    prefix = "modules/distributedpbs_beanstalk_storage",
-)
-
-pkg_files(
     name = "distributed_pbs_container_registry_pkg",
     srcs = [
         "//coordinator/terraform/aws/modules/distributedpbs_container_registry",
     ],
     prefix = "modules/distributedpbs_container_registry",
-)
-
-pkg_files(
-    name = "distributed_pbs_storage_pkg",
-    srcs = [
-        "//coordinator/terraform/aws/modules/distributedpbs_storage",
-    ],
-    prefix = "modules/distributedpbs_storage",
 )
 
 pkg_files(

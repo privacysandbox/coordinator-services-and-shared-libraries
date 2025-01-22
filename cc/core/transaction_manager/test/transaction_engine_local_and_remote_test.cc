@@ -37,7 +37,6 @@
 #include "cc/core/transaction_manager/src/transaction_phase_manager.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
-#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;
@@ -69,7 +68,6 @@ using google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLogType;
 using google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
-using google::scp::cpio::MockMetricClient;
 using std::atomic;
 using std::function;
 using std::make_pair;
@@ -114,7 +112,6 @@ void CreateLocalRemoteTransactionManagers(
           make_shared<MockTransactionCommandSerializer>();
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager_2 =
       make_shared<TransactionPhaseManager>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_remote_transaction_manager_2 =
       make_shared<MockRemoteTransactionManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager_2 =
@@ -123,7 +120,7 @@ void CreateLocalRemoteTransactionManagers(
   mock_transaction_engine_1 = make_shared<MockTransactionEngine>(
       async_executor_1, mock_transaction_command_serializer_1,
       mock_journal_service_1, transaction_phase_manager_1,
-      remote_transaction_manager_2, mock_metric_client,
+      remote_transaction_manager_2,
       0 /* transaction_engine_cache_lifetime_seconds */);
   shared_ptr<TransactionEngineInterface> transaction_engine_1 =
       mock_transaction_engine_1;
@@ -131,7 +128,7 @@ void CreateLocalRemoteTransactionManagers(
   mock_transaction_engine_2 = make_shared<MockTransactionEngine>(
       async_executor_2, mock_transaction_command_serializer_2,
       mock_journal_service_2, transaction_phase_manager_2,
-      remote_transaction_manager_1, mock_metric_client,
+      remote_transaction_manager_1,
       0 /* transaction_engine_cache_lifetime_seconds */);
   shared_ptr<TransactionEngineInterface> transaction_engine_2 =
       mock_transaction_engine_2;

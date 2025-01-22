@@ -21,13 +21,11 @@ variable "environment" {
 variable "parent_domain_name" {
   description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string
-  nullable    = false
 }
 
 variable "parent_domain_project" {
   description = "The project owning the parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string
-  nullable    = false
 }
 
 variable "pbs_domain" {

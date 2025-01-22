@@ -21,7 +21,8 @@ namespace google::scp::core::errors {
 REGISTER_COMPONENT_CODE(SC_HTTP2_CLIENT, 0x0012)
 
 DEFINE_ERROR_CODE(SC_HTTP2_CLIENT_INVALID_URI, SC_HTTP2_CLIENT, 0x0001,
-                  "The URI is invalid", HttpStatusCode::BAD_REQUEST)
+                  "The URI is invalid", HttpStatusCode::BAD_REQUEST,
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 DEFINE_ERROR_CODE(SC_HTTP2_CLIENT_FAILED_TO_CONNECT, SC_HTTP2_CLIENT, 0x0002,
                   "Failed to connect to the HTTP server",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)

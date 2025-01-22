@@ -1,5 +1,63 @@
 # Changelog
 
+## [1.16.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.15.0...v1.16.0) (2025-01-21)
+
+### Important Note
+- Users of CPIO library need to be updated to be compatible with new changes for supporting WIF from AWS.
+
+### Changes
+
+- A dedicated exception, `ObjectConversionException`, was created to be thrown when an error occurred during the conversion of an object to another type
+- Created trace fakes for in-memory integration testing
+- GCP end-to-end test bazel dependencies were separated by removing unnecessary AWS dependencies
+- Installed the required `glibc-common` version in the `reproducible_proxy_outputs` bazel target
+- Modified `RecordServerLatency` and `RecordRequestBodySize` to take `Http2SynchronizationContext` and `AsyncContext`, respectively, as constant references
+- Removed MetricClient from `//cc/pbs/front_end*`  and `//cc/core/...`
+- Refactored CPIO library to support WIF from AWS
+- Setup Trace SDK
+- Some HTTP 4xx return codes were updated to the correct 5xx codes
+- The GCP Key Storage Service renamed `KmsKeyAead` to `DecryptionAead`
+- The GCP Key Storage Service utilized dedicated `EncryptionAead`
+- The `GcpKeyGenerationUtil` was refactored and moved to shared
+- The usage of terraform default empty string input variables was replaced with null values
+- Updated StdoutLogProvider to initialize JSON using an initializer list
+- Upgraded `cc_rules` to the 0.0.9 version
+- Upgraded `google-cloud-cpp` to 2.34.0 version
+- Upgraded `java_rules` to the 7.12.2 version
+- Upgraded `proto` to the 28.3 version
+- [AWS Only] Removal of unused resources after launching cross-cloud PBS
+    - With the launch of Cross-Cloud PBS, several AWS-specific Terraform modules are no longer required and have been removed from the `distributedpbs_application` module. This includes modules for:
+        - PBS VPC (vpc)
+        - Remote PBS Access Policy (`access_policy`)
+        - PBS DynamoDB Storage (`storage`)
+        - PBS Beanstalk Storage (`beanstalk_storage`)
+        - In addition, most resources in the PBS Beanstalk Environment (`beanstalk_environment`) module have been removed, except the Route53 resource that is responsible for routing requests from AWS PBS to GCP PBS. Deployment script has been updated to stop pushing new PBS Docker image to AWS ECR.
+    - Existing deployments using these modules will have the corresponding resources automatically removed upon deployment of this release. No manual action is required from coordinator operators.
+- [AWS only] Removed unused `distributedpbs_access_policy`, `distributedpbs_alarms`, `distributedpbs_beanstalk_storage`, `distributedpbs_storage` Terraform modules
+- [AWS only] The `aws_keyencryptionkey` resource attributes were updated to use hyphens instead of underscores
+- [GCP only] Added `version.txt` symlink for terraform
+- [GCP only] Added the ability to run MPKHS with AWS worker support. The feature requires deploying the `xc_resources_aws` app and adjusting the MPKHS configuration. It is disabled by default and does not affect existing users
+- [GCP only] Modified Cloud Build command to produce the artifacts required for deploying MPKHS on Cloud Run. This update specifically includes generating the necessary container images for deploying the Public Key Service, Private Key Service, and Key Storage Service on Cloud Run
+- [GCP only] Introduced the flexibility to deploy MPKHS on either Cloud Run or Cloud Functions. By default, MPKHS will be deployed on Cloud Functions. To switch to a Cloud Run deployment, you can add the following configuration to your deployment settings:
+
+  Primary Coordinator:
+  ```
+  use_cloud_run                        = true
+  public_key_service_image             = <url_to_public_key_service_image>
+  private_key_service_image            = <url_to_private_key_service_image>
+  private_key_service_custom_audiences = [...]
+  ```
+
+  Secondary Coordinator:
+  ```
+  use_cloud_run                        = true
+  private_key_service_image            = <url_to_private_key_service_image>
+  key_storage_service_image            = <url_to_key_storage_service_image>
+  private_key_service_custom_audiences = [...]
+  key_storage_service_custom_audiences = [...]
+  ```
+- [Java CPIO library] Added a module that enables federation from AWS to GCP. This module is disabled by default and allows for future integration of AWS workers with GCP-based MPKHS
+
 ## [1.15.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.14.0...v1.15.0) (2025-01-07)
 
 ### Important Note

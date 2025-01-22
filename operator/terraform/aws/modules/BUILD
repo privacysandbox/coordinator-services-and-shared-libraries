@@ -30,6 +30,7 @@ pkg_filegroup(
         "//operator/terraform/aws/modules/notifications",
         "//operator/terraform/aws/modules/parameters",
         "//operator/terraform/aws/modules/vpc",
+        "//operator/terraform/aws/modules/wifconfiguration",
         "//operator/terraform/aws/modules/worker",
         "//operator/terraform/aws/modules/workerdashboard",
     ],

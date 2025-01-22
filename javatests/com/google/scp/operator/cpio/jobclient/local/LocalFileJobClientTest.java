@@ -17,7 +17,6 @@
 package com.google.scp.operator.cpio.jobclient.local;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertThrows;
 

@@ -40,8 +40,7 @@ public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
           String coordinatorAPrivacyBudgetServiceAuthEndpoint,
       @CoordinatorBPrivacyBudgetServiceAuthEndpoint
           String coordinatorBPrivacyBudgetServiceAuthEndpoint,
-      @TrustedServicesClientVersion String trustedServicesClientVersion)
-      throws IOException {
+      @TrustedServicesClientVersion String trustedServicesClientVersion) throws IOException {
     HttpRequestInterceptor coordinatorATokenInterceptor =
         GcpHttpInterceptorUtil.createPbsHttpInterceptor(
             coordinatorAPrivacyBudgetServiceAuthEndpoint);
@@ -71,8 +70,7 @@ public class GcpPbsClientModule extends DistributedPrivacyBudgetClientModule {
           String coordinatorAPrivacyBudgetServiceAuthEndpoint,
       @CoordinatorBPrivacyBudgetServiceAuthEndpoint
           String coordinatorBPrivacyBudgetServiceAuthEndpoint,
-      @TrustedServicesClientVersion String trustedServicesClientVersion)
-      throws IOException {
+      @TrustedServicesClientVersion String trustedServicesClientVersion) throws IOException {
     HttpRequestInterceptor coordinatorATokenInterceptor =
         GcpHttpInterceptorUtil.createPbsHttpInterceptor(
             coordinatorAPrivacyBudgetServiceAuthEndpoint);

@@ -26,6 +26,7 @@ java_test(
         "//java/com/google/scp/shared/api/model",
         "//java/external:aws_lambda_java_core",
         "//java/external:aws_lambda_java_events",
+        "//java/external:guava",
         "//java/external:mockito",
     ],
 )
@@ -39,6 +40,7 @@ java_test(
         "//java/external:aws_auto_scaling",
         "//java/external:aws_lambda_java_core",
         "//java/external:aws_lambda_java_events",
+        "//java/external:guava",
         "//java/external:mockito",
     ],
 )

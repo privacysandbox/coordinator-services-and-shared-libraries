@@ -161,19 +161,5 @@ class JournalServiceInterface : public ServiceInterface {
    */
   virtual ExecutionResult GetLastPersistedJournalId(
       JournalId& journal_id) noexcept = 0;
-
-  /**
-   * @brief Run the recovery metrics without running the journal service
-   * component. Since Recover() method maybe invoked even before the
-   * JournalService is Run(), this method is provided as a way to Run() any
-   * recovery related metrics before the component is Run().
-   *
-   */
-  virtual ExecutionResult RunRecoveryMetrics() noexcept = 0;
-
-  /**
-   * @brief Stop recovery metrics.
-   */
-  virtual ExecutionResult StopRecoveryMetrics() noexcept = 0;
 };
 }  // namespace google::scp::core

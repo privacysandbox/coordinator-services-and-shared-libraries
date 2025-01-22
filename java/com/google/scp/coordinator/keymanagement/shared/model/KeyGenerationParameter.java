@@ -48,4 +48,8 @@ public final class KeyGenerationParameter {
   public static final String PEER_COORDINATOR_SERVICE_ACCOUNT = "PEER_COORDINATOR_SERVICE_ACCOUNT";
 
   public static final String KEY_ID_TYPE = "KEY_ID_TYPE";
+
+  public static final String AWS_XC_ENABLED = "AWS_XC_ENABLED";
+  public static final String AWS_KMS_KEY_URI = "AWS_KMS_KEY_URI";
+  public static final String AWS_KMS_ROLE_ARN = "AWS_KMS_ROLE_ARN";
 }

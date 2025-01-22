@@ -34,8 +34,6 @@
 #include "cc/core/journal_service/interface/journal_service_stream_interface.h"
 #include "cc/core/journal_service/src/proto/journal_service.pb.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "google/protobuf/any.pb.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/sync_instruments.h"
@@ -53,8 +51,6 @@ class JournalOutputStream
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
       const std::shared_ptr<BlobStorageClientInterface>&
           blob_storage_provider_client,
-      const std::shared_ptr<cpio::AggregateMetricInterface>&
-          journal_output_metric,
       std::shared_ptr<core::MetricRouter> metric_router);
 
   ExecutionResult AppendLog(
@@ -167,9 +163,6 @@ class JournalOutputStream
 
   // Blob storage provider client instance.
   std::shared_ptr<BlobStorageClientInterface> blob_storage_provider_client_;
-
-  // The aggregate metric instance for journal output count
-  std::shared_ptr<cpio::AggregateMetricInterface> journal_output_count_metric_;
 
   // Keep a MetricRouter member in order to access MetricRouter-owned OTel
   // Instruments.

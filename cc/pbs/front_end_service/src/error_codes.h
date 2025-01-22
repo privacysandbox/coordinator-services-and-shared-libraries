@@ -66,11 +66,6 @@ DEFINE_ERROR_CODE(SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE,
                   "belong to the provided site.",
                   HttpStatusCode::UNAUTHORIZED)
 
-DEFINE_ERROR_CODE(SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS,
-                  SC_PBS_FRONT_END_SERVICE, 0x0010,
-                  "Unable to find the TransactionMetrics instances.",
-                  HttpStatusCode::INTERNAL_SERVER_ERROR)
-
 DEFINE_ERROR_CODE(SC_PBS_FRONT_END_SERVICE_INITIALIZATION_FAILED,
                   SC_PBS_FRONT_END_SERVICE, 0x0011,
                   "Failed to initialize FrontEndService.",

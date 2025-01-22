@@ -274,7 +274,7 @@ void CheckpointService::CreateComponents() noexcept {
   io_async_executor_ = make_shared<AsyncExecutor>(8, 100000);
   journal_service_ = make_shared<JournalService>(
       bucket_name_, partition_name_, async_executor_, blob_storage_provider_,
-      metric_client_, metric_router_, config_provider_);
+      metric_router_, config_provider_);
   budget_key_provider_ = make_shared<BudgetKeyProvider>(
       async_executor_, journal_service_, metric_client_, metric_router_,
       config_provider_);
@@ -282,8 +282,8 @@ void CheckpointService::CreateComponents() noexcept {
       async_executor_, budget_key_provider_);
   transaction_manager_ = make_shared<TransactionManager>(
       async_executor_, transaction_command_serializer_, journal_service_,
-      remote_transaction_manager_, 100000, metric_client_, metric_router_,
-      config_provider_, partition_id_);
+      remote_transaction_manager_, 100000, metric_router_, config_provider_,
+      partition_id_);
 }
 
 ExecutionResult CheckpointService::Bootstrap() noexcept {
@@ -360,12 +360,8 @@ ExecutionResult CheckpointService::Recover(
       };
 
   // Recovering the service
-  // Recovery metrics needs to be separately Run because the journal_service_ is
-  // not yet Run().
-  RETURN_IF_FAILURE(journal_service_->RunRecoveryMetrics());
   RETURN_IF_FAILURE(journal_service_->Recover(recovery_context));
   auto future_result = recovery_execution_result.get_future().get();
-  RETURN_IF_FAILURE(journal_service_->StopRecoveryMetrics());
 
   return future_result;
 }

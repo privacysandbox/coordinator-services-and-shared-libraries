@@ -63,6 +63,11 @@ ExecutionResult ConfigProvider::Get(const ConfigKey& key,
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key, bool& out) noexcept {
   return Get<bool>(key, out);
+}
+
+ExecutionResult ConfigProvider::Get(const ConfigKey& key,
+                                    double& out) noexcept {
+  return Get<double>(key, out);
 };
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key,

@@ -23,3 +23,7 @@ output "subscription_id" {
 output "key_generation_service_account" {
   value = google_service_account.key_generation_service_account.email
 }
+
+output "key_generation_service_account_unique_id" {
+  value = google_service_account.key_generation_service_account.unique_id
+}

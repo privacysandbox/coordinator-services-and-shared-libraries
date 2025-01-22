@@ -26,6 +26,7 @@ java_test(
         "//java/com/google/scp/operator/worker/model",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
     ],
 )
@@ -36,6 +37,7 @@ java_test(
     deps = [
         "//java/com/google/scp/operator/worker/decryption/hybrid",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:tink",
     ],
 )
@@ -55,6 +57,7 @@ java_test(
         "//java/com/google/scp/simulation/encryption/hybrid",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:tink",
     ],

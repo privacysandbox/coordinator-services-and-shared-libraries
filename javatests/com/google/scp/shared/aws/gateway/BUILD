@@ -34,6 +34,7 @@ java_test(
         "//java/external:aws_lambda_java_core",
         "//java/external:aws_lambda_java_events",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_annotations",
         "//java/external:jackson_core",

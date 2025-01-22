@@ -6,6 +6,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.operator.protos.shared.backend.JobParametersProto;
 import com.google.scp.operator.protos.shared.backend.JobParametersProto.JobParameters;
+import com.google.scp.operator.shared.utils.ObjectConversionException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -138,7 +139,7 @@ public class JobParametersAttributeConverterTest {
 
     var exception =
         assertThrows(
-            IllegalArgumentException.class,
+            ObjectConversionException.class,
             () -> attributeConverter.transformTo(invalidDynamoObject));
 
     assertThat(exception)

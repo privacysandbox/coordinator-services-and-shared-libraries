@@ -37,15 +37,11 @@
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/front_end_utils.h"
-#include "cc/pbs/front_end_service/src/metric_initialization.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/front_end_service_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
 
 namespace google::scp::pbs {
 namespace {
@@ -73,32 +69,10 @@ using ::google::scp::core::errors::
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_INITIALIZATION_FAILED;
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS;
-using ::google::scp::cpio::AggregateMetricInterface;
-using ::google::scp::cpio::MetricLabels;
-using ::google::scp::cpio::MetricName;
 using ::google::scp::pbs::FrontEndUtils;
 
 inline constexpr char kFrontEndService[] = "FrontEndServiceV2";
 inline constexpr char kFakeLastExecutionTimestamp[] = "1234";
-
-ExecutionResultOr<std::shared_ptr<AggregateMetricInterface>>
-FindAggregateMetricInMap(const MetricsMap& metrics_map,
-                         absl::string_view metric_label,
-                         absl::string_view metric_name) {
-  auto outer_map_iterator = metrics_map.find(metric_label);
-  if (outer_map_iterator == metrics_map.end()) {
-    return FailureExecutionResult(
-        SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS);
-  }
-  auto inner_map_iterator = outer_map_iterator->second.find(metric_name);
-  if (inner_map_iterator == outer_map_iterator->second.end()) {
-    return FailureExecutionResult(
-        SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS);
-  }
-  return inner_map_iterator->second;
-}
 
 // The extracted transaction_id is unused in BeginTransaction of
 // front_end_service_v2.cc, but the extraction serves two purposes:
@@ -163,17 +137,12 @@ void InsertBackwardCompatibleHeaders(
 FrontEndServiceV2::FrontEndServiceV2(
     std::shared_ptr<core::HttpServerInterface> http_server,
     std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    const std::shared_ptr<cpio::MetricClientInterface> metric_client,
     const std::shared_ptr<core::ConfigProviderInterface> config_provider,
     BudgetConsumptionHelperInterface* budget_consumption_helper,
-    std::unique_ptr<MetricInitialization> metric_initialization,
     core::MetricRouter* metric_router)
     : http_server_(http_server),
       async_executor_(async_executor),
-      metric_client_(metric_client),
       config_provider_(config_provider),
-      aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs),
-      metric_initialization_(std::move(metric_initialization)),
       budget_consumption_helper_(budget_consumption_helper),
       metric_router_(metric_router) {
   MetricInit();
@@ -365,12 +334,6 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
                                         get_transaction_status_path,
                                         get_transaction_transaction_handler);
 
-  if (!config_provider_
-           ->Get(kAggregatedMetricIntervalMs, aggregated_metric_interval_ms_)
-           .Successful()) {
-    aggregated_metric_interval_ms_ = kDefaultAggregatedMetricIntervalMs;
-  }
-
   if (budget_consumption_helper_ == nullptr) {
     auto failure_execution_result =
         FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INITIALIZATION_FAILED);
@@ -380,40 +343,14 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
     return failure_execution_result;
   }
 
-  if (metric_initialization_ == nullptr) {
-    metric_initialization_ =
-        std::make_unique<MetricInitializationImplementation>();
-  }
-  // Initializes TransactionMetric instances for all transaction phases.
-  ASSIGN_OR_RETURN(metrics_instances_map_, metric_initialization_->Initialize(
-                                               async_executor_, metric_client_,
-                                               aggregated_metric_interval_ms_))
-
-  for (auto const& [method_name, map] : metrics_instances_map_) {
-    for (auto const& [metric_name, metric_instance] : map) {
-      RETURN_IF_FAILURE(metric_instance->Init());
-    }
-  }
   return SuccessExecutionResult();
 }
 
 ExecutionResult FrontEndServiceV2::Run() noexcept {
-  // Runs all AggregateMetric instances.
-  for (auto const& [method_name, map] : metrics_instances_map_) {
-    for (auto const& [metric_name, metric_instance] : map) {
-      RETURN_IF_FAILURE(metric_instance->Run());
-    }
-  }
   return SuccessExecutionResult();
 }
 
 ExecutionResult FrontEndServiceV2::Stop() noexcept {
-  // Shuts down all AggregateMetric instances.
-  for (auto const& [method_name, map] : metrics_instances_map_) {
-    for (auto const& [metric_name, metric_instance] : map) {
-      RETURN_IF_FAILURE(metric_instance->Stop());
-    }
-  }
   return SuccessExecutionResult();
 }
 
@@ -443,15 +380,9 @@ ExecutionResult FrontEndServiceV2::ExecuteConsumeBudgetTransaction(
 ExecutionResult FrontEndServiceV2::BeginTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start BeginTransaction.");
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       total_request_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelBeginTransaction,
-                                            kMetricNameRequests));
   const std::string reporting_origin_metric_label =
       FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
-  total_request_metrics_instance->Increment(reporting_origin_metric_label);
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelBeginTransaction},
@@ -470,17 +401,11 @@ ExecutionResult FrontEndServiceV2::BeginTransaction(
   if (total_request_counter_) {
     total_request_counter_->Add(1, labels);
   }
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       client_error_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelBeginTransaction,
-                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           false);
   if (!transaction_id.result().Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
                      google::scp::core::errors::GetErrorName(
@@ -501,15 +426,9 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context,
                     "Start PrepareTransaction.");
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       total_request_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelPrepareTransaction,
-                                            kMetricNameRequests));
   const std::string reporting_origin_metric_label =
       FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
-  total_request_metrics_instance->Increment(reporting_origin_metric_label);
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
@@ -529,18 +448,11 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
     total_request_counter_->Add(1, labels);
   }
 
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       client_error_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelPrepareTransaction,
-                                            kMetricNameClientErrors));
-
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
                      google::scp::core::errors::GetErrorName(
@@ -563,7 +475,6 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
           *transaction_origin, http_context.request->body,
           consume_budget_context.request->budgets);
       !execution_result.Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel, google::scp::core::errors::GetErrorName(
                                             execution_result.status_code));
@@ -578,7 +489,6 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
         consume_budget_context.request->budgets.size(), labels, context);
   }
   if (consume_budget_context.request->budgets.size() == 0) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(
           kErrorReasonLabel,
@@ -624,8 +534,6 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
   if (auto execution_result =
           budget_consumption_helper_->ConsumeBudgets(consume_budget_context);
       !execution_result.Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
-
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel, google::scp::core::errors::GetErrorName(
                                             execution_result.status_code));
@@ -641,33 +549,6 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
     std::string transaction_id,
     AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
         consume_budget_context) {
-  auto server_error_metrics_instance = FindAggregateMetricInMap(
-      metrics_instances_map_, kMetricLabelPrepareTransaction,
-      kMetricNameServerErrors);
-
-  if (!server_error_metrics_instance.result().Successful()) {
-    SCP_ERROR_CONTEXT(kFrontEndService, http_context,
-                      server_error_metrics_instance.result(),
-                      "Failed to find server error aggregate metric for "
-                      "prepare transaction endpoint.");
-    http_context.result = server_error_metrics_instance.result();
-    http_context.Finish();
-    return;
-  }
-
-  auto client_error_metrics_instance = FindAggregateMetricInMap(
-      metrics_instances_map_, kMetricLabelPrepareTransaction,
-      kMetricNameClientErrors);
-  if (!client_error_metrics_instance.result().Successful()) {
-    SCP_ERROR_CONTEXT(kFrontEndService, http_context,
-                      server_error_metrics_instance.result(),
-                      "Failed to find client error aggregate metric for "
-                      "prepare transaction endpoint.");
-    http_context.result = client_error_metrics_instance.result();
-    http_context.Finish();
-    return;
-  }
-
   const std::string reporting_origin_metric_label =
       FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
@@ -723,8 +604,6 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
       }
 
       // Client error because budget is already exhausted.
-      (*client_error_metrics_instance)
-          ->Increment(reporting_origin_metric_label);
       if (client_error_counter_) {
         labels.emplace(kErrorReasonLabel,
                        google::scp::core::errors::GetErrorName(
@@ -745,8 +624,6 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
                            consume_budget_context.result.status_code));
         server_error_counter_->Add(1, labels);
       }
-      (*server_error_metrics_instance)
-          ->Increment(reporting_origin_metric_label);
     }
 
     http_context.result = consume_budget_context.result;
@@ -771,15 +648,9 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
 ExecutionResult FrontEndServiceV2::CommitTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start CommitTransaction.");
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       total_request_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelCommitTransaction,
-                                            kMetricNameRequests));
   const std::string reporting_origin_metric_label =
       FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
-  total_request_metrics_instance->Increment(reporting_origin_metric_label);
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelCommitTransaction},
@@ -799,17 +670,11 @@ ExecutionResult FrontEndServiceV2::CommitTransaction(
     total_request_counter_->Add(1, labels);
   }
 
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       client_error_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelCommitTransaction,
-                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
                      google::scp::core::errors::GetErrorName(
@@ -832,15 +697,9 @@ ExecutionResult FrontEndServiceV2::CommitTransaction(
 ExecutionResult FrontEndServiceV2::NotifyTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start NotifyTransaction.");
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       total_request_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelNotifyTransaction,
-                                            kMetricNameRequests));
   const std::string reporting_origin_metric_label =
       FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
-  total_request_metrics_instance->Increment(reporting_origin_metric_label);
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelNotifyTransaction},
@@ -860,17 +719,11 @@ ExecutionResult FrontEndServiceV2::NotifyTransaction(
     total_request_counter_->Add(1, labels);
   }
 
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       client_error_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelNotifyTransaction,
-                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
                      google::scp::core::errors::GetErrorName(
@@ -893,15 +746,9 @@ ExecutionResult FrontEndServiceV2::NotifyTransaction(
 FrontEndServiceV2::AbortTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start AbortTransaction.");
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       total_request_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelAbortTransaction,
-                                            kMetricNameRequests));
   const std::string reporting_origin_metric_label =
       FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
-  total_request_metrics_instance->Increment(reporting_origin_metric_label);
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelAbortTransaction},
@@ -921,17 +768,11 @@ FrontEndServiceV2::AbortTransaction(
     total_request_counter_->Add(1, labels);
   }
 
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       client_error_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelAbortTransaction,
-                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
                      google::scp::core::errors::GetErrorName(
@@ -954,15 +795,9 @@ FrontEndServiceV2::AbortTransaction(
 FrontEndServiceV2::EndTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start EndTransaction.");
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       total_request_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelEndTransaction,
-                                            kMetricNameRequests));
   const std::string reporting_origin_metric_label =
       FrontEndUtils::GetReportingOriginMetricLabel(
           http_context.request, remote_coordinator_claimed_identity_);
-  total_request_metrics_instance->Increment(reporting_origin_metric_label);
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelEndTransaction},
@@ -982,17 +817,11 @@ FrontEndServiceV2::EndTransaction(
     total_request_counter_->Add(1, labels);
   }
 
-  ASSIGN_OR_RETURN(const std::shared_ptr<AggregateMetricInterface>&
-                       client_error_metrics_instance,
-                   FindAggregateMetricInMap(metrics_instances_map_,
-                                            kMetricLabelEndTransaction,
-                                            kMetricNameClientErrors));
   ExecutionResultOr<std::string> transaction_id =
       ExtractBackwardCompatibleHeaders(
           http_context, /*should_extract_last_execution_timestamp=*/
           true);
   if (!transaction_id.result().Successful()) {
-    client_error_metrics_instance->Increment(reporting_origin_metric_label);
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
                      google::scp::core::errors::GetErrorName(

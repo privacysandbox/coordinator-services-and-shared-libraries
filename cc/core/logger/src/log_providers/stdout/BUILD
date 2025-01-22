@@ -24,14 +24,12 @@ cc_library(
             "*.h",
         ],
     ),
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/interface:logger_interface_lib",
         "//cc/core/logger/src:logger_lib",
         "@boost//:algorithm",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@nlohmann_json//:lib",

@@ -57,9 +57,9 @@ variable "alarms_enabled" {
 }
 
 variable "alarms_notification_email" {
-  description = "Email to receive alarms for mpkhs services. Default to empty string so it is not required when alarms_enabled = false."
+  description = "Email to receive alarms for mpkhs services. Default to null so it is not required when alarms_enabled = false."
   type        = string
-  default     = ""
+  default     = null
 }
 
 ################################################################################
@@ -243,7 +243,26 @@ variable "peer_coordinator_service_account" {
 variable "key_id_type" {
   description = "Key ID Type"
   type        = string
-  default     = ""
+  default     = null
+}
+
+################################################################################
+# Cross-cloud AWS variables
+################################################################################
+
+variable "aws_xc_enabled" {
+  description = "Enable cross-cloud support for AWS"
+  type        = bool
+}
+
+variable "aws_kms_key_encryption_key_arn" {
+  description = "ARN of the AWS KMS key encryption key"
+  type        = string
+}
+
+variable "aws_kms_key_encryption_key_role_arn" {
+  description = "ARN of AWS IAM role used for encrypting with AWS KMS key encryption key"
+  type        = string
 }
 
 ################################################################################
@@ -259,19 +278,19 @@ variable "enable_domain_management" {
 variable "parent_domain_name" {
   description = <<-EOT
     Custom domain name to register and use with key hosting APIs.
-    Default to empty string so it does not have to be populated when enable_domain_management = false".
+    Default to null so it does not have to be populated when enable_domain_management = false".
   EOT
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "parent_domain_name_project" {
   description = <<-EOT
     Project ID where custom domain name hosted zone is located.
-    Default to empty string so it does not have to be populated when enable_domain_management = false".
+    Default to null so it does not have to be populated when enable_domain_management = false".
   EOT
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "service_subdomain_suffix" {

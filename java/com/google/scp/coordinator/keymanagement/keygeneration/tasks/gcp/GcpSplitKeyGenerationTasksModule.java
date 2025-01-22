@@ -1,8 +1,9 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp;
 
-import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpKeyGenerationUtil.getAead;
-import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpKeyGenerationUtil.getAeadFromEncodedKeysetHandle;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_URI;
+import static com.google.scp.coordinator.keymanagement.shared.util.GcpAeadProvider.getAeadFromEncodedKeysetHandle;
+import static com.google.scp.coordinator.keymanagement.shared.util.GcpAeadProvider.getAwsAead;
+import static com.google.scp.coordinator.keymanagement.shared.util.GcpAeadProvider.getGcpAead;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.crypto.tink.Aead;
@@ -18,6 +19,9 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotat
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKmsKeyUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKmsRoleArn;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsXcEnabled;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKmsKeyAead;
 import com.google.scp.shared.clients.configclient.ParameterClient;
@@ -39,8 +43,15 @@ public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
   @Provides
   @Singleton
   @KeyEncryptionKeyUri
-  String provideKeyEncryptionKeyUri(ParameterClient parameterClient, @KmsKeyUri String kmsKeyUri)
+  String provideKeyEncryptionKeyUri(
+      ParameterClient parameterClient,
+      @KmsKeyUri String kmsKeyUri,
+      @AwsXcEnabled Boolean awsXcEnabled,
+      @AwsKmsKeyUri Optional<String> awsKmsKeyUri)
       throws ParameterClientException {
+    if (awsXcEnabled) {
+      return awsKmsKeyUri.get();
+    }
     return parameterClient.getParameter(KMS_KEY_URI).orElse(kmsKeyUri);
   }
 
@@ -48,10 +59,18 @@ public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
   @Provides
   @Singleton
   @KmsKeyAead
-  Aead provideAead(@KeyEncryptionKeyUri String kmsKeyUri) {
-    return encodedKeysetHandle.isPresent()
-        ? getAeadFromEncodedKeysetHandle(encodedKeysetHandle.get())
-        : getAead(kmsKeyUri, Optional.empty());
+  Aead provideAead(
+      @KeyEncryptionKeyUri String kmsKeyUri,
+      @AwsXcEnabled Boolean awsXcEnabled,
+      @AwsKmsKeyUri Optional<String> awsKmsKeyUri,
+      @AwsKmsRoleArn Optional<String> awsKmsRoleArn) {
+    if (awsXcEnabled) {
+      return getAwsAead(awsKmsKeyUri.get(), awsKmsRoleArn.get());
+    } else {
+      return encodedKeysetHandle.isPresent()
+          ? getAeadFromEncodedKeysetHandle(encodedKeysetHandle.get())
+          : getGcpAead(kmsKeyUri, Optional.empty());
+    }
   }
 
   /** Provides a {@code KmsClient} for peer coordinator. */
@@ -63,7 +82,7 @@ public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
       @PeerCoordinatorCredentials GoogleCredentials credentials) {
     return peerCoordinatorEncodedKeysetHandle.isPresent()
         ? getAeadFromEncodedKeysetHandle(peerCoordinatorEncodedKeysetHandle.get())
-        : getAead(peerCoordinatorKmsKeyUri, Optional.of(credentials));
+        : getGcpAead(peerCoordinatorKmsKeyUri, Optional.of(credentials));
   }
 
   @Provides

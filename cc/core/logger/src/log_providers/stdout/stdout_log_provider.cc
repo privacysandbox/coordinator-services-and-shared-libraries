@@ -22,13 +22,13 @@
 
 #include <nlohmann/json.hpp>
 
+#include "absl/log/check.h"
 #include "absl/strings/str_split.h"
 #include "cc/core/common/uuid/src/uuid.h"
 
 namespace google::scp::core::logger::log_providers {
 using ::google::scp::core::common::ToString;
 using ::google::scp::core::common::Uuid;
-using json = nlohmann::json;
 
 ExecutionResult StdoutLogProvider::Init() noexcept {
   return SuccessExecutionResult();
@@ -80,30 +80,36 @@ void StdoutLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
       std::cerr << "Invalid log type";
       break;
   }
+
   // Cloud Run defines a structured JSON logging pattern such that if certain
   // fields are defined, Cloud Logging will automatically parse them and
   // populate the logs dashboard accordingly. Learn more at:
   // https://cloud.google.com/logging/docs/structured-logging#structured_logging_special_fields
-  json logEntry;
-  logEntry["severity"] = severity;
-  logEntry["message"] = message;
-  logEntry["correlation_id"] = ToString(correlation_id);
-  // TODO: Propogate trace details from the header and replace
-  // parent_activity_id with trace.
-  logEntry["parent_activity_id"] = ToString(parent_activity_id);
-  logEntry["activity_id"] = ToString(activity_id);
-  logEntry["component_name"] = component_name;
-  logEntry["machine_name"] = machine_name;
-  logEntry["cluster_name"] = cluster_name;
+  nlohmann::json log_entry = {
+      {"severity", severity},
+      {"message", message},
+      {"correlation_id", ToString(correlation_id)},
+      {"parent_activity_id", ToString(parent_activity_id)},
+      {"activity_id", ToString(activity_id)},
+      {"component_name", component_name},
+      {"machine_name", machine_name},
+      {"cluster_name", cluster_name},
+  };
 
-  json sourceLocation;
-  std::vector<std::string> locationFields = absl::StrSplit(location, ':');
-  sourceLocation["file"] = locationFields.at(0);
-  sourceLocation["function"] = locationFields.at(1);
-  sourceLocation["line"] = locationFields.at(2);
+  std::vector<absl::string_view> location_fields =
+      absl::StrSplit(location, ':');
+  DCHECK_EQ(location_fields.size(), 3);
+  if (location_fields.size() == 3) [[likely]] {
+    log_entry["logging.googleapis.com/sourceLocation"] = {
+        {"file", location_fields[0]},
+        {"function", location_fields[1]},
+        {"line", location_fields[2]},
+    };
+  } else {
+    log_entry["message"] =
+        absl::StrCat(message, " (source location unavailable)");
+  }
 
-  logEntry["logging.googleapis.com/sourceLocation"] = sourceLocation;
-
-  std::cout << logEntry.dump() << std::endl;
+  std::cout << log_entry.dump() << std::endl;
 }
 }  // namespace google::scp::core::logger::log_providers

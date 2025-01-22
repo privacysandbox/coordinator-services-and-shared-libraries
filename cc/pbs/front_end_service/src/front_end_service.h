@@ -32,8 +32,6 @@
 #include "cc/pbs/interface/front_end_service_interface.h"
 #include "cc/pbs/transactions/src/consume_budget_command_factory_interface.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/provider.h"
 
@@ -49,7 +47,6 @@ class FrontEndService : public FrontEndServiceInterface {
           transaction_request_router,
       std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
           consume_budget_command_factory,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider);
 
   FrontEndService(
@@ -59,7 +56,6 @@ class FrontEndService : public FrontEndServiceInterface {
           transaction_request_router,
       std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
           consume_budget_command_factory,
-      std::shared_ptr<cpio::MetricClientInterface> metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
       std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>
           total_request_counter,
@@ -86,36 +82,13 @@ class FrontEndService : public FrontEndServiceInterface {
 
  protected:
   /**
-   * @brief Registers a Aggregate Metric object
-   *
-   * @param metrics_instance The pointer of the aggregate metric object.
-   * @param name The event/method name of the aggregate metric.
-   * @param phase The transaction phase this aggregate metric pertains to
-   * @return core::ExecutionResult
-   */
-  virtual core::ExecutionResultOr<
-      std::shared_ptr<cpio::AggregateMetricInterface>>
-  RegisterAggregateMetric(const std::string& name,
-                          const std::string& phase) noexcept;
-
-  /**
-   * @brief Initializes the TransactionMetrics instances for all transaction
-   * phases.
-   * @return core::ExecutionResult
-   */
-  virtual core::ExecutionResult InitMetricInstances() noexcept;
-
-  /**
    * @brief Is called when the transaction execute operation is
    * completed.
    *
-   * @param metric_instance The metric instance used to track the execution
-   * status.
    * @param http_context The http context of the operation.
    * @param transaction_context The transaction context of the operation.
    */
   virtual void OnTransactionCallback(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionRequest, core::TransactionResponse>&
           transaction_context) noexcept;
@@ -123,8 +96,6 @@ class FrontEndService : public FrontEndServiceInterface {
   /**
    * @brief Executes a transaction phase via the transaction request router.
    *
-   * @param metric_instance The metric instance used to track the execution
-   * status.
    * @param http_context The http context of the operation.
    * @param transaction_id The id of the transaction.
    * @param transaction_secret The secret of the transaction.
@@ -134,7 +105,6 @@ class FrontEndService : public FrontEndServiceInterface {
    * @return core::ExecutionResult
    */
   virtual core::ExecutionResult ExecuteTransactionPhase(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::common::Uuid& transaction_id,
       std::shared_ptr<std::string>& transaction_secret,
@@ -146,14 +116,11 @@ class FrontEndService : public FrontEndServiceInterface {
   /**
    * @brief Is called when the transaction phase operation is executed.
    *
-   * @param metric_instance The metric instance used to track the execution
-   * status.
    * @param http_context The http context of the operation.
    * @param transaction_phase_context The context of the transaction phase
    * execution.
    */
   virtual void OnExecuteTransactionPhaseCallback(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::TransactionPhaseRequest,
                          core::TransactionPhaseResponse>&
@@ -262,14 +229,11 @@ class FrontEndService : public FrontEndServiceInterface {
   /**
    * @brief Is called when the get transaction status callback is completed.
    *
-   * @param metric_instance The metric instance used to track the execution
-   * status.
    * @param http_context The http context of the operation.
    * @param get_transaction_status_context The context of the get transaction
    * status operation.
    */
   void OnGetTransactionStatusCallback(
-      const std::shared_ptr<cpio::AggregateMetricInterface>& metric_instance,
       core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context,
       core::AsyncContext<core::GetTransactionStatusRequest,
                          core::GetTransactionStatusResponse>&
@@ -331,20 +295,8 @@ class FrontEndService : public FrontEndServiceInterface {
   std::unique_ptr<ConsumeBudgetCommandFactoryInterface>
       consume_budget_command_factory_;
 
-  /// Metric client instance to set up custom metric service.
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-
-  absl::flat_hash_map<
-      std::string,
-      absl::flat_hash_map<std::string,
-                          std::shared_ptr<cpio::AggregateMetricInterface>>>
-      metrics_instances_map_;
-
   /// An instance of the config provider.
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
-
-  /// The time interval for metrics aggregation.
-  core::TimeDuration aggregated_metric_interval_ms_;
 
   /// Enable generating batch budget consume commands per day
   bool generate_batch_budget_consume_commands_per_day_;

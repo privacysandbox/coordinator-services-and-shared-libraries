@@ -16,8 +16,8 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
 # Default protobuf version and hash
-DEFAULT_PROTOBUF_CORE_VERSION = "25.3"
-DEFAULT_PROTOBUF_SHA_256 = "d19643d265b978383352b3143f04c0641eea75a75235c111cc01a1350173180e"
+DEFAULT_PROTOBUF_CORE_VERSION = "28.3"
+DEFAULT_PROTOBUF_SHA_256 = "7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a"
 
 def protobuf(version = DEFAULT_PROTOBUF_CORE_VERSION, hash = DEFAULT_PROTOBUF_SHA_256):
     maybe(

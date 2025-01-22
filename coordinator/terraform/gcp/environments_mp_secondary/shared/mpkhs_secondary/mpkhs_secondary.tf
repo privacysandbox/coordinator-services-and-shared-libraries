@@ -41,6 +41,10 @@ module "multipartykeyhosting_secondary" {
   encryption_key_service_subdomain = var.encryption_key_service_subdomain
   key_storage_service_subdomain    = var.key_storage_service_subdomain
 
+  aws_xc_enabled                      = var.aws_xc_enabled
+  aws_kms_key_encryption_key_arn      = var.aws_kms_key_encryption_key_arn
+  aws_kms_key_encryption_key_role_arn = var.aws_kms_key_encryption_key_role_arn
+
   key_storage_service_zip    = var.key_storage_service_zip
   encryption_key_service_zip = var.encryption_key_service_zip
 

@@ -34,9 +34,7 @@ max_job_num_attempts_parameter = "5" # Max number of times a job can be processe
 # If a job processes longer than max_job_processing_time_parameter, the job will return to the
 # queue and be available for any available worker to process. This might cause concurrent processing
 # of the job if the original worker is still processing the job.
-max_job_processing_time_parameter   = "3600" # Set max processing time across all jobs in seconds.
-coordinator_a_assume_role_parameter = "arn:aws:iam::<CoordinatorAAccount>:role/<CoordinatorARole>"
-coordinator_b_assume_role_parameter = "arn:aws:iam::<CoordinatorBAccount>:role/<CoordinatorBRole>"
+max_job_processing_time_parameter = "3600" # Set max processing time across all jobs in seconds.
 
 # If min_capacity_ec2_instances is set to 0, the worker autoscaling group will scale down to 0
 # instances when there are no jobs left to process in the job queue.

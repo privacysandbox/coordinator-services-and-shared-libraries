@@ -19,6 +19,5 @@ filegroup(
     srcs = [
         "create_tfplan_distributedpbs.sh",
         "deploy_distributedpbs.sh",
-        "push_distributedpbs_container_image.sh",
     ],
 )

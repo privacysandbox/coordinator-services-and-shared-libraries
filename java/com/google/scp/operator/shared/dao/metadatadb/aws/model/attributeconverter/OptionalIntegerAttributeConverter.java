@@ -43,7 +43,7 @@ public final class OptionalIntegerAttributeConverter
   /** Convert DynamoDB AttributeValue to Optional Integer. */
   @Override
   public Optional<Integer> transformTo(AttributeValue attributeValue) {
-    return Optional.ofNullable(Integer.parseInt(attributeValue.n()));
+    return Optional.of(Integer.parseInt(attributeValue.n()));
   }
 
   /** Returns a DynamoDB enhanced type for the {@code Optional<Integer>} class. */

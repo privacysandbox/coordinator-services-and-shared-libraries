@@ -25,6 +25,7 @@ pkg_filegroup(
         "//coordinator/terraform/gcp/environments_mp_secondary/shared/domainrecordsetup:domainrecordsetup_shared",
         "//coordinator/terraform/gcp/environments_mp_secondary/shared/mpkhs_secondary:mpkhs_secondary_shared",
         "//coordinator/terraform/gcp/environments_mp_secondary/shared/operator_wipp:operator_wipp_shared",
+        "//coordinator/terraform/gcp/environments_mp_secondary/shared/xc_resources_aws:xc_resources_aws_shared",
     ],
     prefix = "environments_mp_secondary/shared",
 )

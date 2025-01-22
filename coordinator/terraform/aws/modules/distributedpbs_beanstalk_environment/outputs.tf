@@ -17,11 +17,11 @@ output "evironment_url" {
 }
 
 output "elb_loadbalancers" {
-  value       = aws_elastic_beanstalk_environment.beanstalk_app_environment.load_balancers
+  value       = "DEPRECATED"
   description = "Elastic Load Balancers in use by this environment"
 }
 
 output "autoscaling_group_name" {
-  value       = aws_elastic_beanstalk_environment.beanstalk_app_environment.autoscaling_groups
+  value       = "DEPRECATED"
   description = "EC2 instances autoscaling group name"
 }

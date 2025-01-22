@@ -17,7 +17,6 @@
 package com.google.scp.operator.shared.dao.metadatadb.aws;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.DECRYPTION_ERROR;
 import static com.google.scp.operator.protos.shared.backend.JobStatusProto.JobStatus.FINISHED;
 import static com.google.scp.operator.protos.shared.backend.JobStatusProto.JobStatus.IN_PROGRESS;

@@ -59,5 +59,11 @@ peer_coordinator_wip_provider = "<output from workload_identity_pool_provider_na
 
 allowed_operator_user_group = "<output from allowedoperatorgroup in primary coordinator>"
 
+
+# Uncomment lines below to enable AWS cross-cloud setup
+# aws_xc_enabled = true
+# aws_kms_key_encryption_key_arn      = "<output from xc_resources_aws in primary coordinator>"
+# aws_kms_key_encryption_key_role_arn = "<output from xc_resources_aws in primary coordinator>"
+
 alarms_enabled            = true
 alarms_notification_email = "<email to receive alarms>"

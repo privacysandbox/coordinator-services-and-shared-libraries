@@ -79,6 +79,9 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
       VERSION             = module.version.version
       LOG_EXECUTION_ID    = "true"
       EXPORT_OTEL_METRICS = var.export_otel_metrics
+      AWS_XC_ENABLED      = var.aws_xc_enabled ? "true" : null
+      AWS_KMS_URI         = var.aws_xc_enabled ? "aws-kms://${var.aws_kms_key_encryption_key_arn}" : null
+      AWS_KMS_ROLE_ARN    = var.aws_xc_enabled ? var.aws_kms_key_encryption_key_role_arn : null
     }
   }
 
@@ -146,6 +149,18 @@ resource "google_cloud_run_v2_service" "key_storage_service" {
       env {
         name  = "EXPORT_OTEL_METRICS"
         value = var.export_otel_metrics
+      }
+      env {
+        name  = "AWS_XC_ENABLED"
+        value = var.aws_xc_enabled ? "true" : null
+      }
+      env {
+        name  = "AWS_KMS_URI"
+        value = var.aws_xc_enabled ? "aws-kms://${var.aws_kms_key_encryption_key_arn}" : null
+      }
+      env {
+        name  = "AWS_KMS_ROLE_ARN"
+        value = var.aws_xc_enabled ? var.aws_kms_key_encryption_key_role_arn : null
       }
 
       resources {

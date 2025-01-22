@@ -25,20 +25,24 @@ REGISTER_COMPONENT_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0015)
 DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_CANNOT_SCHEDULE,
                   SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0001,
                   "Cannot schedule garbage collection.",
-                  HttpStatusCode::CONFLICT)
+                  HttpStatusCode::CONFLICT,
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_INVALID_EXPIRATION,
                   SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0002,
-                  "The expiration value is invalid.", HttpStatusCode::CONFLICT)
+                  "The expiration value is invalid.", HttpStatusCode::CONFLICT,
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED,
                   SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0004,
-                  "The entry is being deleted.", HttpStatusCode::CONFLICT)
+                  "The entry is being deleted.", HttpStatusCode::CONFLICT,
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_STOP_INCOMPLETE,
                   SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0005,
                   "There is pending work to be completed, cannot stop the "
                   "AutoExpiryConcurrentMap properly.",
-                  HttpStatusCode::CONFLICT)
+                  HttpStatusCode::CONFLICT,
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 }  // namespace google::scp::core::errors

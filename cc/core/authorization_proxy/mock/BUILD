@@ -21,5 +21,6 @@ cc_library(
     srcs = ["mock_authorization_proxy.h"],
     deps = [
         "//cc/core/interface:interface_lib",
+        "@com_google_googletest//:gtest_main",
     ],
 )

@@ -23,6 +23,7 @@ java_test(
         "//java/external:aws_dynamodb",
         "//java/external:aws_dynamodb_enhanced",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//operator/protos/shared/backend:java_proto",
     ],
 )
@@ -33,9 +34,11 @@ java_test(
     deps = [
         "//java/com/google/scp/operator/shared/dao/metadatadb/aws/model/attributeconverter",
         "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/operator/shared/utils",
         "//java/external:aws_dynamodb",
         "//java/external:aws_dynamodb_enhanced",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//operator/protos/shared/backend:java_proto",
     ],
 )

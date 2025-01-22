@@ -220,11 +220,5 @@ else
   version_tag="pbs-$release_version-$current_timestamp"
 fi
 
-# Push the PBS container image to the ECR repository for this environment
-./push_distributedpbs_container_image.sh \
---aws_region=$aws_region \
---ecr_repository_name=$ecr_repository_name \
---release_version=$version_tag
-
 # Deploy the distributedpbs_application resources for this environment
 deploy_pbs_application "$environment_dir" "$version_tag" "$auto_approve" "$use_tf_plan" "$plan_version_suffix"

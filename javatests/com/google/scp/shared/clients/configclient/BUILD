@@ -27,6 +27,7 @@ java_test(
         "//java/external:aws_core",
         "//java/external:aws_utils",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:mockserver_client",
         "//java/external:mockserver_core",
         "//java/external:mockserver_junit_rule",
@@ -44,5 +45,6 @@ java_test(
         "//java/com/google/scp/shared/clients/configclient",
         "//java/com/google/scp/shared/clients/configclient:model",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )

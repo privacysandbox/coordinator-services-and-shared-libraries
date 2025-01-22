@@ -127,6 +127,10 @@ class ConfigProviderMock : public ConfigProviderInterface {
   ExecutionResult Get(const ConfigKey& key, list<bool>& out) noexcept override {
     return SuccessExecutionResult();
   }
+
+  ExecutionResult Get(const ConfigKey& key, double& out) noexcept override {
+    return SuccessExecutionResult();
+  }
 };
 
 class HealthServiceForTests : public HealthService {

@@ -26,12 +26,9 @@
 #include "cc/core/interface/http_types.h"
 #include "cc/core/interface/type_def.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/pbs/front_end_service/src/metric_initialization.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/front_end_service_interface.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/provider.h"
 
@@ -44,10 +41,8 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   FrontEndServiceV2(
       std::shared_ptr<core::HttpServerInterface> http_server,
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<cpio::MetricClientInterface> metric_client,
       std::shared_ptr<core::ConfigProviderInterface> config_provider,
       BudgetConsumptionHelperInterface* budget_consumption_helper,
-      std::unique_ptr<MetricInitialization> metric_initialization = nullptr,
       core::MetricRouter* metric_router = nullptr);
 
   core::ExecutionResult Init() noexcept override;
@@ -125,28 +120,14 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   // An instance of the async executor.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
 
-  // Metric client instance to set up custom metric service.
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-
-  absl::flat_hash_map<
-      std::string,
-      absl::flat_hash_map<std::string,
-                          std::shared_ptr<cpio::AggregateMetricInterface>>>
-      metrics_instances_map_;
-
   // An instance of the config provider.
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
-
-  // The time interval for metrics aggregation.
-  core::TimeDuration aggregated_metric_interval_ms_;
 
   /// The claimed-identity string of the remote coordinator. This value is
   /// present in the requests coming from the remote coordinator and can be
   /// used to identify such requests.
   std::string remote_coordinator_claimed_identity_;
 
-  // Used to set up metrics_instances_map_.
-  std::unique_ptr<const MetricInitialization> metric_initialization_;
   BudgetConsumptionHelperInterface* budget_consumption_helper_;
 
   // An instance of metric router which will provide APIs to create metrics.

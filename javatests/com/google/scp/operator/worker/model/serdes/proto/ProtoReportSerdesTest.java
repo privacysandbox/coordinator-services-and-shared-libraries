@@ -17,7 +17,6 @@
 package com.google.scp.operator.worker.model.serdes.proto;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.io.ByteSource;
 import com.google.scp.operator.worker.model.Report;

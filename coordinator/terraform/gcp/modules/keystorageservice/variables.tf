@@ -52,6 +52,25 @@ variable "allowed_wip_user_group" {
 }
 
 ################################################################################
+# Cross-cloud AWS variables
+################################################################################
+
+variable "aws_xc_enabled" {
+  description = "Enable cross-cloud support for AWS"
+  type        = bool
+}
+
+variable "aws_kms_key_encryption_key_arn" {
+  description = "ARN of the AWS KMS key encryption key"
+  type        = string
+}
+
+variable "aws_kms_key_encryption_key_role_arn" {
+  description = "ARN of AWS IAM role used for encrypting with AWS KMS key encryption key"
+  type        = string
+}
+
+################################################################################
 # Function Variables
 ################################################################################
 

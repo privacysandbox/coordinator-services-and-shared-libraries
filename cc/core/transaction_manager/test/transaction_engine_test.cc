@@ -51,7 +51,6 @@
 #include "cc/core/transaction_manager/src/transaction_phase_manager.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
-#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 #include "google/protobuf/text_format.h"
 
 namespace google::scp::core {
@@ -101,7 +100,6 @@ using ::google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
 using ::google::scp::core::transaction_manager::proto::TransactionLog_1_0;
 using ::google::scp::core::transaction_manager::proto::TransactionLogType;
 using ::google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
-using ::google::scp::cpio::MockMetricClient;
 using ::std::atomic;
 using ::std::dynamic_pointer_cast;
 using ::std::function;
@@ -133,10 +131,9 @@ class TransactionEngineTest : public testing::Test {
         make_shared<MockTransactionCommandSerializer>();
     mock_async_executor_ = make_shared<MockAsyncExecutor>();
     async_executor_ = mock_async_executor_;
-    auto mock_metric_client = make_shared<MockMetricClient>();
     mock_transaction_engine_ = make_shared<MockTransactionEngine>(
         async_executor_, mock_transaction_command_serializer_,
-        mock_journal_service_, remote_transaction_manager_, mock_metric_client);
+        mock_journal_service_, remote_transaction_manager_);
   }
 
   TransactionEngineTest() { CreateComponents(); }
@@ -215,7 +212,6 @@ TransactionEngineTest::GetSampleTransactionPhaseLogBytes(
 TEST_F(TransactionEngineTest, InitShouldSubscribe) {
   auto bucket_name = make_shared<string>("bucket_name");
   auto partition_name = make_shared<string>("partition_name");
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<BlobStorageProviderInterface> blob_storage_provider =
@@ -223,7 +219,7 @@ TEST_F(TransactionEngineTest, InitShouldSubscribe) {
   auto mock_config_provider = make_shared<MockConfigProvider>();
   auto mock_journal_service = make_shared<MockJournalServiceWithOverrides>(
       bucket_name, partition_name, async_executor, blob_storage_provider,
-      mock_metric_client, /*metric_router=*/nullptr, mock_config_provider);
+      /*metric_router=*/nullptr, mock_config_provider);
   shared_ptr<JournalServiceInterface> journal_service =
       static_pointer_cast<JournalServiceInterface>(mock_journal_service);
   shared_ptr<TransactionCommandSerializerInterface>
@@ -232,7 +228,7 @@ TEST_F(TransactionEngineTest, InitShouldSubscribe) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   EXPECT_SUCCESS(mock_transaction_engine.Init());
   Uuid transaction_engine_uuid = {.high = 0xFFFFFFF1, .low = 0x00000004};
   OnLogRecoveredCallback callback;
@@ -244,7 +240,6 @@ TEST_F(TransactionEngineTest, InitShouldSubscribe) {
 TEST_F(TransactionEngineTest, RunShouldReplayAllPendingTransactions) {
   auto bucket_name = make_shared<string>("bucket_name");
   auto partition_name = make_shared<string>("partition_name");
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_async_executor = make_shared<MockAsyncExecutor>();
   auto async_executor =
       static_pointer_cast<AsyncExecutorInterface>(mock_async_executor);
@@ -259,7 +254,7 @@ TEST_F(TransactionEngineTest, RunShouldReplayAllPendingTransactions) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   Uuid transaction_id = Uuid::GenerateUuid();
   auto transaction = make_shared<Transaction>();
   transaction->current_phase = TransactionPhase::Commit;
@@ -333,7 +328,6 @@ TEST_F(TransactionEngineTest, RunShouldReplayAllPendingTransactions) {
 TEST_F(TransactionEngineTest, VerifyExecuteOperationInvalidInitialization) {
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<TransactionCommandSerializerInterface>
@@ -342,7 +336,7 @@ TEST_F(TransactionEngineTest, VerifyExecuteOperationInvalidInitialization) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   vector<ExecutionResult> results = {FailureExecutionResult(123),
                                      RetryExecutionResult(123)};
 
@@ -384,7 +378,6 @@ TEST_F(TransactionEngineTest, VerifyExecuteOperationInvalidInitialization) {
 
 TEST_F(TransactionEngineTest, VerifyExecuteOperation) {
   atomic<bool> condition = false;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -395,7 +388,7 @@ TEST_F(TransactionEngineTest, VerifyExecuteOperation) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   shared_ptr<Transaction> current_transaction;
   TransactionPhase current_phase;
   mock_transaction_engine.log_transaction_and_proceed_to_next_phase_mock =
@@ -435,7 +428,6 @@ TEST_F(TransactionEngineTest, VerifyExecuteOperation) {
 
 TEST_F(TransactionEngineTest, VerifyNotStartedOperation) {
   atomic<bool> condition = false;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -446,7 +438,7 @@ TEST_F(TransactionEngineTest, VerifyNotStartedOperation) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   shared_ptr<Transaction> current_transaction;
 
   mock_transaction_engine.log_transaction_and_proceed_to_next_phase_mock =
@@ -475,7 +467,6 @@ TEST_F(TransactionEngineTest, VerifyNotStartedOperation) {
 
 TEST_F(TransactionEngineTest, VerifyBeginOperation) {
   atomic<bool> condition = false;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -486,7 +477,7 @@ TEST_F(TransactionEngineTest, VerifyBeginOperation) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   shared_ptr<Transaction> current_transaction;
 
   mock_transaction_engine.log_transaction_and_proceed_to_next_phase_mock =
@@ -515,7 +506,6 @@ TEST_F(TransactionEngineTest, VerifyBeginOperation) {
 
 TEST_F(TransactionEngineTest, VerifyPrepareOperation) {
   atomic<bool> condition = false;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -526,7 +516,7 @@ TEST_F(TransactionEngineTest, VerifyPrepareOperation) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   shared_ptr<Transaction> current_transaction;
 
   mock_transaction_engine.log_transaction_and_proceed_to_next_phase_mock =
@@ -582,7 +572,6 @@ void VerifyDispatchedOperations(
         mock_function,
     ExecutionResult transaction_execution_result, size_t pending_callbacks) {
   atomic<bool> condition = false;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -593,7 +582,7 @@ void VerifyDispatchedOperations(
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   shared_ptr<Transaction> current_transaction;
   mock_function(mock_transaction_engine, current_transaction, condition);
 
@@ -1386,7 +1375,6 @@ TEST_F(TransactionEngineTest, VerifyNonDispatchedSuccessNextPhases) {
                                               TransactionPhase::Committed,
                                               TransactionPhase::Aborted};
 
-  auto mock_metric_client = make_shared<MockMetricClient>();
   atomic<bool> condition = false;
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
@@ -1398,7 +1386,7 @@ TEST_F(TransactionEngineTest, VerifyNonDispatchedSuccessNextPhases) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   shared_ptr<Transaction> current_transaction;
 
   mock_transaction_engine.log_transaction_and_proceed_to_next_phase_mock =
@@ -1469,7 +1457,6 @@ TEST_F(TransactionEngineTest, VerifyNonDispatchedFailureNextPhases) {
                                               TransactionPhase::Aborted};
 
   atomic<bool> condition = false;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<JournalServiceInterface> mock_journal_service =
       make_shared<MockJournalService>();
   shared_ptr<AsyncExecutorInterface> async_executor =
@@ -1480,7 +1467,7 @@ TEST_F(TransactionEngineTest, VerifyNonDispatchedFailureNextPhases) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   shared_ptr<Transaction> current_transaction;
 
   mock_transaction_engine.log_transaction_and_proceed_to_next_phase_mock =
@@ -1552,11 +1539,10 @@ TEST_F(TransactionEngineTest, ConvertProtoPhaseToTransactionPhase) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   EXPECT_EQ(mock_transaction_engine.ConvertProtoPhaseToPhase(
                 transaction_manager::proto::TransactionPhase::NOT_STARTED),
             transaction_manager::TransactionPhase::NotStarted);
@@ -1598,11 +1584,10 @@ TEST_F(TransactionEngineTest, ConvertTransactionPhaseToProtoPhase) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   EXPECT_EQ(mock_transaction_engine.ConvertPhaseToProtoPhase(
                 transaction_manager::TransactionPhase::NotStarted),
             transaction_manager::proto::TransactionPhase::NOT_STARTED);
@@ -1644,11 +1629,10 @@ TEST_F(TransactionEngineTest, OnJournalServiceRecoverCallbackInvalidLog) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   auto bytes_buffer = make_shared<BytesBuffer>(1);
   EXPECT_THAT(mock_transaction_engine.OnJournalServiceRecoverCallback(
                   bytes_buffer, kDefaultUuid),
@@ -1665,11 +1649,10 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(130);
   transaction_engine_log.mutable_version()->set_minor(432);
@@ -1695,11 +1678,10 @@ TEST_F(TransactionEngineTest, OnJournalServiceRecoverCallbackInvalidLog1_0) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
   transaction_engine_log.mutable_version()->set_minor(0);
@@ -1730,11 +1712,10 @@ TEST_F(TransactionEngineTest, OnJournalServiceRecoverCallbackInvalidLogType) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
   transaction_engine_log.mutable_version()->set_minor(0);
@@ -1783,11 +1764,10 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
   transaction_engine_log.mutable_version()->set_minor(0);
@@ -1835,11 +1815,10 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
   transaction_engine_log.mutable_version()->set_minor(0);
@@ -1897,11 +1876,10 @@ TEST_F(TransactionEngineTest, OnJournalServiceRecoverCallbackInvalidCommand) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
 
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
@@ -1951,11 +1929,10 @@ TEST_F(TransactionEngineTest, OnJournalServiceRecoverCallbackValidCommand) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
   transaction_engine_log.mutable_version()->set_minor(0);
@@ -2047,11 +2024,10 @@ TEST_F(TransactionEngineTest,
   std::shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           std::make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = std::make_shared<MockMetricClient>();
   std::shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   TransactionLog_1_0 transaction_log_1_0;
   TextFormat::ParseFromString(
@@ -2118,11 +2094,10 @@ TEST_F(TransactionEngineTest,
   std::shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           std::make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = std::make_shared<MockMetricClient>();
   std::shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client, mock_config_provider);
+      remote_transaction_manager, mock_config_provider);
 
   TransactionLog_1_0 transaction_log_1_0;
   TextFormat::ParseFromString(
@@ -2183,11 +2158,10 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   EXPECT_THAT(mock_transaction_engine.OnJournalServiceRecoverCallback(
                   GetSampleTransactionPhaseLogBytes(
                       Uuid::GenerateUuid(),
@@ -2206,11 +2180,10 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   EXPECT_THAT(mock_transaction_engine.OnJournalServiceRecoverCallback(
                   GetSampleTransactionPhaseLogBytes(
                       Uuid::GenerateUuid(),
@@ -2228,7 +2201,6 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   auto mock_config_provider = make_shared<MockConfigProvider>();
   mock_config_provider->SetBool(kTransactionManagerSkipFailedLogsInRecovery,
@@ -2236,7 +2208,7 @@ TEST_F(TransactionEngineTest,
 
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client, mock_config_provider);
+      remote_transaction_manager, mock_config_provider);
   EXPECT_THAT(mock_transaction_engine.Init(),
               ResultIs(SuccessExecutionResult()));
   EXPECT_THAT(mock_transaction_engine.OnJournalServiceRecoverCallback(
@@ -2256,11 +2228,10 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   Uuid transaction_id = Uuid::GenerateUuid();
   shared_ptr<Transaction> transaction = make_shared<Transaction>();
@@ -2291,7 +2262,6 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   auto mock_config_provider = make_shared<MockConfigProvider>();
   mock_config_provider->SetBool(kTransactionManagerSkipFailedLogsInRecovery,
@@ -2299,7 +2269,7 @@ TEST_F(TransactionEngineTest,
 
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client, mock_config_provider);
+      remote_transaction_manager, mock_config_provider);
 
   Uuid transaction_id = Uuid::GenerateUuid();
   shared_ptr<Transaction> transaction = make_shared<Transaction>();
@@ -2330,11 +2300,10 @@ TEST_F(TransactionEngineTest, OnJournalServiceRecoverCallbackTransactionFound) {
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
   transaction_engine_log.mutable_version()->set_minor(0);
@@ -2409,11 +2378,10 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionCommandSerializerInterface>
       mock_transaction_command_serializer =
           make_shared<MockTransactionCommandSerializer>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   TransactionEngineLog transaction_engine_log;
   transaction_engine_log.mutable_version()->set_major(1);
   transaction_engine_log.mutable_version()->set_minor(0);
@@ -2493,10 +2461,9 @@ TEST_F(TransactionEngineTest, LogTransactionAndProceedToNextPhase) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   shared_ptr<Transaction> transaction = make_shared<Transaction>();
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
@@ -2539,10 +2506,9 @@ TEST_F(TransactionEngineTest, LogStateAndProceedToNextPhase) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   shared_ptr<Transaction> transaction = make_shared<Transaction>();
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
@@ -2591,10 +2557,9 @@ TEST_F(TransactionEngineTest, SerializeTransaction) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   shared_ptr<Transaction> transaction = make_shared<Transaction>();
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
@@ -2632,10 +2597,9 @@ TEST_F(TransactionEngineTest, SerializeState) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   shared_ptr<Transaction> transaction = make_shared<Transaction>();
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
@@ -2678,10 +2642,9 @@ TEST_F(TransactionEngineTest, ProceedToNextPhaseAfterRecovery) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   vector<TransactionPhase> current_phases = {
       TransactionPhase::NotStarted,   TransactionPhase::Begin,
@@ -2756,10 +2719,9 @@ TEST_F(TransactionEngineTest, Checkpoint) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   auto checkpoint_logs = make_shared<list<CheckpointLog>>();
   mock_transaction_engine.Checkpoint(checkpoint_logs);
@@ -2811,7 +2773,7 @@ TEST_F(TransactionEngineTest, Checkpoint) {
 
   MockTransactionEngine mock_transaction_engine_for_recovery(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   Uuid transaction_manager_id = {.high = 0xFFFFFFF1, .low = 0x00000004};
   auto it = checkpoint_logs->begin();
   EXPECT_EQ(it->component_id, transaction_manager_id);
@@ -2935,10 +2897,9 @@ TEST_F(TransactionEngineTest, LockRemotelyCoordinatedTransaction) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   auto transaction = make_shared<Transaction>();
   transaction->is_coordinated_remotely = false;
 
@@ -2971,10 +2932,9 @@ TEST_F(TransactionEngineTest, UnlockRemotelyCoordinatedTransaction) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   auto transaction = make_shared<Transaction>();
   transaction->is_coordinated_remotely = false;
 
@@ -3007,10 +2967,9 @@ TEST_F(TransactionEngineTest, ResolveNonRemotelyCoordinatedTransaction) {
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   vector<TransactionPhase> cancellable_phases = {
       TransactionPhase::NotStarted,   TransactionPhase::Begin,
       TransactionPhase::Prepare,      TransactionPhase::Commit,
@@ -3070,10 +3029,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   auto transaction = make_shared<Transaction>();
   transaction->is_coordinated_remotely = true;
   transaction->pending_callbacks = 3;
@@ -3096,10 +3054,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<AsyncExecutorInterface> async_executor =
       make_shared<MockAsyncExecutorWithInternals>(2, 100);
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   auto transaction = make_shared<Transaction>();
   transaction->is_coordinated_remotely = true;
   transaction->is_waiting_for_remote = false;
@@ -3149,11 +3106,9 @@ TEST_F(TransactionEngineTest,
         called = true;
         return SuccessExecutionResult();
       };
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      transaction_phase_manager, remote_transaction_manager, mock_metric_client,
-      100000);
+      transaction_phase_manager, remote_transaction_manager, 100000);
 
   EXPECT_SUCCESS(mock_transaction_engine.ResolveTransaction(transaction));
   WaitUntil([&]() { return called.load(); });
@@ -3172,10 +3127,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context;
   get_transaction_status_context.result = FailureExecutionResult(123);
@@ -3221,10 +3175,9 @@ TEST_F(TransactionEngineTest, OnGetRemoteTransactionStatusCallbackUnExpired) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context;
   get_transaction_status_context.result = SuccessExecutionResult();
@@ -3263,10 +3216,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context;
   get_transaction_status_context.result = SuccessExecutionResult();
@@ -3309,10 +3261,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context;
   get_transaction_status_context.result = SuccessExecutionResult();
@@ -3354,10 +3305,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context;
   get_transaction_status_context.result = SuccessExecutionResult();
@@ -3400,10 +3350,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context;
   get_transaction_status_context.result = SuccessExecutionResult();
@@ -3450,10 +3399,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<GetTransactionStatusRequest, GetTransactionStatusResponse>
       get_transaction_status_context;
   get_transaction_status_context.result = SuccessExecutionResult();
@@ -3521,14 +3469,13 @@ TEST_F(TransactionEngineTest, OnRemoteTransactionNotFound) {
       TransactionPhase::AbortNotify,  TransactionPhase::Aborted,
       TransactionPhase::End,          TransactionPhase::Unknown,
   };
-  auto mock_metric_client = make_shared<MockMetricClient>();
   for (auto phase : phases) {
     transaction->blocked = false;
     transaction->current_phase = phase;
     shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
     MockTransactionEngine mock_transaction_engine(
         async_executor, mock_transaction_command_serializer, journal_service,
-        remote_transaction_manager, mock_metric_client);
+        remote_transaction_manager);
 
     atomic<bool> unlock_called = false;
     atomic<bool> execute_phase_called = false;
@@ -3623,13 +3570,12 @@ TEST_F(TransactionEngineTest, OnRemoteTransactionNotFoundUnlockTransaction) {
   transaction->transaction_secret = make_shared<string>("This is secret");
   transaction->transaction_origin = make_shared<string>("origin.com");
   transaction->last_execution_timestamp = 123456;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   transaction->current_phase = TransactionPhase::End;
 
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   atomic<bool> execute_phase_called = false;
   mock_transaction_engine.execute_phase_internal_mock =
@@ -3689,7 +3635,6 @@ TEST_F(TransactionEngineTest, RollForwardLocalTransaction) {
   };
 
   vector<bool> next_phase_outcomes = {true, false};
-  auto mock_metric_client = make_shared<MockMetricClient>();
   for (auto phase : phases) {
     for (auto next_phase : next_phases) {
       for (auto next_phase_outcome : next_phase_outcomes) {
@@ -3699,7 +3644,7 @@ TEST_F(TransactionEngineTest, RollForwardLocalTransaction) {
             remote_transaction_manager;
         MockTransactionEngine mock_transaction_engine(
             async_executor, mock_transaction_command_serializer,
-            journal_service, remote_transaction_manager, mock_metric_client);
+            journal_service, remote_transaction_manager);
 
         atomic<bool> unlocked = false;
         mock_transaction_engine.unlock_remotely_coordinated_transaction_mock =
@@ -3800,12 +3745,10 @@ TEST_F(TransactionEngineTest, RollForwardLocalAndRemoteTransactions) {
         make_shared<MockRemoteTransactionManager>();
     shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager =
         mock_remote_transaction_manager;
-    auto mock_metric_client = make_shared<MockMetricClient>();
     atomic<bool> called = false;
     MockTransactionEngine mock_transaction_engine(
         async_executor, mock_transaction_command_serializer, journal_service,
-        transaction_phase_manager, mock_remote_transaction_manager,
-        mock_metric_client, 100000);
+        transaction_phase_manager, mock_remote_transaction_manager, 100000);
 
     mock_remote_transaction_manager->execute_phase_mock =
         [&](AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>&
@@ -3862,10 +3805,9 @@ TEST_F(TransactionEngineTest, OnRollForwardRemoteTransactionCallbackFailed) {
   transaction->last_execution_timestamp = 123456;
 
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       remote_transaction_phase_context;
@@ -3904,11 +3846,10 @@ TEST_F(TransactionEngineTest,
   transaction->transaction_origin = make_shared<string>("origin.com");
   transaction->last_execution_timestamp = 12343356;
 
-  auto mock_metric_client = make_shared<MockMetricClient>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       remote_transaction_phase_context;
@@ -3968,10 +3909,9 @@ TEST_F(TransactionEngineTest, ToTransactionPhase) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   vector<TransactionExecutionPhase> phases = {
       TransactionExecutionPhase::Begin,  TransactionExecutionPhase::Prepare,
       TransactionExecutionPhase::Commit, TransactionExecutionPhase::Notify,
@@ -4003,10 +3943,9 @@ TEST_F(TransactionEngineTest, LocalAndRemoteTransactionsInSync) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   vector<TransactionPhase> phases = {
       TransactionPhase::NotStarted,   TransactionPhase::Begin,
       TransactionPhase::Prepare,      TransactionPhase::Commit,
@@ -4108,10 +4047,9 @@ TEST_F(TransactionEngineTest, ToTransactionExecutionPhase) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   vector<TransactionPhase> phases = {
       TransactionPhase::NotStarted,   TransactionPhase::Begin,
       TransactionPhase::Prepare,      TransactionPhase::Commit,
@@ -4145,10 +4083,9 @@ TEST_F(TransactionEngineTest, CanCancel) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   vector<TransactionPhase> phases = {
       TransactionPhase::NotStarted,   TransactionPhase::Begin,
       TransactionPhase::Prepare,      TransactionPhase::Commit,
@@ -4182,10 +4119,9 @@ TEST_F(TransactionEngineTest, ExecutePhaseExpiredTransaction) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       transaction_phase_context;
   transaction_phase_context.request = make_shared<TransactionPhaseRequest>();
@@ -4240,10 +4176,9 @@ TEST_F(TransactionEngineTest, ExecutePhase) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       transaction_phase_context;
   transaction_phase_context.request = make_shared<TransactionPhaseRequest>();
@@ -4349,10 +4284,9 @@ TEST_F(TransactionEngineTest, ExecutePhaseInternal) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       transaction_phase_context;
   transaction_phase_context.request = make_shared<TransactionPhaseRequest>();
@@ -4418,10 +4352,9 @@ TEST_F(TransactionEngineTest, ExecutePhaseInternalHandlePhases) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       transaction_phase_context;
   transaction_phase_context.request = make_shared<TransactionPhaseRequest>();
@@ -4505,10 +4438,9 @@ TEST_F(TransactionEngineTest, ExecutePhaseInternalHandlePhasesWithCallback) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   AsyncContext<TransactionPhaseRequest, TransactionPhaseResponse>
       transaction_phase_context;
   transaction_phase_context.request = make_shared<TransactionPhaseRequest>();
@@ -4625,10 +4557,9 @@ TEST_F(TransactionEngineTest, GetTransactionStatus) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   Uuid transaction_id = Uuid::GenerateUuid();
   auto transaction = make_shared<Transaction>();
   transaction->current_phase = TransactionPhase::Commit;
@@ -4732,10 +4663,9 @@ TEST_F(TransactionEngineTest,
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   Uuid transaction_id = Uuid::GenerateUuid();
   auto transaction = make_shared<Transaction>();
   transaction->current_phase = TransactionPhase::Commit;
@@ -4813,10 +4743,9 @@ TEST_F(TransactionEngineTest, OnPhaseCallbackWithErrors) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
   auto current_phase = TransactionPhase::Commit;
 
   auto transaction = make_shared<Transaction>();
@@ -4852,10 +4781,9 @@ TEST_F(TransactionEngineTest, ProceedToNextPhaseToGetFailedIndices) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   struct IndexedTransactionCommand : public TransactionCommand {
     explicit IndexedTransactionCommand(int index) : index_(index) {}
@@ -4921,10 +4849,9 @@ TEST_F(TransactionEngineTest, ExecuteDistributedPhaseWithDispatchError) {
   shared_ptr<TransactionPhaseManagerInterface> transaction_phase_manager =
       make_shared<TransactionPhaseManager>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   MockTransactionEngine mock_transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client);
+      remote_transaction_manager);
 
   transaction_manager::TransactionPhase current_phase =
       TransactionPhase::Prepare;
@@ -5132,14 +5059,13 @@ TEST_F(TransactionEngineTest,
   shared_ptr<AsyncExecutorInterface> async_executor =
       shared_ptr<MockAsyncExecutor>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
 
   mock_config_provider->SetBool(kTransactionResolutionWithRemoteEnabled, false);
 
   MockTransactionEngine transaction_engine(
       async_executor, mock_transaction_command_serializer, journal_service,
-      remote_transaction_manager, mock_metric_client, mock_config_provider);
+      remote_transaction_manager, mock_config_provider);
 
   EXPECT_SUCCESS(transaction_engine.Init());
 

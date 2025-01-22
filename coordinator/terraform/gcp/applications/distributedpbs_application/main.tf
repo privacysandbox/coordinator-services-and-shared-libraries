@@ -27,8 +27,8 @@ provider "google" {
 }
 
 locals {
-  pbs_auth_allowed_principals           = var.pbs_remote_coordinator_service_account_email != "" ? concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}", "serviceAccount:${var.pbs_remote_coordinator_service_account_email}"]) : concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}"])
-  pbs_artifact_registry_repository_name = var.pbs_artifact_registry_repository_name != "" ? var.pbs_artifact_registry_repository_name : "${var.environment}-scp-pbs-artifact-registry-repo"
+  pbs_auth_allowed_principals           = var.pbs_remote_coordinator_service_account_email != null ? concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}", "serviceAccount:${var.pbs_remote_coordinator_service_account_email}"]) : concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}"])
+  pbs_artifact_registry_repository_name = var.pbs_artifact_registry_repository_name != null ? var.pbs_artifact_registry_repository_name : "${var.environment}-scp-pbs-artifact-registry-repo"
   pbs_instance_target_tag               = "${var.environment}-pbs-network-tag"
   service_subdomain_suffix              = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   pbs_domain                            = "${var.service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"

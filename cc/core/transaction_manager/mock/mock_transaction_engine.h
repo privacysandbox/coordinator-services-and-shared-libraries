@@ -23,8 +23,6 @@
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/transaction_manager/src/transaction_engine.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionEngine : public core::TransactionEngine {
@@ -35,11 +33,10 @@ class MockTransactionEngine : public core::TransactionEngine {
           transaction_command_serializer,
       std::shared_ptr<JournalServiceInterface>& journal_service,
       std::shared_ptr<RemoteTransactionManagerInterface>
-          remote_transaction_manager,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client)
+          remote_transaction_manager)
       : core::TransactionEngine(
             async_executor, transaction_command_serializer, journal_service,
-            remote_transaction_manager, metric_client,
+            remote_transaction_manager,
             std::make_shared<config_provider::mock::MockConfigProvider>()) {}
 
   MockTransactionEngine(
@@ -49,11 +46,10 @@ class MockTransactionEngine : public core::TransactionEngine {
       std::shared_ptr<JournalServiceInterface>& journal_service,
       std::shared_ptr<RemoteTransactionManagerInterface>
           remote_transaction_manager,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<ConfigProviderInterface> config_provider)
       : core::TransactionEngine(async_executor, transaction_command_serializer,
                                 journal_service, remote_transaction_manager,
-                                metric_client, config_provider) {}
+                                config_provider) {}
 
   MockTransactionEngine(
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
@@ -64,12 +60,10 @@ class MockTransactionEngine : public core::TransactionEngine {
           transaction_phase_manager,
       std::shared_ptr<RemoteTransactionManagerInterface>
           remote_transaction_manager,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       size_t transaction_engine_cache_lifetime_seconds)
       : core::TransactionEngine(
             async_executor, transaction_command_serializer, journal_service,
             transaction_phase_manager, remote_transaction_manager,
-            metric_client,
             std::make_shared<config_provider::mock::MockConfigProvider>(),
             transaction_engine_cache_lifetime_seconds) {}
 

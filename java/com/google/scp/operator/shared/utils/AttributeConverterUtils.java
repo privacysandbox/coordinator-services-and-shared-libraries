@@ -44,7 +44,7 @@ public class AttributeConverterUtils {
         builder.setField(field, Boolean.parseBoolean(value));
         break;
       default:
-        throw new IllegalArgumentException("Unsupported field type: " + value);
+        throw new ObjectConversionException("Unsupported field type: " + value);
     }
   }
 }

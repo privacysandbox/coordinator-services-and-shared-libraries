@@ -55,17 +55,6 @@ cc_library(
 )
 
 cc_library(
-    name = "metric_initialization",
-    srcs = ["metric_initialization.cc"],
-    hdrs = ["metric_initialization.h"],
-    deps = [
-        "//cc/pbs/transactions/src:pbs_transactions_lib",
-        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
-        "@com_google_absl//absl/container:flat_hash_map",
-    ],
-)
-
-cc_library(
     name = "front_end_service",
     srcs = ["front_end_service.cc"],
     hdrs = ["front_end_service.h"],
@@ -78,13 +67,9 @@ cc_library(
         ":front_end_utils",
         ":transaction_request_router",
         "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/transactions/src:pbs_transactions_lib",
-        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
-        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
-        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@io_opentelemetry_cpp//sdk/src/metrics",
@@ -103,19 +88,14 @@ cc_library(
     deps = [
         ":error_codes",
         ":front_end_utils",
-        ":metric_initialization",
         ":transaction_request_router",
         "//cc/core/interface:interface_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",
-        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
         "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/consume_budget/src/gcp:error_codes",
         "//cc/pbs/interface:pbs_interface_lib",
         "//cc/pbs/transactions/src:pbs_transactions_lib",
-        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
-        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
-        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:bind_front",
         "@com_google_absl//absl/strings",

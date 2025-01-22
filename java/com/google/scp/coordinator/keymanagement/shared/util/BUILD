@@ -21,7 +21,14 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/crypto/tink/integration/awskmsv2",
+        "//java/com/google/scp/shared/aws/credsprovider",
+        "//java/com/google/scp/shared/util",
+        "//java/external:aws_auth",
+        "//java/external:google_auth_library_oauth2_http",
         "//java/external:guava",
+        "//java/external:protobuf_java",
         "//java/external:tink",
+        "//java/external:tink-gcpkms",
     ],
 )

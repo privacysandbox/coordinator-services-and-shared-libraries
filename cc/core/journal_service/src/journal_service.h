@@ -21,6 +21,7 @@
 #include <unordered_set>
 
 #include "absl/base/nullability.h"
+#include "cc/core/common/concurrent_map/src/concurrent_map.h"
 #include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/async_executor_interface.h"
@@ -30,10 +31,7 @@
 #include "cc/core/interface/partition_types.h"
 #include "cc/core/journal_service/interface/journal_service_stream_interface.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
+#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/sync_instruments.h"
 
@@ -54,7 +52,6 @@ class JournalService : public JournalServiceInterface {
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
       const std::shared_ptr<BlobStorageProviderInterface>&
           blob_storage_provider,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<ConfigProviderInterface>& config_provider)
       : is_initialized_(false),
@@ -68,7 +65,6 @@ class JournalService : public JournalServiceInterface {
             common::RetryStrategy(common::RetryStrategyType::Exponential,
                                   kJournalServiceRetryStrategyDelayMs,
                                   kJournalServiceRetryStrategyTotalRetries)),
-        metric_client_(metric_client),
         metric_router_(metric_router),
         config_provider_(config_provider),
         journal_flush_interval_in_milliseconds_(0) {}
@@ -78,10 +74,6 @@ class JournalService : public JournalServiceInterface {
   ExecutionResult Run() noexcept override;
 
   ExecutionResult Stop() noexcept override;
-
-  ExecutionResult RunRecoveryMetrics() noexcept override;
-
-  ExecutionResult StopRecoveryMetrics() noexcept override;
 
   ExecutionResult Log(AsyncContext<JournalLogRequest, JournalLogResponse>&
                           journal_log_context) noexcept override;
@@ -106,7 +98,6 @@ class JournalService : public JournalServiceInterface {
    *
    * @param time_event An instance of time event to record event start, end
    * time.
-   * @param metric_instance An instance of simple metric.
    * @param replayed_logs An unordered set of replayed logs to ensure the same
    * log will not be played twice.
    * @param journal_recover_context The context of the recovery operation.
@@ -114,7 +105,7 @@ class JournalService : public JournalServiceInterface {
    * read operation.
    */
   virtual void OnJournalStreamReadLogCallback(
-      std::shared_ptr<cpio::TimeEvent>& time_event,
+      std::shared_ptr<google::scp::cpio::TimeEvent>& time_event,
       std::shared_ptr<std::unordered_set<std::string>>& replayed_logs,
       AsyncContext<JournalRecoverRequest, JournalRecoverResponse>&
           journal_recover_context,
@@ -181,20 +172,6 @@ class JournalService : public JournalServiceInterface {
                         common::UuidCompare>
       subscribers_map_;
 
-  // Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-
-  // The simple metric instance for journal service recovery time.
-  std::shared_ptr<cpio::SimpleMetricInterface> recover_time_metric_;
-
-  // The aggregate metric instance for journal service recovery log count while
-  // recovering.
-  std::shared_ptr<cpio::AggregateMetricInterface> recover_log_count_metric_;
-
-  // The aggregate metric instance for journal service output stream count
-  // while running.
-  std::shared_ptr<cpio::AggregateMetricInterface> journal_output_count_metric_;
-
   // Keep a MetricRouter member in order to access MetricRouter-owned OTel
   // Instruments.
   //
@@ -223,11 +200,6 @@ class JournalService : public JournalServiceInterface {
 
   // Journal flush interval
   size_t journal_flush_interval_in_milliseconds_;
-
- private:
-  // Initialize MetricClient.
-  //
-  core::ExecutionResult InitMetricClientInterface();
 };
 
 }  // namespace google::scp::core

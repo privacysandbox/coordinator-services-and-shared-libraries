@@ -36,10 +36,6 @@
 #include "cc/core/utils/src/base64.h"
 #include "cc/core/utils/src/http.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/type_def.h"
-#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 #include "nlohmann/json.hpp"
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/view/view.h"
@@ -61,14 +57,6 @@ using ::google::scp::core::errors::HttpStatusCode;
 using ::google::scp::core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
 using ::google::scp::core::utils::Base64Decode;
 using ::google::scp::core::utils::PadBase64Encoding;
-using ::google::scp::cpio::AggregateMetric;
-using ::google::scp::cpio::AggregateMetricInterface;
-using ::google::scp::cpio::kCountSecond;
-using ::google::scp::cpio::MetricDefinition;
-using ::google::scp::cpio::MetricLabels;
-using ::google::scp::cpio::MetricLabelsBase;
-using ::google::scp::cpio::MetricName;
-using ::google::scp::cpio::MetricUnit;
 using ::nghttp2::asio_http2::server::configure_tls_context_easy;
 using ::nghttp2::asio_http2::server::request;
 using ::nghttp2::asio_http2::server::response;
@@ -197,36 +185,6 @@ Http2Server::~Http2Server() {
   }
 }
 
-ExecutionResult Http2Server::MetricInit() noexcept {
-  auto metric_name = std::make_shared<MetricName>(kMetricNameHttpRequest);
-  auto metric_unit = std::make_shared<MetricUnit>(kCountSecond);
-  auto metric_info =
-      std::make_shared<MetricDefinition>(metric_name, metric_unit);
-  MetricLabelsBase label_base(kHttp2Server);
-  metric_info->labels =
-      std::make_shared<MetricLabels>(label_base.GetMetricLabelsBase());
-  std::vector<std::string> event_list = {kMetricEventHttpUnableToResolveRoute,
-                                         kMetricEventHttp2xxLocal,
-                                         kMetricEventHttp4xxLocal,
-                                         kMetricEventHttp5xxLocal,
-                                         kMetricEventHttp2xxForwarded,
-                                         kMetricEventHttp4xxForwarded,
-                                         kMetricEventHttp5xxForwarded};
-  http_request_metrics_ = std::make_shared<AggregateMetric>(
-      async_executor_, metric_client_, metric_info,
-      aggregated_metric_interval_ms_,
-      std::make_shared<std::vector<std::string>>(event_list));
-  return http_request_metrics_->Init();
-}
-
-ExecutionResult Http2Server::MetricRun() noexcept {
-  return http_request_metrics_->Run();
-}
-
-ExecutionResult Http2Server::MetricStop() noexcept {
-  return http_request_metrics_->Stop();
-}
-
 ExecutionResult Http2Server::OtelMetricInit() noexcept {
   if (!metric_router_) {
     return SuccessExecutionResult();
@@ -338,17 +296,6 @@ ExecutionResult Http2Server::Init() noexcept {
     }
   }
 
-  if (metric_client_) {
-    if (!config_provider_ ||
-        !config_provider_
-             ->Get(kAggregatedMetricIntervalMs, aggregated_metric_interval_ms_)
-             .Successful()) {
-      aggregated_metric_interval_ms_ = kDefaultAggregatedMetricIntervalMs;
-    }
-
-    RETURN_IF_FAILURE(MetricInit());
-  }
-
   if (config_provider_) {
     auto result = config_provider_->Get(std::string(kMigrateHttpStatusCode),
                                         migrate_http_status_code_);
@@ -376,13 +323,6 @@ ExecutionResult Http2Server::Run() noexcept {
   }
 
   is_running_ = true;
-
-  if (metric_client_) {
-    auto execution_result = MetricRun();
-    if (!execution_result.Successful()) {
-      return execution_result;
-    }
-  }
 
   std::vector<std::string> paths;
   auto execution_result = resource_handlers_.Keys(paths);
@@ -439,9 +379,6 @@ ExecutionResult Http2Server::Stop() noexcept {
     // Doing the best to stop, ignore otherwise.
   }
 
-  if (metric_client_) {
-    return MetricStop();
-  }
   return SuccessExecutionResult();
 }
 
@@ -543,7 +480,6 @@ void Http2Server::HandleHttp2Request(
   // will be sent immediately, if it is successful the flow will proceed.
 
   std::shared_ptr<Http2SynchronizationContext> sync_context;
-
   auto execution_result = SetSyncContext(http2_context, http_handler,
                                          active_requests_, sync_context);
   if (!execution_result.Successful()) {
@@ -584,7 +520,7 @@ void Http2Server::HandleHttp2Request(
                                       http2_context.request->id, sync_context),
                             http2_context);
 
-  std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy_to_use =
+  std::shared_ptr<AuthorizationProxyInterface> authorization_proxy_to_use =
       authorization_proxy_;
 
   bool dns_routing_enabled = false;
@@ -632,8 +568,8 @@ void Http2Server::HandleHttp2Request(
       std::bind(&Http2Server::OnHttp2PendingCallback, this,
                 std::placeholders::_1, http2_context.request->id));
   http2_context.response->SetOnCloseCallback(
-      std::bind(&Http2Server::OnHttp2Cleanup, this, http2_context.request->id,
-                http2_context.request->id, std::placeholders::_1));
+      std::bind(&Http2Server::OnHttp2Cleanup, this, std::cref(*sync_context),
+                std::placeholders::_1));
 }
 
 void Http2Server::OnAuthorizationCallback(
@@ -662,7 +598,10 @@ void Http2Server::OnHttp2PendingCallback(
   std::shared_ptr<Http2SynchronizationContext> sync_context;
   auto execution_result = active_requests_.Find(request_id, sync_context);
   if (!execution_result.Successful()) {
-    // TODO: Log this.
+    SCP_DEBUG(kHttp2Server, request_id,
+              "Could not find Http2SynchronizationContext(current request) in "
+              "active requests map. This could happen if the request was "
+              "already finished or if the request ID is invalid.");
     return;
   }
 
@@ -704,57 +643,13 @@ void Http2Server::OnHttp2PendingCallback(
 
   // Recording request body length in Bytes - request body is received when code
   // reaches here.
-  RecordRequestBodySize(request_id);
+  RecordRequestBodySize(sync_context->http2_context);
 
   execution_result = sync_context->http_handler(http_context);
   if (!execution_result.Successful()) {
     sync_context->http2_context.result = execution_result;
     sync_context->http2_context.Finish();
     return;
-  }
-}
-
-/**
- * @brief Puts a point into the metric for the HTTP request's error code.
- *
- * @param metric
- * @param error_code
- * @param endpoint_type
- */
-static void IncrementHttpResponseMetric(
-    std::shared_ptr<AggregateMetricInterface> metric,
-    errors::HttpStatusCode error_code,
-    Http2Server::RequestTargetEndpointType endpoint_type) {
-  // Unknown state happens when the routing is enabled and the request route
-  // cannot be determined. For this, we always send a 5xx error code. See
-  if (endpoint_type == Http2Server::RequestTargetEndpointType::Unknown) {
-    metric->Increment(kMetricEventHttpUnableToResolveRoute);
-    return;
-  }
-
-  size_t error_code_value = static_cast<size_t>(error_code);
-  bool is_remote =
-      (endpoint_type == Http2Server::RequestTargetEndpointType::Remote);
-  if (error_code_value >= 200 && error_code_value <= 299) {
-    const auto& metric_label =
-        is_remote ? kMetricEventHttp2xxForwarded : kMetricEventHttp2xxLocal;
-    metric->Increment(metric_label);
-  } else if (error_code_value >= 400 && error_code_value <= 499) {
-    auto code_pair = kHttpStatusCode4xxMap.find(error_code);
-    if (code_pair != kHttpStatusCode4xxMap.end()) {
-      const auto& metric_label =
-          is_remote ? kMetricEventHttp4xxForwarded : kMetricEventHttp4xxLocal;
-      metric->Increment(metric_label);
-    }
-  } else if (error_code_value >= 500 && error_code_value <= 599) {
-    auto code_pair = kHttpStatusCode5xxMap.find(error_code);
-    if (code_pair != kHttpStatusCode5xxMap.end()) {
-      const auto& metric_label =
-          is_remote ? kMetricEventHttp5xxForwarded : kMetricEventHttp5xxLocal;
-      metric->Increment(metric_label);
-    }
-  } else {
-    // Ignore rest of the errors for now
   }
 }
 
@@ -782,12 +677,6 @@ void Http2Server::OnHttp2Response(
                         static_cast<size_t>(endpoint_type)));
   }
 
-  // Put metric if available
-  if (http_request_metrics_) {
-    IncrementHttpResponseMetric(http_request_metrics_,
-                                http_context.response->code, endpoint_type);
-  }
-
   // Record response body size in Bytes - response is prepared here to be sent.
   RecordResponseBodySize(http_context);
 
@@ -802,95 +691,81 @@ void Http2Server::OnHttp2Response(
       [response = http_context.response]() { response->Send(); });
 }
 
-void Http2Server::OnHttp2Cleanup(Uuid activity_id, Uuid request_id,
-                                 uint32_t error_code) noexcept {
-  auto request_id_str = ToString(request_id);
+void Http2Server::OnHttp2Cleanup(
+    const Http2SynchronizationContext& sync_context,
+    uint32_t error_code) noexcept {
+  auto request_id_str = ToString(sync_context.http2_context.request->id);
   if (error_code != 0) {
     SCP_DEBUG(
-        kHttp2Server, activity_id,
+        kHttp2Server, sync_context.http2_context.parent_activity_id,
         absl::StrFormat(
             "The connection for request ID %s was closed with status code %d",
-            request_id_str.c_str(), error_code));
+            request_id_str, error_code));
   }
-  RecordServerLatency(request_id);
-  active_requests_.Erase(request_id);
+  RecordServerLatency(sync_context);
+  // sync_context should not be used after this line because it has been
+  // deallocated.
+  active_requests_.Erase(sync_context.http2_context.request->id);
 }
 
-void Http2Server::RecordServerLatency(const common::Uuid& request_id) {
-  if (!server_request_duration_) {
-    return;
+absl::flat_hash_map<absl::string_view, std::string>
+Http2Server::GetOtelMetricLabels(
+    const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context) {
+  absl::flat_hash_map<std::string_view, std::string> labels = {
+      {kServerAddress, host_address_},
+      {kServerPort, port_},
+      {kHttpRoute, http_context.request->handler_path},
+      {kHttpRequestMethod,
+       utils::HttpMethodToString(http_context.request->method)},
+      {kPbsClaimedIdentityLabel,
+       utils::GetClaimedIdentityOrUnknownValue(http_context)},
+      {kScpHttpRequestClientVersionLabel,
+       utils::GetUserAgentOrUnknownValue(http_context)}};
+
+  if (http_context.response != nullptr) {
+    labels.try_emplace(
+        kHttpResponseStatusCode,
+        std::to_string(static_cast<int>(http_context.response->code)));
   }
-  auto request_id_str = ToString(request_id);
-  std::shared_ptr<Http2SynchronizationContext> sync_context;
-  auto execution_result = active_requests_.Find(request_id, sync_context);
-  if (!execution_result.Successful()) {
-    SCP_DEBUG(kHttp2Server, request_id,
-              "Could not find Http2SynchronizationContext(current request) in "
-              "active requests map");
+
+  if (std::string* auth_domain =
+          http_context.request->auth_context.authorized_domain.get();
+      auth_domain != nullptr) {
+    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
+  }
+
+  return labels;
+}
+
+void Http2Server::RecordServerLatency(
+    const Http2SynchronizationContext& sync_context) {
+  if (!server_request_duration_) {
     return;
   }
 
   std::chrono::duration<double> latency =
-      std::chrono::steady_clock::now() - sync_context->entry_time;
+      std::chrono::steady_clock::now() - sync_context.entry_time;
   double latency_s = latency / std::chrono::seconds(1);
 
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kServerAddress, host_address_},
-      {kServerPort, port_},
-      {kHttpRoute, sync_context->http2_context.request->handler_path},
-      {kHttpRequestMethod,
-       utils::HttpMethodToString(sync_context->http2_context.request->method)},
-      {kHttpResponseStatusCode,
-       std::to_string(
-           static_cast<int>(sync_context->http2_context.response->code))},
-      {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(sync_context->http2_context)},
-      {kScpHttpRequestClientVersionLabel,
-       utils::GetUserAgentOrUnknownValue(sync_context->http2_context)}};
-
-  if (std::string* auth_domain = sync_context->http2_context.request
-                                     ->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
-  }
+  absl::flat_hash_map<absl::string_view, std::string> labels =
+      GetOtelMetricLabels(sync_context.http2_context);
 
   opentelemetry::context::Context context;
   server_request_duration_->Record(latency_s, labels, context);
 }
 
-void Http2Server::RecordRequestBodySize(const common::Uuid& request_id) {
+void Http2Server::RecordRequestBodySize(
+    const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context) {
   if (!server_request_body_size_) {
     return;
   }
-  auto request_id_str = ToString(request_id);
-  std::shared_ptr<Http2SynchronizationContext> sync_context;
-  auto execution_result = active_requests_.Find(request_id, sync_context);
-  if (!execution_result.Successful()) {
-    SCP_DEBUG(kHttp2Server, request_id,
-              "Could not find Http2SynchronizationContext(current request) in "
-              "active requests map");
-    return;
-  }
 
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kServerAddress, host_address_},
-      {kServerPort, port_},
-      {kHttpRoute, sync_context->http2_context.request->handler_path},
-      {kHttpRequestMethod,
-       utils::HttpMethodToString(sync_context->http2_context.request->method)},
-      {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(sync_context->http2_context)},
-      {kScpHttpRequestClientVersionLabel,
-       utils::GetUserAgentOrUnknownValue(sync_context->http2_context)}};
+  absl::flat_hash_map<absl::string_view, std::string> labels =
+      GetOtelMetricLabels(http_context);
 
-  if (std::string* auth_domain = sync_context->http2_context.request
-                                     ->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
-  }
   opentelemetry::context::Context context;
-  server_request_body_size_->Record(
-      sync_context->http2_context.request->body.length, labels, context);
+  server_request_body_size_->Record(http_context.request->body.length, labels,
+                                    context);
 }
 
 void Http2Server::RecordResponseBodySize(
@@ -899,24 +774,9 @@ void Http2Server::RecordResponseBodySize(
     return;
   }
 
-  absl::flat_hash_map<std::string_view, std::string> labels = {
-      {kServerAddress, host_address_},
-      {kServerPort, port_},
-      {kHttpRoute, http_context.request->handler_path},
-      {kHttpRequestMethod,
-       utils::HttpMethodToString(http_context.request->method)},
-      {kHttpResponseStatusCode,
-       std::to_string(static_cast<int>(http_context.response->code))},
-      {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)},
-      {kScpHttpRequestClientVersionLabel,
-       utils::GetUserAgentOrUnknownValue(http_context)}};
+  absl::flat_hash_map<absl::string_view, std::string> labels =
+      GetOtelMetricLabels(http_context);
 
-  if (std::string* auth_domain =
-          http_context.request->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
-  }
   opentelemetry::context::Context context;
   server_response_body_size_->Record(http_context.response->body.length, labels,
                                      context);
@@ -927,25 +787,10 @@ void Http2Server::RecordPbsRequests(
   if (!pbs_requests_) {
     return;
   }
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kServerAddress, host_address_},
-      {kServerPort, port_},
-      {kHttpRoute, http_context.request->handler_path},
-      {kHttpRequestMethod,
-       utils::HttpMethodToString(http_context.request->method)},
-      {kHttpResponseStatusCode,
-       std::to_string(static_cast<int>(http_context.response->code))},
-      {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)},
-      {kScpHttpRequestClientVersionLabel,
-       utils::GetUserAgentOrUnknownValue(http_context)}};
 
-  if (std::string* auth_domain =
-          http_context.request->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(kPbsAuthDomainLabel, *auth_domain);
-  }
-  opentelemetry::context::Context context;
+  absl::flat_hash_map<absl::string_view, std::string> labels =
+      GetOtelMetricLabels(http_context);
+
   pbs_requests_->Add(1, labels);
 }
 

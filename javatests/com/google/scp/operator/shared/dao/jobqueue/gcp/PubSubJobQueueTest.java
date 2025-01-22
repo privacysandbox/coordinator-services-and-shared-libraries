@@ -17,7 +17,6 @@
 package com.google.scp.operator.shared.dao.jobqueue.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.acai.Acai;

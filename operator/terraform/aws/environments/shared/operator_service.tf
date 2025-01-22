@@ -127,6 +127,10 @@ module "operator_service" {
   # OpenTelemetry
   allowed_otel_metrics = var.allowed_otel_metrics
   min_log_level        = var.min_log_level
+
+  # Per-Coordinator Configs
+  coordinator_configs             = var.coordinator_configs
+  coordinator_wif_config_override = var.coordinator_wif_config_override
 }
 
 # Used by Terraform to treat any existing resources belonging to formerly known

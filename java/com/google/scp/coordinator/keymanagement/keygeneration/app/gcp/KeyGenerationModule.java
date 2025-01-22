@@ -1,5 +1,8 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp;
 
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.AWS_KMS_KEY_URI;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.AWS_KMS_ROLE_ARN;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.AWS_XC_ENABLED;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEYS_VALIDITY_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_DB_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_ID_TYPE;
@@ -34,6 +37,9 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.P
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListenerConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdType;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKmsKeyUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKmsRoleArn;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsXcEnabled;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpSplitKeyGenerationTasksModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
@@ -196,6 +202,50 @@ public final class KeyGenerationModule extends AbstractModule {
                 new ParameterClientException(
                     "Key ID Type %s not found", ErrorReason.MISSING_REQUIRED_PARAMETER))
         .getKeyIdFactory();
+  }
+
+  @Provides
+  @Singleton
+  @AwsXcEnabled
+  Boolean provideAwsXcEnabled(ParameterClient parameterClient) throws ParameterClientException {
+    return parameterClient
+        .getParameter(AWS_XC_ENABLED)
+        .map(s -> s.equalsIgnoreCase("true"))
+        .orElse(false);
+  }
+
+  @Provides
+  @Singleton
+  @AwsKmsKeyUri
+  Optional<String> provideAwsKmsUri(
+      ParameterClient parameterClient, @AwsXcEnabled Boolean awsXcEnabled)
+      throws ParameterClientException {
+    return getParameterIf(parameterClient, AWS_KMS_KEY_URI, awsXcEnabled);
+  }
+
+  @Provides
+  @Singleton
+  @AwsKmsRoleArn
+  Optional<String> provideAwsKmsRoleArn(
+      ParameterClient parameterClient, @AwsXcEnabled Boolean awsXcEnabled)
+      throws ParameterClientException {
+    return getParameterIf(parameterClient, AWS_KMS_ROLE_ARN, awsXcEnabled);
+  }
+
+  private static Optional<String> getParameterIf(
+      ParameterClient paramClient, String param, Boolean condition)
+      throws ParameterClientException {
+    if (condition) {
+      Optional<String> parameter = paramClient.getParameter(param);
+      if (parameter.isEmpty()) {
+        throw new ParameterClientException(
+            String.format("Unable to get required parameter %s", param),
+            ErrorReason.MISSING_REQUIRED_PARAMETER);
+      }
+      return parameter;
+    } else {
+      return Optional.empty();
+    }
   }
 
   @Override

@@ -92,7 +92,7 @@ genrule(
       bazel/cc/aws/proxy:build_container \
       bash -c '
         set -eux
-        yum install glibc-devel-2.26-64.amzn2.0.2 glibc-headers-2.26-64.amzn2.0.2 gcc-7.3.1-17.amzn2 gcc-c++-7.3.1-17.amzn2 tar git -y > /dev/null
+        yum install glibc-common-2.26-64.amzn2.0.2 glibc-devel-2.26-64.amzn2.0.2 glibc-headers-2.26-64.amzn2.0.2 gcc-7.3.1-17.amzn2 gcc-c++-7.3.1-17.amzn2 tar git -y > /dev/null
         tar xf /source_code.tar -C /
         cd /scp
         # Remove clang flags

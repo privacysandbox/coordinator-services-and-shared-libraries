@@ -46,21 +46,6 @@ static constexpr char kMetricNameJournalOutputStreamCount[] =
 
 static constexpr char kMetricLabelJournalWriteSuccess[] = "write_success";
 
-static constexpr char
-    kMetricComponentNameAndPartitionNamePrefixForJournalService[] =
-        "JournalService for Partition ";
-static constexpr char kMetricMethodRecover[] = "Recover";
-static constexpr char kMetricMethodOutputStream[] = "OutputStream";
-
-static constexpr char kMetricEventNameLogCount[] = "LogCount";
-static constexpr char
-    kMetricEventJournalOutputCountWriteJournalScheduledCount[] =
-        "WriteJournal Scheduled";
-static constexpr char kMetricEventJournalOutputCountWriteJournalSuccessCount[] =
-    "WriteJournal Success";
-static constexpr char kMetricEventJournalOutputCountWriteJournalFailureCount[] =
-    "WriteJournal Failure";
-
 /**
  * @brief
  * Transaction Manager Metrics
@@ -85,30 +70,5 @@ static constexpr char kMetricNameFinishedTransactions[] =
     "google.scp.pbs.transaction_manager.finished_transactions";
 
 static constexpr char kMetricLabelPartitionId[] = "partition_id";
-
-static constexpr char kMetricEventReceivedTransaction[] = "ReceivedTransaction";
-static constexpr char kMetricEventFinishedTransaction[] = "FinishedTransaction";
-
-/**
- * @brief
- * HTTP Server Metrics
- *  Metric Name: kMetricNameHttpRequest
- *      Events: kMetricEventHttp2xxLocal
- *      Events: kMetricEventHttp4xxLocal
- *      Events: kMetricEventHttp5xxLocal
- *      Events: kMetricEventHttp2xxForwarded
- *      Events: kMetricEventHttp4xxForwarded
- *      Events: kMetricEventHttp5xxForwarded
- */
-
-static constexpr char kMetricNameHttpRequest[] = "HttpRequest";
-static constexpr char kMetricEventHttpUnableToResolveRoute[] =
-    "Can't Resolve Route 5xx";
-static constexpr char kMetricEventHttp2xxLocal[] = "Non-Forwarded 2xx";
-static constexpr char kMetricEventHttp4xxLocal[] = "Non-Forwarded 4xx";
-static constexpr char kMetricEventHttp5xxLocal[] = "Non-Forwarded 5xx";
-static constexpr char kMetricEventHttp2xxForwarded[] = "Forwarded 2xx";
-static constexpr char kMetricEventHttp4xxForwarded[] = "Forwarded 4xx";
-static constexpr char kMetricEventHttp5xxForwarded[] = "Forwarded 5xx";
 
 }  // namespace google::scp::core

@@ -22,6 +22,27 @@ data "aws_caller_identity" "current" {}
 
 locals {
   operator_alarm_sns_topic_enabled = var.frontend_alarms_enabled || var.worker_alarms_enabled
+  operator_aws_account_id          = data.aws_caller_identity.current.account_id
+
+  # Generate wif configs based on coordinator config, otherwise use the overrides.
+  override_wif = length(var.coordinator_wif_config_override) != 0
+  coordinator_wif_configs = {
+    for name, config in var.coordinator_configs : name =>
+    {
+      gcp_project_number                 = config.gcp_project_number,
+      workload_identity_pool_id          = local.override_wif ? var.coordinator_wif_config_override[name].workload_identity_pool_id : "${config.env_name}-aws-wip-${local.operator_aws_account_id}",
+      workload_identity_pool_provider_id = local.override_wif ? var.coordinator_wif_config_override[name].workload_identity_pool_provider_id : "wipp-${local.operator_aws_account_id}",
+      sa_email                           = local.override_wif ? var.coordinator_wif_config_override[name].sa_email : "${config.env_name}-fed-aws-${local.operator_aws_account_id}@${config.gcp_project_id}.iam.gserviceaccount.com"
+    }
+  }
+  coordinator_assume_roles = {
+    for name, config in var.coordinator_configs : name =>
+    "arn:aws:iam::${config.aws_account_id}:role/${config.env_name}-assumed-role-${local.operator_aws_account_id}"
+  }
+  # Fallback to legacy roles provided via parameters if coordinator_configs were not specified.
+  use_legacy_roles          = length(var.coordinator_configs) == 0
+  coordinator_a_assume_role = local.use_legacy_roles ? var.coordinator_a_assume_role_parameter : local.coordinator_assume_roles["COORDINATOR_A"]
+  coordinator_b_assume_role = local.use_legacy_roles ? var.coordinator_b_assume_role_parameter : local.coordinator_assume_roles["COORDINATOR_B"]
 }
 
 module "bazel" {
@@ -86,7 +107,7 @@ module "assume_role_parameter" {
   environment           = var.environment
   parameter_name        = "COORDINATOR_ROLE"
   legacy_parameter_name = "assume_role_arn"
-  parameter_value       = var.coordinator_a_assume_role_parameter
+  parameter_value       = local.coordinator_a_assume_role
 }
 
 module "coordinator_a_assume_role_parameter" {
@@ -94,7 +115,7 @@ module "coordinator_a_assume_role_parameter" {
   environment           = var.environment
   parameter_name        = "COORDINATOR_A_ROLE"
   legacy_parameter_name = "coordinator_a_assume_role_arn"
-  parameter_value       = var.coordinator_a_assume_role_parameter
+  parameter_value       = local.coordinator_a_assume_role
 }
 
 module "coordinator_b_assume_role_parameter" {
@@ -102,7 +123,7 @@ module "coordinator_b_assume_role_parameter" {
   environment           = var.environment
   parameter_name        = "COORDINATOR_B_ROLE"
   legacy_parameter_name = "coordinator_b_assume_role_arn"
-  parameter_value       = var.coordinator_b_assume_role_parameter
+  parameter_value       = local.coordinator_b_assume_role
 }
 
 module "kms_key_parameter" {
@@ -188,8 +209,8 @@ module "worker_service" {
   metadata_db_table_arn         = module.metadata_db.metadata_db_arn
   asg_instances_table_arn       = module.asginstances_db.asginstances_db_arn
   job_queue_arn                 = module.job_queue.jobqueue_sqs_arn
-  coordinator_a_assume_role_arn = var.coordinator_a_assume_role_parameter
-  coordinator_b_assume_role_arn = var.coordinator_b_assume_role_parameter
+  coordinator_a_assume_role_arn = local.coordinator_a_assume_role
+  coordinator_b_assume_role_arn = local.coordinator_b_assume_role
 
   #Alarms
   worker_alarms_enabled            = var.worker_alarms_enabled
@@ -304,4 +325,16 @@ module "notifications" {
   source = "../../modules/notifications"
 
   environment = var.environment
+}
+
+module "coordinator_wif_configuration" {
+  for_each = local.coordinator_wif_configs
+  source   = "../../modules/wifconfiguration"
+
+  environment                        = var.environment
+  gcp_project_number                 = each.value.gcp_project_number
+  workload_identity_pool_id          = each.value.workload_identity_pool_id
+  workload_identity_pool_provider_id = each.value.workload_identity_pool_provider_id
+  sa_email                           = each.value.sa_email
+  coordinator_name                   = each.key
 }

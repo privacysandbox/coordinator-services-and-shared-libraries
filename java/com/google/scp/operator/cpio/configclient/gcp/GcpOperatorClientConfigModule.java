@@ -8,22 +8,22 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorACredentials;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorAHttpClient;
+import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBCredentials;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBHttpClient;
+import com.google.scp.operator.cpio.configclient.common.OperatorClientConfig;
 import com.google.scp.operator.cpio.configclient.gcp.Annotations.AttestedCredentials;
-import com.google.scp.operator.cpio.configclient.gcp.Annotations.CoordinatorACredentials;
-import com.google.scp.operator.cpio.configclient.gcp.Annotations.CoordinatorBCredentials;
 import com.google.scp.shared.api.util.HttpClientWrapper;
 import com.google.scp.shared.clients.configclient.gcp.CredentialsHelper;
 import com.google.scp.shared.clients.configclient.gcp.GcpClientConfigModule;
-import com.google.scp.shared.clients.configclient.gcp.GcpOperatorClientConfig;
 import com.google.scp.shared.gcp.util.GcpHttpInterceptorUtil;
 import java.io.IOException;
 
 /** Provides necessary configurations for GCP config client. */
 public final class GcpOperatorClientConfigModule extends AbstractModule {
 
-  /** Caller is expected to bind {@link GcpOperatorClientConfig}. */
+  /** Caller is expected to bind {@link OperatorClientConfig}. */
   public GcpOperatorClientConfigModule() {}
 
   /**
@@ -44,8 +44,7 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
   @Provides
   @CoordinatorACredentials
   @Singleton
-  GoogleCredentials provideCoordinatorACredentials(GcpOperatorClientConfig config)
-      throws IOException {
+  GoogleCredentials provideCoordinatorACredentials(OperatorClientConfig config) throws IOException {
     if (config.useLocalCredentials()) {
       return GoogleCredentials.getApplicationDefault();
     }
@@ -60,8 +59,9 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
   @Provides
   @CoordinatorBCredentials
   @Singleton
-  GoogleCredentials provideCoordinatorBCredentials(GcpOperatorClientConfig config)
-      throws IOException {
+  GoogleCredentials provideCoordinatorBCredentials(OperatorClientConfig config) throws IOException {
+    // For single party solution, we will not have coordinatorB details, so use default
+    // credentials. These are not used for single party solution.
     if (config.useLocalCredentials() || config.coordinatorBWipProvider().isEmpty()) {
       return GoogleCredentials.getApplicationDefault();
     }
@@ -74,7 +74,8 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
   @Provides
   @CoordinatorAHttpClient
   @Singleton
-  public HttpClientWrapper provideCoordinatorAHttpClient(GcpOperatorClientConfig config) {
+  public HttpClientWrapper provideCoordinatorAHttpClient(OperatorClientConfig config)
+      throws IOException {
     return getHttpClientWrapper(
         config
             .coordinatorAEncryptionKeyServiceCloudfunctionUrl()
@@ -85,7 +86,8 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
   @Provides
   @CoordinatorBHttpClient
   @Singleton
-  public HttpClientWrapper provideCoordinatorBHttpClient(GcpOperatorClientConfig config) {
+  public HttpClientWrapper provideCoordinatorBHttpClient(OperatorClientConfig config)
+      throws IOException {
     if (config.coordinatorBEncryptionKeyServiceBaseUrl().isPresent()) {
       return getHttpClientWrapper(
           config
@@ -100,7 +102,7 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
     install(new GcpClientConfigModule());
   }
 
-  private static HttpClientWrapper getHttpClientWrapper(String url) {
+  private static HttpClientWrapper getHttpClientWrapper(String url) throws IOException {
     return HttpClientWrapper.builder()
         .setInterceptor(GcpHttpInterceptorUtil.createHttpInterceptor(url))
         .setExponentialBackoff(

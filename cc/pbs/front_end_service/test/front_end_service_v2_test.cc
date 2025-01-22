@@ -34,16 +34,11 @@
 #include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
-#include "cc/pbs/front_end_service/src/metric_initialization.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs {
 
@@ -51,8 +46,6 @@ using ::google::scp::core::AsyncContext;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::HttpRequest;
 using ::google::scp::core::HttpResponse;
-using ::google::scp::cpio::AggregateMetricInterface;
-using ::google::scp::cpio::MockAggregateMetric;
 
 class FrontEndServiceV2Peer {
  public:
@@ -97,15 +90,6 @@ class FrontEndServiceV2Peer {
 
   ExecutionResult Init() { return front_end_service_v2_->Init(); }
 
-  // Downcasts AggregateMetricInterface to MockAggregateMetric, which we inject
-  // into a FrontEndServiceV2 for testing.
-  std::shared_ptr<MockAggregateMetric> GetMetricsInstance(
-      absl::string_view method_name, absl::string_view phase) {
-    std::shared_ptr<AggregateMetricInterface> metrics_instance =
-        front_end_service_v2_->metrics_instances_map_.at(method_name).at(phase);
-    return std::dynamic_pointer_cast<MockAggregateMetric>(metrics_instance);
-  }
-
  private:
   std::unique_ptr<FrontEndServiceV2> front_end_service_v2_;
 };
@@ -127,10 +111,7 @@ using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS;
-using ::google::scp::cpio::MetricClientInterface;
-using ::google::scp::cpio::MockMetricClient;
+using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
 using ::testing::_;
 using ::testing::Invoke;
@@ -184,42 +165,12 @@ class MockHttpServerInterface : public NiceMock<HttpServerInterface> {
               (noexcept, override));
 };
 
-class MockMetricInitialization : public NiceMock<MetricInitialization> {
- public:
-  MockMetricInitialization() {
-    ON_CALL(*this, Initialize(_, _, _))
-        .WillByDefault(Invoke(&MockMetricInitialization::InitializeWithMock));
-  }
-
-  MOCK_METHOD(ExecutionResultOr<MetricsMap>, Initialize,
-              (std::shared_ptr<AsyncExecutorInterface> async_executor,
-               std::shared_ptr<MetricClientInterface> metric_client,
-               core::TimeDuration aggregated_metric_interval_ms),
-              (const, noexcept, override));
-
- private:
-  static ExecutionResultOr<MetricsMap> InitializeWithMock() {
-    MetricsMap metrics_map;
-    for (absl::string_view method_name : kMetricInitializationMethodNames) {
-      for (absl::string_view metric_name : kMetricInitializationMetricNames) {
-        metrics_map[method_name][metric_name] =
-            std::make_shared<MockAggregateMetric>();
-      }
-    }
-    return metrics_map;
-  }
-};
-
 struct FrontEndServiceV2PeerOptions {
   std::optional<std::shared_ptr<MockHttpServerInterface>> http_server =
       std::nullopt;
   std::optional<std::shared_ptr<AsyncExecutorInterface>> async_executor =
       std::nullopt;
-  std::optional<std::shared_ptr<MetricClientInterface>> metric_client =
-      std::nullopt;
   std::optional<std::shared_ptr<ConfigProviderInterface>> config_provider =
-      std::nullopt;
-  std::optional<std::unique_ptr<MetricInitialization>> metric_initialization =
       std::nullopt;
   BudgetConsumptionHelperInterface* budget_consumption_helper = nullptr;
 
@@ -247,11 +198,7 @@ FrontEndServiceV2Peer MakeFrontEndServiceV2Peer(
               std::make_shared<MockHttpServerInterface>()),
           options.async_executor.value_or(
               std::make_shared<MockAsyncExecutor>()),
-          options.metric_client.value_or(std::make_shared<MockMetricClient>()),
           options.config_provider.value(), options.budget_consumption_helper,
-          options.metric_initialization.has_value()
-              ? std::move(options.metric_initialization.value())
-              : std::make_unique<MockMetricInitialization>(),
           options.metric_router.get());
   return FrontEndServiceV2Peer(std::move(front_end_service_v2));
 }
@@ -362,10 +309,6 @@ TEST(FrontEndServiceV2Test, TestBeginTransaction) {
 
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(kMetricLabelBeginTransaction,
-                                                   kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestBeginTransactionWithEmptyHeader) {
@@ -433,11 +376,6 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithEmptyHeader) {
 
   EXPECT_FALSE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
-
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(kMetricLabelBeginTransaction,
-                                                   kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestBeginTransactionWithConstructorWithLessParams) {
@@ -460,8 +398,7 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithConstructorWithLessParams) {
   std::unique_ptr<FrontEndServiceV2> front_end_service_v2 =
       std::make_unique<FrontEndServiceV2>(
           std::make_shared<MockHttpServerInterface>(),
-          std::make_shared<MockAsyncExecutor>(),
-          std::make_shared<MockMetricClient>(), mock_config_provider,
+          std::make_shared<MockAsyncExecutor>(), mock_config_provider,
           budget_consumption_helper.get());
   FrontEndServiceV2Peer front_end_service_v2_peer(
       std::move(front_end_service_v2));
@@ -482,7 +419,7 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithoutInit) {
   http_context.response = CreateEmptyResponse();
   EXPECT_THAT(
       front_end_service_v2_peer.BeginTransaction(http_context).status_code,
-      SC_PBS_FRONT_END_SERVICE_UNABLE_TO_FIND_TRANSACTION_METRICS);
+      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
 }
 
 TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
@@ -657,11 +594,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
             23);
   EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].time_bucket,
             1576135250000000000);
-
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(
-          kMetricLabelPrepareTransaction, kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
@@ -809,11 +741,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
               captured_http_context.response->headers->end());
   EXPECT_EQ(captured_http_context.response->body.ToString(),
             kBudgetExhaustedResponseBody);
-
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(
-          kMetricLabelPrepareTransaction, kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
@@ -931,11 +858,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
   EXPECT_TRUE(captured_http_context.response->headers->find(
                   kTransactionLastExecutionTimestampHeader) ==
               captured_http_context.response->headers->end());
-
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(
-          kMetricLabelPrepareTransaction, kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestCommitTransaction) {
@@ -996,11 +918,6 @@ TEST(FrontEndServiceV2Test, TestCommitTransaction) {
 
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
-
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(
-          kMetricLabelCommitTransaction, kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestNotifyTransaction) {
@@ -1061,10 +978,6 @@ TEST(FrontEndServiceV2Test, TestNotifyTransaction) {
 
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(
-          kMetricLabelNotifyTransaction, kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestAbortTransaction) {
@@ -1125,10 +1038,6 @@ TEST(FrontEndServiceV2Test, TestAbortTransaction) {
 
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(kMetricLabelAbortTransaction,
-                                                   kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestEndTransaction) {
@@ -1189,10 +1098,6 @@ TEST(FrontEndServiceV2Test, TestEndTransaction) {
 
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
-  std::shared_ptr<MockAggregateMetric> mock_aggregate_metric =
-      front_end_service_v2_peer.GetMetricsInstance(kMetricLabelEndTransaction,
-                                                   kMetricNameRequests);
-  EXPECT_THAT(mock_aggregate_metric->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST(FrontEndServiceV2Test, TestRegisterResourceHandlerIsCalled) {

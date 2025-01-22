@@ -51,3 +51,7 @@ output "wip_allowed_service_account" {
 output "wip_verified_service_account" {
   value = module.multipartykeyhosting_secondary.wip_verified_service_account
 }
+
+output "key_storage_service_account_unique_id" {
+  value = module.multipartykeyhosting_secondary.key_storage_service_account_unique_id
+}

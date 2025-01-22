@@ -134,15 +134,14 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
   http_server_ = std::make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
-      authorization_proxy_, aws_authorization_proxy, metric_client_,
-      config_provider_, http2_server_options, metric_router_.get());
+      authorization_proxy_, aws_authorization_proxy, config_provider_,
+      http2_server_options, metric_router_.get());
 
   if (container_type_ == kComputeEngine) {
     health_http_server_ = std::make_shared<Http2Server>(
         *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
         /*thread_pool_size=*/1, async_executor_, pass_thru_authorization_proxy_,
-        aws_authorization_proxy,
-        /*metric_client=*/nullptr, config_provider_, http2_server_options);
+        aws_authorization_proxy, config_provider_, http2_server_options);
     health_service_ = std::make_shared<HealthService>(
         health_http_server_, config_provider_, async_executor_, metric_client_);
   }
@@ -157,8 +156,8 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
   }
 
   front_end_service_ = std::make_shared<FrontEndServiceV2>(
-      http_server_, async_executor_, metric_client_, config_provider_,
-      budget_consumption_helper_.get(), nullptr, metric_router_.get());
+      http_server_, async_executor_, config_provider_,
+      budget_consumption_helper_.get(), metric_router_.get());
 
   return SuccessExecutionResult();
 }

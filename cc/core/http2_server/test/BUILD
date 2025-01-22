@@ -41,7 +41,6 @@ cc_test(
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )
@@ -67,9 +66,6 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
-        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
-        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -35,9 +35,6 @@
 #include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/provider.h"
 
@@ -62,8 +59,8 @@ class Http2ServerOptions {
                                        kHttpServerRetryStrategyDelayInMs,
                                        kDefaultRetryStrategyMaxRetries))
       : use_tls(use_tls),
-        private_key_file(move(private_key_file)),
-        certificate_chain_file(move(certificate_chain_file)),
+        private_key_file(std::move(private_key_file)),
+        certificate_chain_file(std::move(certificate_chain_file)),
         retry_strategy_options(retry_strategy_options) {}
 
   /// Whether to use TLS.
@@ -88,8 +85,6 @@ class Http2Server : public HttpServerInterface {
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
       std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client =
-          nullptr,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
           nullptr,
       Http2ServerOptions options = Http2ServerOptions(),
@@ -100,9 +95,7 @@ class Http2Server : public HttpServerInterface {
         is_running_(false),
         authorization_proxy_(authorization_proxy),
         aws_authorization_proxy_(aws_authorization_proxy),
-        metric_client_(metric_client),
         config_provider_(config_provider),
-        aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs),
         otel_server_metrics_enabled_(false),
         async_executor_(async_executor),
         operation_dispatcher_(
@@ -161,13 +154,6 @@ class Http2Server : public HttpServerInterface {
   };
 
  protected:
-  /// Init http_error_metrics_ instance.
-  virtual ExecutionResult MetricInit() noexcept;
-  /// Run http_error_metrics_ instance.
-  virtual ExecutionResult MetricRun() noexcept;
-  /// Stop http_error_metrics_ instance.
-  virtual ExecutionResult MetricStop() noexcept;
-
   /**
    * @brief Handles the incoming nghttp2 native request and response. This is
    * the first function to receive the HTTP request. It initializes the
@@ -199,12 +185,11 @@ class Http2Server : public HttpServerInterface {
   /**
    * @brief Is called when the http connection/stream is closed.
    *
-   * @param activity_id Correlation ID for this request.
-   * @param request_id The ID of the request.
+   * @param sync_context The sync context associated with the http operation.
    * @param error_code The error code that the connection/stream was closed
    * with.
    */
-  virtual void OnHttp2Cleanup(common::Uuid activity_id, common::Uuid request_id,
+  virtual void OnHttp2Cleanup(const Http2SynchronizationContext& sync_context,
                               uint32_t error_code) noexcept;
 
   /**
@@ -290,23 +275,14 @@ class Http2Server : public HttpServerInterface {
 
   std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy_;
 
-  // Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-
   // An instance of the config provider.
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
-
-  // The time interval for metrics aggregation.
-  TimeDuration aggregated_metric_interval_ms_;
 
   // Feature flag for otel server metrics
   bool otel_server_metrics_enabled_;
 
   // An instance of the async executor.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
-
-  // The AggregateMetric instance for http request metrics.
-  std::shared_ptr<cpio::AggregateMetricInterface> http_request_metrics_;
 
   // An instance of the operation dispatcher.
   common::OperationDispatcher operation_dispatcher_;
@@ -341,18 +317,18 @@ class Http2Server : public HttpServerInterface {
    * the latency of a request coming to the PBS server (OnHttp2Request) until
    * the request is fully complete (OnHttp2Cleanup).
    *
-   * @param request_id The unique identifier for the request whose latency is
-   * being recorded.
+   * @param sync_context The sync context associated with the http operation.
    */
-  void RecordServerLatency(const common::Uuid& request_id);
+  void RecordServerLatency(const Http2SynchronizationContext& sync_context);
 
   /**
    * Records the size of the request body (uncompressed) sent by the client.
    *
-   * @param request_id The unique identifier for the request whose body size is
-   * being recorded.
+   * @param http_context The http context containing the request and response
+   * objects.
    */
-  void RecordRequestBodySize(const common::Uuid& request_id);
+  void RecordRequestBodySize(
+      const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
 
   /**
    * Records the size of the response body (uncompressed) when request is
@@ -389,6 +365,17 @@ class Http2Server : public HttpServerInterface {
   static void ObserveActiveRequestsCallback(
       opentelemetry::metrics::ObserverResult observer_result,
       Http2Server* self_ptr);
+
+  /**
+   * Sets the OpenTelemetry labels
+   *
+   * @param http_context The http context containing the request and response
+   * objects.
+   *
+   * @return OpenTelemetry labels.
+   */
+  absl::flat_hash_map<absl::string_view, std::string> GetOtelMetricLabels(
+      const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
 
   // An instance of metric router which will provide APIs to create metrics.
   MetricRouter* metric_router_;

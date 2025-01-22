@@ -43,6 +43,10 @@ pkg_filegroup(
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/operator_wipp:operator_wipp_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/operator_wipp:operator_wipp_outputs_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/operator_wipp:operator_wipp_variables_link",
+        "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_demo",
+        "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_link",
+        "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_outputs_link",
+        "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_variables_link",
     ],
     prefix = "environments_mp_secondary/demo",
 )

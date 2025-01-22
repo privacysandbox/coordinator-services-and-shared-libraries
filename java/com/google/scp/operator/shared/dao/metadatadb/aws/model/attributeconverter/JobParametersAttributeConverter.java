@@ -21,6 +21,7 @@ import com.google.protobuf.Descriptors;
 import com.google.scp.operator.protos.shared.backend.JobParametersProto;
 import com.google.scp.operator.protos.shared.backend.JobParametersProto.JobParameters;
 import com.google.scp.operator.shared.utils.AttributeConverterUtils;
+import com.google.scp.operator.shared.utils.ObjectConversionException;
 import java.util.Map;
 import software.amazon.awssdk.enhanced.dynamodb.AttributeConverter;
 import software.amazon.awssdk.enhanced.dynamodb.AttributeValueType;
@@ -69,7 +70,9 @@ public class JobParametersAttributeConverter implements AttributeConverter<JobPa
       try {
         AttributeConverterUtils.setFieldValue(field, builder, value);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Invalid value for field " + key + ": " + value, e);
+        throw new ObjectConversionException("Invalid value for field " + key + ": " + value);
+      } catch (Exception e) {
+        throw new ObjectConversionException(e.getMessage(), e);
       }
     }
     return builder.build();

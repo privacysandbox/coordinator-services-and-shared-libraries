@@ -69,14 +69,6 @@ class MockJournalService : public JournalServiceInterface {
     return SuccessExecutionResult();
   }
 
-  ExecutionResult RunRecoveryMetrics() noexcept override {
-    return SuccessExecutionResult();
-  }
-
-  ExecutionResult StopRecoveryMetrics() noexcept override {
-    return SuccessExecutionResult();
-  }
-
   std::function<ExecutionResult(
       AsyncContext<JournalLogRequest, JournalLogResponse>&)>
       log_mock;

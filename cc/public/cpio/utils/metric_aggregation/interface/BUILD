@@ -41,6 +41,7 @@ cc_library(
         ],
     deps = [
         "//cc/core/interface:interface_lib",
+        "//cc/public/cpio/interface/metric_client:type_def",
         "@com_google_protobuf//:protobuf",
     ],
 )

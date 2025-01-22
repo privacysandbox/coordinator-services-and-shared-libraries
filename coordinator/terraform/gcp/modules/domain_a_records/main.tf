@@ -23,7 +23,7 @@ data "google_dns_managed_zone" "dns_zone" {
   lifecycle {
     # Parent domain name should not be empty
     precondition {
-      condition     = var.parent_domain_name != "" && var.parent_domain_name_project != ""
+      condition     = var.parent_domain_name != null && var.parent_domain_name_project != null
       error_message = "var.enable_domain_management is true with an empty var.parent_domain_name."
     }
   }

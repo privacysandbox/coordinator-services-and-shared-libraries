@@ -202,15 +202,15 @@ class MetricRouter {
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
 
-  absl::flat_hash_map<absl::string_view,
+  absl::flat_hash_map<std::string,
                       std::shared_ptr<opentelemetry::metrics::Meter>>
       meters_;
   absl::flat_hash_map<
-      absl::string_view,
+      std::string,
       std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>>
       synchronous_instruments_;
   absl::flat_hash_map<
-      absl::string_view,
+      std::string,
       std::shared_ptr<opentelemetry::metrics::ObservableInstrument>>
       asynchronous_instruments_;
 

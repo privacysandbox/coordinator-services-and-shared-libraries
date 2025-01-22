@@ -37,6 +37,7 @@ java_test(
     deps = [
         "//java/com/google/scp/shared/util",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:protobuf_java",
         "//java/external:tink",
     ],

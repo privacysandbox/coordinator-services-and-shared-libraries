@@ -44,8 +44,6 @@ using google::scp::core::journal_service::JournalSerialization;
 using google::scp::core::journal_service::JournalStreamAppendLogRequest;
 using google::scp::core::journal_service::JournalStreamAppendLogResponse;
 using google::scp::core::journal_service::JournalUtils;
-using google::scp::cpio::AggregateMetricInterface;
-using google::scp::cpio::MetricClientInterface;
 using std::atomic;
 using std::bind;
 using std::list;
@@ -71,14 +69,12 @@ JournalOutputStream::JournalOutputStream(
     const shared_ptr<string>& partition_name,
     const shared_ptr<AsyncExecutorInterface>& async_executor,
     const shared_ptr<BlobStorageClientInterface>& blob_storage_provider_client,
-    const shared_ptr<AggregateMetricInterface>& journal_output_count_metric,
     std::shared_ptr<core::MetricRouter> metric_router)
     : current_journal_id_(kInvalidJournalId),
       bucket_name_(bucket_name),
       partition_name_(partition_name),
       async_executor_(async_executor),
       blob_storage_provider_client_(blob_storage_provider_client),
-      journal_output_count_metric_(journal_output_count_metric),
       metric_router_(metric_router),
       last_persisted_journal_id_(kInvalidJournalId),
       pending_logs_(0),
@@ -261,8 +257,6 @@ ExecutionResult JournalOutputStream::WriteJournalBlob(
   if (metric_router_) {
     journal_scheduled_output_stream_count_instrument_->Add(1);
   }
-  journal_output_count_metric_->Increment(
-      kMetricEventJournalOutputCountWriteJournalScheduledCount);
 
   AsyncContext<PutBlobRequest, PutBlobResponse> put_blob_context(
       make_shared<PutBlobRequest>(put_blob_request),
@@ -315,15 +309,11 @@ void JournalOutputStream::OnWriteJournalBlobCallback(
       journal_output_stream_count_instrument_->Add(
           1, {{kMetricLabelJournalWriteSuccess, false}});
     }
-    journal_output_count_metric_->Increment(
-        kMetricEventJournalOutputCountWriteJournalFailureCount);
   } else {
     if (metric_router_) {
       journal_output_stream_count_instrument_->Add(
           1, {{kMetricLabelJournalWriteSuccess, true}});
     }
-    journal_output_count_metric_->Increment(
-        kMetricEventJournalOutputCountWriteJournalSuccessCount);
   }
 
   callback(context.result);

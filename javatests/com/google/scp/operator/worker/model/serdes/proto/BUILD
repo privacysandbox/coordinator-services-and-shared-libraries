@@ -26,5 +26,6 @@ java_test(
         "//java/com/google/scp/operator/worker/testing:fake_report_generator",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
     ],
 )

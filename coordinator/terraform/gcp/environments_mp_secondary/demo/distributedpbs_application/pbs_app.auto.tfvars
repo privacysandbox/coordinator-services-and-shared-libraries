@@ -21,8 +21,8 @@ region  = "<deployment-region>"
 environment = "demo-b"
 
 # This must be updated to the output `pbs_service_account_email` of the remote coordinator, known after its initial deployment.
-# If the service account does not yet exist, only the empty string will be accepted.
-pbs_remote_coordinator_service_account_email = ""
+# If the service account does not yet exist, only the null value (default) will be accepted.
+# pbs_remote_coordinator_service_account_email = null
 
 ## Uncomment one of the configuration blocks below depending on your type of deployment.
 

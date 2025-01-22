@@ -19,9 +19,12 @@ pkg_filegroup(
     name = "multipartykeyhosting_modules_pkg",
     srcs = [
         "//coordinator/terraform/gcp/modules/allowedusergroup",
+        "//coordinator/terraform/gcp/modules/aws_keyencryptionkey",
+        "//coordinator/terraform/gcp/modules/aws_roleprovider",
         "//coordinator/terraform/gcp/modules/cloud-nat",
         "//coordinator/terraform/gcp/modules/domain_a_records",
         "//coordinator/terraform/gcp/modules/encryptionkeyservice",
+        "//coordinator/terraform/gcp/modules/federated_workloadidentitypoolprovider",
         "//coordinator/terraform/gcp/modules/keydb",
         "//coordinator/terraform/gcp/modules/keygenerationservice",
         "//coordinator/terraform/gcp/modules/keystorageservice",

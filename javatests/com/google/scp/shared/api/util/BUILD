@@ -27,6 +27,7 @@ java_test(
         "//java/com/google/scp/shared/api/util",
         "//java/com/google/scp/shared/mapper",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
         "//java/external:protobuf_java",
@@ -45,6 +46,7 @@ java_test(
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/api/util",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )
 
@@ -61,6 +63,7 @@ java_test(
         "//java/external:aws_auth",
         "//java/external:aws_sts",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:mockito",
         "//java/external:mockito_inline",
         "//java/external:resilience4j_core",
@@ -77,6 +80,7 @@ java_test(
         "//java/external:apache_httpcore",
         "//java/external:aws_sts",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:mockito",
         "//java/external:resilience4j_retry",
     ],

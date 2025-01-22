@@ -20,7 +20,6 @@
 #include <string>
 
 #include "cc/core/http2_server/src/http2_server.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::http2_server::mock {
 
@@ -29,22 +28,15 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
   MockHttp2ServerWithOverrides(
       std::string& host_address, std::string& port,
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
+      std::shared_ptr<AuthorizationProxyInterface> authorization_proxy,
       std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
           nullptr,
       MetricRouter* metric_router = nullptr)
       : Http2Server(host_address, port, 2 /* thread_pool_size */,
                     async_executor, authorization_proxy,
-                    aws_authorization_proxy, metric_client, config_provider,
+                    aws_authorization_proxy, config_provider,
                     Http2ServerOptions(), metric_router) {}
-
-  ExecutionResult MetricInit() noexcept { return SuccessExecutionResult(); }
-
-  ExecutionResult MetricRun() noexcept { return SuccessExecutionResult(); }
-
-  ExecutionResult MetricStop() noexcept { return SuccessExecutionResult(); }
 
   void OnHttp2Response(
       AsyncContext<NgHttp2Request, NgHttp2Response>& http_context,
@@ -59,29 +51,30 @@ class MockHttp2ServerWithOverrides : public core::Http2Server {
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context,
       common::Uuid& request_id,
-      const std::shared_ptr<Http2SynchronizationContext>&
-          sync_context) noexcept {
+      const std::shared_ptr<Http2SynchronizationContext>& sync_context) noexcept
+      override {
     core::Http2Server::OnAuthorizationCallback(authorization_context,
                                                request_id, sync_context);
   }
 
   void HandleHttp2Request(
       AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
-      HttpHandler& http_handler) noexcept {
+      HttpHandler& http_handler) noexcept override {
     if (handle_http2_request_mock_) {
       return handle_http2_request_mock_(http2_context, http_handler);
     }
     return core::Http2Server::HandleHttp2Request(http2_context, http_handler);
   }
 
-  void OnHttp2PendingCallback(ExecutionResult& execution_result,
-                              common::Uuid& request_id) noexcept {
+  void OnHttp2PendingCallback(
+      ExecutionResult execution_result,
+      const common::Uuid& request_id) noexcept override {
     core::Http2Server::OnHttp2PendingCallback(execution_result, request_id);
   }
 
-  void OnHttp2Cleanup(common::Uuid activity_id, common::Uuid request_id,
-                      uint32_t error_code) noexcept {
-    core::Http2Server::OnHttp2Cleanup(activity_id, request_id, error_code);
+  void OnHttp2Cleanup(const Http2SynchronizationContext& sync_context,
+                      uint32_t error_code) noexcept override {
+    core::Http2Server::OnHttp2Cleanup(sync_context, error_code);
   }
 
   common::ConcurrentMap<

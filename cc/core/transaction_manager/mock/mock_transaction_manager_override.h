@@ -25,7 +25,6 @@
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/transaction_manager/interface/transaction_engine_interface.h"
 #include "cc/core/transaction_manager/src/transaction_manager.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionManager : public core::TransactionManager {
@@ -39,12 +38,10 @@ class MockTransactionManager : public core::TransactionManager {
       std::shared_ptr<JournalServiceInterface>& journal_service,
       std::shared_ptr<RemoteTransactionManagerInterface>&
           remote_transaction_manager,
-      size_t max_concurrent_transactions,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client)
+      size_t max_concurrent_transactions)
       : TransactionManager(
             async_executor, transaction_command_serializer, journal_service,
             remote_transaction_manager, max_concurrent_transactions,
-            metric_client,
             std::make_shared<config_provider::mock::MockConfigProvider>()) {}
 
   std::function<ExecutionResult(
@@ -63,13 +60,6 @@ class MockTransactionManager : public core::TransactionManager {
       const GetTransactionManagerStatusRequest& request,
       GetTransactionManagerStatusResponse& response)>
       get_status_mock;
-
-  ExecutionResult RegisterAggregateMetric(
-      std::shared_ptr<cpio::AggregateMetricInterface>& metrics_instance,
-      const std::string& name) noexcept {
-    metrics_instance = std::make_shared<cpio::MockAggregateMetric>();
-    return SuccessExecutionResult();
-  }
 
   ExecutionResult Execute(AsyncContext<TransactionRequest, TransactionResponse>&
                               transaction_context) noexcept override {

@@ -33,7 +33,6 @@ variable "project_id" {
 variable "parent_domain_name" {
   description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string
-  nullable    = false
 }
 
 variable "enable_domain_management" {
@@ -51,7 +50,6 @@ variable "pbs_domain" {
 variable "parent_domain_project" {
   description = "The project owning the parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string
-  nullable    = false
 }
 
 variable "pbs_ip_address" {
@@ -99,7 +97,6 @@ variable "pbs_health_check_port" {
 variable "pbs_vpc_network_id" {
   description = "This is the VPC (google compute network) ID to use for the load balancer."
   type        = string
-  nullable    = false
 }
 
 variable "pbs_instance_target_tag" {

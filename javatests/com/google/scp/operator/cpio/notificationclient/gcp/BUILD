@@ -29,6 +29,7 @@ java_test(
         "//java/external:gcp_pubsub_v1",
         "//java/external:google_truth",
         "//java/external:grpc_api",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:mockito",
         "//javatests/com/google/scp/shared/testutils/gcp",

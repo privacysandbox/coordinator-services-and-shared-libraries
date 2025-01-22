@@ -12,6 +12,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.HttpKey
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
 import com.google.scp.shared.clients.DefaultHttpClientRetryStrategy;
 import com.google.scp.shared.gcp.util.GcpHttpInterceptorUtil;
+import java.io.IOException;
 import java.util.Optional;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -25,7 +26,8 @@ public final class GcpKeyStorageConfigModule extends AbstractModule {
   @CoordinatorBHttpClient
   public HttpClient provideCoordinatorBHttpClient(
       @KeyStorageServiceBaseUrl String keyStorageServiceBaseUrl,
-      @KeyStorageServiceCloudfunctionUrl Optional<String> keyStorageServiceCloudfunctionUrl) {
+      @KeyStorageServiceCloudfunctionUrl Optional<String> keyStorageServiceCloudfunctionUrl)
+      throws IOException {
     return HttpClients.custom()
         .addInterceptorFirst(
             GcpHttpInterceptorUtil.createHttpInterceptor(

@@ -36,6 +36,7 @@ java_test(
         "//java/external:aws_sqs",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:localstack_containers",
         "//java/external:protobuf_java_util",

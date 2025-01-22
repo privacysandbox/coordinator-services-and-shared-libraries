@@ -65,6 +65,8 @@ class ConfigProvider : public ConfigProviderInterface {
   ExecutionResult Get(const ConfigKey& key,
                       std::list<bool>& out) noexcept override;
 
+  ExecutionResult Get(const ConfigKey& key, double& out) noexcept override;
+
  private:
   template <typename T>
   ExecutionResult Get(const ConfigKey& key, T& out) noexcept {

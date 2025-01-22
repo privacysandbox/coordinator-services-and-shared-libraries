@@ -29,6 +29,7 @@ java_test(
         "//java/com/google/scp/shared/mapper",
         "//java/external:aws_lambda_java_events",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
         "//java/external:mockito",
@@ -50,6 +51,7 @@ java_test(
         "//java/external:aws_auth",
         "//java/external:aws_regions",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )
 
@@ -68,6 +70,7 @@ java_test(
         "//java/external:aws_auth",
         "//java/external:aws_regions",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:junit",
         "//java/external:mockito",
         "//java/external:mockito_inline",

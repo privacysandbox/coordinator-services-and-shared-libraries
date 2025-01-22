@@ -19,7 +19,6 @@ package com.google.scp.operator.frontend.service.aws;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.scp.shared.testutils.aws.AwsIntegrationTestUtil.getLocalStackHostname;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

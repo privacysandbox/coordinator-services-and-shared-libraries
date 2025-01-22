@@ -7,6 +7,9 @@ build --config=java
 build:cpp --client_env=BAZEL_CXXOPTS=-std=c++20
 build:cpp --cxxopt=-std=c++20
 
+# Ensures binary compatibility with OpenTelemetry ABI version 2.
+build --cxxopt=-DOPENTELEMETRY_ABI_VERSION_NO=2
+
 # Don't use opentelemetry-cpp’s copy of Abseil
 # https://github.com/open-telemetry/opentelemetry-cpp/pull/1172
 # https://github.com/open-telemetry/opentelemetry-cpp/blob/main/examples/otlp/README.md#additional-notes-regarding-abseil-library
@@ -31,6 +34,12 @@ build:asan --linkopt -fsanitize=address
 # Run sudo apt-get install lld in case of error
 build:asan --linkopt=-fuse-ld=lld
 build:asan --action_env=ASAN_OPTIONS=detect_leaks=1:color=always
+
+# Used to build a debug binary that can be run under lldb
+build:lldb --compilation_mode=dbg
+build:lldb --dynamic_mode=off
+build:lldb --copt=-gpubnames
+build:lldb --linkopt=-Wl,--debug-names
 
 test --cxxopt=-D_SCP_CORE_SOCAT_FORWARDER_NON_PRIVILEGED=1
 test --test_output=all

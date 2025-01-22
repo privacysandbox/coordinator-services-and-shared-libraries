@@ -35,9 +35,6 @@
 #include "cc/core/interface/transaction_manager_interface.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/core/transaction_manager/interface/transaction_engine_interface.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
 #include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/observer_result.h"
@@ -50,18 +47,16 @@ namespace google::scp::core {
 class TransactionManager : public TransactionManagerInterface {
  public:
   TransactionManager() = delete;
-  TransactionManager(
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<TransactionCommandSerializerInterface>&
-          transaction_command_serializer,
-      std::shared_ptr<JournalServiceInterface>& journal_service,
-      std::shared_ptr<RemoteTransactionManagerInterface>&
-          remote_transaction_manager,
-      size_t max_concurrent_transactions,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
-      std::shared_ptr<MetricRouter> metric_router,
-      std::shared_ptr<ConfigProviderInterface> config_provider,
-      const PartitionId& partition_id = kGlobalPartitionId);
+  TransactionManager(std::shared_ptr<AsyncExecutorInterface>& async_executor,
+                     std::shared_ptr<TransactionCommandSerializerInterface>&
+                         transaction_command_serializer,
+                     std::shared_ptr<JournalServiceInterface>& journal_service,
+                     std::shared_ptr<RemoteTransactionManagerInterface>&
+                         remote_transaction_manager,
+                     size_t max_concurrent_transactions,
+                     std::shared_ptr<MetricRouter> metric_router,
+                     std::shared_ptr<ConfigProviderInterface> config_provider,
+                     const PartitionId& partition_id = kGlobalPartitionId);
 
   ~TransactionManager();
 
@@ -95,24 +90,11 @@ class TransactionManager : public TransactionManagerInterface {
       opentelemetry::metrics::ObserverResult observer_result,
       absl::Nonnull<TransactionManager*> self_ptr);
 
-  /**
-   * @brief Registers a Aggregate Metric object
-   *
-   * @param metrics_instance The pointer of the aggregate metric object.
-   * @param name The event name of the aggregate metric used to build metric
-   * name.
-   * @return ExecutionResult
-   */
-  virtual ExecutionResult RegisterAggregateMetric(
-      std::shared_ptr<cpio::AggregateMetricInterface>& metrics_instance,
-      const std::string& name) noexcept;
-
   TransactionManager(
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<transaction_manager::TransactionEngineInterface>
           transaction_engine,
       size_t max_concurrent_transactions,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<MetricRouter> metric_router,
       std::shared_ptr<ConfigProviderInterface> config_provider,
       const PartitionId& partition_id = kGlobalPartitionId)
@@ -122,13 +104,11 @@ class TransactionManager : public TransactionManagerInterface {
         active_transactions_count_(0),
         max_transactions_since_observed_(0),
         started_(false),
-        metric_client_(metric_client),
         metric_router_(metric_router),
         config_provider_(config_provider),
         partition_id_(partition_id),
-        activity_id_(partition_id),  // Use partition ID as the activity ID for
-                                     // the lifetime of this object
-        aggregated_metric_interval_ms_(kDefaultAggregatedMetricIntervalMs) {}
+        activity_id_(partition_id) {}  // Use partition ID as the activity ID
+                                       // for the lifetime of this object
 
   // Max concurrent transactions count.
   const size_t max_concurrent_transactions_;
@@ -162,9 +142,6 @@ class TransactionManager : public TransactionManagerInterface {
   // Indicates whether the component has started.
   std::atomic<bool> started_;
 
-  // Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-
   // Keep a MetricRouter member in order to access MetricRouter-owned OTel
   // Instruments.
   //
@@ -190,9 +167,6 @@ class TransactionManager : public TransactionManagerInterface {
   std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
       finished_transactions_instrument_;
 
-  // The AggregateMetric instance for number of active transactions.
-  std::shared_ptr<cpio::AggregateMetricInterface> active_transactions_metric_;
-
   // Configurations for Transaction Manager are obtained from this.
   std::shared_ptr<ConfigProviderInterface> config_provider_;
 
@@ -202,14 +176,6 @@ class TransactionManager : public TransactionManagerInterface {
 
   // Activity Id of the background activities
   core::common::Uuid activity_id_;
-
-  // The time interval for metrics aggregation.
-  TimeDuration aggregated_metric_interval_ms_;
-
- private:
-  // Initialize MetricClient.
-  //
-  core::ExecutionResult InitMetricClientInterface();
 };
 
 }  // namespace google::scp::core

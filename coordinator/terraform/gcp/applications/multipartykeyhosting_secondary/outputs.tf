@@ -37,3 +37,7 @@ output "wip_allowed_service_account" {
 output "wip_verified_service_account" {
   value = module.workload_identity_pool.wip_verified_service_account
 }
+
+output "key_storage_service_account_unique_id" {
+  value = module.keystorageservice.key_storage_service_account_unique_id
+}

@@ -40,3 +40,6 @@ output "key_generation_service_account" {
   value = module.multipartykeyhosting_primary.key_generation_service_account
 }
 
+output "key_generation_service_account_unique_id" {
+  value = module.multipartykeyhosting_primary.key_generation_service_account_unique_id
+}

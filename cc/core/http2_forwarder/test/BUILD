@@ -29,7 +29,6 @@ cc_test(
         "//cc/core/http2_forwarder/src:core_http2_forwarder_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",

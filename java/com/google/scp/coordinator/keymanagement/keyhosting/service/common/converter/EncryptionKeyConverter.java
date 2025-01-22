@@ -85,10 +85,9 @@ public final class EncryptionKeyConverter {
                       .setPublicKeySignature(keySplitData.getPublicKeySignature())
                       .setKeyEncryptionKeyUri(keySplitData.getKeySplitKeyEncryptionKeyUri());
               // Only populate key material for the key data owned by this coordinator.
-              if (encryptionKey.getKeyEncryptionKeyUri() != null
-                  && encryptionKey
-                      .getKeyEncryptionKeyUri()
-                      .equals(keySplitData.getKeySplitKeyEncryptionKeyUri())) {
+              if (encryptionKey
+                  .getKeyEncryptionKeyUri()
+                  .equals(keySplitData.getKeySplitKeyEncryptionKeyUri())) {
                 keyDataBuilder.setKeyMaterial(encryptionKey.getJsonEncodedKeyset());
               }
               return keyDataBuilder.build();

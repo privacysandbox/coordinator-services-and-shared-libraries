@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "pbs_environment_url" {
-  value = module.beanstalk_environment.evironment_url
+  value = "DEPRECATED"
 }
 
 output "pbs_environment_auth_url" {

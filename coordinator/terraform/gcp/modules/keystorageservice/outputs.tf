@@ -20,3 +20,8 @@ output "key_storage_cloudfunction_url" {
   description = "The audience claim URL used by the key generation service."
   value       = var.use_cloud_run ? google_cloud_run_v2_service.key_storage_service[0].uri : google_cloudfunctions2_function.key_storage_cloudfunction[0].url
 }
+
+output "key_storage_service_account_unique_id" {
+  description = "Unique Id of key storage service account"
+  value       = google_service_account.key_storage_service_account.unique_id
+}

@@ -523,3 +523,63 @@ variable "min_log_level" {
     error_message = "The values should be one of ['', 'INFO', 'WARN', 'ERROR']."
   }
 }
+
+################################################################################
+#  Per-coordinator config variables
+################################################################################
+
+variable "coordinator_configs" {
+  type = map(object({
+    gcp_project_number = string
+    gcp_project_id     = string
+    aws_account_id     = string
+    env_name           = string
+  }))
+  default = {}
+
+  description = <<EOT
+      A map with per-coordinator config variables. Keys must be 'COORDINATOR_A' and 'COORDINATOR_B'.
+      Values are objects with variables specific to each coordinator. Example:
+      coordinator_configs = {
+       "COORDINATOR_A" = {
+         gcp_project_number = "12312312312"
+         gcp_project_id = "project-a"
+         aws_account_id = "23123123123"
+         env_name = "prod"
+       },
+       "COORDINATOR_B" = {
+         gcp_project_number = "78978978978"
+         gcp_project_id = "project-b"
+         aws_account_id = "987987987987"
+         env_name = "prod"
+       }
+      }
+    EOT
+}
+
+variable "coordinator_wif_config_override" {
+  type = map(object({
+    workload_identity_pool_id          = string
+    workload_identity_pool_provider_id = string
+    sa_email                           = string
+  }))
+  default = {}
+
+  description = <<EOT
+      Optional override for per-coordinator values used for Workload Identity Federation (WIF).
+      If not provided, WIF values are generated automatically based on coordinator_config.
+      Keys must be 'COORDINATOR_A' and 'COORIDNATOR_B'. Example:
+      coordinator_wif_config_override = {
+       "COORDINATOR_A" = {
+         workload_identity_pool_id = "prod-aws-wip-1"
+         workload_ideanity_pool_provider_id = "wipp-1"
+         sa_email = "prod-fed-aws-1@12312312312.iam.gserviceaccount.com"
+       },
+       "COORDINATOR_B" = {
+         workload_identity_pool_id = "prod-aws-wip-1"
+         workload_ideanity_pool_provider_id = "wipp-1"
+         sa_email = "prod-fed-aws-1@32132132132.iam.gserviceaccount.com"
+       }
+      }
+  EOT
+}

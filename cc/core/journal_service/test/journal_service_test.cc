@@ -41,7 +41,6 @@
 #include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
-#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
 using google::scp::core::AsyncContext;
@@ -68,9 +67,6 @@ using google::scp::core::journal_service::mock::MockJournalOutputStream;
 using google::scp::core::journal_service::mock::MockJournalServiceWithOverrides;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
-using google::scp::cpio::MetricClientInterface;
-using google::scp::cpio::MockMetricClient;
-using google::scp::cpio::MockSimpleMetric;
 using google::scp::cpio::TimeEvent;
 using std::atomic;
 using std::make_pair;
@@ -90,7 +86,6 @@ class JournalServiceTests : public ::testing::Test {
         make_shared<AsyncExecutor>(4 /* threads*/, 1000000 /* queue size*/);
     EXPECT_SUCCESS(async_executor_->Init());
     EXPECT_SUCCESS(async_executor_->Run());
-    mock_metric_client_ = make_shared<MockMetricClient>();
     mock_config_provider_ = make_shared<MockConfigProvider>();
     mock_blob_storage_provider_ = make_shared<MockBlobStorageProvider>();
 
@@ -104,7 +99,6 @@ class JournalServiceTests : public ::testing::Test {
   shared_ptr<string> partition_name_ =
       make_shared<string>("00000000-0000-0000-0000-000000000000");
   shared_ptr<AsyncExecutorInterface> async_executor_;
-  shared_ptr<MetricClientInterface> mock_metric_client_;
   shared_ptr<ConfigProviderInterface> mock_config_provider_;
   shared_ptr<BlobStorageProviderInterface> mock_blob_storage_provider_;
   // For testing OTel metrics
@@ -114,11 +108,10 @@ class JournalServiceTests : public ::testing::Test {
 TEST_F(JournalServiceTests, Init) {
   shared_ptr<BlobStorageProviderInterface> blob_storage_provider =
       make_shared<MockBlobStorageProvider>();
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   JournalService journal_service(
       bucket_name_, partition_name_, async_executor_, blob_storage_provider,
-      mock_metric_client, /*metric_router=*/nullptr, mock_config_provider);
+      /*metric_router=*/nullptr, mock_config_provider);
 
   EXPECT_SUCCESS(journal_service.Init());
   EXPECT_THAT(journal_service.Init(),
@@ -129,7 +122,7 @@ TEST_F(JournalServiceTests, Init) {
 TEST_F(JournalServiceTests, Run) {
   JournalService journal_service(bucket_name_, partition_name_, async_executor_,
                                  mock_blob_storage_provider_,
-                                 mock_metric_client_, /*metric_router=*/nullptr,
+                                 /*metric_router=*/nullptr,
                                  mock_config_provider_);
   EXPECT_THAT(journal_service.Run(),
               ResultIs(FailureExecutionResult(
@@ -145,7 +138,7 @@ TEST_F(JournalServiceTests, Run) {
 TEST_F(JournalServiceTests, Stop) {
   JournalService journal_service(bucket_name_, partition_name_, async_executor_,
                                  mock_blob_storage_provider_,
-                                 mock_metric_client_, /*metric_router=*/nullptr,
+                                 /*metric_router=*/nullptr,
                                  mock_config_provider_);
   EXPECT_THAT(journal_service.Stop(),
               ResultIs(FailureExecutionResult(
@@ -161,7 +154,7 @@ TEST_F(JournalServiceTests, Stop) {
 TEST_F(JournalServiceTests, Recover) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
   mock_blob_storage_provider_->CreateBlobStorageClient(blob_storage_client);
@@ -196,7 +189,7 @@ TEST_F(JournalServiceTests, Recover) {
 TEST_F(JournalServiceTests, ValidateParamsOfRecover) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
 
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
@@ -267,7 +260,7 @@ TEST_F(JournalServiceTests, ValidateParamsOfRecover) {
 TEST_F(JournalServiceTests, OnJournalStreamReadLogCallbackStreamFailure) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
   mock_blob_storage_provider_->CreateBlobStorageClient(blob_storage_client);
@@ -320,7 +313,7 @@ TEST_F(JournalServiceTests, OnJournalStreamReadLogCallbackStreamFailure) {
 TEST_F(JournalServiceTests, OnJournalStreamReadLogCallbackNoCallbackFound) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
   mock_blob_storage_provider_->CreateBlobStorageClient(blob_storage_client);
@@ -354,7 +347,7 @@ TEST_F(JournalServiceTests,
        OnJournalStreamReadLogCallbackCallbackFoundWithFailure) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
   mock_blob_storage_provider_->CreateBlobStorageClient(blob_storage_client);
@@ -402,7 +395,7 @@ TEST_F(JournalServiceTests,
        OnJournalStreamReadLogCallbackCallbackFoundWithSuccess) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
   shared_ptr<BlobStorageClientInterface> blob_storage_client;
   mock_blob_storage_provider_->CreateBlobStorageClient(blob_storage_client);
@@ -479,7 +472,7 @@ TEST_F(JournalServiceTests,
 TEST_F(JournalServiceTests, OnJournalStreamAppendLogCallback) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
@@ -506,7 +499,7 @@ TEST_F(JournalServiceTests, SubscribeForRecovery) {
   {
     MockJournalServiceWithOverrides journal_service(
         bucket_name_, partition_name_, async_executor_,
-        mock_blob_storage_provider_, mock_metric_client_,
+        mock_blob_storage_provider_,
         /*metric_router=*/nullptr, mock_config_provider_);
 
     journal_service.Init();
@@ -526,7 +519,7 @@ TEST_F(JournalServiceTests, SubscribeForRecovery) {
     auto mock_config_provider = make_shared<MockConfigProvider>();
     MockJournalServiceWithOverrides journal_service(
         bucket_name_, partition_name_, async_executor_,
-        mock_blob_storage_provider_, mock_metric_client_,
+        mock_blob_storage_provider_,
         /*metric_router=*/nullptr, mock_config_provider_);
 
     journal_service.Init();
@@ -543,7 +536,7 @@ TEST_F(JournalServiceTests, SubscribeForRecovery) {
   {
     MockJournalServiceWithOverrides journal_service(
         bucket_name_, partition_name_, async_executor_,
-        mock_blob_storage_provider_, mock_metric_client_,
+        mock_blob_storage_provider_,
         /*metric_router=*/nullptr, mock_config_provider_);
 
     journal_service.Init();
@@ -564,7 +557,7 @@ TEST_F(JournalServiceTests, UnsubscribeForRecovery) {
   {
     MockJournalServiceWithOverrides journal_service(
         bucket_name_, partition_name_, async_executor_,
-        mock_blob_storage_provider_, mock_metric_client_,
+        mock_blob_storage_provider_,
         /*metric_router=*/nullptr, mock_config_provider_);
 
     journal_service.Init();
@@ -581,7 +574,7 @@ TEST_F(JournalServiceTests, UnsubscribeForRecovery) {
   {
     MockJournalServiceWithOverrides journal_service(
         bucket_name_, partition_name_, async_executor_,
-        mock_blob_storage_provider_, mock_metric_client_,
+        mock_blob_storage_provider_,
         /*metric_router=*/nullptr, mock_config_provider_);
 
     journal_service.Init();
@@ -602,7 +595,7 @@ TEST_F(JournalServiceTests, UnsubscribeForRecovery) {
     auto mock_config_provider = make_shared<MockConfigProvider>();
     MockJournalServiceWithOverrides journal_service(
         bucket_name_, partition_name_, async_executor_,
-        mock_blob_storage_provider_, mock_metric_client_,
+        mock_blob_storage_provider_,
         /*metric_router=*/nullptr, mock_config_provider_);
 
     journal_service.Init();
@@ -621,7 +614,7 @@ TEST_F(JournalServiceTests, UnsubscribeForRecovery) {
 TEST_F(JournalServiceTests, GetLastPersistedJournalIdWithoutRecovery) {
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_,
+      mock_blob_storage_provider_,
       /*metric_router=*/nullptr, mock_config_provider_);
   JournalId journal_id;
   EXPECT_THAT(journal_service.GetLastPersistedJournalId(journal_id),
@@ -641,8 +634,7 @@ TEST_F(JournalServiceTests, OTelReturnsJournalRecoveryTime) {
 
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_, metric_router_,
-      mock_config_provider_);
+      mock_blob_storage_provider_, metric_router_, mock_config_provider_);
   journal_service.Init();
   journal_service.SetInputStream(input_stream);
 
@@ -704,8 +696,7 @@ TEST_F(JournalServiceTests, OTelReturnsCorrectJournalRecoveryCount) {
 
   MockJournalServiceWithOverrides journal_service(
       bucket_name_, partition_name_, async_executor_,
-      mock_blob_storage_provider_, mock_metric_client_, metric_router_,
-      mock_config_provider_);
+      mock_blob_storage_provider_, metric_router_, mock_config_provider_);
   journal_service.Init();
   journal_service.SetInputStream(input_stream);
 

@@ -31,10 +31,10 @@ data "google_dns_managed_zone" "dns_zone" {
   project = var.parent_domain_project
 
   lifecycle {
-    # Parent domain name should not be empty
+    # Parent domain name should not be null
     precondition {
-      condition     = var.parent_domain_name != "" && var.parent_domain_project != ""
-      error_message = "Domain management is enabled with an empty parent_domain_name or parent_domain_project."
+      condition     = var.parent_domain_name != null && var.parent_domain_project != null
+      error_message = "Domain management is enabled with an null parent_domain_name or parent_domain_project."
     }
   }
 }

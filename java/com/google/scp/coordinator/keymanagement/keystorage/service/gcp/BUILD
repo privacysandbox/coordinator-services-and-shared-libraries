@@ -20,6 +20,8 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "GcpKeyStorageServiceModule",
     srcs = [
+        "AwsEncryptionAeadModule.java",
+        "GcpEncryptionAeadModule.java",
         "GcpKeyStorageServiceModule.java",
     ],
     deps = [
@@ -28,6 +30,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/external:guice",
         "//java/external:tink",
         "//java/external:tink-gcpkms",

@@ -39,3 +39,7 @@ output "key_encryption_key_id" {
 output "key_generation_service_account" {
   value = module.keygenerationservice.key_generation_service_account
 }
+
+output "key_generation_service_account_unique_id" {
+  value = module.keygenerationservice.key_generation_service_account_unique_id
+}

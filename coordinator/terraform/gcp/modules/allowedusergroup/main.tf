@@ -19,12 +19,12 @@ terraform {
 }
 
 data "google_organization" "org" {
-  count  = var.customer_id == "" ? 1 : 0
+  count  = var.customer_id == null ? 1 : 0
   domain = var.organization_domain
 }
 
 locals {
-  customer_id = var.customer_id != "" ? var.customer_id : data.google_organization.org[0].directory_customer_id
+  customer_id = var.customer_id != null ? var.customer_id : data.google_organization.org[0].directory_customer_id
 }
 
 resource "google_cloud_identity_group" "group" {

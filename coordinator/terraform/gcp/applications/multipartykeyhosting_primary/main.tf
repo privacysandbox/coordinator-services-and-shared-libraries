@@ -23,8 +23,9 @@ terraform {
 
 locals {
   service_subdomain_suffix = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  public_key_domain        = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.public_key_service_subdomain}.${var.parent_domain_name}"
-  encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
+  parent_domain_name       = var.parent_domain_name != null ? var.parent_domain_name : ""
+  public_key_domain        = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.public_key_service_subdomain}.${local.parent_domain_name}"
+  encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
   notification_channel_id  = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
   package_bucket_prefix    = "${var.project_id}_${var.environment}"
   package_bucket_name      = length("${local.package_bucket_prefix}_mpkhs_primary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_primary_package_jars" : "${local.package_bucket_prefix}_mpkhs_a_pkg"
@@ -62,7 +63,7 @@ resource "google_monitoring_notification_channel" "alarm_email" {
   lifecycle {
     # Email should not be empty
     precondition {
-      condition     = var.alarms_notification_email != ""
+      condition     = var.alarms_notification_email != null
       error_message = "var.alarms_enabled is true with an empty var.alarms_notification_email."
     }
   }
@@ -333,11 +334,41 @@ module "peer_coordinator_service_account" {
 }
 
 module "key_id_type" {
-  count  = var.key_id_type == "" ? 0 : 1
+  count  = var.key_id_type == null ? 0 : 1
   source = "../../modules/parameters"
 
   project_id      = var.project_id
   environment     = var.environment
   parameter_name  = "KEY_ID_TYPE"
   parameter_value = var.key_id_type
+}
+
+module "aws_xc_enabled" {
+  count  = var.aws_xc_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_XC_ENABLED"
+  parameter_value = "true"
+}
+
+module "aws_kms_key_uri" {
+  count  = var.aws_xc_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_KMS_KEY_URI"
+  parameter_value = "aws-kms://${var.aws_kms_key_encryption_key_arn}"
+}
+
+module "aws_kms_role_arn" {
+  count  = var.aws_xc_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_KMS_ROLE_ARN"
+  parameter_value = var.aws_kms_key_encryption_key_role_arn
 }

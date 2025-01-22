@@ -30,18 +30,13 @@ rules_jvm_external_setup()
 
 # Declare explicit protobuf version and hash, to override any implicit dependencies.
 # Please update both while upgrading to new versions.
-#
-# Staying with 25.3 until we address breaking changes in Protobuf Java 3 -> 4
-# https://protobuf.dev/news/2023-12-05/
-# https://github.com/grpc/grpc-java/issues/11015
-# https://github.com/protocolbuffers/protobuf/issues/16452#issuecomment-2047931605
-PROTOBUF_CORE_VERSION = "25.3"
+PROTOBUF_CORE_VERSION = "28.3"
 
-PROTOBUF_SHA_256 = "d19643d265b978383352b3143f04c0641eea75a75235c111cc01a1350173180e"
+PROTOBUF_SHA_256 = "7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a"
 
 # Protobuf now uses different major version numbers for each language.
 # https://protobuf.dev/support/version-support/#java
-PROTOBUF_JAVA_VERSION_PREFIX = "3."
+PROTOBUF_JAVA_VERSION_PREFIX = "4."
 
 ##########################
 # SDK Dependencies Rules #
@@ -170,8 +165,8 @@ maven_install(
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.testparameterinjector:test-parameter-injector:1.1",
         "com.google.truth.extensions:truth-java8-extension:1.1.2",
-        "com.google.truth.extensions:truth-proto-extension:1.1.2",
-        "com.google.truth:truth:1.1.2",
+        "com.google.truth.extensions:truth-proto-extension:1.4.4",
+        "com.google.truth:truth:1.4.4",
         "com.jayway.jsonpath:json-path:2.5.0",
         "io.github.resilience4j:resilience4j-core:1.7.1",
         "io.github.resilience4j:resilience4j-retry:1.7.1",

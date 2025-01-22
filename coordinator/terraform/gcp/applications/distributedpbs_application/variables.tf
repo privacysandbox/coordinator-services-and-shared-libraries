@@ -41,14 +41,12 @@ variable "environment" {
 variable "pbs_artifact_registry_repository_name" {
   description = "The PBS Artifact Registry repository name."
   type        = string
-  nullable    = false
 }
 
 variable "pbs_image_override" {
   description = "The absolute location of the PBS container (including the tag) which will override the derived location"
   type        = string
-  default     = ""
-  nullable    = false
+  default     = null
 }
 
 ################################################################################
@@ -192,15 +190,13 @@ variable "pbs_auth_allowed_principals" {
 variable "pbs_auth_package_path" {
   description = "The package path of the PBS Auth Cloud Function which will override the built-in path"
   type        = string
-  default     = ""
-  nullable    = false
+  default     = null
 }
 
 variable "pbs_auth_package_bucket" {
   description = "The name of the bucket containing the PBS Auth Cloud Function which will override the built-in bucket"
   type        = string
-  default     = ""
-  nullable    = false
+  default     = null
 }
 
 ################################################################################
@@ -259,7 +255,6 @@ variable "pbs_service_account_email" {
 variable "pbs_remote_coordinator_service_account_email" {
   description = "The email of the service account for the PBS remote coordinator."
   type        = string
-  nullable    = false
 }
 
 variable "pbs_custom_vm_tags" {
@@ -315,13 +310,11 @@ variable "deploy_pbs_cloud_run" {
 variable "parent_domain_project" {
   description = "The project owning the parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string
-  nullable    = false
 }
 
 variable "parent_domain_name" {
   description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string
-  nullable    = false
 }
 
 variable "service_subdomain" {
@@ -344,13 +337,11 @@ variable "pbs_main_port" {
 variable "vpc_network_id" {
   description = "The VPC ID. If left blank, the default network will be used."
   type        = string
-  nullable    = false
 }
 
 variable "vpc_subnet_id" {
   description = "The VPC subnetwork ID. Must be provided if using a custom VPC."
   type        = string
-  nullable    = false
 }
 
 variable "enable_public_ip_address" {

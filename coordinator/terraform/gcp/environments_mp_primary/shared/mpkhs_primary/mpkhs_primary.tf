@@ -41,6 +41,10 @@ module "multipartykeyhosting_primary" {
   public_key_service_alternate_domain_names = var.public_key_service_alternate_domain_names
   encryption_key_service_subdomain          = var.encryption_key_service_subdomain
 
+  aws_xc_enabled                      = var.aws_xc_enabled
+  aws_kms_key_encryption_key_arn      = var.aws_kms_key_encryption_key_arn
+  aws_kms_key_encryption_key_role_arn = var.aws_kms_key_encryption_key_role_arn
+
   get_public_key_service_zip = var.get_public_key_service_zip
   encryption_key_service_zip = var.encryption_key_service_zip
 

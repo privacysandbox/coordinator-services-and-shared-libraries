@@ -28,6 +28,7 @@ java_test(
         "//java/com/google/scp/shared/proto",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:mockito",
         "//java/external:protobuf_java",

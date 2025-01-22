@@ -23,8 +23,9 @@ terraform {
 
 locals {
   service_subdomain_suffix = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  key_storage_domain       = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
-  encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
+  parent_domain_name       = var.parent_domain_name != null ? var.parent_domain_name : ""
+  key_storage_domain       = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.key_storage_service_subdomain}.${local.parent_domain_name}"
+  encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
   notification_channel_id  = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
   package_bucket_prefix    = "${var.project_id}_${var.environment}"
   package_bucket_name      = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
@@ -81,8 +82,8 @@ resource "google_monitoring_notification_channel" "alarm_email" {
   lifecycle {
     # Email should not be empty
     precondition {
-      condition     = var.alarms_notification_email != ""
-      error_message = "var.alarms_enabled is true with an empty var.alarms_notification_email."
+      condition     = var.alarms_notification_email != null
+      error_message = "var.alarms_enabled is true but var.alarms_notification_email is not set."
     }
   }
 }
@@ -118,6 +119,11 @@ module "keystorageservice" {
   key_storage_cloudfunction_memory                = var.key_storage_service_cloudfunction_memory_mb
   key_storage_service_cloudfunction_min_instances = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances = var.key_storage_service_cloudfunction_max_instances
+
+  # AWS cross-cloud variables
+  aws_xc_enabled                      = var.aws_xc_enabled
+  aws_kms_key_encryption_key_arn      = var.aws_kms_key_encryption_key_arn
+  aws_kms_key_encryption_key_role_arn = var.aws_kms_key_encryption_key_role_arn
 
   # Cloud Run vars
   use_cloud_run                        = var.use_cloud_run

@@ -24,6 +24,7 @@ java_test(
         "//java/external:acai",
         "//java/external:gcp_storage",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//javatests/com/google/scp/shared/testutils/gcp",
     ],

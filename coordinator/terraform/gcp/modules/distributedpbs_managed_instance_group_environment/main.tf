@@ -38,8 +38,8 @@ locals {
   startup_script = templatefile("${path.module}/files/instance_startup.sh", { host_certificate_path = local.host_certificate_path })
 
   pbs_auth_endpoint = var.enable_domain_management ? "${var.pbs_domain}/v1/auth" : var.pbs_auth_audience_url
-  pbs_image         = var.pbs_image_override != "" ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-image:${var.pbs_image_tag}"
-  pbs_image_cr      = var.pbs_image_override != "" ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-cloud-run-image:${var.pbs_image_tag}"
+  pbs_image         = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-image:${var.pbs_image_tag}"
+  pbs_image_cr      = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-cloud-run-image:${var.pbs_image_tag}"
 
   pbs_application_environment_variables = concat(var.pbs_application_environment_variables, [
     {
@@ -355,7 +355,7 @@ resource "google_compute_instance_template" "pbs_instance_template" {
 
   network_interface {
     # If a VPC ID is provided, use that, otherwise use the default network.
-    network    = var.vpc_network_id != "" ? var.vpc_network_id : "default"
+    network    = var.vpc_network_id != null ? var.vpc_network_id : "default"
     subnetwork = var.vpc_subnet_id
 
     # There is no specific flag to enable/disable auto-assigment of a public IP

@@ -27,6 +27,7 @@ java_test(
         "//java/external:aws_sns",
         "//java/external:google_truth",
         "//java/external:grpc_api",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:mockito",
         "//javatests/com/google/scp/shared/testutils/aws",

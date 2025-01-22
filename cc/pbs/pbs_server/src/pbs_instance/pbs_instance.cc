@@ -271,8 +271,8 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
   journal_service_ = make_shared<JournalService>(
       pbs_instance_config_.journal_bucket_name,
       pbs_instance_config_.journal_partition_name, async_executor_,
-      blob_storage_provider_for_journal_service_, metric_client_,
-      metric_router_, config_provider_);
+      blob_storage_provider_for_journal_service_, metric_router_,
+      config_provider_);
   budget_key_provider_ = make_shared<BudgetKeyProvider>(
       async_executor_, journal_service_, nosql_database_provider_,
       metric_client_, metric_router_, config_provider_);
@@ -281,8 +281,8 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
   transaction_manager_ = make_shared<TransactionManager>(
       async_executor_, transaction_command_serializer_, journal_service_,
       remote_transaction_manager_,
-      pbs_instance_config_.transaction_manager_capacity, metric_client_,
-      metric_router_, config_provider_);
+      pbs_instance_config_.transaction_manager_capacity, metric_router_,
+      config_provider_);
 
   pass_thru_authorization_proxy_ = make_shared<PassThruAuthorizationProxy>();
 
@@ -294,13 +294,12 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
   http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.host_port,
       pbs_instance_config_.http2server_thread_pool_size, async_executor_,
-      authorization_proxy_, /*aws_authorization_proxy=*/nullptr, metric_client_,
+      authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
       config_provider_, http2_server_options, metric_router_.get());
   health_http_server_ = make_shared<Http2Server>(
       *pbs_instance_config_.host_address, *pbs_instance_config_.health_port,
       1 /* one thread needed */, async_executor_,
       pass_thru_authorization_proxy_, /*aws_authorization_proxy=*/nullptr,
-      nullptr /* metric_client, no metric recording for health http server */,
       config_provider_, http2_server_options, metric_router_.get());
 
   health_service_ = make_shared<HealthService>(
@@ -313,7 +312,7 @@ ExecutionResult PBSInstance::CreateComponents() noexcept {
       make_unique<TransactionRequestRouter>(transaction_manager_);
   front_end_service_ = make_shared<FrontEndService>(
       http_server_, async_executor_, move(transaction_request_router),
-      move(consume_budget_command_factory), metric_client_, config_provider_);
+      move(consume_budget_command_factory), config_provider_);
 
   checkpoint_service_ = make_shared<CheckpointService>(
       pbs_instance_config_.journal_bucket_name,
@@ -588,17 +587,11 @@ ExecutionResult PBSInstance::Run() noexcept {
       };
 
   // Recovering the service
-
-  // Recovery metrics needs to be separately Run because the journal_service_ is
-  // not yet Run().
-  RETURN_IF_FAILURE(journal_service_->RunRecoveryMetrics());
   RETURN_IF_FAILURE(journal_service_->Recover(recovery_context));
 
   while (!recovery_completed) {
     sleep_for(milliseconds(250));
   }
-
-  RETURN_IF_FAILURE(journal_service_->StopRecoveryMetrics());
 
   if (recovery_failed) {
     return FailureExecutionResult(core::errors::SC_PBS_SERVICE_RECOVERY_FAILED);

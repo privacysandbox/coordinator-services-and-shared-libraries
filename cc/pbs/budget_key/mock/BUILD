@@ -27,5 +27,6 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/pbs/budget_key/src:pbs_budget_key_lib",
+        "//cc/public/cpio/utils/metric_aggregation/mock:metric_aggregation_mock",
     ],
 )

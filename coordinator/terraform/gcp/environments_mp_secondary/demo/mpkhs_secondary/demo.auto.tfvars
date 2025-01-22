@@ -48,5 +48,10 @@ assertion_tee_swname = "CONFIDENTIAL_SPACE"
 
 assertion_tee_container_image_hash_list = ["<list of hash values for images>"]
 
+# Uncomment lines below to enable AWS cross-cloud setup
+# aws_xc_enabled = true
+# aws_kms_key_encryption_key_arn      = "<output from xc_resources_aws in secondary coordinator>"
+# aws_kms_key_encryption_key_role_arn = "<output from xc_resources_aws in secondary coordinator>"
+
 alarms_enabled            = true
 alarms_notification_email = "<email to receive alarms>"

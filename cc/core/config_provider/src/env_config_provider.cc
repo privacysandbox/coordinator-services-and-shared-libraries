@@ -75,4 +75,9 @@ ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
                                        list<bool>& out) noexcept {
   return Get<bool>(key, out);
 }
+
+ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
+                                       double& out) noexcept {
+  return Get<double>(key, out);
+}
 }  // namespace google::scp::core

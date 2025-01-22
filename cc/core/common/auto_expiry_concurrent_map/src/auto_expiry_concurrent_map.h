@@ -75,8 +75,13 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
      */
     ExecutionResult ExtendExpiration(size_t expiration_seconds) {
       if (expiration_seconds == 0) {
-        return FailureExecutionResult(
+        auto execution_result = FailureExecutionResult(
             errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_INVALID_EXPIRATION);
+        SCP_ERROR(
+            kAutoExpiryConcurrentMap, kZeroUuid, execution_result,
+            "The provided extended expiration value is 0, which is invalid. "
+            "Please provide a non-zero value to ensure proper functionality.");
+        return execution_result;
       }
 
       std::shared_lock<std::shared_timed_mutex> lock(record_lock);
@@ -361,8 +366,13 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
     sync_mutex.lock();
     if (!is_running_) {
       sync_mutex.unlock();
-      return FailureExecutionResult(
+
+      auto execution_result = FailureExecutionResult(
           errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_CANNOT_SCHEDULE);
+      SCP_ERROR(
+          kAutoExpiryConcurrentMap, kZeroUuid, execution_result,
+          "Concurrent map is not running. Cannot schedule garbage collection.");
+      return execution_result;
     }
 
     auto execution_result = async_executor_->ScheduleFor(

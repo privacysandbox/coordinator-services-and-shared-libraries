@@ -31,7 +31,6 @@
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/core/test/utils/logging_utils.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
-#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;
@@ -63,7 +62,6 @@ using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::TestLoggingUtils;
 using google::scp::core::test::WaitUntil;
-using google::scp::cpio::MockMetricClient;
 using std::atomic;
 using std::cout;
 using std::endl;
@@ -83,16 +81,13 @@ using ::testing::_;
 using ::testing::An;
 using ::testing::AnyOf;
 using ::testing::Contains;
-using ::testing::DoAll;
 using ::testing::Eq;
-using ::testing::Return;
 
 namespace google::scp::pbs::test {
 
 class HttpServerLoadTest : public testing::Test {
  protected:
   HttpServerLoadTest() {
-    metric_client_ = make_shared<MockMetricClient>();
     auto mock_config_provider = make_shared<MockConfigProvider>();
     config_provider_ = mock_config_provider;
     async_executor_for_server_ = make_shared<AsyncExecutor>(
@@ -115,7 +110,7 @@ class HttpServerLoadTest : public testing::Test {
     http_server_ = make_shared<Http2Server>(
         host_, port_, 10 /* http server thread pool size */,
         async_executor_for_server_, authorization_proxy,
-        /*aws_authorization_proxy=*/nullptr, metric_client_, config_provider_);
+        /*aws_authorization_proxy=*/nullptr, config_provider_);
 
     string path = "/v1/test";
     core::HttpHandler handler =
@@ -156,7 +151,6 @@ class HttpServerLoadTest : public testing::Test {
   string host_ = "localhost";
   string port_ = "8099";  // TODO: Pick this randomly.
   shared_ptr<core::ConfigProviderInterface> config_provider_;
-  shared_ptr<cpio::MetricClientInterface> metric_client_;
   shared_ptr<AsyncExecutorInterface> async_executor_for_server_;
   shared_ptr<AsyncExecutorInterface> async_executor_for_client_;
   shared_ptr<HttpServerInterface> http_server_;

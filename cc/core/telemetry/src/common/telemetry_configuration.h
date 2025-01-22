@@ -65,6 +65,32 @@ inline constexpr absl::string_view kOtelAudienceKey =
     "google_scp_otel_audience";
 inline constexpr absl::string_view kOtelAudienceValue = "";
 
+// Trace
+// The time interval between two consecutive exports.
+// Default value: 5000 milliseconds.
+inline constexpr absl::string_view kOtelTraceBatchExportIntervalMsecKey =
+    "google_scp_otel_trace_batch_export_interval_msec";
+inline constexpr int32_t kOtelTraceBatchExportIntervalMsecValue = 5000;
+
+// The maximum buffer/queue size. After the size is reached, spans are dropped.
+// Default value: 2048.
+inline constexpr absl::string_view kOtelTraceMaxSpanBufferKey =
+    "google_scp_otel_trace_max_span_buffer";
+inline constexpr int32_t kOtelTraceMaxSpanBufferValue = 2048;
+
+// The maximum batch size of every export. It must be smaller or equal to max
+// span buffer.
+// Default value: 512.
+inline constexpr absl::string_view kOtelTraceMaxExportBatchSizeKey =
+    "google_scp_otel_trace_max_export_batch_size";
+inline constexpr int32_t kOtelTraceMaxExportBatchSizeValue = 512;
+
+// Trace Sampling Ratio.
+// Default value: 0.1 (10%).
+inline constexpr absl::string_view kOtelTraceSamplingRatioKey =
+    "google_scp_otel_trace_sampling_ratio";
+inline constexpr double kOtelTraceSamplingRatioValue = 0.1;
+
 // Cred config path
 // defaults to empty string for local and gcp cases, non-empty in the case of
 // AWS

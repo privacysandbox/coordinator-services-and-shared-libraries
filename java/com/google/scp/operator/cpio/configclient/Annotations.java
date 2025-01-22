@@ -101,4 +101,16 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface TrustedServicesClientVersion {}
+
+  /** Credentials for coordinator A. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface CoordinatorACredentials {}
+
+  /** Credentials for coordinator B. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface CoordinatorBCredentials {}
 }

@@ -38,9 +38,7 @@
 #include "cc/core/transaction_manager/interface/transaction_engine_interface.h"
 #include "cc/core/transaction_manager/interface/transaction_phase_manager_interface.h"
 #include "cc/core/transaction_manager/src/proto/transaction_engine.pb.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 #include "error_codes.h"
 
@@ -147,15 +145,13 @@ struct Transaction : public LoadableObject {
 class TransactionEngine
     : public transaction_manager::TransactionEngineInterface {
  public:
-  TransactionEngine(
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      std::shared_ptr<TransactionCommandSerializerInterface>&
-          transaction_command_serializer,
-      std::shared_ptr<JournalServiceInterface>& journal_service,
-      std::shared_ptr<RemoteTransactionManagerInterface>&
-          remote_transaction_manager,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
-      std::shared_ptr<ConfigProviderInterface> config_provider);
+  TransactionEngine(std::shared_ptr<AsyncExecutorInterface>& async_executor,
+                    std::shared_ptr<TransactionCommandSerializerInterface>&
+                        transaction_command_serializer,
+                    std::shared_ptr<JournalServiceInterface>& journal_service,
+                    std::shared_ptr<RemoteTransactionManagerInterface>&
+                        remote_transaction_manager,
+                    std::shared_ptr<ConfigProviderInterface> config_provider);
 
   ExecutionResult Init() noexcept override;
 
@@ -191,7 +187,6 @@ class TransactionEngine
           transaction_phase_manager,
       std::shared_ptr<RemoteTransactionManagerInterface>
           remote_transaction_manager,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<ConfigProviderInterface> config_provider,
       size_t transaction_engine_cache_lifetime_seconds =
           kTransactionEngineCacheLifetimeSeconds)
@@ -214,7 +209,6 @@ class TransactionEngine
                                 core::common::RetryStrategyType::Exponential,
                                 kTransactionManagerRetryStrategyDelayMs,
                                 kTransactionManagerRetryStrategyTotalRetries)),
-        metric_client_(metric_client),
         transaction_engine_cache_lifetime_seconds_(
             transaction_engine_cache_lifetime_seconds),
         config_provider_(config_provider),
@@ -746,9 +740,6 @@ class TransactionEngine
 
   /// Operation dispatcher
   core::common::OperationDispatcher operation_dispatcher_;
-
-  /// Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
 
   /// Cache life time of the transactions
   size_t transaction_engine_cache_lifetime_seconds_;

@@ -48,9 +48,6 @@
 #include "cc/pbs/transactions/src/consume_budget_command.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
-#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::pbs::test {
 
@@ -91,9 +88,6 @@ using ::google::scp::core::nosql_database_provider::mock::
     MockNoSQLDatabaseProvider;
 using ::google::scp::core::test::ResultIs;
 using ::google::scp::core::test::WaitUntil;
-using ::google::scp::cpio::AggregateMetricInterface;
-using ::google::scp::cpio::MockAggregateMetric;
-using ::google::scp::cpio::MockMetricClient;
 using ::google::scp::pbs::BatchConsumeBudgetCommand;
 using ::google::scp::pbs::BudgetKeyProviderInterface;
 using ::google::scp::pbs::ConsumeBudgetCommand;
@@ -139,7 +133,6 @@ class FrontEndServiceTest : public testing::Test {
   }
 
   void InitializeClassComponents() {
-    auto mock_metric_client = make_shared<MockMetricClient>();
     mock_config_provider_ = make_shared<MockConfigProvider>();
     shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
     shared_ptr<JournalServiceInterface> journal_service;
@@ -164,11 +157,9 @@ class FrontEndServiceTest : public testing::Test {
 
     front_end_service_ = make_shared<MockFrontEndServiceWithOverrides>(
         http2_server, async_executor_, std::move(transaction_request_router),
-        std::move(consume_budget_command_factory), mock_metric_client,
-        mock_config_provider_, std::move(total_request_counter_),
-        std::move(client_error_counter_), std::move(server_error_counter_));
-
-    front_end_service_->InitMetricInstances();
+        std::move(consume_budget_command_factory), mock_config_provider_,
+        std::move(total_request_counter_), std::move(client_error_counter_),
+        std::move(server_error_counter_));
   }
 
   void InitializeTransactionContext() {
@@ -327,7 +318,6 @@ class FrontEndServiceTest : public testing::Test {
 };
 
 TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -347,7 +337,7 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
   FrontEndService front_end_service(http2_server, mock_async_executor,
                                     std::move(mock_transaction_request_router),
                                     std::move(consume_budget_command_factory),
-                                    mock_metric_client, mock_config_provider);
+                                    mock_config_provider);
   ConsumeBudgetTransactionRequest consume_budget_transaction_request;
   consume_budget_transaction_request.budget_keys =
       make_shared<vector<ConsumeBudgetMetadata>>();
@@ -368,7 +358,6 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationInvalidRequest) {
 
 TEST_F(FrontEndServiceTest,
        ExecuteConsumeBudgetOperationTransactionManagerFailure) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -400,8 +389,7 @@ TEST_F(FrontEndServiceTest,
     FrontEndService front_end_service(
         http2_server, mock_async_executor,
         std::move(mock_transaction_request_router),
-        std::move(consume_budget_command_factory), mock_metric_client,
-        mock_config_provider);
+        std::move(consume_budget_command_factory), mock_config_provider);
 
     ConsumeBudgetTransactionRequest consume_budget_transaction_request;
     consume_budget_transaction_request.budget_keys =
@@ -424,7 +412,6 @@ TEST_F(FrontEndServiceTest,
 }
 
 TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -458,7 +445,7 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
   FrontEndService front_end_service(http2_server, mock_async_executor,
                                     std::move(mock_transaction_request_router),
                                     std::move(consume_budget_command_factory),
-                                    mock_metric_client, mock_config_provider);
+                                    mock_config_provider);
   ConsumeBudgetTransactionRequest consume_budget_transaction_request;
   consume_budget_transaction_request.budget_keys =
       make_shared<vector<ConsumeBudgetMetadata>>();
@@ -486,7 +473,6 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationCommandConstruction) {
 }
 
 TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationTransactionResults) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -523,8 +509,7 @@ TEST_F(FrontEndServiceTest, ExecuteConsumeBudgetOperationTransactionResults) {
     FrontEndService front_end_service(
         http2_server, mock_async_executor,
         std::move(mock_transaction_request_router),
-        std::move(consume_budget_command_factory), mock_metric_client,
-        mock_config_provider);
+        std::move(consume_budget_command_factory), mock_config_provider);
     ConsumeBudgetTransactionRequest consume_budget_transaction_request;
     consume_budget_transaction_request.budget_keys =
         make_shared<vector<ConsumeBudgetMetadata>>();
@@ -558,7 +543,6 @@ TEST_F(FrontEndServiceTest,
 
   mock_config_provider_->SetBool(pbs::kDisallowNewTransactionRequests, true);
 
-  front_end_service_->InitMetricInstances();
   EXPECT_EQ(
       front_end_service_->BeginTransaction(begin_transaction_context),
       FailureExecutionResult(
@@ -577,7 +561,6 @@ TEST_F(FrontEndServiceTest,
 }
 
 TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -613,11 +596,10 @@ TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider, std::move(total_request_counter),
-      std::move(client_error_counter), std::move(server_error_counter));
+      std::move(consume_budget_command_factory), mock_config_provider,
+      std::move(total_request_counter), std::move(client_error_counter),
+      std::move(server_error_counter));
 
-  front_end_service.InitMetricInstances();
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.request->body.bytes = std::make_shared<vector<Byte>>();
@@ -626,14 +608,6 @@ TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
       front_end_service.BeginTransaction(http_context),
       FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
-  auto total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelBeginTransaction, kMetricNameRequests);
-  auto client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelBeginTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 
   http_context.request->headers->insert(
       {std::string(kTransactionIdHeader),
@@ -642,24 +616,15 @@ TEST_F(FrontEndServiceTest, BeginTransactionInvalidBody) {
       front_end_service.BeginTransaction(http_context),
       FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 2);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 2);
 
   http_context.request->headers->insert(
       {string(kTransactionSecretHeader), "this_is_a_secret"});
   EXPECT_EQ(front_end_service.BeginTransaction(http_context),
             FailureExecutionResult(
                 core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 3);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 3);
 }
 
 TEST_F(FrontEndServiceTest, BeginTransactionValidBodySiteAsAuthDomainEnabled) {
-  auto mock_metric_client = std::make_shared<MockMetricClient>();
   auto mock_config_provider = std::make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -727,12 +692,11 @@ TEST_F(FrontEndServiceTest, BeginTransactionValidBodySiteAsAuthDomainEnabled) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider, std::move(total_request_counter),
-      std::move(client_error_counter), std::move(server_error_counter));
+      std::move(consume_budget_command_factory), mock_config_provider,
+      std::move(total_request_counter), std::move(client_error_counter),
+      std::move(server_error_counter));
 
   front_end_service.Init();
-  front_end_service.InitMetricInstances();
   string begin_transaction_body_string =
       GetBeginTransactionHttpRequestBody_Sample();
   BytesBuffer bytes_buffer;
@@ -755,14 +719,6 @@ TEST_F(FrontEndServiceTest, BeginTransactionValidBodySiteAsAuthDomainEnabled) {
       front_end_service.BeginTransaction(http_context),
       FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
-  auto total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelBeginTransaction, kMetricNameRequests);
-  auto client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelBeginTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 
   http_context.request->headers->insert(
       {std::string(kTransactionIdHeader),
@@ -771,10 +727,6 @@ TEST_F(FrontEndServiceTest, BeginTransactionValidBodySiteAsAuthDomainEnabled) {
                                          std::string("transaction_secret")});
   EXPECT_EQ(front_end_service.BeginTransaction(http_context),
             SuccessExecutionResult());
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 2);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
   WaitUntil([&]() { return condition.load(); });
 }
 
@@ -790,17 +742,12 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackFailed) {
         condition = true;
       };
 
-  auto mock_metric_transaction = std::make_shared<MockAggregateMetric>();
   AsyncContext<TransactionRequest, TransactionResponse> transaction_context;
   transaction_context.response = std::make_shared<TransactionResponse>();
   transaction_context.result = FailureExecutionResult(123);
 
-  front_end_service_->OnTransactionCallback(mock_metric_transaction,
-                                            http_context, transaction_context);
+  front_end_service_->OnTransactionCallback(http_context, transaction_context);
   WaitUntil([&]() { return condition.load(); });
-  EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-            0);
 }
 
 TEST_F(FrontEndServiceTest, OnTransactionCallback) {
@@ -822,7 +769,6 @@ TEST_F(FrontEndServiceTest, OnTransactionCallback) {
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(123)};
-  vector<size_t> expected_server_error_metrics = {0, 1, 1};
 
   for (int i = 0; i < results.size(); i++) {
     auto result = results[i];
@@ -853,8 +799,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallback) {
         };
 
     front_end_service_->execution_transaction_phase_mock =
-        [&](const shared_ptr<AggregateMetricInterface>& metric_instance,
-            AsyncContext<HttpRequest, HttpResponse>& http_context,
+        [&](AsyncContext<HttpRequest, HttpResponse>& http_context,
             Uuid& transaction_id, shared_ptr<string>& transaction_secret,
             shared_ptr<string>& transaction_origin,
             Timestamp transaction_last_execution_timestamp,
@@ -870,15 +815,9 @@ TEST_F(FrontEndServiceTest, OnTransactionCallback) {
         };
 
     transaction_context.result = result;
-    auto mock_metric_transaction = make_shared<MockAggregateMetric>();
-    front_end_service_->OnTransactionCallback(
-        mock_metric_transaction, http_context, transaction_context);
+    front_end_service_->OnTransactionCallback(http_context,
+                                              transaction_context);
     WaitUntil([&]() { return condition.load(); });
-    size_t expected_server_error_metric = expected_server_error_metrics[i];
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator),
-              expected_server_error_metric);
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-              0);
   }
 }
 
@@ -919,7 +858,6 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(123)};
-  vector<size_t> expected_server_error_metrics = {0, 1, 1};
 
   for (int i = 0; i < results.size(); i++) {
     auto result = results[i];
@@ -950,8 +888,7 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
         };
 
     front_end_service_->execution_transaction_phase_mock =
-        [&](const shared_ptr<AggregateMetricInterface>& metric_instance,
-            AsyncContext<HttpRequest, HttpResponse>& http_context,
+        [&](AsyncContext<HttpRequest, HttpResponse>& http_context,
             Uuid& transaction_id, shared_ptr<string>& transaction_secret,
             shared_ptr<string>& transaction_origin,
             Timestamp transaction_last_execution_timestamp,
@@ -970,15 +907,9 @@ TEST_F(FrontEndServiceTest, OnTransactionCallbackWithBatchCommands) {
         };
 
     transaction_context_.result = result;
-    auto mock_metric_transaction = make_shared<MockAggregateMetric>();
-    front_end_service_->OnTransactionCallback(
-        mock_metric_transaction, http_context, transaction_context_);
+    front_end_service_->OnTransactionCallback(http_context,
+                                              transaction_context_);
     WaitUntil([&]() { return condition.load(); });
-    size_t expected_server_error_metric = expected_server_error_metrics[i];
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator),
-              expected_server_error_metric);
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-              0);
   }
 }
 
@@ -1010,7 +941,6 @@ TEST_F(FrontEndServiceTest, ObtainTransactionOriginReturnsHeaderValue) {
 }
 
 TEST_F(FrontEndServiceTest, InvalidTransactionId) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -1045,11 +975,9 @@ TEST_F(FrontEndServiceTest, InvalidTransactionId) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider, std::move(total_request_counter),
-      std::move(client_error_counter), std::move(server_error_counter));
-
-  front_end_service.InitMetricInstances();
+      std::move(consume_budget_command_factory), mock_config_provider,
+      std::move(total_request_counter), std::move(client_error_counter),
+      std::move(server_error_counter));
 
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
@@ -1061,62 +989,21 @@ TEST_F(FrontEndServiceTest, InvalidTransactionId) {
 
   EXPECT_EQ(front_end_service.PrepareTransaction(http_context),
             FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
-  auto total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelPrepareTransaction, kMetricNameRequests);
-  auto client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelPrepareTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 
   EXPECT_EQ(front_end_service.CommitTransaction(http_context),
             FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
-  total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelCommitTransaction, kMetricNameRequests);
-  client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelCommitTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 
   EXPECT_EQ(front_end_service.NotifyTransaction(http_context),
             FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
-  total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelNotifyTransaction, kMetricNameRequests);
-  client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelNotifyTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 
   EXPECT_EQ(front_end_service.AbortTransaction(http_context),
             FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
-  total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelAbortTransaction, kMetricNameRequests);
-  client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelAbortTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 
   EXPECT_EQ(front_end_service.EndTransaction(http_context),
             FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
-  total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelEndTransaction, kMetricNameRequests);
-  client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelEndTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 1);
 }
 
 TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -1142,9 +1029,7 @@ TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider);
-  front_end_service.InitMetricInstances();
+      std::move(consume_budget_command_factory), mock_config_provider);
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
   http_context.request->headers = make_shared<core::HttpHeaders>();
@@ -1170,7 +1055,6 @@ TEST_F(FrontEndServiceTest, ValidTransactionNotValidPhase) {
 }
 
 TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -1193,9 +1077,7 @@ TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider);
-  front_end_service.InitMetricInstances();
+      std::move(consume_budget_command_factory), mock_config_provider);
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
   http_context.request->headers = make_shared<core::HttpHeaders>();
@@ -1289,7 +1171,6 @@ TEST_F(FrontEndServiceTest, ValidTransactionValidPhase) {
 }
 
 TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -1310,14 +1191,11 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider);
+      std::move(consume_budget_command_factory), mock_config_provider);
 
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
-
-  vector<size_t> expected_server_error_metrics = {0, 1, 1};
 
   for (int i = 0; i < results.size(); i++) {
     auto result = results[i];
@@ -1340,16 +1218,9 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallback) {
     transaction_phase_context.response =
         make_shared<TransactionPhaseResponse>();
 
-    auto mock_metric_transaction = make_shared<MockAggregateMetric>();
     front_end_service.OnExecuteTransactionPhaseCallback(
-        mock_metric_transaction, http_context, transaction_phase_context,
-        kMetricLabelFrontEndService);
+        http_context, transaction_phase_context, kMetricLabelFrontEndService);
     WaitUntil([&]() { return condition.load(); });
-    size_t expected_server_error_metric = expected_server_error_metrics[i];
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator),
-              expected_server_error_metric);
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-              0);
   }
 }
 
@@ -1357,7 +1228,6 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallbackFailureWithKeys) {
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
-  vector<size_t> expected_server_error_metrics = {0, 1, 1};
 
   for (int i = 0; i < results.size(); i++) {
     auto result = results[i];
@@ -1395,16 +1265,9 @@ TEST_F(FrontEndServiceTest, OnExecuteTransactionPhaseCallbackFailureWithKeys) {
     transaction_phase_context.response->failed_commands_indices.push_back(2);
     transaction_phase_context.response->failed_commands_indices.push_back(3);
 
-    auto mock_metric_transaction = make_shared<MockAggregateMetric>();
     front_end_service_->OnExecuteTransactionPhaseCallback(
-        mock_metric_transaction, http_context, transaction_phase_context,
-        kMetricLabelFrontEndService);
+        http_context, transaction_phase_context, kMetricLabelFrontEndService);
     WaitUntil([&]() { return condition.load(); });
-    size_t expected_server_error_metric = expected_server_error_metrics[i];
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator),
-              expected_server_error_metric);
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-              0);
   }
 }
 
@@ -1439,7 +1302,6 @@ TEST_F(FrontEndServiceTest,
   vector<ExecutionResult> results = {SuccessExecutionResult(),
                                      FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
-  vector<size_t> expected_server_error_metrics = {0, 1, 1};
 
   for (int i = 0; i < results.size(); i++) {
     auto result = results[i];
@@ -1477,16 +1339,9 @@ TEST_F(FrontEndServiceTest,
     transaction_phase_context.response->failed_commands = {
         batch_command1, non_batch_command, batch_command2};
 
-    auto mock_metric_transaction = make_shared<MockAggregateMetric>();
     front_end_service_->OnExecuteTransactionPhaseCallback(
-        mock_metric_transaction, http_context, transaction_phase_context,
-        kMetricLabelFrontEndService);
+        http_context, transaction_phase_context, kMetricLabelFrontEndService);
     WaitUntil([&]() { return condition.load(); });
-    size_t expected_server_error_metric = expected_server_error_metrics[i];
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator),
-              expected_server_error_metric);
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-              0);
   }
 }
 
@@ -1556,7 +1411,6 @@ TEST_F(FrontEndServiceTest, GetServiceStatusFailure) {
 }
 
 TEST_F(FrontEndServiceTest, GetTransactionStatus) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -1596,11 +1450,9 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider, std::move(total_request_counter),
-      std::move(client_error_counter), std::move(server_error_counter));
-
-  front_end_service.InitMetricInstances();
+      std::move(consume_budget_command_factory), mock_config_provider,
+      std::move(total_request_counter), std::move(client_error_counter),
+      std::move(server_error_counter));
 
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = make_shared<HttpRequest>();
@@ -1612,20 +1464,6 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
       front_end_service.GetTransactionStatus(http_context),
       core::FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
-  auto total_request_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelGetStatusTransaction, kMetricNameRequests);
-  auto client_errors_metric_instance = front_end_service.GetMetricsInstance(
-      kMetricLabelGetStatusTransaction, kMetricNameClientErrors);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueCoordinator),
-      1);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueCoordinator),
-      1);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 0);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 0);
 
   auto pair = make_pair(string(kTransactionIdHeader),
                         string("3E2A3D09-48ED-A355-D346-AD7DC6CB0909"));
@@ -1635,16 +1473,6 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
       front_end_service.GetTransactionStatus(http_context),
       core::FailureExecutionResult(
           core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueCoordinator),
-      2);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueCoordinator),
-      2);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 0);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 0);
 
   pair = make_pair(string(kTransactionSecretHeader), string("secret"));
   http_context.request->headers->insert(pair);
@@ -1667,21 +1495,10 @@ TEST_F(FrontEndServiceTest, GetTransactionStatus) {
           });
 
   EXPECT_SUCCESS(front_end_service.GetTransactionStatus(http_context));
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueCoordinator),
-      3);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueCoordinator),
-      2);
-  EXPECT_EQ(
-      total_request_metric_instance->GetCounter(kMetricLabelValueOperator), 0);
-  EXPECT_EQ(
-      client_errors_metric_instance->GetCounter(kMetricLabelValueOperator), 0);
   WaitUntil([&]() { return condition.load(); });
 }
 
 TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
-  auto mock_metric_client = make_shared<MockMetricClient>();
   auto mock_config_provider = make_shared<MockConfigProvider>();
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   shared_ptr<AsyncExecutorInterface> async_executor;
@@ -1702,8 +1519,7 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
   MockFrontEndServiceWithOverrides front_end_service(
       http2_server, mock_async_executor,
       std::move(mock_transaction_request_router),
-      std::move(consume_budget_command_factory), mock_metric_client,
-      mock_config_provider);
+      std::move(consume_budget_command_factory), mock_config_provider);
 
   vector<ExecutionResult> results = {FailureExecutionResult(123),
                                      RetryExecutionResult(1234)};
@@ -1717,10 +1533,6 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
   get_transaction_status_context.request =
       make_shared<GetTransactionStatusRequest>();
 
-  auto mock_metric_transaction = make_shared<MockAggregateMetric>();
-
-  vector<size_t> expected_server_error_metrics = {1, 2};
-
   for (int i = 0; i < results.size(); i++) {
     auto result = results[i];
     atomic<bool> called = false;
@@ -1733,15 +1545,10 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
         };
 
     front_end_service.OnGetTransactionStatusCallback(
-        mock_metric_transaction, http_context, get_transaction_status_context,
+        http_context, get_transaction_status_context,
         kMetricLabelFrontEndService);
 
     WaitUntil([&]() { return called.load(); });
-    size_t expected_server_error_metric = expected_server_error_metrics[i];
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator),
-              expected_server_error_metric);
-    EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-              0);
   }
 
   get_transaction_status_context.response =
@@ -1766,11 +1573,8 @@ TEST_F(FrontEndServiceTest, OnGetTransactionStatusCallback) {
   };
 
   front_end_service.OnGetTransactionStatusCallback(
-      mock_metric_transaction, http_context, get_transaction_status_context,
+      http_context, get_transaction_status_context,
       kMetricLabelFrontEndService);
-  EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueOperator), 2);
-  EXPECT_EQ(mock_metric_transaction->GetCounter(kMetricLabelValueCoordinator),
-            0);
   WaitUntil([&]() { return called.load(); });
 }
 

@@ -41,13 +41,12 @@ variable "environment" {
 variable "pbs_artifact_registry_repository_name" {
   description = "The PBS Artifact Registry repository name."
   type        = string
-  nullable    = false
 }
 
 variable "pbs_image_override" {
   description = "The absolute location of the PBS container (including the tag) which will override the derived location"
   type        = string
-  default     = ""
+  default     = null
 }
 
 ################################################################################
@@ -189,13 +188,11 @@ variable "deploy_pbs_cloud_run" {
 variable "vpc_network_id" {
   description = "The VPC ID. If left blank, the default network will be used."
   type        = string
-  nullable    = false
 }
 
 variable "vpc_subnet_id" {
   description = "The VPC subnetwork ID. Must be provided if using a custom VPC."
   type        = string
-  nullable    = false
 }
 
 variable "network_target_tag" {

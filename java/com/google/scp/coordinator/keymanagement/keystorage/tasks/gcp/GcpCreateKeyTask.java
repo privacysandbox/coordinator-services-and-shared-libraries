@@ -6,8 +6,9 @@ import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import com.google.common.collect.ImmutableList;
 import com.google.crypto.tink.Aead;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyAead;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyUri;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DecryptionAead;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.EncryptionAead;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.EncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
@@ -22,17 +23,20 @@ import java.util.Base64;
 public final class GcpCreateKeyTask implements CreateKeyTask {
 
   private final KeyDb keyDb;
-  private final Aead kmsKeyAead;
-  private final String kmsKeyEncryptionKeyUri;
+  private final Aead decryptionAead;
+  private final Aead encryptionAead;
+  private final String encryptionKeyUri;
 
   @Inject
   public GcpCreateKeyTask(
       KeyDb keyDb,
-      @KmsKeyAead Aead kmsKeyAead,
-      @KmsKeyEncryptionKeyUri String kmsKeyEncryptionKeyUri) {
+      @DecryptionAead Aead decryptionAead,
+      @EncryptionAead Aead encryptionAead,
+      @EncryptionKeyUri String encryptionKeyUri) {
     this.keyDb = keyDb;
-    this.kmsKeyAead = kmsKeyAead;
-    this.kmsKeyEncryptionKeyUri = kmsKeyEncryptionKeyUri;
+    this.decryptionAead = decryptionAead;
+    this.encryptionAead = encryptionAead;
+    this.encryptionKeyUri = encryptionKeyUri;
   }
 
   /** Creates the key in the database */
@@ -51,13 +55,11 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
         ImmutableList.<KeySplitData>builder()
             .addAll(encryptionKey.getKeySplitDataList())
             .add(
-                KeySplitData.newBuilder()
-                    .setKeySplitKeyEncryptionKeyUri(kmsKeyEncryptionKeyUri)
-                    .build());
+                KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(encryptionKeyUri).build());
     var newEncryptionKey =
         encryptionKey.toBuilder()
             .setJsonEncodedKeyset(validatedKeySplit)
-            .setKeyEncryptionKeyUri(kmsKeyEncryptionKeyUri)
+            .setKeyEncryptionKeyUri(encryptionKeyUri)
             // Need to clear before adding, otherwise there will be duplicate KeySplitData elements.
             .clearKeySplitData()
             .addAllKeySplitData(newKeySplitData.build())
@@ -87,8 +89,8 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
     try {
       byte[] cipherText = Base64.getDecoder().decode(privateKeySplit);
       byte[] associatedData = Base64.getDecoder().decode(publicKeyMaterial);
-      byte[] plainText = kmsKeyAead.decrypt(cipherText, associatedData);
-      return Base64.getEncoder().encodeToString(kmsKeyAead.encrypt(plainText, new byte[0]));
+      byte[] plainText = decryptionAead.decrypt(cipherText, associatedData);
+      return Base64.getEncoder().encodeToString(encryptionAead.encrypt(plainText, new byte[0]));
     } catch (NullPointerException | GeneralSecurityException ex) {
       throw new ServiceException(
           INVALID_ARGUMENT, SERVICE_ERROR.name(), "Key-split validation failed.", ex);

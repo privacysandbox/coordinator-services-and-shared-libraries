@@ -24,6 +24,7 @@ java_test(
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
     ],
 )
 
@@ -36,6 +37,7 @@ java_test(
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
         "//java/com/google/scp/operator/shared/model",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//operator/protos/shared/backend:java_proto",
     ],
 )

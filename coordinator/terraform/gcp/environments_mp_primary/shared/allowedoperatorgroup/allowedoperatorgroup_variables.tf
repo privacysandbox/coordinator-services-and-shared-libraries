@@ -62,5 +62,5 @@ variable "initial_group_config" {
 variable "customer_id" {
   description = "Customer ID of the organization to create the group in"
   type        = string
-  default     = ""
+  default     = null
 }

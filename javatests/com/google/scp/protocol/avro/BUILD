@@ -66,5 +66,6 @@ java_test(
         "//java/com/google/scp/protocol/avro:avro_results_schema_supplier",
         "//java/external:avro",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )

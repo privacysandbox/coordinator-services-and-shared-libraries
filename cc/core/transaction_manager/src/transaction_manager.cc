@@ -32,23 +32,10 @@
 #include "cc/core/interface/metrics_def.h"
 #include "cc/core/interface/partition_types.h"
 #include "cc/core/interface/transaction_command_serializer_interface.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/aggregate_metric_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/src/aggregate_metric.h"
 
 #include "error_codes.h"
 #include "transaction_engine.h"
 
-using google::scp::cpio::AggregateMetric;
-using google::scp::cpio::AggregateMetricInterface;
-using google::scp::cpio::kCountSecond;
-using google::scp::cpio::MetricClientInterface;
-using google::scp::cpio::MetricDefinition;
-using google::scp::cpio::MetricLabels;
-using google::scp::cpio::MetricLabelsBase;
-using google::scp::cpio::MetricName;
-using google::scp::cpio::MetricUnit;
 using std::atomic;
 using std::function;
 using std::list;
@@ -121,27 +108,6 @@ TransactionManager::~TransactionManager() {
   }
 }
 
-ExecutionResult TransactionManager::RegisterAggregateMetric(
-    shared_ptr<AggregateMetricInterface>& metrics_instance,
-    const string& name) noexcept {
-  auto metric_name = make_shared<MetricName>(name);
-  auto metric_unit = make_shared<MetricUnit>(kCountSecond);
-  auto metric_info = make_shared<MetricDefinition>(metric_name, metric_unit);
-  MetricLabelsBase label_base(
-      kMetricComponentNameAndPartitionNamePrefixForTransactionManager +
-          ToString(partition_id_),
-      name);
-  metric_info->labels =
-      make_shared<MetricLabels>(label_base.GetMetricLabelsBase());
-  vector<string> event_list = {kMetricEventReceivedTransaction,
-                               kMetricEventFinishedTransaction};
-  metrics_instance = make_shared<AggregateMetric>(
-      async_executor_, metric_client_, metric_info,
-      aggregated_metric_interval_ms_, make_shared<vector<string>>(event_list));
-
-  return SuccessExecutionResult();
-}
-
 TransactionManager::TransactionManager(
     shared_ptr<AsyncExecutorInterface>& async_executor,
     shared_ptr<TransactionCommandSerializerInterface>&
@@ -149,7 +115,6 @@ TransactionManager::TransactionManager(
     shared_ptr<JournalServiceInterface>& journal_service,
     shared_ptr<RemoteTransactionManagerInterface>& remote_transaction_manager,
     size_t max_concurrent_transactions,
-    const shared_ptr<MetricClientInterface>& metric_client,
     std::shared_ptr<MetricRouter> metric_router,
     shared_ptr<ConfigProviderInterface> config_provider,
     const PartitionId& partition_id)
@@ -157,9 +122,9 @@ TransactionManager::TransactionManager(
           async_executor,
           make_shared<TransactionEngine>(
               async_executor, transaction_command_serializer, journal_service,
-              remote_transaction_manager, metric_client, config_provider),
-          max_concurrent_transactions, metric_client, metric_router,
-          config_provider, partition_id) {}
+              remote_transaction_manager, config_provider),
+          max_concurrent_transactions, metric_router, config_provider,
+          partition_id) {}
 
 ExecutionResult TransactionManager::Init() noexcept {
   if (max_concurrent_transactions_ <= 0) {
@@ -171,13 +136,6 @@ ExecutionResult TransactionManager::Init() noexcept {
   if (started_) {
     return FailureExecutionResult(
         errors::SC_TRANSACTION_MANAGER_ALREADY_STARTED);
-  }
-
-  if (!config_provider_ ||
-      !config_provider_
-           ->Get(kAggregatedMetricIntervalMs, aggregated_metric_interval_ms_)
-           .Successful()) {
-    aggregated_metric_interval_ms_ = kDefaultAggregatedMetricIntervalMs;
   }
 
   if (metric_router_) {
@@ -219,8 +177,6 @@ ExecutionResult TransactionManager::Init() noexcept {
         this);
   }
 
-  RETURN_IF_FAILURE(InitMetricClientInterface());
-
   return transaction_engine_->Init();
 }
 
@@ -233,10 +189,6 @@ ExecutionResult TransactionManager::Run() noexcept {
   started_ = true;
 
   auto execution_result = transaction_engine_->Run();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-  execution_result = active_transactions_metric_->Run();
   if (!execution_result.Successful()) {
     return execution_result;
   }
@@ -258,11 +210,6 @@ ExecutionResult TransactionManager::Stop() noexcept {
              active_transactions_count_.load());
     // The wait value can be any.
     sleep_for(milliseconds(kShutdownWaitIntervalMilliseconds));
-  }
-
-  auto execution_result = active_transactions_metric_->Stop();
-  if (!execution_result.Successful()) {
-    return execution_result;
   }
 
   return transaction_engine_->Stop();
@@ -297,8 +244,6 @@ ExecutionResult TransactionManager::Execute(
       received_transactions_instrument_->Add(1, metric_labels);
     }
 
-    active_transactions_metric_->Increment(kMetricEventReceivedTransaction);
-
     // To avoid circular dependency we create a copy. We need to decrement
     // the active transactions.
     auto transaction_engine_context = transaction_context;
@@ -315,9 +260,6 @@ ExecutionResult TransactionManager::Execute(
                 {kMetricLabelPartitionId, ToString(partition_id_)}};
             finished_transactions_instrument_->Add(1, metric_labels);
           }
-
-          active_transactions_metric_->Increment(
-              kMetricEventFinishedTransaction);
 
           // This should be decremented at the end because of race between
           // transactions leaving the component and someone stopping the
@@ -374,8 +316,6 @@ ExecutionResult TransactionManager::ExecutePhase(
       received_transactions_instrument_->Add(1, metric_labels);
     }
 
-    active_transactions_metric_->Increment(kMetricEventReceivedTransaction);
-
     // To avoid circular dependency we create a copy. We need to decrement
     // the active transactions.
     auto transaction_engine_context = transaction_phase_context;
@@ -393,9 +333,6 @@ ExecutionResult TransactionManager::ExecutePhase(
                 {kMetricLabelPartitionId, ToString(partition_id_)}};
             finished_transactions_instrument_->Add(1, metric_labels);
           }
-
-          active_transactions_metric_->Increment(
-              kMetricEventFinishedTransaction);
 
           // This should be decremented at the end because of race between
           // transactions leaving the component and someone stopping the
@@ -479,13 +416,6 @@ ExecutionResult TransactionManager::GetTransactionManagerStatus(
                                    max_transactions_since_observed_,
                                    transaction_counts_mutex_);
   return SuccessExecutionResult();
-}
-
-ExecutionResult TransactionManager::InitMetricClientInterface() {
-  RegisterAggregateMetric(active_transactions_metric_,
-                          kMetricNameActiveTransactions);
-  auto execution_result = active_transactions_metric_->Init();
-  return execution_result;
 }
 
 }  // namespace google::scp::core

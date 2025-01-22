@@ -17,7 +17,6 @@
 package com.google.scp.operator.shared.dao.metadatadb.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.scp.operator.protos.shared.backend.asginstance.InstanceTerminationReasonProto.InstanceTerminationReason.TERMINATION_REASON_UNKNOWN;
 import static org.junit.Assert.assertThrows;
 

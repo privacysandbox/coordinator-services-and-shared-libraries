@@ -40,7 +40,6 @@ cc_test(
         "//cc/core/telemetry/src/common:telemetry_metric_utils",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
         "@io_opentelemetry_cpp//sdk/src/metrics",

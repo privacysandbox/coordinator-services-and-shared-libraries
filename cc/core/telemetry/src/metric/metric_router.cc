@@ -90,13 +90,14 @@ std::shared_ptr<opentelemetry::metrics::Meter> MetricRouter::GetOrCreateMeter(
     absl::string_view service_name, absl::string_view version,
     absl::string_view schema_url) {
   absl::MutexLock lock(&metric_mutex_);
-  if (auto it = meters_.find(service_name); it != meters_.end()) {
-    return it->second;
+  std::string service(service_name);
+  auto [it, inserted] = meters_.insert(
+      {service, std::shared_ptr<opentelemetry::metrics::Meter>()});
+  if (inserted) {
+    it->second = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+        service, version, schema_url);
   }
-  auto meter = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
-      service_name, version, schema_url);
-  meters_[service_name] = meter;
-  return meter;
+  return it->second;
 }
 
 std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>
@@ -106,15 +107,14 @@ MetricRouter::GetOrCreateSyncInstrument(
         std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>()>
         instrument_factory) {
   absl::MutexLock lock(&metric_mutex_);
-  if (auto it = synchronous_instruments_.find(metric_name);
-      it != synchronous_instruments_.end()) {
-    return it->second;
+  std::string metric(metric_name);
+  auto [it, inserted] = synchronous_instruments_.insert(
+      {metric,
+       std::shared_ptr<opentelemetry::metrics::SynchronousInstrument>()});
+  if (inserted) {
+    it->second = instrument_factory();
   }
-
-  // If not found, create the instrument using the factory.
-  auto new_instrument = instrument_factory();
-  synchronous_instruments_[metric_name] = new_instrument;
-  return new_instrument;
+  return it->second;
 }
 
 std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
@@ -124,15 +124,14 @@ MetricRouter::GetOrCreateObservableInstrument(
         std::shared_ptr<opentelemetry::metrics::ObservableInstrument>()>
         instrument_factory) {
   absl::MutexLock lock(&metric_mutex_);
-  if (auto it = asynchronous_instruments_.find(metric_name);
-      it != asynchronous_instruments_.end()) {
-    return it->second;
+  std::string metric(metric_name);
+  auto [it, inserted] = asynchronous_instruments_.insert(
+      {metric,
+       std::shared_ptr<opentelemetry::metrics::ObservableInstrument>()});
+  if (inserted) {
+    it->second = instrument_factory();
   }
-
-  // If not found, create the instrument using the factory.
-  auto new_instrument = instrument_factory();
-  asynchronous_instruments_[metric_name] = new_instrument;
-  return new_instrument;
+  return it->second;
 }
 
 ExecutionResult MetricRouter::CreateViewForInstrument(

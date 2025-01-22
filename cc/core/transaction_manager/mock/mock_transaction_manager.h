@@ -25,7 +25,6 @@
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/transaction_manager/interface/transaction_engine_interface.h"
 #include "cc/core/transaction_manager/src/transaction_manager.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
 
 namespace google::scp::core::transaction_manager::mock {
 class MockTransactionManager : public core::TransactionManager {
@@ -34,19 +33,11 @@ class MockTransactionManager : public core::TransactionManager {
       std::shared_ptr<AsyncExecutorInterface> async_executor,
       std::shared_ptr<transaction_manager::TransactionEngineInterface>
           transaction_engine,
-      size_t max_concurrent_transactions,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client)
+      size_t max_concurrent_transactions)
       : TransactionManager(
             async_executor, transaction_engine, max_concurrent_transactions,
-            metric_client, /*metric_router=*/nullptr,
+            /*metric_router=*/nullptr,
             std::make_shared<config_provider::mock::MockConfigProvider>()) {}
-
-  virtual ExecutionResult RegisterAggregateMetric(
-      std::shared_ptr<cpio::AggregateMetricInterface>& metrics_instance,
-      const std::string& name) noexcept {
-    metrics_instance = std::make_shared<cpio::MockAggregateMetric>();
-    return SuccessExecutionResult();
-  }
 
   std::atomic<size_t>& GetActiveTransactionsCount() {
     return core::TransactionManager::active_transactions_count_;

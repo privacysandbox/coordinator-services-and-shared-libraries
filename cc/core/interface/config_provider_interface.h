@@ -111,5 +111,14 @@ class ConfigProviderInterface : public ServiceInterface {
    */
   virtual ExecutionResult Get(const ConfigKey& key,
                               std::list<bool>& out) noexcept = 0;
+
+  /**
+   * @brief Looks up configuration key with double output type. If any error
+   * occurs, ExecutionResult can be used to identify the problem.
+   * @param key configuration key.
+   * @param out configuration value;
+   * @return ExecutionResult
+   */
+  virtual ExecutionResult Get(const ConfigKey& key, double& out) noexcept = 0;
 };
 }  // namespace google::scp::core

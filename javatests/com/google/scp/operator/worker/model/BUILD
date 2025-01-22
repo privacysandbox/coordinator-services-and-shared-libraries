@@ -23,6 +23,7 @@ java_test(
         "//java/com/google/scp/operator/shared/model",
         "//java/com/google/scp/operator/worker/model",
         "//java/com/google/scp/operator/worker/testing:fake_report_generator",
+        "//java/external:guava",
         "//operator/protos/shared/backend:java_proto",
     ],
 )

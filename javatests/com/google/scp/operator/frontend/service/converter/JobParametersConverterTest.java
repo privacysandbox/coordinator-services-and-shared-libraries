@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.operator.protos.shared.backend.JobParametersProto;
+import com.google.scp.operator.shared.utils.ObjectConversionException;
 import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -93,7 +94,7 @@ public class JobParametersConverterTest {
 
     var exception =
         assertThrows(
-            IllegalArgumentException.class, () -> converter.convert(invalidJobParametersMap));
+            ObjectConversionException.class, () -> converter.convert(invalidJobParametersMap));
 
     assertThat(exception)
         .hasMessageThat()
@@ -110,7 +111,7 @@ public class JobParametersConverterTest {
 
     var exception =
         assertThrows(
-            IllegalArgumentException.class, () -> converter.convert(invalidJobParametersMap));
+            ObjectConversionException.class, () -> converter.convert(invalidJobParametersMap));
 
     assertThat(exception)
         .hasMessageThat()

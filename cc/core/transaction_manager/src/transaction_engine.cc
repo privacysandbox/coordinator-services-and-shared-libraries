@@ -50,7 +50,6 @@ using google::scp::core::transaction_manager::proto::TransactionEngineLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLog_1_0;
 using google::scp::core::transaction_manager::proto::TransactionLogType;
 using google::scp::core::transaction_manager::proto::TransactionPhaseLog_1_0;
-using google::scp::cpio::MetricClientInterface;
 using std::atomic;
 using std::bind;
 using std::function;
@@ -152,12 +151,10 @@ TransactionEngine::TransactionEngine(
         transaction_command_serializer,
     shared_ptr<JournalServiceInterface>& journal_service,
     shared_ptr<RemoteTransactionManagerInterface>& remote_transaction_manager,
-    const shared_ptr<MetricClientInterface>& metric_client,
     shared_ptr<ConfigProviderInterface> config_provider)
     : TransactionEngine(async_executor, transaction_command_serializer,
                         journal_service, make_shared<TransactionPhaseManager>(),
-                        remote_transaction_manager, metric_client,
-                        config_provider) {}
+                        remote_transaction_manager, config_provider) {}
 
 ExecutionResult TransactionEngine::Init() noexcept {
   auto execution_result = active_transactions_map_.Init();

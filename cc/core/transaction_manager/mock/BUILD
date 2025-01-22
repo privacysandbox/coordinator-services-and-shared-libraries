@@ -28,7 +28,5 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/transaction_manager/interface:core_transaction_manager_interface_lib",
         "//cc/core/transaction_manager/src:core_transaction_manager_lib",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
-        "//cc/public/cpio/utils/metric_aggregation/mock:metric_aggregation_mock",
     ],
 )

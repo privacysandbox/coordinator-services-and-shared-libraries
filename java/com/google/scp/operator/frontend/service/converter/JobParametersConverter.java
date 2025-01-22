@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Descriptors;
 import com.google.scp.operator.protos.shared.backend.JobParametersProto;
 import com.google.scp.operator.shared.utils.AttributeConverterUtils;
+import com.google.scp.operator.shared.utils.ObjectConversionException;
 import java.util.Map;
 
 /**
@@ -42,12 +43,14 @@ public final class JobParametersConverter
           JobParametersProto.JobParameters.getDescriptor().findFieldByName(key);
 
       if (field == null) {
-        throw new IllegalArgumentException("Invalid key: " + key + " in job parameters.");
+        throw new ObjectConversionException("Invalid key: " + key + " in job parameters.");
       }
       try {
         AttributeConverterUtils.setFieldValue(field, builder, value);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Invalid value for field " + key + ": " + value, e);
+        throw new ObjectConversionException("Invalid value for field " + key + ": " + value);
+      } catch (Exception e) {
+        throw new ObjectConversionException(e.getMessage(), e);
       }
     }
     return builder.build();

@@ -24,6 +24,7 @@ pkg_filegroup(
         "//coordinator/terraform/gcp/applications/multipartykeyhosting_secondary",
         "//coordinator/terraform/gcp/applications/operator_workloadidentitypoolprovider",
         "//coordinator/terraform/gcp/applications/setupresources",
+        "//coordinator/terraform/gcp/applications/xc_resources_aws",
     ],
     prefix = "applications",
 )

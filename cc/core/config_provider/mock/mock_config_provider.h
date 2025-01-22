@@ -88,6 +88,14 @@ class MockConfigProvider : public ConfigProviderInterface {
     return SuccessExecutionResult();
   }
 
+  ExecutionResult Get(const ConfigKey& key, double& out) noexcept override {
+    if (double_config_map_.find(key) == double_config_map_.end()) {
+      return FailureExecutionResult(errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
+    }
+    out = double_config_map_[key];
+    return SuccessExecutionResult();
+  }
+
   void Set(const ConfigKey& key, const char* value) {
     string_config_map_[key] = std::string(value);
   }
@@ -108,10 +116,15 @@ class MockConfigProvider : public ConfigProviderInterface {
     bool_config_map_[key] = value;
   }
 
+  void SetDouble(const ConfigKey& key, const double value) {
+    double_config_map_[key] = value;
+  }
+
  private:
   std::map<ConfigKey, std::string> string_config_map_;
   std::map<ConfigKey, size_t> size_t_config_map_;
   std::map<ConfigKey, int32_t> int32_t_config_map_;
   std::map<ConfigKey, bool> bool_config_map_;
+  std::map<ConfigKey, double> double_config_map_;
 };
 }  // namespace google::scp::core::config_provider::mock

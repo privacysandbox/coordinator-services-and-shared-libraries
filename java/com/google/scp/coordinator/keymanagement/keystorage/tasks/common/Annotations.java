@@ -42,6 +42,29 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface KmsKeyEncryptionKeyUri {}
 
+  /**
+   * Binds instance of Aead used to validate (decrypt) encrypted private keys/splits received by Key
+   * Storage Service.
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface DecryptionAead {}
+
+  /**
+   * Binds instance of Aead used to re-encrypt private keys/splits before persiting them to KeyDb.
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface EncryptionAead {}
+
+  /** Binds URI of Aead used to re-encrypt private keys/splits before persisting them to KeyDb. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface EncryptionKeyUri {}
+
   /** Binds instance of Coordinator Key Aead. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

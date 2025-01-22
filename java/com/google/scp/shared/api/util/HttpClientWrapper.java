@@ -240,7 +240,7 @@ public class HttpClientWrapper {
       return HttpClientWrapper.createHttpClient(
           Optional.ofNullable(interceptor),
           Optional.ofNullable(intervalFunction),
-          Optional.ofNullable(maxAttempts),
+          Optional.of(maxAttempts),
           Optional.ofNullable(retryExceptions),
           Optional.ofNullable(retryStatusCodes));
     }

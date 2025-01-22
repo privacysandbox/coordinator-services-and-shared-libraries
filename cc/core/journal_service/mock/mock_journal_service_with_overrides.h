@@ -25,8 +25,6 @@
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/journal_service/src/journal_service.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_aggregate_metric.h"
-#include "cc/public/cpio/utils/metric_aggregation/mock/mock_simple_metric.h"
 
 namespace google::scp::core::journal_service::mock {
 class MockJournalServiceWithOverrides : public JournalService {
@@ -37,19 +35,10 @@ class MockJournalServiceWithOverrides : public JournalService {
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
       const std::shared_ptr<BlobStorageProviderInterface>&
           blob_storage_provider,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client,
       std::shared_ptr<core::MetricRouter> metric_router,
       const std::shared_ptr<ConfigProviderInterface>& config_provider)
       : JournalService(bucket_name, partition_name, async_executor,
-                       blob_storage_provider, metric_client, metric_router,
-                       config_provider) {
-    // TODO: Temporary hack to make the tests work. This will be removed when we
-    // have a MetricFactory (we can just simply use MockMetricFactory)
-    recover_time_metric_ = std::make_shared<cpio::MockSimpleMetric>();
-    recover_log_count_metric_ = std::make_shared<cpio::MockAggregateMetric>();
-    journal_output_count_metric_ =
-        std::make_shared<cpio::MockAggregateMetric>();
-  }
+                       blob_storage_provider, metric_router, config_provider) {}
 
   void SetInputStream(
       std::shared_ptr<journal_service::JournalInputStreamInterface>&

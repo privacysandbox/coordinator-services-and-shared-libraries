@@ -398,10 +398,10 @@ TEST_F(CheckpointServiceTest, Checkpoint) {
   shared_ptr<RemoteTransactionManagerInterface> remote_transaction_manager;
   auto mock_transaction_engine = make_shared<MockTransactionEngine>(
       async_executor, mock_transaction_command_serializer, mock_journal_service,
-      remote_transaction_manager, mock_metric_client_);
+      remote_transaction_manager);
 
   auto mock_transaction_manager = make_shared<MockTransactionManager>(
-      mock_async_executor, mock_transaction_engine, 1000, mock_metric_client_);
+      mock_async_executor, mock_transaction_engine, 1000);
 
   shared_ptr<NoSQLDatabaseProviderInterface> nosql_database_provider = nullptr;
   auto mock_budget_key_provider = make_shared<MockBudgetKeyProvider>(
