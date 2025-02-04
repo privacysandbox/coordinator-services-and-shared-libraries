@@ -39,7 +39,6 @@ def cmrt_sdk(
         "crypto_service": {},
         "instance_service": {},
         "job_service": job_service_configs,
-        "metric_service": {},
         "nosql_database_service": nosql_database_service_configs,
         "parameter_service": {},
         "private_key_service": private_key_service_configs,

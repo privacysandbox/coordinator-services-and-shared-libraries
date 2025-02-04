@@ -33,8 +33,6 @@
 set -eux
 set -o pipefail
 
-ecr_repository_name=''
-
 function deploy_pbs_base() {
     environment_dir=$1
     auto_approve=$2
@@ -56,9 +54,6 @@ function deploy_pbs_base() {
         terraform -chdir=$environment_dir/distributedpbs_base apply -input=false | tee $environment_dir/distributedpbs_base/tfapply.pbs_base_$plan_version_suffix.txt
       fi
     fi
-
-    # Get the ECR repository name
-    ecr_repository_name=$(terraform -chdir=$environment_dir/distributedpbs_base output -raw ecr_repository_name)
 }
 
 function deploy_pbs_application() {
@@ -106,11 +101,6 @@ function deploy_pbs_application() {
 function validate_input() {
   if [ ! -d "$environment_dir" ]; then
       echo "ERROR: Environment directory [$environment_dir] does not exist."
-      exit 1
-  fi
-
-  if [ ! -f "$container_image_tar" ]; then
-      echo "ERROR: PBS container image tar [$container_image_tar] does not exist."
       exit 1
   fi
 
@@ -204,7 +194,6 @@ done
 export TF_IN_AUTOMATION=1
 
 environment_dir="./environments_mp_$coordinator/$environment"
-container_image_tar="./dist/reproducible_pbs_container_aws.tar"
 plan_version_suffix="$environment"_"$coordinator"_"$release_version"
 # Fail early if expected files do not exist
 validate_input

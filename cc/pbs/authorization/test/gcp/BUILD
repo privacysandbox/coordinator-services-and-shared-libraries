@@ -26,8 +26,8 @@ cc_test(
         "//cc/pbs/authorization/src/gcp:gcp_http_request_response_auth_interceptor",
         "//cc/public/core/interface:execution_result",
         "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
-        "@nlohmann_json//:lib",
     ],
 )

@@ -31,10 +31,10 @@ def absl():
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "733726b8c3a6d39a4120d7e45ea8b41a434cdacde401cba500f14236c49b39dc",
-        strip_prefix = "abseil-cpp-20240116.2",
-        # Committed on Apr 9, 2024.
+        sha256 = "40cee67604060a7c8794d931538cb55f4d444073e556980c88b6c49bb9b19bb7",
+        strip_prefix = "abseil-cpp-20240722.1",
+        # Committed on Jan 23, 2025.
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/20240116.2.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240722.1.tar.gz",
         ],
     )

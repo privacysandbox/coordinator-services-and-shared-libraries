@@ -20,9 +20,9 @@
 #include <functional>
 #include <memory>
 
+#include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/core/interface/async_executor_interface.h"
-#include "cc/core/interface/streaming_context.h"
 
 #include "error_codes.h"
 #include "retry_strategy.h"
@@ -75,79 +75,6 @@ class OperationDispatcher {
     };
 
     DispatchWithRetry<Context>(async_context, dispatch_to_target_function);
-  }
-
-  /**
-   * @brief Dispatches a producer streaming context object to the target
-   * component with a provided function.
-   *
-   * @param producer_streaming_context The streaming context of the operation to
-   * be executed.
-   * @param dispatch_to_target_function The function to call the target
-   * component.
-   */
-  template <class TRequest, class TResponse>
-  void DispatchProducerStreaming(
-      ProducerStreamingContext<TRequest, TResponse>& producer_streaming_context,
-      const std::function<
-          ExecutionResult(ProducerStreamingContext<TRequest, TResponse>&)>&
-          dispatch_to_target_function) {
-    auto original_callback = producer_streaming_context.callback;
-    producer_streaming_context.callback =
-        [this, dispatch_to_target_function,
-         original_callback](AsyncContext<TRequest, TResponse>& async_context) {
-          if (async_context.result.status == ExecutionStatus::Retry) {
-            async_context.retry_count++;
-            // Downcast is safe here. We must downcast because only one
-            // DispatchWithRetry can exist in this compilation unit - the
-            // template types must agree.
-            DispatchWithRetry(
-                static_cast<ProducerStreamingContext<TRequest, TResponse>&>(
-                    async_context),
-                dispatch_to_target_function);
-            return;
-          }
-          original_callback(async_context);
-        };
-
-    DispatchWithRetry(producer_streaming_context, dispatch_to_target_function);
-  }
-
-  /**
-   * @brief Dispatches a consumer streaming context object to the target
-   * component with a provided function.
-   *
-   * @param consumer_streaming_context The streaming context of the operation to
-   * be executed.
-   * @param dispatch_to_target_function The function to call the target
-   * component.
-   */
-  template <class TRequest, class TResponse>
-  void DispatchConsumerStreaming(
-      ConsumerStreamingContext<TRequest, TResponse>& consumer_streaming_context,
-      const std::function<
-          ExecutionResult(ConsumerStreamingContext<TRequest, TResponse>&)>&
-          dispatch_to_target_function) {
-    auto original_callback = consumer_streaming_context.process_callback;
-    consumer_streaming_context.process_callback =
-        [this, dispatch_to_target_function, original_callback](
-            ConsumerStreamingContext<TRequest, TResponse>&
-                consumer_streaming_context,
-            bool is_finish) {
-          if (is_finish) {
-            if (consumer_streaming_context.result.status ==
-                ExecutionStatus::Retry) {
-              consumer_streaming_context.retry_count++;
-              DispatchWithRetry(consumer_streaming_context,
-                                dispatch_to_target_function);
-              return;
-            }
-          }
-          original_callback(consumer_streaming_context, is_finish);
-        };
-
-    DispatchWithRetry<ConsumerStreamingContext<TRequest, TResponse>>(
-        consumer_streaming_context, dispatch_to_target_function);
   }
 
  private:

@@ -34,8 +34,6 @@
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::utils::GetEscapedUriWithQuery;
 using std::make_shared;
-using std::make_unique;
-using std::move;
 using std::regex;
 using std::regex_search;
 using std::shared_ptr;

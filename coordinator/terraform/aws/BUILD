@@ -20,7 +20,6 @@ package(default_visibility = ["//visibility:public"])
 pkg_files(
     name = "multiparty_dist_files",
     srcs = [
-        "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_container_aws",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:EncryptionKeyServiceLambdaDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PublicKeyApiGatewayHandlerDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/service/aws:KeyStorageServiceLambdaDeploy",

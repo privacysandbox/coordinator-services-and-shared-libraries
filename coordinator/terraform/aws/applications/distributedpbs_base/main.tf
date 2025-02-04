@@ -25,7 +25,9 @@ provider "aws" {
   region = var.aws_region
 }
 
-module "ecr_repo" {
-  source             = "../../modules/distributedpbs_container_registry"
-  environment_prefix = var.environment
-}
+# This module previously contains the module for AWS PBS container registry
+# (distributedpbs_container_registry), but the module has been removed.
+#
+# The distributedpbs_base application is now an empty application. It is not
+# removed because many environment specific terraform configs that may not be
+# in this repo are still depending on this application.

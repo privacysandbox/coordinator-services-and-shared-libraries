@@ -27,8 +27,8 @@ cc_library(
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface:type_def",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
     ],
 )
 

@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <nghttp2/asio_http2_server.h>
+#include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
 #include "cc/core/authorization_service/src/error_codes.h"
@@ -32,20 +33,15 @@
 #include "cc/core/http2_server/src/error_codes.h"
 #include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/errors.h"
-#include "cc/core/interface/metrics_def.h"
 #include "cc/core/utils/src/base64.h"
 #include "cc/core/utils/src/http.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "nlohmann/json.hpp"
-#include "opentelemetry/sdk/metrics/meter_provider.h"
-#include "opentelemetry/sdk/metrics/view/view.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
 namespace google::scp::core {
 
 namespace {
 
-using ::absl::StrCat;
 using ::boost::asio::ssl::context;
 using ::boost::system::error_code;
 using ::boost::system::errc::success;
@@ -54,7 +50,6 @@ using ::google::scp::core::common::kZeroUuid;
 using ::google::scp::core::common::Uuid;
 using ::google::scp::core::errors::GetErrorHttpStatusCode;
 using ::google::scp::core::errors::HttpStatusCode;
-using ::google::scp::core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
 using ::google::scp::core::utils::Base64Decode;
 using ::google::scp::core::utils::PadBase64Encoding;
 using ::nghttp2::asio_http2::server::configure_tls_context_easy;
@@ -66,7 +61,6 @@ using ::opentelemetry::sdk::resource::SemanticConventions::
 using ::opentelemetry::sdk::resource::SemanticConventions::kHttpRoute;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerPort;
-using ::opentelemetry::sdk::resource::SemanticConventions::kUrlScheme;
 
 static constexpr char kHttp2Server[] = "Http2Server";
 static constexpr size_t kConnectionReadTimeoutInSeconds = 90;

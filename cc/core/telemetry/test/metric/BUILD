@@ -15,7 +15,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_test")
 load("//build_defs/cc:benchmark.bzl", "BENCHMARK_COPT")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_test(
     name = "telemetry_metric_integration_test",

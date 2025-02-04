@@ -41,6 +41,7 @@ variable "environment" {
 variable "pbs_artifact_registry_repository_name" {
   description = "The PBS Artifact Registry repository name."
   type        = string
+  default     = null
 }
 
 variable "pbs_image_override" {
@@ -129,7 +130,7 @@ variable "pbs_spanner_autoscaling_config" {
 variable "auth_cloud_function_handler_path" {
   description = "The path to where the cloud function handler file is read from."
   type        = string
-  nullable    = false
+  default     = null
 }
 
 variable "pbs_auth_cloudfunction_min_instances" {
@@ -148,23 +149,27 @@ variable "pbs_auth_cloudfunction_instance_concurrency" {
   description = "The maximum number of concurrent requests that one function instance can handle."
   type        = number
   nullable    = false
+  default     = 1
 }
 
 variable "pbs_auth_cloudfunction_instance_available_cpu" {
   description = "The maximum number of CPUs that will be available to a function instance."
   type        = string
+  default     = null
 }
 
 variable "pbs_auth_cloudfunction_memory_mb" {
   description = "Memory size in MB for cloudfunction."
   type        = number
   nullable    = false
+  default     = 512
 }
 
 variable "pbs_auth_cloudfunction_timeout_seconds" {
   description = "Number of seconds after which a function instance times out."
   type        = number
   nullable    = false
+  default     = 60
 }
 
 variable "pbs_auth_package_bucket_force_destroy" {
@@ -204,8 +209,9 @@ variable "pbs_auth_package_bucket" {
 ################################################################################
 
 variable "pbs_image_tag" {
-  type     = string
-  nullable = false
+  description = "The tag of the PBS image stored in the derived location (only set this if pbs_image_override is not set)"
+  type        = string
+  default     = null
 }
 
 variable "pbs_application_environment_variables" {
@@ -232,12 +238,14 @@ variable "pbs_cloud_logging_enabled" {
   description = "Enables cloud logging of the PBS instances."
   type        = bool
   nullable    = false
+  default     = true
 }
 
 variable "pbs_cloud_monitoring_enabled" {
   description = "Enables cloud monitoring of the PBS instances."
   type        = bool
   nullable    = false
+  default     = true
 }
 
 variable "pbs_instance_allow_ssh" {
@@ -295,6 +303,7 @@ variable "pbs_cloud_run_max_concurrency" {
   description = "The maximum number of concurrent requests per Cloud Run PBS instance."
   type        = number
   nullable    = false
+  default     = 1000
 }
 
 variable "deploy_pbs_cloud_run" {
@@ -326,22 +335,26 @@ variable "service_subdomain" {
 variable "service_subdomain_suffix" {
   description = "When set, the value replaces `-$${var.environment}` as the service subdomain suffix."
   type        = string
+  default     = null
 }
 
 variable "pbs_main_port" {
   description = "The main port to map for PBS."
   type        = number
   nullable    = false
+  default     = 8080
 }
 
 variable "vpc_network_id" {
   description = "The VPC ID. If left blank, the default network will be used."
   type        = string
+  default     = null
 }
 
 variable "vpc_subnet_id" {
   description = "The VPC subnetwork ID. Must be provided if using a custom VPC."
   type        = string
+  default     = null
 }
 
 variable "enable_public_ip_address" {
@@ -371,6 +384,7 @@ variable "enable_health_check" {
   description = "Whether to enable the managed instance group health check."
   type        = bool
   nullable    = false
+  default     = true
 }
 
 ################################################################################

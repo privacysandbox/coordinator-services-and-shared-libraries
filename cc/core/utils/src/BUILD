@@ -29,9 +29,9 @@ cc_library(
         "//cc/core/interface:type_def_lib",
         "//cc/public/core/interface:execution_result",
         "@boringssl//:crypto",
+        "@com_github_curl_curl//:curl",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_googlesource_code_re2//:re2",
-        "@curl",
     ],
 )

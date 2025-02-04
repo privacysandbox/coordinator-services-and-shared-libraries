@@ -147,8 +147,7 @@ variable "pbs_spanner_autoscaling_config" {
 variable "auth_cloud_function_handler_path" {
   description = "The path to where the cloud function handler file is read from."
   type        = string
-  nullable    = false
-  default     = ""
+  default     = null
 }
 
 variable "pbs_auth_cloudfunction_min_instances" {
@@ -228,8 +227,9 @@ variable "pbs_auth_package_bucket" {
 ################################################################################
 
 variable "pbs_image_tag" {
-  type     = string
-  nullable = false
+  description = "The tag of the PBS image stored in the derived location (only set this if pbs_image_override is not set)"
+  type        = string
+  default     = null
 }
 
 variable "pbs_application_environment_variables" {
@@ -311,12 +311,14 @@ variable "pbs_cloud_run_min_instances" {
   description = "Minimum instances for Cloud Run PBS"
   type        = number
   nullable    = false
+  default     = 3
 }
 
 variable "pbs_cloud_run_max_instances" {
   description = "Max instances for Cloud Run PBS"
   type        = number
   nullable    = false
+  default     = 20
 }
 
 variable "pbs_cloud_run_max_concurrency" {

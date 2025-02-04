@@ -57,8 +57,6 @@ using ::google::scp::core::HttpMethod;
 using ::google::scp::core::HttpRequest;
 using ::google::scp::core::HttpResponse;
 using ::google::scp::core::HttpServerInterface;
-using ::google::scp::core::kAggregatedMetricIntervalMs;
-using ::google::scp::core::kDefaultAggregatedMetricIntervalMs;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::Timestamp;
 using ::google::scp::core::common::kZeroUuid;

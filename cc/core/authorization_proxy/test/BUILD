@@ -14,17 +14,14 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
-
-TEST_SRCS = [
-    "authorization_proxy_test.cc",
-]
+package(default_visibility = ["//visibility:private"])
 
 cc_test(
     name = "authorization_proxy_test",
     size = "small",
-    srcs =
-        TEST_SRCS,
+    srcs = [
+        "authorization_proxy_test.cc",
+    ],
     deps = [
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",

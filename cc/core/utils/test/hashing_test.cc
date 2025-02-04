@@ -24,7 +24,6 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::Byte;
-using google::scp::core::BytesBuffer;
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
 using std::make_shared;

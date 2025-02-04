@@ -14,16 +14,14 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "concurrent_map_lib",
-    srcs = glob(
-        [
-            "*.cc",
-            "*.h",
-        ],
-    ),
+    srcs = [
+        "concurrent_map.h",
+        "error_codes.h",
+    ],
     deps = [
         "//cc/core/interface:type_def_lib",
         "@oneTBB//:tbb",

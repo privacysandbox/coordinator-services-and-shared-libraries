@@ -14,18 +14,14 @@
 
 #include "gcp_dependency_factory.h"
 
-#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <variant>
 
 #include "cc/core/authorization_proxy/src/authorization_proxy.h"
-#include "cc/core/blob_storage_provider/src/gcp/gcp_cloud_storage.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/configuration_keys.h"
-#include "cc/core/interface/credentials_provider_interface.h"
-#include "cc/core/nosql_database_provider/src/gcp/gcp_spanner.h"
 #include "cc/core/telemetry/src/authentication/gcp_token_fetcher.h"
 #include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
 #include "cc/core/telemetry/src/authentication/grpc_id_token_authenticator.h"
@@ -33,19 +29,12 @@
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
-#include "cc/core/token_provider_cache/src/auto_refresh_token_provider.h"
 #include "cc/cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
 #include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_provider.h"
 #include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
 #include "cc/pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
-#include "cc/pbs/authorization_token_fetcher/src/gcp/gcp_authorization_token_fetcher.h"
 #include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
 #include "cc/pbs/interface/configuration_keys.h"
-#include "cc/pbs/interface/pbs_client_interface.h"
-#include "cc/pbs/pbs_client/src/pbs_client.h"
-#include "cc/public/cpio/interface/metric_client/type_def.h"
 #include "google/cloud/monitoring/v3/metric_client.h"
 #include "google/cloud/opentelemetry/monitoring_exporter.h"
 #include "google/cloud/opentelemetry/resource_detector.h"
@@ -56,53 +45,30 @@
 #include "opentelemetry/sdk/resource/resource_detector.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
-#include "dummy_impls.h"
-
 namespace google::scp::pbs {
 
-using ::google::scp::core::AsyncContext;
 using ::google::scp::core::AsyncExecutorInterface;
 using ::google::scp::core::AuthorizationProxyInterface;
-using ::google::scp::core::AutoRefreshTokenProviderService;
-using ::google::scp::core::BlobStorageProviderInterface;
 using ::google::scp::core::ConfigProviderInterface;
-using ::google::scp::core::CredentialsProviderInterface;
 using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::GcpTokenFetcher;
 using ::google::scp::core::GrpcAuthConfig;
 using ::google::scp::core::GrpcIdTokenAuthenticator;
 using ::google::scp::core::kAlternateCloudServiceRegion;
 using ::google::scp::core::kHttpServerDnsRoutingEnabled;
 using ::google::scp::core::MetricRouter;
-using ::google::scp::core::NoSQLDatabaseProviderInterface;
 using ::google::scp::core::OtlpGrpcAuthedMetricExporter;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::TimeDuration;
-using ::google::scp::core::blob_storage_provider::GcpCloudStorageProvider;
 using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::core::nosql_database_provider::GcpSpanner;
-using ::google::scp::cpio::MetricClientOptions;
 using ::google::scp::cpio::client_providers::GcpAuthTokenProvider;
 using ::google::scp::cpio::client_providers::GcpInstanceClientProvider;
-using ::google::scp::cpio::client_providers::GcpInstanceClientUtils;
-using ::google::scp::cpio::client_providers::GcpMetricClientProvider;
-using ::google::scp::cpio::client_providers::MetricBatchingOptions;
-using ::google::scp::pbs::GcpAuthorizationTokenFetcher;
 
 static constexpr char kGcpDependencyProvider[] = "kGCPDependencyProvider";
 
-// TODO move these to a common place
-static constexpr char kBudgetKeyTablePartitionKeyName[] = "Budget_Key";
-static constexpr char kBudgetKeyTableSortKeyName[] = "Timeframe";
-static constexpr char kPartitionLockTablePartitionKeyName[] = "LockId";
-static constexpr TimeDuration kDefaultMetricBatchTimeDuration = 3000;
-
 GcpDependencyFactory::GcpDependencyFactory(
     std::shared_ptr<ConfigProviderInterface> config_provider)
-    : config_provider_(config_provider),
-      metrics_batch_push_enabled_(false),
-      metrics_batch_time_duration_ms_(kDefaultMetricBatchTimeDuration) {}
+    : config_provider_(config_provider) {}
 
 ExecutionResult GcpDependencyFactory::Init() noexcept {
   RETURN_IF_FAILURE(ReadConfigurations());
@@ -131,36 +97,6 @@ ExecutionResult GcpDependencyFactory::ReadConfigurations() {
     SCP_CRITICAL(kGcpDependencyProvider, kZeroUuid, execution_result,
                  "Failed to read auth service endpoint.");
     return execution_result;
-  }
-
-  execution_result =
-      config_provider_->Get(kServiceMetricsNamespace, metrics_namespace_);
-  if (!execution_result.Successful()) {
-    SCP_CRITICAL(kGcpDependencyProvider, kZeroUuid, execution_result,
-                 "Failed to read metrics namespace.");
-    return execution_result;
-  }
-
-  execution_result = config_provider_->Get(kServiceMetricsBatchPush,
-                                           metrics_batch_push_enabled_);
-  if (!execution_result.Successful()) {
-    // If config of metrics_batch_push_enabled not present, continue with
-    // unbatch mode.
-    SCP_INFO(kGcpDependencyProvider, kZeroUuid,
-             "%s flag not specified. Starting PBS in single metric push mode",
-             kServiceMetricsBatchPush);
-    metrics_batch_push_enabled_ = false;
-  }
-
-  execution_result = config_provider_->Get(kServiceMetricsBatchTimeDurationMs,
-                                           metrics_batch_time_duration_ms_);
-  if (!execution_result.Successful()) {
-    SCP_INFO(
-        kGcpDependencyProvider, kZeroUuid,
-        "%s flag not specified. Set the time duration of batch push to 3000 "
-        "milliseconds",
-        kServiceMetricsBatchTimeDurationMs);
-    metrics_batch_time_duration_ms_ = kDefaultMetricBatchTimeDuration;
   }
 
   execution_result =
@@ -227,17 +163,6 @@ ExecutionResult GcpDependencyFactory::ReadConfigurations() {
   return SuccessExecutionResult();
 }
 
-std::unique_ptr<core::TokenProviderCacheInterface>
-GcpDependencyFactory::ConstructAuthorizationTokenProviderCache(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
-  auto auth_token_fetcher = std::make_unique<GcpAuthorizationTokenFetcher>(
-      http_client, remote_coordinator_auth_gateway_endpoint_, async_executor);
-  return std::make_unique<AutoRefreshTokenProviderService>(
-      std::move(auth_token_fetcher), async_executor);
-}
-
 std::unique_ptr<AuthorizationProxyInterface>
 GcpDependencyFactory::ConstructAuthorizationProxyClient(
     std::shared_ptr<core::AsyncExecutorInterface> async_executor,
@@ -258,37 +183,6 @@ GcpDependencyFactory::ConstructAwsAuthorizationProxyClient(
           alternate_cloud_service_region_, config_provider_));
 }
 
-std::unique_ptr<BlobStorageProviderInterface>
-GcpDependencyFactory::ConstructBlobStorageClient(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    core::AsyncPriority async_execution_priority,
-    core::AsyncPriority io_async_execution_priority) noexcept {
-  return std::make_unique<GcpCloudStorageProvider>(
-      async_executor, io_async_executor, config_provider_,
-      async_execution_priority, io_async_execution_priority);
-}
-
-std::unique_ptr<NoSQLDatabaseProviderInterface>
-GcpDependencyFactory::ConstructNoSQLDatabaseClient(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    core::AsyncPriority async_execution_priority,
-    core::AsyncPriority io_async_execution_priority) noexcept {
-  auto table_schema_map = std::make_unique<std::unordered_map<
-      std::string, std::pair<std::string, std::optional<std::string>>>>();
-  table_schema_map->emplace(budget_key_table_name_,
-                            std::make_pair(kBudgetKeyTablePartitionKeyName,
-                                           kBudgetKeyTableSortKeyName));
-  table_schema_map->emplace(
-      partition_lock_table_name_,
-      std::make_pair(kPartitionLockTablePartitionKeyName, std::nullopt));
-  return std::make_unique<GcpSpanner>(
-      async_executor, io_async_executor, config_provider_,
-      std::move(table_schema_map), async_execution_priority,
-      io_async_execution_priority);
-}
-
 std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
 GcpDependencyFactory::ConstructBudgetConsumptionHelper(
     google::scp::core::AsyncExecutorInterface* async_executor,
@@ -304,23 +198,6 @@ GcpDependencyFactory::ConstructBudgetConsumptionHelper(
   return std::make_unique<pbs::BudgetConsumptionHelper>(
       config_provider_.get(), async_executor, io_async_executor,
       std::move(*spanner_connection));
-}
-
-std::unique_ptr<cpio::MetricClientInterface>
-GcpDependencyFactory::ConstructMetricClient(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
-        instance_client_provider) noexcept {
-  auto metric_client_options = std::make_shared<MetricClientOptions>();
-  auto metric_batching_options = std::make_shared<MetricBatchingOptions>();
-  metric_batching_options->metric_namespace = metrics_namespace_;
-  metric_batching_options->enable_batch_recording = metrics_batch_push_enabled_;
-  metric_batching_options->batch_recording_time_duration =
-      std::chrono::milliseconds(metrics_batch_time_duration_ms_);
-  return std::make_unique<GcpMetricClientProvider>(
-      metric_client_options, instance_client_provider, async_executor,
-      metric_batching_options);
 }
 
 std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
@@ -341,16 +218,6 @@ GcpDependencyFactory::ConstructInstanceMetadataClient(
   config_provider_->Get(google::scp::pbs::kContainerType, container_type);
   return std::make_unique<GcpInstanceClientProvider>(
       auth_token_provider, http1_client, http2_client, container_type);
-}
-
-std::unique_ptr<pbs::PrivacyBudgetServiceClientInterface>
-GcpDependencyFactory::ConstructRemoteCoordinatorPBSClient(
-    std::shared_ptr<core::HttpClientInterface> http_client,
-    std::shared_ptr<core::TokenProviderCacheInterface>
-        auth_token_provider_cache) noexcept {
-  return std::make_unique<PrivacyBudgetServiceClient>(
-      reporting_origin_for_remote_coordinator_, remote_coordinator_endpoint_,
-      http_client, auth_token_provider_cache);
 }
 
 std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(

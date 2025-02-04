@@ -29,3 +29,13 @@ def grpc():
             "https://github.com/grpc/grpc/archive/v1.64.2.tar.gz",
         ],
     )
+
+    maybe(
+        http_archive,
+        name = "io_grpc_grpc_java",
+        sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
+        strip_prefix = "grpc-java-1.56.0",
+        urls = [
+            "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
+        ],
+    )

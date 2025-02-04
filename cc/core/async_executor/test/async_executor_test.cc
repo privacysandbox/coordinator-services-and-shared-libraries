@@ -35,7 +35,6 @@
 
 using google::scp::core::async_executor::mock::MockAsyncExecutorWithInternals;
 using std::atomic;
-using std::hash;
 using std::make_shared;
 using std::map;
 using std::mutex;

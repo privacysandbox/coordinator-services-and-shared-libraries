@@ -15,7 +15,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//build_defs/cc:benchmark.bzl", "BENCHMARK_COPT")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "core_async_executor_lib",

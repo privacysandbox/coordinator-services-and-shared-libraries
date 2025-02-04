@@ -31,8 +31,8 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
         "//cc/public/core/interface:execution_result",
+        "@com_github_curl_curl//:curl",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@curl",
     ],
 )

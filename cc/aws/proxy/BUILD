@@ -83,7 +83,7 @@ genrule(
         "socket_vendor",
     ],
     cmd = """
-    export OUTPUT_DIR=`mktemp -d -t PROXY_BUILD_OUTPUTS_XXXXX`
+    export OUTPUT_DIR=`dirname $(location proxify)`
     docker load < $(location :build_container.tar)
     docker run --rm \
       -v `realpath $(location //:source_code_tar)`:/source_code.tar \
@@ -92,7 +92,10 @@ genrule(
       bazel/cc/aws/proxy:build_container \
       bash -c '
         set -eux
-        yum install glibc-common-2.26-64.amzn2.0.2 glibc-devel-2.26-64.amzn2.0.2 glibc-headers-2.26-64.amzn2.0.2 gcc-7.3.1-17.amzn2 gcc-c++-7.3.1-17.amzn2 tar git -y > /dev/null
+        # glibc-common is depended by other glibc packages, installing it
+        # separately to avoid race conditions.
+        yum install -y glibc-common-2.26-64.amzn2.0.3
+        yum install glibc-devel-2.26-64.amzn2.0.3 glibc-headers-2.26-64.amzn2.0.3 gcc-7.3.1-17.amzn2 gcc-c++-7.3.1-17.amzn2 tar git -y > /dev/null
         tar xf /source_code.tar -C /
         cd /scp
         # Remove clang flags
@@ -105,11 +108,6 @@ genrule(
           //cc/aws/proxy/src:socket_vendor
         cp $$(bazel info bazel-bin)/cc/aws/proxy/src/{libproxy_preload.so,proxify,proxy,socket_vendor} /output
       '
-    cp "$${OUTPUT_DIR}/libproxy_preload.so" $(location libproxy_preload.so)
-    cp "$${OUTPUT_DIR}/proxify" $(location proxify)
-    cp "$${OUTPUT_DIR}/proxy" $(location proxy)
-    cp "$${OUTPUT_DIR}/socket_vendor" $(location socket_vendor)
-    rm -r "$${OUTPUT_DIR}"
     """,
     tags = ["manual"],
 )

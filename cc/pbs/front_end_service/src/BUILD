@@ -13,17 +13,6 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_foreign_cc//foreign_cc:defs.bzl", "configure_make")
-
-configure_make(
-    name = "libpsl",
-    configure_in_place = True,
-    lib_source = "@libpsl//:all_srcs",
-    out_shared_libs = [
-        "libpsl.so",
-        "libpsl.so.5",
-    ],
-)
 
 cc_library(
     name = "error_codes",
@@ -35,45 +24,14 @@ cc_library(
     name = "front_end_utils",
     srcs = ["front_end_utils.cc"],
     hdrs = ["front_end_utils.h"],
+    visibility = ["//cc/pbs:__subpackages__"],
     deps = [
         ":error_codes",
-        ":libpsl",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/container:flat_hash_map",
         "@io_opentelemetry_cpp//sdk/src/metrics",
-    ],
-)
-
-cc_library(
-    name = "transaction_request_router",
-    srcs = ["transaction_request_router.cc"],
-    hdrs = ["transaction_request_router.h"],
-    deps = [
-        "//cc/core/interface:interface_lib",
-        "//cc/pbs/interface:pbs_interface_lib",
-    ],
-)
-
-cc_library(
-    name = "front_end_service",
-    srcs = ["front_end_service.cc"],
-    hdrs = ["front_end_service.h"],
-    linkopts = [
-        "-latomic",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":error_codes",
-        ":front_end_utils",
-        ":transaction_request_router",
-        "//cc/core/interface:interface_lib",
-        "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
-        "//cc/pbs/interface:pbs_interface_lib",
-        "//cc/pbs/transactions/src:pbs_transactions_lib",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/strings",
-        "@io_opentelemetry_cpp//sdk/src/metrics",
-        "@nlohmann_json//:lib",
+        "@libpsl",
     ],
 )
 
@@ -81,25 +39,20 @@ cc_library(
     name = "front_end_service_v2",
     srcs = ["front_end_service_v2.cc"],
     hdrs = ["front_end_service_v2.h"],
-    linkopts = [
-        "-latomic",
-    ],
     visibility = ["//visibility:public"],
     deps = [
         ":error_codes",
         ":front_end_utils",
-        ":transaction_request_router",
         "//cc/core/interface:interface_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
         "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/consume_budget/src/gcp:error_codes",
         "//cc/pbs/interface:pbs_interface_lib",
-        "//cc/pbs/transactions/src:pbs_transactions_lib",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:bind_front",
         "@com_google_absl//absl/strings",
         "@io_opentelemetry_cpp//sdk/src/metrics",
-        "@nlohmann_json//:lib",
     ],
 )

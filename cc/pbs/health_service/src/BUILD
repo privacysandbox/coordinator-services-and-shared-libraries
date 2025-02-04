@@ -30,14 +30,9 @@ cc_library(
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",
-        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/pbs/interface:pbs_interface_lib",
-        "//cc/pbs/transactions/src:pbs_transactions_lib",
-        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
-        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
-        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
     ],
 )

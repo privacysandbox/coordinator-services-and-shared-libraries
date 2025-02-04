@@ -38,7 +38,7 @@ gazelle(name = "gazelle")
 gazelle(
     name = "gazelle-update-repos",
     args = [
-        "-from_file=go/go.work",
+        "-from_file=go.work",
         "-to_macro=build_defs/go/go_repositories.bzl%go_repositories",
         "--build_file_proto_mode=disable_global",
     ],
@@ -92,6 +92,12 @@ copy_directory(
 )
 
 copy_directory(
+    name = "python_dir",
+    src = "python",
+    out = "srcs/python",
+)
+
+copy_directory(
     name = "licenses_dir",
     src = "licenses",
     out = "srcs/licenses",
@@ -120,6 +126,7 @@ pkg_tar(
         ":javatests_dir",
         ":licenses_dir",
         ":operator_dir",
+        ":python_dir",
     ] + glob(["*.bzl"]),
     mode = "0777",
     package_dir = "scp",

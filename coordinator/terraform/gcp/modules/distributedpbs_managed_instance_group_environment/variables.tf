@@ -92,8 +92,9 @@ variable "pbs_spanner_partition_lock_table_name" {
 ################################################################################
 
 variable "pbs_image_tag" {
-  type     = string
-  nullable = false
+  description = "The tag of the PBS image stored in the derived location (only set this if pbs_image_override is not set)"
+  type        = string
+  default     = null
 }
 
 variable "pbs_auth_audience_url" {

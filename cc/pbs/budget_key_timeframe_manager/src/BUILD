@@ -18,29 +18,14 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "pbs_budget_key_timeframe_manager_lib",
-    srcs = glob(
-        [
-            "*.cc",
-            "*.h",
-        ],
-    ),
-    linkopts = [
-        "-latomic",
+    srcs = [
+        "budget_key_timeframe_serialization.h",
+        "budget_key_timeframe_utils.h",
+        "error_codes.h",
     ],
     deps = [
-        "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
-        "//cc/core/common/serialization/src:serialization_lib",
-        "//cc/core/interface:interface_lib",
-        "//cc/core/nosql_database_provider/src/common:core_nosql_database_provider_common_lib",
-        "//cc/core/telemetry/src/metric:telemetry_metric",
-        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
-        "//cc/pbs/budget_key_timeframe_manager/src/proto:pbs_budget_key_timeframe_manager_proto_lib",
         "//cc/pbs/interface:pbs_interface_lib",
-        "//cc/public/cpio/utils/metric_aggregation/interface:metric_aggregation_interface",
-        "//cc/public/cpio/utils/metric_aggregation/interface:type_def",
-        "//cc/public/cpio/utils/metric_aggregation/src:metric_aggregation",
         "@boost//:algorithm",
-        "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/strings",
     ],
 )

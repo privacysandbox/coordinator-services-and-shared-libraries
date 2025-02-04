@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 exports_files([
     "gcp_instance_client_provider.h",
@@ -51,8 +51,8 @@ cc_library(
         "//cc/cpio/common/src:cpio_utils_lib",
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/proto/instance_service/v1:instance_service_cc_proto",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@nlohmann_json//:lib",
     ],
 )

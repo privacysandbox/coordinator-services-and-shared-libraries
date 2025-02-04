@@ -30,11 +30,9 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::AsyncContext;
-using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::BytesBuffer;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::HttpClientInterface;
 using google::scp::core::HttpHeaders;
 using google::scp::core::HttpMethod;
 using google::scp::core::HttpRequest;
@@ -50,22 +48,14 @@ using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::MockCurlClient;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;
-using std::atomic;
 using std::atomic_bool;
-using std::bind;
-using std::dynamic_pointer_cast;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::string;
-using std::thread;
 using std::unique_ptr;
 using std::chrono::seconds;
-using testing::Contains;
-using testing::EndsWith;
 using testing::Eq;
-using testing::IsNull;
 using testing::Pair;
 using testing::Pointee;
 using testing::UnorderedElementsAre;

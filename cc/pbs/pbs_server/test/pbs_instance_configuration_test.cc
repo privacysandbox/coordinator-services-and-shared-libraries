@@ -29,9 +29,7 @@
 
 using google::scp::core::ConfigProviderInterface;
 using google::scp::core::EnvConfigProvider;
-using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::errors::SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH;
 using google::scp::core::errors::
@@ -62,7 +60,6 @@ static void SetAllConfigs() {
   setenv(kRemotePrivacyBudgetServiceHostAddress, "https://remote.com", 1);
   setenv(kAuthServiceEndpoint, "https://auth.com", 1);
   setenv(core::kCloudServiceRegion, "region", 1);
-  setenv(kServiceMetricsNamespace, "ns", 1);
   setenv(kTotalHttp2ServerThreadsCount, "10", 1);
   setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table", 1);
   setenv(kContainerType, "compute_engine", 1);
@@ -88,7 +85,6 @@ static void UnsetAllConfigs() {
   unsetenv(kRemotePrivacyBudgetServiceHostAddress);
   unsetenv(kAuthServiceEndpoint);
   unsetenv(core::kCloudServiceRegion);
-  unsetenv(kServiceMetricsNamespace);
   unsetenv(kTotalHttp2ServerThreadsCount);
   unsetenv(kPBSPartitionLockTableNameConfigName);
   unsetenv(kHttp2ServerUseTls);

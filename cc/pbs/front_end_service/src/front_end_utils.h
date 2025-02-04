@@ -16,32 +16,23 @@
 
 #pragma once
 
-#include <chrono>
 #include <list>
-#include <map>
 #include <memory>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include <google/protobuf/util/time_util.h>
 #include <nlohmann/json.hpp>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/strings/str_cat.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/http_types.h"
-#include "cc/core/interface/transaction_manager_interface.h"
 #include "cc/core/interface/type_def.h"
-#include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/interface/front_end_service_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/common/key_value_iterable_view.h"
-#include "opentelemetry/context/context.h"
-#include "opentelemetry/metrics/provider.h"
-#include "opentelemetry/metrics/sync_instruments.h"
 
 namespace google::scp::pbs {
 
@@ -69,27 +60,6 @@ class FrontEndUtils {
       for (auto index : command_failed_indices) {
         serialized_body["f"].push_back(index);
       }
-      auto serialized = serialized_body.dump();
-      response_body.bytes = std::make_shared<std::vector<core::Byte>>(
-          serialized.begin(), serialized.end());
-      response_body.length = serialized.size();
-      response_body.capacity = serialized.size();
-    } catch (...) {
-      return core::FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
-    }
-
-    return core::SuccessExecutionResult();
-  }
-
-  static core::ExecutionResult SerializePendingTransactionCount(
-      const core::GetTransactionManagerStatusResponse& response,
-      core::BytesBuffer& response_body) noexcept {
-    try {
-      nlohmann::json serialized_body =
-          nlohmann::json::parse("{\"v\": \"1.0\"}");
-      serialized_body["pending_transactions_count"] =
-          response.pending_transactions_count;
       auto serialized = serialized_body.dump();
       response_body.bytes = std::make_shared<std::vector<core::Byte>>(
           serialized.begin(), serialized.end());
@@ -221,147 +191,6 @@ class FrontEndUtils {
 
     transaction_origin = header_iter->second;
     return core::SuccessExecutionResult();
-  }
-
-  static core::ExecutionResult DeserializeGetTransactionStatus(
-      const core::BytesBuffer& response_body,
-      std::shared_ptr<core::GetTransactionStatusResponse>&
-          get_transaction_status_response) noexcept {
-    try {
-      auto get_transaction_status = nlohmann::json::parse(
-          response_body.bytes->begin(), response_body.bytes->end());
-
-      if (get_transaction_status.find("is_expired") ==
-              get_transaction_status.end() ||
-          get_transaction_status.find("has_failures") ==
-              get_transaction_status.end() ||
-          get_transaction_status.find("last_execution_timestamp") ==
-              get_transaction_status.end() ||
-          get_transaction_status.find("transaction_execution_phase") ==
-              get_transaction_status.end()) {
-        return core::FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
-      }
-
-      get_transaction_status_response->is_expired =
-          get_transaction_status["is_expired"].get<bool>();
-      get_transaction_status_response->has_failure =
-          get_transaction_status["has_failures"].get<bool>();
-      get_transaction_status_response->last_execution_timestamp =
-          get_transaction_status["last_execution_timestamp"].get<uint64_t>();
-
-      auto transaction_execution_phase =
-          get_transaction_status["transaction_execution_phase"]
-              .get<std::string>();
-      auto execution_result = FromString(
-          transaction_execution_phase,
-          get_transaction_status_response->transaction_execution_phase);
-
-      if (execution_result != core::SuccessExecutionResult()) {
-        return execution_result;
-      }
-    } catch (...) {
-      return core::FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
-    }
-
-    return core::SuccessExecutionResult();
-  }
-
-  static core::ExecutionResult SerializeGetTransactionStatus(
-      const std::shared_ptr<core::GetTransactionStatusResponse>& response,
-      core::BytesBuffer& request_body) noexcept {
-    nlohmann::json json_response;
-    json_response["is_expired"] = response->is_expired;
-    json_response["has_failures"] = response->has_failure;
-    json_response["last_execution_timestamp"] =
-        response->last_execution_timestamp;
-
-    std::string transaction_execution_phase;
-    auto execution_result = ToString(response->transaction_execution_phase,
-                                     transaction_execution_phase);
-    if (execution_result != core::SuccessExecutionResult()) {
-      return execution_result;
-    }
-
-    json_response["transaction_execution_phase"] = transaction_execution_phase;
-    auto body = json_response.dump();
-    request_body.capacity = body.length();
-    request_body.length = body.length();
-    request_body.bytes =
-        std::make_shared<std::vector<core::Byte>>(body.begin(), body.end());
-    return core::SuccessExecutionResult();
-  }
-
-  static core::ExecutionResult ToString(
-      core::TransactionExecutionPhase transaction_execution_phase,
-      std::string& output) noexcept {
-    switch (transaction_execution_phase) {
-      case core::TransactionExecutionPhase::Begin:
-        output = "BEGIN";
-        return core::SuccessExecutionResult();
-      case core::TransactionExecutionPhase::Prepare:
-        output = "PREPARE";
-        return core::SuccessExecutionResult();
-      case core::TransactionExecutionPhase::Commit:
-        output = "COMMIT";
-        return core::SuccessExecutionResult();
-      case core::TransactionExecutionPhase::Notify:
-        output = "NOTIFY";
-        return core::SuccessExecutionResult();
-      case core::TransactionExecutionPhase::Abort:
-        output = "ABORT";
-        return core::SuccessExecutionResult();
-      case core::TransactionExecutionPhase::End:
-        output = "END";
-        return core::SuccessExecutionResult();
-      default:
-        output = "UNKNOWN";
-        return core::SuccessExecutionResult();
-    }
-  }
-
-  static core::ExecutionResult FromString(
-      std::string& input,
-      core::TransactionExecutionPhase& transaction_execution_phase) noexcept {
-    if (input.compare("BEGIN") == 0) {
-      transaction_execution_phase = core::TransactionExecutionPhase::Begin;
-      return core::SuccessExecutionResult();
-    }
-
-    if (input.compare("PREPARE") == 0) {
-      transaction_execution_phase = core::TransactionExecutionPhase::Prepare;
-      return core::SuccessExecutionResult();
-    }
-
-    if (input.compare("COMMIT") == 0) {
-      transaction_execution_phase = core::TransactionExecutionPhase::Commit;
-      return core::SuccessExecutionResult();
-    }
-
-    if (input.compare("NOTIFY") == 0) {
-      transaction_execution_phase = core::TransactionExecutionPhase::Notify;
-      return core::SuccessExecutionResult();
-    }
-
-    if (input.compare("ABORT") == 0) {
-      transaction_execution_phase = core::TransactionExecutionPhase::Abort;
-      return core::SuccessExecutionResult();
-    }
-
-    if (input.compare("END") == 0) {
-      transaction_execution_phase = core::TransactionExecutionPhase::End;
-      return core::SuccessExecutionResult();
-    }
-
-    if (input.compare("UNKNOWN") == 0) {
-      transaction_execution_phase = core::TransactionExecutionPhase::Unknown;
-      return core::SuccessExecutionResult();
-    }
-
-    transaction_execution_phase = core::TransactionExecutionPhase::Unknown;
-    return core::FailureExecutionResult(
-        core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
   }
 
   static opentelemetry::common::KeyValueIterableView<

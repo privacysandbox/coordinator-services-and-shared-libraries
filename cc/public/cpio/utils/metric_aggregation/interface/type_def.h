@@ -23,95 +23,8 @@
 
 #include "cc/core/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/type_def.h"
 
 namespace google::scp::cpio {
-using MetricNamespace = std::string;
-using MetricName = std::string;
-using MetricValue = std::string;
-using MetricLabels = std::map<std::string, std::string>;
-/// Supported metric units.
-enum class MetricUnit {
-  kSeconds = 1,
-  kMicroseconds = 2,
-  kMilliseconds = 3,
-  kBits = 4,
-  kKilobits = 5,
-  kMegabits = 6,
-  kGigabits = 7,
-  kTerabits = 8,
-  kBytes = 9,
-  kKilobytes = 10,
-  kMegabytes = 11,
-  kGigabytes = 12,
-  kTerabytes = 13,
-  kCount = 14,
-  kPercent = 15,
-  kBitsPerSecond = 16,
-  kKilobitsPerSecond = 17,
-  kMegabitsPerSecond = 18,
-  kGigabitsPerSecond = 19,
-  kTerabitsPerSecond = 20,
-  kBytesPerSecond = 21,
-  kKilobytesPerSecond = 22,
-  kMegabytesPerSecond = 23,
-  kGigabytesPerSecond = 24,
-  kTerabytesPerSecond = 25,
-  kCountPerSecond = 26,
-};
-
-static constexpr MetricUnit kCountUnit = MetricUnit::kCount;
-static constexpr MetricUnit kCountSecond = MetricUnit::kCountPerSecond;
-static constexpr MetricUnit kMillisecondsUnit = MetricUnit::kMilliseconds;
-
-static constexpr char kMethodName[] = "MethodName";
-static constexpr char kComponentName[] = "ComponentName";
-
-/// Builds a metric name with component name and event name.
-struct MetricLabelsBase {
-  MetricLabelsBase(const std::string& component_name = std::string(),
-                   const std::string& method_name = std::string())
-      : component_name(component_name), method_name(method_name) {}
-
-  /**
-   * @brief Get the Basic Labels object
-   *
-   * @return MetricLabels the basic metric labels object.
-   */
-  MetricLabels GetMetricLabelsBase() {
-    MetricLabels metric_labels;
-    if (!method_name.empty()) {
-      metric_labels[kMethodName] = method_name;
-    }
-    if (!component_name.empty()) {
-      metric_labels[kComponentName] = component_name;
-    }
-    return metric_labels;
-  }
-
-  /// The component name of the metric instance.
-  std::string component_name;
-  /// The method name of the metric instance.
-  std::string method_name;
-};
-
-/// Represents the metric definition.
-struct MetricDefinition {
-  explicit MetricDefinition(const std::shared_ptr<MetricName>& metric_name,
-                            const std::shared_ptr<MetricUnit>& metric_unit)
-      : name(metric_name), unit(metric_unit) {}
-
-  /// Metric name.
-  std::shared_ptr<MetricName> name;
-  /// Metric unit.
-  std::shared_ptr<MetricUnit> unit;
-  /// A set of key-value pairs. The key represents label name and the value
-  /// represents label value.
-  std::shared_ptr<MetricLabels> labels;
-  /// The namespace parameter required for pushing metric data to AWS.
-  std::shared_ptr<MetricNamespace> name_space;
-};
-
 /**
  * @brief The structure of TimeEvent which used to record the start time, end
  * time and difference time for one event.
@@ -145,28 +58,5 @@ struct TimeEvent {
   core::Timestamp end_time;
   /// The duration time for the event.
   core::TimeDuration diff_time;
-};
-
-/**
- * @brief The metric tag for the specific definition of a metric. The metric tag
- * is used to override the metric name and unit defined before, and also add
- * more labels to the metric.
- *
- */
-struct MetricTag {
-  explicit MetricTag(
-      const std::shared_ptr<MetricName>& update_name = nullptr,
-      const std::shared_ptr<MetricUnit>& update_unit = nullptr,
-      const std::shared_ptr<MetricLabels>& additional_labels = nullptr)
-      : update_name(update_name),
-        update_unit(update_unit),
-        additional_labels(additional_labels) {}
-
-  /// Updates metric name for one metric.
-  std::shared_ptr<MetricName> update_name;
-  /// Updates metric unit for one metric.
-  std::shared_ptr<MetricUnit> update_unit;
-  /// The additional labels for metric identification.
-  std::shared_ptr<MetricLabels> additional_labels;
 };
 }  // namespace google::scp::cpio

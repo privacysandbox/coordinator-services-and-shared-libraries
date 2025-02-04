@@ -13,9 +13,9 @@
 # limitations under the License.
 
 output "ecr_repository_name" {
-  value = module.ecr_repo.ecr_repository_name
+  value = "deprecated"
 }
 
 output "ecr_repository_url" {
-  value = module.ecr_repo.ecr_repository_url
+  value = "deprecated"
 }

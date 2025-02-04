@@ -28,7 +28,6 @@ cc_library(
             "errors.cc",
             "errors.h",
             "async_context.h",
-            "streaming_context.h",
             "type_def.h",
             "logger_interface.h",
             "service_interface.h",
@@ -38,10 +37,8 @@ cc_library(
     deps = [
         ":async_context_lib",
         ":service_interface_lib",
-        ":streaming_context_lib",
         "//cc/core/common/concurrent_map/src:concurrent_map_lib",
         "//cc/core/common/proto:core_common_proto_lib",
-        "//cc/core/common/streaming_context/src:streaming_context_errors_lib",
         "//cc/core/common/uuid/src:uuid_lib",
     ],
 )
@@ -74,20 +71,6 @@ cc_library(
             "async_context.h",
         ],
     deps = [
-        "//cc/core/common/global_logger/src:global_logger_lib",
-        "//cc/core/common/uuid/src:uuid_lib",
-    ],
-)
-
-cc_library(
-    name = "streaming_context_lib",
-    srcs =
-        [
-            "streaming_context.h",
-        ],
-    deps = [
-        ":async_context_lib",
-        "//cc/core/common/concurrent_queue/src:concurrent_queue_lib",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/common/uuid/src:uuid_lib",
     ],

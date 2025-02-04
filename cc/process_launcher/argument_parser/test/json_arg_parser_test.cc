@@ -23,7 +23,6 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON;
 using google::scp::core::errors::ARGUMENT_PARSER_INVALID_JSON;
 using google::scp::core::errors::ARGUMENT_PARSER_UNKNOWN_TYPE;

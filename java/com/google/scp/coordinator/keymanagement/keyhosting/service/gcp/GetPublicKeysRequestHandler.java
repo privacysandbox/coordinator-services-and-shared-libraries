@@ -50,22 +50,17 @@ public class GetPublicKeysRequestHandler
   protected void toCloudFunctionResponse(
       HttpResponse httpResponse, GetActivePublicKeysResponseWithHeaders response)
       throws IOException {
-    if (response.cacheControlMaxAge().isPresent()) {
-      createCloudFunctionResponseFromProto(
-          httpResponse,
-          response.getActivePublicKeysResponse(),
-          OK.getHttpStatusCode(),
-          /* headers= */ ImmutableMap.of(
-              HttpHeaders.CONTENT_TYPE,
-              MediaType.JSON_UTF_8.toString(),
-              HttpHeaders.CACHE_CONTROL,
-              response.cacheControlMaxAge().get()));
-    } else {
-      createCloudFunctionResponseFromProto(
-          httpResponse,
-          response.getActivePublicKeysResponse(),
-          OK.getHttpStatusCode(),
-          ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.JSON_UTF_8.toString()));
-    }
+    ImmutableMap.Builder<String, String> headers = ImmutableMap.builder();
+    headers.put(HttpHeaders.CONTENT_TYPE, MediaType.JSON_UTF_8.toString());
+
+    response
+        .cacheControlMaxAge()
+        .ifPresent(header -> headers.put(HttpHeaders.CACHE_CONTROL, header));
+
+    createCloudFunctionResponseFromProto(
+        httpResponse,
+        response.getActivePublicKeysResponse(),
+        OK.getHttpStatusCode(),
+        headers.build());
   }
 }

@@ -47,7 +47,6 @@ using std::defer_lock;
 using std::find;
 using std::function;
 using std::make_shared;
-using std::move;
 using std::shared_lock;
 using std::shared_ptr;
 using std::shared_timed_mutex;

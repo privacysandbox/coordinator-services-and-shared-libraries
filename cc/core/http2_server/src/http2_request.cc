@@ -29,7 +29,6 @@
 using google::scp::core::http2_server::Http2Utils;
 using std::bind;
 using std::copy;
-using std::make_pair;
 using std::make_shared;
 using std::string;
 using std::vector;

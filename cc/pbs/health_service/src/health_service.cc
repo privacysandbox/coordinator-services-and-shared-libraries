@@ -27,9 +27,7 @@
 #include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/metrics_def.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/src/metric_utils.h"
-#include "cc/public/cpio/utils/metric_aggregation/src/simple_metric.h"
+#include "cc/pbs/interface/type_def.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 
@@ -49,8 +47,6 @@ using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
-using google::scp::core::common::TimeProvider;
-using google::scp::core::errors::GetErrorMessage;
 using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO;
 using google::scp::core::errors::
@@ -65,23 +61,12 @@ using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED;
 using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
-using google::scp::cpio::kCountUnit;
-using google::scp::cpio::MetricDefinition;
-using google::scp::cpio::MetricLabels;
-using google::scp::cpio::MetricLabelsBase;
-using google::scp::cpio::MetricName;
-using google::scp::cpio::MetricUnit;
-using google::scp::cpio::MetricUtils;
-using google::scp::cpio::MetricValue;
-using google::scp::pbs::kPBSHealthServiceEnableMemoryAndStorageCheck;
 using std::bind;
 using std::error_code;
 using std::getline;
 using std::ifstream;
-using std::make_shared;
 using std::string;
 using std::stringstream;
-using std::to_string;
 using std::vector;
 using std::chrono::seconds;
 using std::filesystem::space;
@@ -99,8 +84,6 @@ static constexpr char kMemInfoFileName[] = "/proc/meminfo";
 static constexpr char kMemInfoLineSeparator[] = " ";
 static constexpr char kServiceName[] = "HealthCheckService";
 static constexpr char kVarLogDirectory[] = "/var/log";
-
-static constexpr size_t kDefaultInstanceHealthMetricPushIntervalInSeconds = 10;
 
 namespace google::scp::pbs {
 
@@ -171,19 +154,14 @@ ExecutionResult HealthService::Init() noexcept {
           &HealthService::ObserveFileSystemStorageUsageCallback),
       this);
 
-  RETURN_IF_FAILURE(InitMetricClientInterface());
   return SuccessExecutionResult();
 }
 
 ExecutionResult HealthService::Run() noexcept {
-  RETURN_IF_FAILURE(instance_memory_usage_metric_->Run());
-  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Run());
   return SuccessExecutionResult();
 }
 
 ExecutionResult HealthService::Stop() noexcept {
-  RETURN_IF_FAILURE(instance_memory_usage_metric_->Stop());
-  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Stop());
   return SuccessExecutionResult();
 }
 
@@ -222,18 +200,6 @@ ExecutionResult HealthService::CheckMemoryAndStorageUsage() noexcept {
     SCP_CRITICAL(kServiceName, kZeroUuid, result,
                  "Failed to read filesystem storage info.");
     return result;
-  }
-
-  // Emit metric.
-  if (TimeProvider::GetSteadyTimestampInNanoseconds() -
-          last_metric_push_steady_ns_timestamp_ >
-      seconds(kDefaultInstanceHealthMetricPushIntervalInSeconds)) {
-    instance_memory_usage_metric_->Push(
-        make_shared<MetricValue>(to_string(*used_memory_percentage)));
-    instance_filesystem_storage_usage_metric_->Push(
-        make_shared<MetricValue>(to_string(*used_storage_percentage)));
-    last_metric_push_steady_ns_timestamp_ =
-        TimeProvider::GetSteadyTimestampInNanoseconds();
   }
 
   if (*used_memory_percentage > kMemoryUsagePercentageHealthyThreshold) {
@@ -387,23 +353,6 @@ ExecutionResultOr<int> HealthService::GetFileSystemStorageUsagePercentage(
             info_object.capacity, info_object.available);
 
   return ComputePercentage(info_object.available, info_object.capacity);
-}
-
-ExecutionResult HealthService::InitMetricClientInterface() {
-  instance_memory_usage_metric_ = MetricUtils::RegisterSimpleMetric(
-      async_executor_, metric_client_, kMetricNameInstanceHealthMemory,
-      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
-      kCountUnit);
-  instance_filesystem_storage_usage_metric_ = MetricUtils::RegisterSimpleMetric(
-      async_executor_, metric_client_,
-      kMetricNameInstanceHealthFileSystemLogStorageUsage,
-      kMetricComponentNameInstanceHealth, kMetricComponentNameInstanceHealth,
-      kCountUnit);
-
-  RETURN_IF_FAILURE(instance_memory_usage_metric_->Init());
-  RETURN_IF_FAILURE(instance_filesystem_storage_usage_metric_->Init());
-
-  return SuccessExecutionResult();
 }
 
 }  // namespace google::scp::pbs

@@ -17,9 +17,13 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 package(default_visibility = ["//visibility:public"])
 
 package_group(
-    name = "scp_internal_pkg",
+    name = "pbs_visibility",
     packages = [
-        "//cc/...",
+        "//cc/core/...",
+        "//cc/cpio/...",
+        "//cc/pbs/...",
+        "//cc/process_launcher/...",
+        "//cc/public/...",
     ],
 )
 
@@ -27,32 +31,14 @@ string_flag(
     name = "platform",
     build_setting_default = "local",
     values = [
-        "aws",
-        "aws_integration_test",
         "gcp",
-        "gcp_integration_test",
         "local",
     ],
 )
 
 config_setting(
-    name = "cloud_platform_aws",
-    flag_values = {"platform": "aws"},
-)
-
-config_setting(
-    name = "cloud_platform_aws_integration_test",
-    flag_values = {"platform": "aws_integration_test"},
-)
-
-config_setting(
     name = "cloud_platform_gcp",
     flag_values = {"platform": "gcp"},
-)
-
-config_setting(
-    name = "cloud_platform_gcp_integration_test",
-    flag_values = {"platform": "gcp_integration_test"},
 )
 
 config_setting(

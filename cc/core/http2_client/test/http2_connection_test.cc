@@ -36,15 +36,9 @@
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
 using ::google::scp::core::AsyncExecutor;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
 using ::google::scp::core::common::Uuid;
 using ::google::scp::core::http2_client::mock::MockHttpConnection;
-using ::google::scp::core::test::IsSuccessful;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::WaitUntil;
-using ::opentelemetry::sdk::resource::SemanticConventions::
-    kHttpResponseStatusCode;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
 using ::testing::IsEmpty;
 

@@ -35,7 +35,7 @@ locals {
   pbs_container_log_path = "/var/log/"
   pbs_host_log_path      = "/var/log/pbs/"
 
-  startup_script = templatefile("${path.module}/files/instance_startup.sh", { host_certificate_path = local.host_certificate_path })
+  startup_script = templatefile("${path.module}/files/instance_startup.sh.tftpl", { host_certificate_path = local.host_certificate_path })
 
   pbs_auth_endpoint = var.enable_domain_management ? "${var.pbs_domain}/v1/auth" : var.pbs_auth_audience_url
   pbs_image         = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-image:${var.pbs_image_tag}"
@@ -126,18 +126,6 @@ locals {
       value = "remote-coordinator.com"
     },
     {
-      name  = "google_scp_pbs_metrics_namespace"
-      value = "${var.environment}-google-scp-pbs"
-    },
-    {
-      name  = "google_scp_pbs_metrics_batch_push_enabled"
-      value = "true"
-    },
-    {
-      name  = "google_scp_pbs_metrics_batch_time_duration_ms"
-      value = "3000"
-    },
-    {
       name  = "google_scp_pbs_multi_instance_mode_disabled"
       value = local.target_instance_count > 1 || var.pbs_autoscaling_policy != null ? "false" : "true"
     },
@@ -222,6 +210,52 @@ locals {
       value = "40"
     }
   ]
+
+  container_spec = {
+    spec = {
+      containers = [
+        {
+          image = local.pbs_image
+          securityContext = {
+            privileged : true
+          }
+          tty : false
+
+          env = concat(local.pbs_application_environment_variables, local.pbs_gce_environment_variables)
+
+          volumeMounts = [
+            # Mount the self-signed cert directory from the host machine on the container
+            # so that it can be accessed by the HTTP2 server.
+            {
+              name      = "${local.docker_cert_volume_name}"
+              mountPath = "${local.container_certificate_path}"
+              readOnly  = true
+            },
+            {
+              name      = "${local.pbs_log_volume_name}"
+              mountPath = "${local.pbs_container_log_path}"
+              readOnly  = false
+            },
+          ]
+        },
+      ]
+      volumes = [
+        {
+          name = local.docker_cert_volume_name
+          hostPath = {
+            path = local.host_certificate_path
+          }
+        },
+        {
+          name = local.pbs_log_volume_name
+          hostPath = {
+            path = local.pbs_host_log_path
+          }
+        },
+      ]
+      restartPolicy = "Always"
+    }
+  }
 }
 
 resource "google_artifact_registry_repository_iam_member" "pbs_artifact_registry_iam_read" {
@@ -290,53 +324,6 @@ data "google_compute_image" "pbs_container_vm_image" {
   project = "cos-cloud"
 }
 
-module "pbs_container" {
-  source  = "terraform-google-modules/container-vm/google"
-  version = "~> 2.0"
-
-  container = {
-    image = local.pbs_image
-    securityContext = {
-      privileged : true
-    }
-    tty : false
-
-    env = concat(local.pbs_application_environment_variables, local.pbs_gce_environment_variables)
-
-    volumeMounts = [
-      # Mount the self-signed cert directory from the host machine on the container
-      # so that it can be accessed by the HTTP2 server.
-      {
-        name      = "${local.docker_cert_volume_name}"
-        mountPath = "${local.container_certificate_path}"
-        readOnly  = true
-      },
-      {
-        name      = "${local.pbs_log_volume_name}"
-        mountPath = "${local.pbs_container_log_path}"
-        readOnly  = false
-      },
-    ],
-  }
-
-  volumes = [
-    {
-      name = local.docker_cert_volume_name
-      hostPath = {
-        path = local.host_certificate_path
-      }
-    },
-    {
-      name = local.pbs_log_volume_name
-      hostPath = {
-        path = local.pbs_host_log_path
-      }
-    },
-  ]
-
-  restart_policy = "Always"
-}
-
 resource "google_compute_instance_template" "pbs_instance_template" {
   # Cannot be longer than 37 characters
   name_prefix          = "${var.environment}-pbs-inst-template"
@@ -371,7 +358,7 @@ resource "google_compute_instance_template" "pbs_instance_template" {
   }
 
   metadata = {
-    gce-container-declaration = module.pbs_container.metadata_value
+    gce-container-declaration = yamlencode(local.container_spec)
     google-logging-enabled    = var.pbs_cloud_logging_enabled
     google-monitoring-enabled = var.pbs_cloud_monitoring_enabled
     startup-script            = local.startup_script

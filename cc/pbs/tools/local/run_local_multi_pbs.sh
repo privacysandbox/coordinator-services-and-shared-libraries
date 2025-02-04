@@ -71,9 +71,6 @@ function run_server() {
     --env google_scp_pbs_journal_service_partition_name=00000000-0000-0000-0000-000000000000 \
     --env google_scp_pbs_host_address=0.0.0.0 \
     --env google_scp_pbs_remote_claimed_identity=remote \
-    --env google_scp_pbs_metrics_namespace=namespace \
-    --env google_scp_pbs_metrics_batch_push_enabled=false \
-    --env google_scp_pbs_metrics_batch_time_duration_ms=1000 \
     --env google_scp_pbs_multi_instance_mode_disabled=true \
     --env google_scp_pbs_remote_host_address=http://127.0.0.1:$remote_host_port \
     --env google_scp_pbs_remote_cloud_region=us-east \

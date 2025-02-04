@@ -15,11 +15,12 @@
  */
 #include "test_http1_server.h"
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <utility>
 
-#include "cc/core/test/utils/conditional_wait.h"
+#include "absl/synchronization/notification.h"
 #include "cc/core/test/utils/http1_helper/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
@@ -72,8 +73,8 @@ ExecutionResultOr<in_port_t> GetUnusedPortNumber() {
 }
 
 TestHttp1Server::TestHttp1Server() {
-  atomic_bool ready(false);
-  thread_ = thread([this, &ready]() {
+  absl::Notification notification;
+  thread_ = thread([this, &notification]() {
     boost::asio::io_context ioc(/*concurrency_hint=*/1);
     tcp::endpoint ep(tcp::v4(), /*port=*/0);
     tcp::acceptor acceptor(ioc, ep);
@@ -84,6 +85,7 @@ TestHttp1Server::TestHttp1Server() {
     // Attempt to handle a request for 1 second - if run_ becomes false, stop
     // accepting requests and finish.
     // If run_ is still true, continue accepting requests.
+    absl::Notification* local_notification = &notification;
     while (run_) {
       acceptor.async_accept(socket, [this, &socket](beast::error_code ec) {
         if (!ec) {
@@ -93,12 +95,15 @@ TestHttp1Server::TestHttp1Server() {
           exit(EXIT_FAILURE);
         }
       });
-      ready = true;
+      if (local_notification) {
+        local_notification->Notify();
+        local_notification = nullptr;
+      }
       ioc.run_for(milliseconds(100));
       ioc.reset();
     }
   });
-  WaitUntil([&ready]() { return ready.load(); });
+  notification.WaitForNotification();
 }
 
 // Initiate the asynchronous operations associated with the connection.

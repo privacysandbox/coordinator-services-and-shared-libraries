@@ -40,7 +40,7 @@ void GlobalLogger::SetGlobalLogLevels(
 }
 
 void GlobalLogger::SetGlobalLogger(unique_ptr<LoggerInterface> logger) {
-  logger_instance_ = move(logger);
+  logger_instance_ = std::move(logger);
 }
 
 bool GlobalLogger::IsLogLevelEnabled(const LogLevel log_level) {

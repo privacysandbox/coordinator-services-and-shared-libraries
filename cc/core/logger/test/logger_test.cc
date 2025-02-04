@@ -27,7 +27,6 @@
 #include "cc/core/logger/src/log_utils.h"
 #include "cc/core/test/scp_test_base.h"
 
-using google::scp::core::LogLevel;
 using google::scp::core::common::ToString;
 using google::scp::core::common::Uuid;
 using google::scp::core::logger::FromString;

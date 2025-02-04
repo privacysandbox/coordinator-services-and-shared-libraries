@@ -21,4 +21,5 @@ variable "environment" {
   description = "Description for the environment. Used to prefix resources. e.g. dev, staging, production."
   type        = string
   nullable    = false
+  default     = "deprecated"
 }

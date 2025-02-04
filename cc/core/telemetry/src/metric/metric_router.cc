@@ -21,9 +21,7 @@
 
 #include "absl/strings/string_view.h"
 #include "cc/core/common/uuid/src/uuid.h"
-#include "cc/core/interface/metrics_def.h"
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
-#include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
 #include "opentelemetry/sdk/metrics/meter_context.h"

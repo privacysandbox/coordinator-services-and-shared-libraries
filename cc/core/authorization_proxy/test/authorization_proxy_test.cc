@@ -30,9 +30,7 @@ using google::scp::core::AsyncExecutor;
 using std::make_shared;
 using std::shared_ptr;
 using ::testing::_;
-using ::testing::DoAll;
 using ::testing::Return;
-using ::testing::SetArgPointee;
 
 namespace google::scp::core::test {
 

@@ -14,28 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
-package(default_visibility = ["//visibility:public"])
-
-cc_test(
-    name = "pbs_aws_cloud_dependency_factory_test",
-    size = "small",
-    srcs = [
-        "aws_cloud_dependency_factory_test.cc",
-    ],
-    deps = [
-        "//cc/core/async_executor/src:core_async_executor_lib",
-        "//cc/core/config_provider/mock:core_config_provider_mock",
-        "//cc/core/config_provider/src:config_provider_lib",
-        "//cc/core/http2_client/mock:http2_client_mock",
-        "//cc/core/tcp_traffic_forwarder/mock:tcp_traffic_forwarder_mock",
-        "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
-        "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
-        "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws:pbs_aws_cloud_platform_dependency_factory_lib",
-        "//cc/pbs/pbs_server/src/pbs_instance",
-        "//cc/public/core/test/interface:execution_result_matchers",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+package(default_visibility = ["//visibility:private"])
 
 cc_test(
     name = "pbs_gcp_cloud_dependency_factory_test",
@@ -48,11 +27,8 @@ cc_test(
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/http2_client/mock:http2_client_mock",
-        "//cc/core/tcp_traffic_forwarder/mock:tcp_traffic_forwarder_mock",
-        "//cc/core/token_provider_cache/mock:core_token_provider_cache_mock",
         "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
         "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp:pbs_gcp_cloud_platform_dependency_factory_lib",
-        "//cc/pbs/pbs_server/src/pbs_instance",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
     ],

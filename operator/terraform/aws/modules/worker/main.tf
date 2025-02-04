@@ -38,11 +38,20 @@ locals {
   all_otel_metrics = [
     for metric in var.allowed_otel_metrics : try(local.metrics_map[metric], metric)
   ]
-  otel_metrics = [
+  base_otel_metrics = [
     for metric in local.all_otel_metrics : metric if contains(values(local.metrics_map), metric)
   ]
+  // Add job success and fail metrics
+  otel_metrics = contains(var.allowed_otel_metrics, "job_success_metrics") ? concat(local.base_otel_metrics, [
+    "job_success_counter", "job_fail_counter"
+  ]) : local.base_otel_metrics
+
+  // Excluding job success metrics from being collected as part of spans/traces.
+  // Exporting as metrics is sufficient to track using cloud monitoring,
+  // hence we don't export as trace similar to cpu and memory metrics.
+  modified_otel_metrics = setsubtract(var.allowed_otel_metrics, ["job_success_metrics"])
   otel_spans = [
-    for span in local.all_otel_metrics : span if !contains(values(local.metrics_map), span)
+    for span in local.modified_otel_metrics : span if !contains(values(local.metrics_map), span)
   ]
   // No logs will be exported if set to "". Setting it to the highest severity level to filter out all the logs.
   min_log_level = var.min_log_level == "" ? "FATAL4" : var.min_log_level

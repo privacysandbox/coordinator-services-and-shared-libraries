@@ -39,7 +39,6 @@ using boost::algorithm::to_lower_copy;
 using boost::algorithm::token_compress_off;
 using boost::algorithm::token_compress_on;
 using std::distance;
-using std::make_pair;
 using std::string;
 using std::stringstream;
 using std::vector;

@@ -31,26 +31,13 @@ using google::scp::core::errors::
     SC_GCP_INSTANCE_CLIENT_INVALID_INSTANCE_RESOURCE_NAME;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
-using google::scp::core::test::WaitUntil;
-using google::scp::cpio::client_providers::GcpInstanceClientUtils;
-using google::scp::cpio::client_providers::GcpInstanceResourceNameDetails;
 using google::scp::cpio::client_providers::mock::MockInstanceClientProvider;
-using std::atomic;
 using std::get;
 using std::make_shared;
 using std::make_tuple;
-using std::move;
-using std::shared_ptr;
 using std::string;
 using std::tuple;
-using testing::_;
-using testing::DoAll;
-using testing::Pair;
-using testing::Pointee;
-using testing::Return;
-using testing::SetArgPointee;
 using testing::TestWithParam;
-using testing::UnorderedElementsAre;
 
 namespace {
 constexpr char kResourceNameMock[] =

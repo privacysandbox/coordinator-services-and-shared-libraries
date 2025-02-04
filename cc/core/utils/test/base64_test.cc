@@ -24,7 +24,6 @@
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
 using std::string;
-using testing::Eq;
 
 namespace google::scp::core::utils::test {
 TEST(Base64Test, Base64EncodeInvalidValue) {

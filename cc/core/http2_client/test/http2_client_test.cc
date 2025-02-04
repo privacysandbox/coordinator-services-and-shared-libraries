@@ -45,12 +45,10 @@ using namespace std::chrono_literals;         // NOLINT
 using namespace std::placeholders;            // NOLINT
 
 using google::scp::core::AsyncExecutor;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::TimeDuration;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::common::RetryStrategyOptions;
 using google::scp::core::common::RetryStrategyType;
-using google::scp::core::test::AutoInitRunStop;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::WaitUntil;

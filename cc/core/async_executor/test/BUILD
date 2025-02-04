@@ -15,15 +15,12 @@
 load("@rules_cc//cc:defs.bzl", "cc_test")
 load("//build_defs/cc:benchmark.bzl", "BENCHMARK_COPT")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//visibility:private"])
 
 cc_test(
     name = "async_executor_test",
     size = "small",
     srcs = ["async_executor_test.cc"],
-    linkopts = [
-        "-lprofiler",
-    ],
     deps = [
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/async_executor/src:core_async_executor_lib",
@@ -31,7 +28,6 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
-        "@gperftools",
     ],
 )
 

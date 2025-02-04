@@ -19,6 +19,7 @@ filegroup(
     srcs = [
         "create_tfplan_distributedpbs.sh",
         "deploy_distributedpbs.sh",
+        "initialize_distributedpbs.sh",
         "insert_auth_entry.sh",
         "push_distributedpbs_container_image.sh",
     ],

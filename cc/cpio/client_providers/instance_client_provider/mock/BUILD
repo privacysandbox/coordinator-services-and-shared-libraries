@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "instance_client_provider_mock",

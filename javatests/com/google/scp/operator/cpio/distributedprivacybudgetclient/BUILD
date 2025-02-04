@@ -127,7 +127,7 @@ java_test(
         "//java/external:mockito",
         "//java/external:test_parameter_injector",
         "//java/external:testcontainers",
-        "//javatests/com/google/scp/coordinator/privacy/budgeting/utils/gcp:pbs_gcp_e2e_test_utils",
+        "//javatests/com/google/scp/coordinator/privacy/budgeting/utils:pbs_e2e_test_utils",
         "//javatests/com/google/scp/shared/testutils/gcp",
     ],
 )

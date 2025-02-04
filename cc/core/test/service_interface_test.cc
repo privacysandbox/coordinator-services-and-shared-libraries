@@ -18,9 +18,6 @@
 
 #include <memory>
 
-using google::scp::core::ExecutionResult;
-using google::scp::core::ServiceInterface;
-using google::scp::core::SuccessExecutionResult;
 
 namespace google::scp::core::test {
 

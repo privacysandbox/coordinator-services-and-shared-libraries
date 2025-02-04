@@ -18,12 +18,14 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
 def cc_utils():
     maybe(
-        new_git_repository,
-        name = "nlohmann_json",
-        build_file = Label("//build_defs/cc/shared/build_targets:nlohmann.BUILD"),
-        # Commits on Apr 6, 2022
-        commit = "15fa6a342af7b51cb51a22599026e01f1d81957b",
-        remote = "https://github.com/nlohmann/json.git",
+        http_archive,
+        name = "com_github_nlohmann_json",
+        sha256 = "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406",
+        strip_prefix = "json-3.11.3",
+        patches = [Label("//build_defs/cc/shared/build_targets:nlohmann.patch")],
+        urls = [
+            "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz",
+        ],
     )
 
     maybe(
@@ -36,12 +38,12 @@ def cc_utils():
 
     maybe(
         http_archive,
-        name = "curl",
-        build_file = Label("//build_defs/cc/shared/build_targets:curl.BUILD"),
-        sha256 = "ff3e80c1ca6a068428726cd7dd19037a47cc538ce58ef61c59587191039b2ca6",
-        strip_prefix = "curl-7.49.1",
+        name = "com_github_curl_curl",
+        patches = [Label("//build_defs/cc/shared/build_targets:curl.patch")],
+        sha256 = "77c0e1cd35ab5b45b659645a93b46d660224d0024f1185e8a95cdb27ae3d787d",
+        strip_prefix = "curl-8.8.0",
         urls = [
-            "https://mirror.bazel.build/curl.haxx.se/download/curl-7.49.1.tar.gz",
+            "https://github.com/curl/curl/releases/download/curl-8_8_0/curl-8.8.0.tar.gz",
         ],
     )
 

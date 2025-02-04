@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_test")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_test(
     name = "gcp_instance_client_provider_test",
     size = "small",
-    srcs =
-        [
-            "gcp_instance_client_provider_test.cc",
-        ],
+    srcs = [
+        "gcp_instance_client_provider_test.cc",
+    ],
     deps = [
         "//cc/core/curl_client/mock:mock_curl_client",
         "//cc/core/interface:interface_lib",
@@ -37,10 +36,9 @@ cc_test(
 cc_test(
     name = "gcp_instance_client_utils_test",
     size = "small",
-    srcs =
-        [
-            "gcp_instance_client_utils_test.cc",
-        ],
+    srcs = [
+        "gcp_instance_client_utils_test.cc",
+    ],
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
@@ -48,22 +46,5 @@ cc_test(
         "//cc/cpio/client_providers/instance_client_provider/src/gcp:gcp_instance_client_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "test_gcp_instance_client_provider_lib",
-    srcs = [
-        "test_gcp_instance_client_provider.cc",
-        "test_gcp_instance_client_provider.h",
-    ],
-    deps = [
-        "//cc/core/interface:async_context_lib",
-        "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/instance_client_provider/test:test_instance_client_provider_lib",
-        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
-        "//cc/public/cpio/proto/instance_service/v1:instance_service_cc_proto",
-        "//cc/public/cpio/test/global_cpio:test_cpio_options",
-        "@com_google_absl//absl/strings:str_format",
     ],
 )

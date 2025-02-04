@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//visibility:private"])
 
 cc_test(
     name = "health_service_test",
@@ -34,7 +34,6 @@ cc_test(
         "//cc/core/telemetry/src/common:telemetry_metric_utils",
         "//cc/pbs/health_service/src:pbs_health_service_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_google_googletest//:gtest_main",
         "@io_opentelemetry_cpp//sdk/src/metrics",
     ],

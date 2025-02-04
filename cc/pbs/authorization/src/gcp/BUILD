@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//cc:scp_internal_pkg"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "gcp_http_request_response_auth_interceptor",
@@ -27,8 +27,8 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
         "//cc/public/core/interface:execution_result",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@nlohmann_json//:lib",
     ],
 )

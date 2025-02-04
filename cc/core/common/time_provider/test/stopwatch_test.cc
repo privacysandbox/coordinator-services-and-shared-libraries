@@ -20,7 +20,6 @@
 
 #include <thread>
 
-using google::scp::core::common::Stopwatch;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;

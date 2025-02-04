@@ -66,16 +66,19 @@ variable "enable_audit_log" {
 variable "aws_xc_enabled" {
   description = "Enable cross-cloud support for AWS"
   type        = bool
+  default     = false
 }
 
 variable "aws_kms_key_encryption_key_arn" {
   description = "ARN of the AWS KMS key encryption key"
   type        = string
+  default     = null
 }
 
 variable "aws_kms_key_encryption_key_role_arn" {
   description = "ARN of AWS IAM role used for encrypting with AWS KMS key encryption key"
   type        = string
+  default     = null
 }
 
 ################################################################################

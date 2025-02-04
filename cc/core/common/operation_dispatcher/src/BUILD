@@ -14,16 +14,15 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "operation_dispatcher_lib",
-    srcs = glob(
-        [
-            "*.cc",
-            "*.h",
-        ],
-    ),
+    srcs = [
+        "error_codes.h",
+        "operation_dispatcher.h",
+        "retry_strategy.h",
+    ],
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/interface:type_def_lib",

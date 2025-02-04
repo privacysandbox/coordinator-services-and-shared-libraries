@@ -27,6 +27,6 @@ cc_library(
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
-        "@nlohmann_json//:lib",
+        "@com_github_nlohmann_json//:singleheader-json",
     ],
 )

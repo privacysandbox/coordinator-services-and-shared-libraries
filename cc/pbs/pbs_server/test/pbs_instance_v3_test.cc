@@ -27,7 +27,6 @@
 namespace google::scp::pbs {
 namespace {
 
-using ::google::scp::core::AsyncExecutor;
 using ::google::scp::core::EnvConfigProvider;
 using ::google::scp::pbs::LocalDependencyFactory;
 
@@ -59,7 +58,6 @@ TEST(PBSInstanceV3Test, TestInitRunAndStopWithLocalDependencyFactory) {
          should_overwrite);
   setenv(kAuthServiceEndpoint, "https://auth.com", should_overwrite);
   setenv(core::kCloudServiceRegion, "region", should_overwrite);
-  setenv(kServiceMetricsNamespace, "ns", should_overwrite);
   setenv(kTotalHttp2ServerThreadsCount, "10", should_overwrite);
   setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table",
          should_overwrite);

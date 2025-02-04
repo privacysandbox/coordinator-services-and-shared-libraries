@@ -39,7 +39,6 @@ using json = nlohmann::json;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::errors::DAEMONIZER_INVALID_INPUT;
 using google::scp::core::test::ResultIs;
-using google::scp::process_launcher::Daemonizer;
 using google::scp::process_launcher::ExecutableArgument;
 
 namespace google::scp::process_launcher::test {

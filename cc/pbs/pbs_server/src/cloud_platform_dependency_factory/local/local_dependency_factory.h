@@ -17,32 +17,18 @@
 #pragma once
 
 #include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "cc/core/interface/partition_types.h"
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 
 namespace google::scp::pbs {
 
-static constexpr core::PartitionId kGlobalPartitionId = {0, 0};
-
 class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  public:
   LocalDependencyFactory(
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
-      std::vector<core::PartitionId> partition_ids = {kGlobalPartitionId})
-      : config_provider_(config_provider),
-        partition_ids_(std::move(partition_ids)) {}
+      const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
+      : config_provider_(config_provider) {}
 
   core::ExecutionResult Init() noexcept override;
-
-  std::unique_ptr<core::TokenProviderCacheInterface>
-  ConstructAuthorizationTokenProviderCache(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
 
   std::unique_ptr<core::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
@@ -53,24 +39,6 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   ConstructAwsAuthorizationProxyClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
-
-  std::unique_ptr<core::BlobStorageProviderInterface>
-  ConstructBlobStorageClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      core::AsyncPriority async_execution_priority =
-          kDefaultAsyncPriorityForCallbackExecution,
-      core::AsyncPriority io_async_execution_priority =
-          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
-
-  std::unique_ptr<core::NoSQLDatabaseProviderInterface>
-  ConstructNoSQLDatabaseClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      core::AsyncPriority async_execution_priority =
-          kDefaultAsyncPriorityForCallbackExecution,
-      core::AsyncPriority io_async_execution_priority =
-          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
 
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
@@ -91,18 +59,6 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
           auth_token_provider) noexcept override;
 
-  std::unique_ptr<cpio::MetricClientInterface> ConstructMetricClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
-          instance_client_provider) noexcept override;
-
-  std::unique_ptr<pbs::PrivacyBudgetServiceClientInterface>
-  ConstructRemoteCoordinatorPBSClient(
-      std::shared_ptr<core::HttpClientInterface> http_client,
-      std::shared_ptr<core::TokenProviderCacheInterface>
-          auth_token_provider_cache) noexcept override;
-
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
       absl::Nullable<std::shared_ptr<
           cpio::client_providers::InstanceClientProviderInterface>>
@@ -112,9 +68,6 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   core::ExecutionResult ReadConfigurations();
 
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
-  std::string remote_coordinator_endpoint_ = "http://othercoordinator.com:8080";
-  std::string reporting_origin_ = "reporting_origin";
-  std::vector<core::PartitionId> partition_ids_;
 };
 
 }  // namespace google::scp::pbs

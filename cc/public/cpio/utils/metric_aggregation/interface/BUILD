@@ -17,23 +17,6 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "metric_aggregation_interface",
-    srcs = glob(
-        [
-            "*.h",
-        ],
-        exclude = [
-            "type_def.h",
-        ],
-    ),
-    deps = [
-        ":type_def",
-        "//cc/core/interface:interface_lib",
-        "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_library(
     name = "type_def",
     srcs =
         [
@@ -41,7 +24,6 @@ cc_library(
         ],
     deps = [
         "//cc/core/interface:interface_lib",
-        "//cc/public/cpio/interface/metric_client:type_def",
         "@com_google_protobuf//:protobuf",
     ],
 )

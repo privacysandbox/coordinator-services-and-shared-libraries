@@ -27,17 +27,13 @@ cc_library(
     deps = [
         "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/authorization_service/src:core_authorization_service",
-        "//cc/core/blob_storage_provider/mock:blob_storage_provider_mock",
         "//cc/core/config_provider/src:config_provider_lib",
-        "//cc/core/credentials_provider/src:core_credentials_provider_lib",
         "//cc/core/interface:interface_lib",
-        "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
         "//cc/core/telemetry/mock:telemetry_fake",
         "//cc/core/telemetry/src/common:telemetry_common",
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/interface:pbs_interface_lib",
-        "//cc/pbs/pbs_client/src:pbs_client_lib",
         "@io_opentelemetry_cpp//sdk/src/resource",
     ],
 )

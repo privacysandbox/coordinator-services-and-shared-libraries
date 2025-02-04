@@ -41,13 +41,9 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::HttpHeaders;
 using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
-using google::scp::core::RetryExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::utils::Base64Decode;
 using google::scp::core::utils::PadBase64Encoding;
-using std::make_pair;
 using std::make_shared;
-using std::shared_ptr;
 using std::string;
 
 using json = nlohmann::json;

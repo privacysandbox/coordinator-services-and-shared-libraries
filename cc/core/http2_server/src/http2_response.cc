@@ -24,13 +24,9 @@
 
 #include "cc/public/core/interface/execution_result.h"
 
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using nghttp2::asio_http2::header_map;
 using nghttp2::asio_http2::header_value;
-using std::make_pair;
 using std::string;
-using std::vector;
 using std::placeholders::_1;
 
 namespace google::scp::core {

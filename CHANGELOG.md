@@ -1,9 +1,53 @@
 # Changelog
 
-## [1.16.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.15.0...v1.16.0) (2025-01-21)
+## [1.17.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.16.0...v1.17.0) (2025-02-04)
 
-### Important Note
-- Users of CPIO library need to be updated to be compatible with new changes for supporting WIF from AWS.
+### Changes
+
+- Added the `envoy_api` dependency for PBS API rate limiting
+- Added `initialize_distributedpbs.sh` script
+- Added job success and fail metrics to GCP and AWS operator terraform
+- Added the `-t` flag to the docker command when building a Bazel target within a container
+- Fixed address sanitizer issue in `test_http1_server.cc`
+- Fixed failing target after enable `--incompatible_disallow_empty_glob`
+- Integrated with `asan`, `ubsan`, `tsan`, `msan` sanitizers in PBS
+- Modified to `pbs_value_column` for better variable names and removing unnecessary dependencies
+- Moved `libpsl` target to its own repo
+- Removed unused/outdated PBS code from core components and tests
+- Replaced `@nlohmann_json//:lib` with `@nlohmann_json//:singleheader-json`
+- Update import of `cc_proto_library`, `cc_grpc_library`, `java_grpc_library` so that it is compatible with the rule define in bazel central repository
+- Updated `go.work` so that it is in root directory
+- Updated container dependencies
+- Updated integration test for PBS (build with local flag, so that pbs interacts with local spanner) with Spanner emulator
+- Updated link to `spanner_backup`
+- Updated rules naming to `com_github_curl_curl` and `com_github_nlohmann_json`
+- Updated visibility rule for all libraries belong to PBS
+- Upgraded `Guava` to `33.3.1-jre` version
+- Upgraded `abseil` to `20240722.1` version
+- Upgraded `io_grpc_grpc_java` to `1.56` version
+- Upgraded `opentelemetry-cpp` to `1.17.0` version and `.bazelrc` so that OTel `copts` flags are not propagated when building non-OTel libraries
+- Upgraded `rules_cc` to `0.0.17` version
+- Upgraded `rules_jvm_external` to `6.6` version
+- Upgraded `rules_python` to `0.39.0` version and remove unused `privacy_ml` python
+- [AWS only] Refactored default Terraform xcc variables
+- [AWS only] Updated `pbs_heartbeat.py` to probe `:prepare` endpoint
+- [AWS only] Updated `reproducible_proxy_outputs` to eliminate reliance on the `/tmp` directory
+- [AWS only] Upgraded `glibc` libraries to `2.26-64.amzn2.0.3` version to be compatible with updated default `glibc-common` version
+- [GCP only] Added back the `operator_wipp:operator_wipp_demo` file to the tar, which was deleted by accident
+- [GCP only] Added config parameters to support writing and reading from the `ValueProto` column
+- [GCP only] Added missing deploy permissions for alarm setup on operator
+- [GCP only] Added support for writing `ValueProto` Column with `LaplaceDP Budgets` only
+- [GCP only] Added support to read `ValueProto` column in `phase 3` and `phase 4`
+- [GCP only] Combined `ReadPrivacyBudgetsForKeys` and `CreatePbsMutations` to hide underlying type
+- [GCP only] Inlined Container VM Metadata module for PBS instance
+- [GCP only] Propagated default Terraform variable values for PBS from `shared/` to `applications/`
+- [GCP only] Reformed distributedpbs `README.md` files and the `instance_startup.sh` file was renamed to `instance_startup.sh.tftpl`
+- [GCP only] Simplified `toCloudFunctionResponse` by eliminating redundant code
+- [GCP only] Updated PBS `auth_cloud_function_handler_path` to be nullable
+- [GCP only] Updated `pbs_image_tag` to be nullable
+- [GCP only] Updated default Terraform variables values for PBS `pbs_cloud_run_max_instances` and `pbs_cloud_run_min_instances`
+
+## [1.16.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.15.0...v1.16.0) (2025-01-21)
 
 ### Changes
 
@@ -13,7 +57,6 @@
 - Installed the required `glibc-common` version in the `reproducible_proxy_outputs` bazel target
 - Modified `RecordServerLatency` and `RecordRequestBodySize` to take `Http2SynchronizationContext` and `AsyncContext`, respectively, as constant references
 - Removed MetricClient from `//cc/pbs/front_end*`  and `//cc/core/...`
-- Refactored CPIO library to support WIF from AWS
 - Setup Trace SDK
 - Some HTTP 4xx return codes were updated to the correct 5xx codes
 - The GCP Key Storage Service renamed `KmsKeyAead` to `DecryptionAead`
@@ -37,7 +80,7 @@
 - [AWS only] The `aws_keyencryptionkey` resource attributes were updated to use hyphens instead of underscores
 - [GCP only] Added `version.txt` symlink for terraform
 - [GCP only] Added the ability to run MPKHS with AWS worker support. The feature requires deploying the `xc_resources_aws` app and adjusting the MPKHS configuration. It is disabled by default and does not affect existing users
-- [GCP only] Modified Cloud Build command to produce the artifacts required for deploying MPKHS on Cloud Run. This update specifically includes generating the necessary container images for deploying the Public Key Service, Private Key Service, and Key Storage Service on Cloud Run
+- [GCP only] Modified Cloud Build command to produce the artifacts required for deploying MPKHS on Cloud Run. This update specifically includes generating the necessary container images for deploying the Public Key Service, Private Key Service, and Key Storage Service on Cloud Run.
 - [GCP only] Introduced the flexibility to deploy MPKHS on either Cloud Run or Cloud Functions. By default, MPKHS will be deployed on Cloud Functions. To switch to a Cloud Run deployment, you can add the following configuration to your deployment settings:
 
   Primary Coordinator:
@@ -57,6 +100,15 @@
   key_storage_service_custom_audiences = [...]
   ```
 - [Java CPIO library] Added a module that enables federation from AWS to GCP. This module is disabled by default and allows for future integration of AWS workers with GCP-based MPKHS
+
+- [GCP only] 4xx error code migration
+  - In the `auto.tfvars` for `distributedpbs_application`, add the following variables:
+    ```
+    google_scp_migrate_http_status_code = true
+    ```
+  - This terraform configuration variable is needed to enable the error code migration from 4xx to 5xx for certain errors. This addresses a few 4xx error codes which were incorrectly handled.
+  - We identified that some errors classified as 4xx were incorrectly categorized and should have been 5xx. This issue was observed in the auto expiry concurrent map, primarily used for authorization, and in the HTTP client when PBS makes HTTP call to auth service.
+  - To rollback, set `google_scp_migrate_http_status_code = false` and deploy PBS
 
 ## [1.15.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.14.0...v1.15.0) (2025-01-07)
 

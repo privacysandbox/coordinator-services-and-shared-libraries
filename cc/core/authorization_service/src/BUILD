@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "core_authorization_service",
@@ -29,6 +29,6 @@ cc_library(
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
-        "@nlohmann_json//:lib",
+        "@com_github_nlohmann_json//:singleheader-json",
     ],
 )

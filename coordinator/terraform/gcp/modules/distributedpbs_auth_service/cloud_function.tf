@@ -53,6 +53,13 @@ resource "google_storage_bucket_object" "pbs_auth_package_bucket_object" {
   count  = var.pbs_auth_package_path == null ? 1 : 0
   bucket = var.pbs_auth_package_bucket != null ? var.pbs_auth_package_bucket : google_storage_bucket.pbs_auth_package[0].name
   source = var.auth_cloud_function_handler_path
+
+  lifecycle {
+    precondition {
+      condition     = var.auth_cloud_function_handler_path != null
+      error_message = "variable 'auth_cloud_function_handler_path' must be set"
+    }
+  }
 }
 
 resource "google_cloudfunctions2_function" "pbs_auth_cloudfunction" {

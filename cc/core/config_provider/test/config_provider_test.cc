@@ -19,17 +19,14 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
-#include <filesystem>
-#include <fstream>
+#include <filesystem>  // NOLINT
 #include <list>
-#include <memory>
+#include <utility>
 
 #include "cc/core/config_provider/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::ConfigProvider;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 
 using std::list;
 using std::move;
@@ -41,7 +38,8 @@ path GetTestDataDir(std::string relative_path) {
   path test_srcdir_env = std::getenv("TEST_SRCDIR");
   path test_workspace_env = std::getenv("TEST_WORKSPACE");
 
-  return path(test_srcdir_env) / path(test_workspace_env) / move(relative_path);
+  return path(test_srcdir_env) / path(test_workspace_env) /
+         std::move(relative_path);
 }
 
 TEST(ConfigProviderTest, GetConfigs) {

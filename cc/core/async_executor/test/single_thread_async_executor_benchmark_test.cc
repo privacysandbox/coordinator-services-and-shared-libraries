@@ -22,15 +22,12 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::TimeProvider;
 using std::atomic;
 using std::cout;
 using std::endl;
 using std::function;
 using std::make_shared;
-using std::rand;
 using std::shared_ptr;
 using std::thread;
 using std::vector;

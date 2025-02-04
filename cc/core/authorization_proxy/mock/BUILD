@@ -14,13 +14,13 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "core_authorization_proxy_mock",
     srcs = ["mock_authorization_proxy.h"],
     deps = [
         "//cc/core/interface:interface_lib",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
 )

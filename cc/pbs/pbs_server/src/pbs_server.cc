@@ -36,18 +36,8 @@
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_v3.h"
 #include "cc/public/core/interface/execution_result.h"
 
-#if !defined(PBS_GCP) && !defined(PBS_GCP_INTEGRATION_TEST)
-#include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance.h"
-#endif
-
 #if defined(PBS_GCP)
 #include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
-#elif defined(PBS_GCP_INTEGRATION_TEST)
-#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test/gcp_integration_test_dependency_factory.h"
-#elif defined(PBS_AWS)
-#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws/aws_dependency_factory.h"
-#elif defined(PBS_AWS_INTEGRATION_TEST)
-#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test/aws_integration_test_dependency_factory.h"
 #elif defined(PBS_LOCAL)
 #include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
 #endif
@@ -56,25 +46,18 @@ namespace {
 
 using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::EnvConfigProvider;
-using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::LoggerInterface;
 using ::google::scp::core::LogLevel;
 using ::google::scp::core::ServiceInterface;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::common::GlobalLogger;
 using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::core::errors::GetErrorMessage;
-using ::google::scp::core::errors::INVALID_ENVIROMENT;
 using ::google::scp::core::logger::FromString;
 using ::google::scp::core::logger::Logger;
 using ::google::scp::core::logger::log_providers::StdoutLogProvider;
 using ::google::scp::core::logger::log_providers::SyslogLogProvider;
 using ::google::scp::pbs::CloudPlatformDependencyFactoryInterface;
-#if !defined(PBS_GCP) && !defined(PBS_GCP_INTEGRATION_TEST)
-using ::google::scp::pbs::PBSInstance;
-#endif
 using ::google::scp::pbs::PBSInstanceV3;
 
 std::shared_ptr<ConfigProviderInterface> config_provider;
@@ -90,20 +73,6 @@ GetEnvironmentSpecificFactory(const std::shared_ptr<ConfigProviderInterface>&
 #if defined(PBS_GCP)
   SCP_INFO(kPBSServer, kZeroUuid, "Running GCP PBS.");
   return std::make_unique<google::scp::pbs::GcpDependencyFactory>(
-      config_provider_for_factory);
-#elif defined(PBS_GCP_INTEGRATION_TEST)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running GCP Integration Test PBS.");
-  return std::make_unique<
-      google::scp::pbs::GcpIntegrationTestDependencyFactory>(
-      config_provider_for_factory);
-#elif defined(PBS_AWS)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS PBS.");
-  return std::make_unique<google::scp::pbs::AwsDependencyFactory>(
-      config_provider_for_factory);
-#elif defined(PBS_AWS_INTEGRATION_TEST)
-  SCP_INFO(kPBSServer, kZeroUuid, "Running AWS Integration Test PBS.");
-  return std::make_unique<
-      google::scp::pbs::AwsIntegrationTestDependencyFactory>(
       config_provider_for_factory);
 #elif defined(PBS_LOCAL)
   SCP_INFO(kPBSServer, kZeroUuid, "Running Local PBS.");
@@ -213,31 +182,12 @@ int main(int argc, char** argv) {
   }
   GlobalLogger::SetGlobalLogger(std::move(logger_ptr));
 
-#if defined(PBS_GCP) || defined(PBS_GCP_INTEGRATION_TEST)
   SCP_INFO(kPBSServer, kZeroUuid, "Instantiating PBSInstanceV3.");
   auto factory_interface = GetEnvironmentSpecificFactory(config_provider);
   CHECK(factory_interface.Successful())
       << "GetEnvironmentSpecificFactory was unsuccessful.";
   pbs_instance = std::make_shared<PBSInstanceV3>(
       config_provider, std::move(factory_interface.value()));
-#else
-  bool pbs_relaxed_consistency_enabled = false;
-  if (config_provider
-          ->Get(google::scp::pbs::kPBSRelaxedConsistencyEnabled,
-                pbs_relaxed_consistency_enabled)
-          .Successful() &&
-      pbs_relaxed_consistency_enabled) {
-    SCP_INFO(kPBSServer, kZeroUuid, "Instantiating PBSInstanceV3.");
-    auto factory_interface = GetEnvironmentSpecificFactory(config_provider);
-    CHECK(factory_interface.Successful())
-        << "GetEnvironmentSpecificFactory was unsuccessful.";
-    pbs_instance = std::make_shared<PBSInstanceV3>(
-        config_provider, std::move(factory_interface.value()));
-  } else {
-    SCP_INFO(kPBSServer, kZeroUuid, "Instantiated PBSInstance");
-    pbs_instance = std::make_shared<PBSInstance>(config_provider);
-  }
-#endif
 
   Init(pbs_instance, "PBS_Instance");
   Run(pbs_instance, "PBS_Instance");

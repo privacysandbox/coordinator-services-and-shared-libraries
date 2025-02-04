@@ -31,7 +31,6 @@
 using boost::system::error_code;
 using nghttp2::asio_http2::host_service_from_uri;
 using std::make_shared;
-using std::shared_ptr;
 using std::string;
 using std::stringstream;
 using std::vector;

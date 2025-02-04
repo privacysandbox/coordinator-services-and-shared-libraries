@@ -20,7 +20,7 @@ import requests
 
 
 # UPDATE THE URL TO PROBE
-_URL_TO_PROBE = os.environ.get("URL_TO_PROBE") + ":status"
+_URL_TO_PROBE = os.environ.get("URL_TO_PROBE") + ":prepare"
 
 
 def verify_request(url, headers):

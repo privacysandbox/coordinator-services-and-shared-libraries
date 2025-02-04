@@ -31,8 +31,8 @@ cc_library(
         "@boost//:asio_ssl",
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/strings",
         "@io_opentelemetry_cpp//sdk/src/metrics",
-        "@nlohmann_json//:lib",
     ],
 )

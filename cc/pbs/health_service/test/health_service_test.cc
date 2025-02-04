@@ -33,8 +33,8 @@
 #include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/pbs/health_service/src/error_codes.h"
 #include "cc/pbs/interface/configuration_keys.h"
+#include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
-#include "cc/public/cpio/mock/metric_client/mock_metric_client.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
 using google::scp::core::AsyncContext;
@@ -65,16 +65,12 @@ using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
 using google::scp::core::http2_server::mock::MockHttp2Server;
 using google::scp::core::test::ResultIs;
-using google::scp::cpio::MetricClientInterface;
-using google::scp::cpio::MockMetricClient;
-using google::scp::pbs::kPBSHealthServiceEnableMemoryAndStorageCheck;
 using std::list;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
 using std::filesystem::space_info;
 using testing::_;
-using testing::ByRef;
 using testing::DoAll;
 using testing::NiceMock;
 using testing::Return;
@@ -141,10 +137,8 @@ class HealthServiceForTests : public HealthService {
 
   HealthServiceForTests(shared_ptr<HttpServerInterface>& http_server,
                         shared_ptr<ConfigProviderInterface>& config_provider,
-                        shared_ptr<AsyncExecutorInterface>& async_executor,
-                        shared_ptr<MetricClientInterface>& metric_client)
-      : HealthService(http_server, config_provider, async_executor,
-                      metric_client) {}
+                        shared_ptr<AsyncExecutorInterface>& async_executor)
+      : HealthService(http_server, config_provider, async_executor) {}
 
   void SetMemInfoFilePath(const string& meminfo_file_path) {
     meminfo_file_path_ = meminfo_file_path;
@@ -190,7 +184,6 @@ class HealthServiceTest : public ::testing::Test {
  protected:
   HealthServiceTest() {
     config_provider_mock_ = make_shared<NiceMock<ConfigProviderMock>>();
-    metric_client_mock_ = make_shared<MockMetricClient>();
     http_server_ = make_shared<MockHttp2Server>();
     async_executor_ =
         make_shared<AsyncExecutor>(2 /* thread count */, 10000 /* queue cap */);
@@ -206,9 +199,8 @@ class HealthServiceTest : public ::testing::Test {
         .WillByDefault(
             DoAll(SetArgReferee<1>(true), Return(SuccessExecutionResult())));
 
-    health_service_ =
-        HealthServiceForTests(http_server_, config_provider_mock_,
-                              async_executor_, metric_client_mock_);
+    health_service_ = HealthServiceForTests(http_server_, config_provider_mock_,
+                                            async_executor_);
 
     // Always be good on memory and drive usage
     health_service_.SetMemInfoFilePath(
@@ -226,7 +218,6 @@ class HealthServiceTest : public ::testing::Test {
   HealthServiceForTests health_service_;
   shared_ptr<HttpServerInterface> http_server_;
   shared_ptr<ConfigProviderInterface> config_provider_mock_;
-  shared_ptr<MetricClientInterface> metric_client_mock_;
   shared_ptr<AsyncExecutorInterface> async_executor_;
   // For testing OTel metrics
   std::unique_ptr<core::InMemoryMetricRouter> metric_router_;

@@ -22,7 +22,6 @@
 
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::RetryExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 using google::scp::core::test::ResultIs;
 
 namespace google::scp::core::utils::test {

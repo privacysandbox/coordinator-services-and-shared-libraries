@@ -70,27 +70,4 @@ static constexpr char kMetricNameBudgetKeyUnloads[] =
 static constexpr char kMetricLabelBudgetKeyLoadSuccess[] = "load_success";
 static constexpr char kMetricLabelBudgetKeyUnloadSuccess[] = "unload_success";
 
-static constexpr char kMetricComponentNameAndPartitionNamePrefixForBudgetKey[] =
-    "BudgetKeyProvider for Partition ";
-static constexpr char kMetricNameBudgetKeyCount[] = "BudgetKeyCounter";
-static constexpr char kMetricMethodLoadUnload[] = "BudgetKey Load Unload";
-
-static constexpr char kMetricEventLoadFromDBScheduled[] =
-    "LoadFromDB Scheduled";
-static constexpr char kMetricEventLoadFromDBSuccess[] = "LoadFromDB Success";
-static constexpr char kMetricEventLoadFromDBFailed[] = "LoadFromDB Failed";
-static constexpr char kMetricEventUnloadFromDBScheduled[] =
-    "UnloadFromDB Scheduled";
-static constexpr char kMetricEventUnloadFromDBSuccess[] =
-    "UnloadFromDB Success";
-static constexpr char kMetricEventUnloadFromDBFailed[] = "UnloadFromDB Failed";
-
-// Instance Health Metric
-static constexpr char kMetricComponentNameInstanceHealth[] = "Health";
-
-static constexpr char kMetricNameInstanceHealthMemory[] = "MemoryUsage";
-
-static constexpr char kMetricNameInstanceHealthFileSystemLogStorageUsage[] =
-    "FileSystemUsage";
-
 };  // namespace google::scp::pbs

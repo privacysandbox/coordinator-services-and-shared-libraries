@@ -21,7 +21,7 @@
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "google/cloud/spanner/client.h"
+#include "google/cloud/spanner/connection.h"
 
 namespace google::scp::pbs {
 
@@ -69,6 +69,12 @@ class BudgetConsumptionHelper : public BudgetConsumptionHelperInterface {
   google::scp::core::AsyncExecutorInterface* io_async_executor_;
   std::shared_ptr<cloud::spanner::Connection> spanner_connection_;
   std::string table_name_;
+
+  // These are migration parameters that will be removed eventually and
+  // ValueProto column will be the source of truth.
+  bool enable_write_to_value_column_ = false;
+  bool enable_write_to_value_proto_column_ = false;
+  bool enable_read_truth_from_value_column_ = true;
 };
 
 }  // namespace google::scp::pbs

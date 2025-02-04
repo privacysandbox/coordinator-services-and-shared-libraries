@@ -22,7 +22,6 @@
 #include <string>
 
 using std::string;
-using ::testing::AllOf;
 using ::testing::Gt;
 
 namespace google::scp::core::os::linux::test {

@@ -299,16 +299,7 @@ def load_pbs_container_multi_stage_container_build_tools():
     #
 
     pbs_container_platforms = [
-        "aws",
-        "aws_integration_test",
         "gcp",
-        "gcp_integration_test",
-        "local",
-    ]
-
-    pbs_cloud_run_container_platforms = [
-        "gcp",
-        "gcp_integration_test",
         "local",
     ]
 
@@ -340,7 +331,7 @@ def load_pbs_container_multi_stage_container_build_tools():
             user = "root",
         )
 
-    for platform in pbs_cloud_run_container_platforms:
+    for platform in pbs_container_platforms:
         container_image(
             name = "pbs_cloud_run_container_" + platform,
             base = "@debian_11_runtime//image",

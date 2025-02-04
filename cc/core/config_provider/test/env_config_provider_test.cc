@@ -28,14 +28,10 @@
 #include "cc/core/config_provider/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::EnvConfigProvider;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
 
 using std::list;
-using std::move;
 using std::string;
-using std::to_string;
 
 namespace google::scp::core::test {
 

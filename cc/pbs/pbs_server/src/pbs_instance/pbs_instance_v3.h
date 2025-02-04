@@ -31,7 +31,6 @@
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::pbs {
 
@@ -59,7 +58,6 @@ class PBSInstanceV3 : public core::ServiceInterface {
       auth_token_provider_;
   std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
       instance_client_provider_;
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
   std::shared_ptr<core::AuthorizationProxyInterface>
       pass_thru_authorization_proxy_;
   std::shared_ptr<core::HttpServerInterface> http_server_;

@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//visibility:private"])
 
 cc_test(
     name = "daemonizer_test",
@@ -24,7 +24,7 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/process_launcher/daemonizer/src:daemonizer_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_googletest//:gtest_main",
-        "@nlohmann_json//:lib",
     ],
 )

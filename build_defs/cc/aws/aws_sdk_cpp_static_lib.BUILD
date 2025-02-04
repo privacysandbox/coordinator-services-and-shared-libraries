@@ -33,7 +33,7 @@ cc_library(
     ),
     deps = [
         "@aws_c_common",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -51,7 +51,7 @@ cc_library(
     deps = [
         ":aws_checksums",
         "@aws_c_common",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -73,7 +73,7 @@ cc_library(
     deps = [
         ":aws_c_event_stream",
         ":aws_checksums",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -94,7 +94,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -115,7 +115,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -136,7 +136,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -157,7 +157,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -178,7 +178,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -199,7 +199,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -220,7 +220,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -241,7 +241,7 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 
@@ -262,6 +262,6 @@ cc_library(
     ],
     deps = [
         ":core",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )

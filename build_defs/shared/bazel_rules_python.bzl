@@ -19,7 +19,7 @@ def bazel_rules_python():
     maybe(
         http_archive,
         name = "rules_python",
-        sha256 = "b593d13bb43c94ce94b483c2858e53a9b811f6f10e1e0eedc61073bd90e58d9c",
-        strip_prefix = "rules_python-0.12.0",
-        url = "https://github.com/bazelbuild/rules_python/archive/0.12.0.tar.gz",
+        sha256 = "62ddebb766b4d6ddf1712f753dac5740bea072646f630eb9982caa09ad8a7687",
+        strip_prefix = "rules_python-0.39.0",
+        url = "https://github.com/bazelbuild/rules_python/releases/download/0.39.0/rules_python-0.39.0.tar.gz",
     )

@@ -39,6 +39,7 @@ pkg_filegroup(
         "//coordinator/terraform/gcp/environments_mp_primary/demo/mpkhs_primary:mpkhs_primary_link",
         "//coordinator/terraform/gcp/environments_mp_primary/demo/mpkhs_primary:mpkhs_primary_outputs_link",
         "//coordinator/terraform/gcp/environments_mp_primary/demo/mpkhs_primary:mpkhs_primary_variables_link",
+        "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_demo",
         "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_link",
         "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_outputs_link",
         "//coordinator/terraform/gcp/environments_mp_primary/demo/operator_wipp:operator_wipp_variables_link",

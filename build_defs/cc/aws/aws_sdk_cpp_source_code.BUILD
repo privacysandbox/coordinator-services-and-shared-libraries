@@ -99,7 +99,7 @@ cc_library(
         "@aws_c_event_stream",
         "@boringssl//:crypto",
         "@boringssl//:ssl",
-        "@curl",
+        "@com_github_curl_curl//:curl",
     ],
 )
 

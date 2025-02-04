@@ -29,7 +29,6 @@
 #include "typedef.h"
 
 using google::scp::core::common::TimeProvider;
-using std::atomic;
 using std::function;
 using std::make_shared;
 using std::make_unique;

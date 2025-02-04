@@ -35,12 +35,6 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
 
   core::ExecutionResult Init() noexcept override;
 
-  std::unique_ptr<core::TokenProviderCacheInterface>
-  ConstructAuthorizationTokenProviderCache(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
-
   std::unique_ptr<core::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
@@ -50,24 +44,6 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   ConstructAwsAuthorizationProxyClient(
       std::shared_ptr<core::AsyncExecutorInterface> async_executor,
       std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
-
-  std::unique_ptr<core::BlobStorageProviderInterface>
-  ConstructBlobStorageClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      core::AsyncPriority async_execution_priority =
-          kDefaultAsyncPriorityForCallbackExecution,
-      core::AsyncPriority io_async_execution_priority =
-          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
-
-  std::unique_ptr<core::NoSQLDatabaseProviderInterface>
-  ConstructNoSQLDatabaseClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      core::AsyncPriority async_execution_priority =
-          kDefaultAsyncPriorityForCallbackExecution,
-      core::AsyncPriority io_async_execution_priority =
-          kDefaultAsyncPriorityForBlockingIOTaskExecution) noexcept override;
 
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
@@ -87,18 +63,6 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
       std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
           auth_token_provider) noexcept override;
-
-  std::unique_ptr<cpio::MetricClientInterface> ConstructMetricClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
-          instance_client_provider) noexcept override;
-
-  std::unique_ptr<pbs::PrivacyBudgetServiceClientInterface>
-  ConstructRemoteCoordinatorPBSClient(
-      std::shared_ptr<core::HttpClientInterface> http_client,
-      std::shared_ptr<core::TokenProviderCacheInterface>
-          auth_token_provider_cache) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
       absl::Nullable<std::shared_ptr<
@@ -130,10 +94,6 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   std::string reporting_origin_for_remote_coordinator_;
   std::string remote_coordinator_endpoint_;
   std::string remote_coordinator_auth_gateway_endpoint_;
-
-  std::string metrics_namespace_;
-  bool metrics_batch_push_enabled_;
-  core::TimeDuration metrics_batch_time_duration_ms_;
 };
 
 }  // namespace google::scp::pbs

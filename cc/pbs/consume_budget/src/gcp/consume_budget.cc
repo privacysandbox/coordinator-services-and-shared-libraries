@@ -16,6 +16,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -31,6 +32,7 @@
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/type_def.h"
+#include "cc/pbs/proto/storage/budget_value.pb.h"
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "google/cloud/spanner/client.h"
@@ -62,9 +64,40 @@ constexpr absl::string_view kComponentName = "BudgetConsumptionHelper";
 constexpr absl::string_view kBudgetKeySpannerColumnName = "Budget_Key";
 constexpr absl::string_view kTimeframeSpannerColumnName = "Timeframe";
 constexpr absl::string_view kValueSpannerColumnName = "Value";
+constexpr absl::string_view kValueProtoSpannerColumnName = "ValueProto";
 constexpr absl::string_view kTokenCountJsonField = "TokenCount";
 constexpr size_t kDefaultTokenCountSize = 24;
 constexpr TokenCount kDefaultPrivacyBudgetCount = 1;
+constexpr int32_t kDefaultLaplaceDpBudgetCount = 6400;
+constexpr int32_t kEmptyBudgetCount = 0;
+
+// Migration phase for ValueProto column.
+// The new ValueProto column is meant to replace the existing Value JSON column.
+// The data from Value JSON column needs to be migrated to ValueProto column.
+// The migration is divided into four phases:
+//
+// - Phase 1:
+//   - Value column is the source of truth (i.e. budget values will be read from
+//     Value column)
+//   - Budgets will be written to Value column
+// - Phase 2:
+//   - Value column is the source of truth (i.e. budget values will be read from
+//     Value column)
+//   - Budgets will be written to Value and ValueProto column
+// - Phase 3:
+//   - ValueProto column is the source of truth (i.e. budget values will be read
+//   from ValueProto column)
+//   - Budgets will be written to Value and ValueProto column
+// - Phase 4:
+//   - ValueProto column is the source of truth
+//   - Budgets will be written to ValueProto column
+//   - Value Column isn't read or written anymore.
+constexpr absl::string_view kMigrationPhase1 = "phase_1";
+constexpr absl::string_view kMigrationPhase2 = "phase_2";
+constexpr absl::string_view kMigrationPhase3 = "phase_3";
+constexpr absl::string_view kMigrationPhase4 = "phase_4";
+constexpr std::array<absl::string_view, 4> kMigrationPhases = {
+    kMigrationPhase1, kMigrationPhase2, kMigrationPhase3, kMigrationPhase4};
 
 class PbsPrimaryKey {
  public:
@@ -136,6 +169,66 @@ class PbsBudgetKeyMutation {
     return std::make_tuple(cloud::Status(), SuccessExecutionResult());
   }
 
+  std::tuple<cloud::Status, ExecutionResult> ResetFromSpannerValue(
+      const privacy_sandbox_pbs::BudgetValue& spanner_value) {
+    if (!spanner_value.has_laplace_dp_budgets()) {
+      return std::make_tuple(
+          cloud::Status(cloud::StatusCode::kInvalidArgument,
+                        "Proto does not have LaplaceDpBudgets"),
+          FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
+    }
+
+    const privacy_sandbox_pbs::BudgetValue::LaplaceDpBudgets& dp_budgets =
+        spanner_value.laplace_dp_budgets();
+    if (dp_budgets.budgets_size() != kDefaultTokenCountSize) {
+      return std::make_tuple(
+          cloud::Status(
+              cloud::StatusCode::kInvalidArgument,
+              absl::StrFormat(
+                  "LaplaceDpBudgets have %d tokens, expected %d tokens",
+                  dp_budgets.budgets_size(), kDefaultTokenCountSize)),
+          FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
+    }
+
+    token_count_.clear();
+    token_count_.resize(kDefaultTokenCountSize);
+    for (size_t i = 0; i < kDefaultTokenCountSize; ++i) {
+      const int32_t budget = dp_budgets.budgets(i);
+      if (budget != kEmptyBudgetCount &&
+          budget != kDefaultLaplaceDpBudgetCount) {
+        return std::make_tuple(
+            cloud::Status(
+                cloud::StatusCode::kInvalidArgument,
+                absl::StrFormat("LaplaceDpBudgets value should be "
+                                "either %d (full) or %d (empty), found %d",
+                                kDefaultLaplaceDpBudgetCount, kEmptyBudgetCount,
+                                budget)),
+            FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
+      }
+      token_count_[i] = budget == kDefaultLaplaceDpBudgetCount
+                            ? kDefaultPrivacyBudgetCount
+                            : kEmptyBudgetCount;
+    }
+    return std::make_tuple(cloud::Status(), SuccessExecutionResult());
+  }
+
+  std::tuple<cloud::Status, ExecutionResult, privacy_sandbox_pbs::BudgetValue>
+  ToBudgetValue() const {
+    privacy_sandbox_pbs::BudgetValue budget_value;
+    budget_value.mutable_laplace_dp_budgets()->mutable_budgets()->Reserve(
+        kDefaultTokenCountSize);
+
+    privacy_sandbox_pbs::BudgetValue::LaplaceDpBudgets* dp_budgets =
+        budget_value.mutable_laplace_dp_budgets();
+    for (const auto& token_count : token_count_) {
+      dp_budgets->add_budgets(token_count == kDefaultPrivacyBudgetCount
+                                  ? kDefaultLaplaceDpBudgetCount
+                                  : kEmptyBudgetCount);
+    }
+    return std::make_tuple(cloud::Status(), SuccessExecutionResult(),
+                           budget_value);
+  }
+
   std::tuple<cloud::Status, ExecutionResult, spanner::Json> ToSpannerJson()
       const {
     std::string serialized_token_count;
@@ -162,9 +255,9 @@ class PbsBudgetKeyMutation {
 
   void SetTokenCount(size_t hour, int32_t count) { token_count_[hour] = count; }
 
-  bool is_insertion() const { return is_insertion_; }
+  bool IsInsertion() const { return is_insertion_; }
 
-  void set_is_insertion(bool is_insertion) { is_insertion_ = is_insertion; }
+  void SetIsInsertion(bool is_insertion) { is_insertion_ = is_insertion; }
 
  private:
   // Whether mutation is a Spanner insert mutation or Spanner update mutation
@@ -173,31 +266,6 @@ class PbsBudgetKeyMutation {
   // A vector with 24 integers, each represents an hour in a given day.
   std::vector<TokenCount> token_count_;
 };
-
-cloud::StatusOr<absl::flat_hash_map<PbsPrimaryKey, spanner::Json>>
-ReadPrivacyBudgetsForKeys(cloud::spanner::Client client,
-                          cloud::spanner::Transaction txn,
-                          const std::string& table_name,
-                          const cloud::spanner::KeySet& key_set) {
-  spanner::RowStream returned_rows =
-      client.Read(std::move(txn), table_name, std::move(key_set),
-                  {std::string(kBudgetKeySpannerColumnName),
-                   std::string(kTimeframeSpannerColumnName),
-                   std::string(kValueSpannerColumnName)});
-  absl::flat_hash_map<PbsPrimaryKey, spanner::Json> results;
-  using RowType = std::tuple<std::string, std::string, spanner::Json>;
-  for (const auto& row : cloud::spanner::StreamOf<RowType>(returned_rows)) {
-    if (!row) {
-      return row.status();
-    }
-    if (row.status().code() == cloud::StatusCode::kNotFound) {
-      continue;
-    }
-    results.emplace(PbsPrimaryKey{std::get<0>(*row), std::get<1>(*row)},
-                    std::get<2>(*row));
-  }
-  return results;
-}
 
 spanner::KeySet CreateSpannerKeySet(
     const std::vector<ConsumeBudgetMetadata>& budgets_metadata) {
@@ -211,64 +279,68 @@ spanner::KeySet CreateSpannerKeySet(
   return spanner_key_set;
 }
 
-std::tuple<cloud::Status, ExecutionResult> CreatePbsMutations(
-    const absl::flat_hash_map<PbsPrimaryKey, spanner::Json>& query_results,
+template <typename TokenMetadataType>
+  requires(std::is_same_v<TokenMetadataType, spanner::Json> ||
+           std::is_same_v<TokenMetadataType, privacy_sandbox_pbs::BudgetValue>)
+std::tuple<cloud::Status, ExecutionResult> ReadPrivacyBudgetsForKeys(
+    cloud::spanner::Client client, cloud::spanner::Transaction txn,
+    const std::string& table_name, const cloud::spanner::KeySet& key_set,
     absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>& pbs_mutations) {
-  pbs_mutations.clear();
-  for (const auto& [pbs_primary_key, spanner_json] : query_results) {
-    PbsBudgetKeyMutation& pbs_mutation = pbs_mutations[pbs_primary_key];
-    auto [status, execution_result] =
-        pbs_mutation.ResetFromSpannerValue(spanner_json);
-    if (!status.ok()) {
-      return std::make_tuple(status, execution_result);
+  std::vector<std::string> columns = {std::string(kBudgetKeySpannerColumnName),
+                                      std::string(kTimeframeSpannerColumnName)};
+
+  using TokenMetadataTypeBaseT = std::decay_t<TokenMetadataType>;
+  if constexpr (std::is_same_v<TokenMetadataTypeBaseT, spanner::Json>) {
+    columns.emplace_back(kValueSpannerColumnName);
+  } else {
+    columns.emplace_back(kValueProtoSpannerColumnName);
+  }
+
+  using ValueColumnType = std::conditional_t<
+      std::is_same_v<TokenMetadataTypeBaseT, spanner::Json>, spanner::Json,
+      spanner::ProtoMessage<privacy_sandbox_pbs::BudgetValue>>;
+  using RowType = std::tuple<std::string, std::string, ValueColumnType>;
+
+  spanner::RowStream returned_rows =
+      client.Read(std::move(txn), table_name, std::move(key_set), columns);
+
+  for (const auto& row : cloud::spanner::StreamOf<RowType>(returned_rows)) {
+    if (!row) {
+      return std::make_tuple(
+          cloud::Status(cloud::StatusCode::kInvalidArgument,
+                        absl::StrFormat(
+                            "Error reading rows from the database. Reason: %s",
+                            row.status().message())),
+          FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
+    }
+    if (row.status().code() == cloud::StatusCode::kNotFound) {
+      continue;
+    }
+
+    PbsBudgetKeyMutation& pbs_mutation =
+        pbs_mutations[PbsPrimaryKey{std::get<0>(*row), std::get<1>(*row)}];
+
+    std::tuple<cloud::Status, ExecutionResult> result;
+    if constexpr (std::is_same_v<TokenMetadataTypeBaseT, spanner::Json>) {
+      result = pbs_mutation.ResetFromSpannerValue(std::get<2>(*row));
+    } else {
+      result = pbs_mutation.ResetFromSpannerValue(
+          privacy_sandbox_pbs::BudgetValue(std::get<2>(*row)));
+    }
+    if (!std::get<1>(result)) {
+      return result;
     }
   }
   return std::make_tuple(cloud::Status(), SuccessExecutionResult());
 }
 
 std::tuple<cloud::Status, ExecutionResult, std::vector<size_t>>
-ValidatePbsMutations(
+UpdatePbsMutationsToConsumeBudgetsOrNotifyBudgetExhausted(
     const std::vector<ConsumeBudgetMetadata>& budgets_metadata,
     absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>& pbs_mutations) {
   std::vector<size_t> budget_exhausted_indices;
-  for (int i = 0; i < budgets_metadata.size(); ++i) {
+  for (size_t i = 0; i < budgets_metadata.size(); ++i) {
     const ConsumeBudgetMetadata& metadata = budgets_metadata[i];
-    PbsPrimaryKey primary_key{
-        *metadata.budget_key_name,
-        absl::StrCat(budget_key_timeframe_manager::Utils::GetTimeGroup(
-            metadata.time_bucket))};
-    auto pbs_mutation = pbs_mutations.find(primary_key);
-
-    // The privacy budget key is seen for the first time in the database, so the
-    // key must have enough budget
-    if (pbs_mutation == pbs_mutations.end()) {
-      continue;
-    }
-
-    TimeBucket hours_of_the_day =
-        budget_key_timeframe_manager::Utils::GetTimeBucket(
-            metadata.time_bucket);
-    TokenCount current_token_count =
-        pbs_mutation->second.GetTokenCount(hours_of_the_day);
-    if (current_token_count < metadata.token_count) {
-      budget_exhausted_indices.push_back(i);
-    }
-  }
-
-  if (!budget_exhausted_indices.empty()) {
-    return std::make_tuple(cloud::Status(cloud::StatusCode::kInvalidArgument,
-                                         "Not enough budget."),
-                           FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED),
-                           budget_exhausted_indices);
-  }
-  return std::make_tuple(cloud::Status(), SuccessExecutionResult(),
-                         budget_exhausted_indices);
-}
-
-std::tuple<cloud::Status, ExecutionResult> UpdatePbsMutationsToConsumeBudgets(
-    const std::vector<ConsumeBudgetMetadata>& budgets_metadata,
-    absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>& pbs_mutations) {
-  for (const ConsumeBudgetMetadata& metadata : budgets_metadata) {
     // GetTimeGroup returns the number of days since epoch
     PbsPrimaryKey primary_key{
         *metadata.budget_key_name,
@@ -279,7 +351,7 @@ std::tuple<cloud::Status, ExecutionResult> UpdatePbsMutationsToConsumeBudgets(
         pbs_mutations.insert({primary_key, PbsBudgetKeyMutation()});
     if (inserted) {
       pbs_mutation->second.ResetTokenCount();
-      pbs_mutation->second.set_is_insertion(true);
+      pbs_mutation->second.SetIsInsertion(true);
     }
 
     TimeBucket hours_of_the_day =
@@ -287,47 +359,74 @@ std::tuple<cloud::Status, ExecutionResult> UpdatePbsMutationsToConsumeBudgets(
             metadata.time_bucket);
     TokenCount current_token_count =
         pbs_mutation->second.GetTokenCount(hours_of_the_day);
+
     if (current_token_count < metadata.token_count) {
-      return std::make_tuple(
-          cloud::Status(cloud::StatusCode::kInvalidArgument,
-                        absl::StrCat("Not enough budget. BudgetKey: ",
-                                     primary_key.budget_key(),
-                                     "; Timeframe: ", primary_key.timeframe())),
-          FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED));
+      // Do not process if there is no enough budget
+      budget_exhausted_indices.push_back(i);
+      continue;
     }
 
     pbs_mutation->second.SetTokenCount(
         hours_of_the_day, current_token_count - metadata.token_count);
   }
-  return std::make_tuple(cloud::Status(), SuccessExecutionResult());
+
+  if (!budget_exhausted_indices.empty()) {
+    pbs_mutations.clear();
+    return std::make_tuple(cloud::Status(cloud::StatusCode::kInvalidArgument,
+                                         "Not enough budget."),
+                           FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED),
+                           budget_exhausted_indices);
+  }
+  return std::make_tuple(cloud::Status(), SuccessExecutionResult(),
+                         budget_exhausted_indices);
 }
 
 std::tuple<cloud::Status, ExecutionResult> CreateSpannerMutations(
     const absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>&
         pbs_mutations,
-    absl::string_view table_name, spanner::Mutations& mutations) {
-  auto insertion_builder = spanner::InsertMutationBuilder(
-      std::string(table_name), {std::string(kBudgetKeySpannerColumnName),
-                                std::string(kTimeframeSpannerColumnName),
-                                std::string(kValueSpannerColumnName)});
+    absl::string_view table_name, bool enable_write_to_value_column,
+    bool enable_write_to_value_proto_column, spanner::Mutations& mutations) {
+  std::vector<std::string> columns = {
+      std::string(kBudgetKeySpannerColumnName),
+      std::string(kTimeframeSpannerColumnName),
+  };
+  if (enable_write_to_value_column) {
+    columns.emplace_back(kValueSpannerColumnName);
+  }
+  if (enable_write_to_value_proto_column) {
+    columns.emplace_back(kValueProtoSpannerColumnName);
+  }
+
+  auto insertion_builder =
+      spanner::InsertMutationBuilder(std::string(table_name), columns);
   bool has_insert = false;
-  auto update_builder = spanner::UpdateMutationBuilder(
-      std::string(table_name), {std::string(kBudgetKeySpannerColumnName),
-                                std::string(kTimeframeSpannerColumnName),
-                                std::string(kValueSpannerColumnName)});
+  auto update_builder =
+      spanner::UpdateMutationBuilder(std::string(table_name), columns);
   bool has_update = false;
+
   for (const auto& [pbs_key, pbs_mutation] : pbs_mutations) {
-    auto [status, execution_result, json] = pbs_mutation.ToSpannerJson();
-    if (!status.ok()) {
-      return std::make_tuple(status, execution_result);
+    std::vector<spanner::Value> values = {spanner::Value(pbs_key.budget_key()),
+                                          spanner::Value(pbs_key.timeframe())};
+
+    if (enable_write_to_value_column) {
+      auto [status, execution_result, json] = pbs_mutation.ToSpannerJson();
+      if (!status.ok()) {
+        return std::make_tuple(status, execution_result);
+      }
+      values.emplace_back(json);
     }
-    if (pbs_mutation.is_insertion()) {
-      insertion_builder.EmplaceRow(pbs_key.budget_key(), pbs_key.timeframe(),
-                                   json);
+
+    if (enable_write_to_value_proto_column) {
+      auto [status, execution_result, proto_val] = pbs_mutation.ToBudgetValue();
+      values.emplace_back(
+          spanner::ProtoMessage<privacy_sandbox_pbs::BudgetValue>(proto_val));
+    }
+
+    if (pbs_mutation.IsInsertion()) {
+      insertion_builder.AddRow(values);
       has_insert = true;
     } else {
-      update_builder.EmplaceRow(pbs_key.budget_key(), pbs_key.timeframe(),
-                                json);
+      update_builder.AddRow(values);
       has_update = true;
     }
   }
@@ -396,6 +495,29 @@ ExecutionResult BudgetConsumptionHelper::Init() noexcept {
       execution_result != SuccessExecutionResult()) {
     return execution_result;
   }
+
+  std::string pbs_value_column_migration_phase = std::string(kMigrationPhase1);
+  config_provider_->Get(kValueProtoMigrationPhase,
+                        pbs_value_column_migration_phase);
+  if (!absl::c_any_of(kMigrationPhases, [&pbs_value_column_migration_phase](
+                                            absl::string_view valid_phase) {
+        return pbs_value_column_migration_phase == valid_phase;
+      })) {
+    return FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR);
+  }
+
+  enable_write_to_value_column_ =
+      pbs_value_column_migration_phase == kMigrationPhase1 ||
+      pbs_value_column_migration_phase == kMigrationPhase2 ||
+      pbs_value_column_migration_phase == kMigrationPhase3;
+  enable_write_to_value_proto_column_ =
+      pbs_value_column_migration_phase == kMigrationPhase2 ||
+      pbs_value_column_migration_phase == kMigrationPhase3 ||
+      pbs_value_column_migration_phase == kMigrationPhase4;
+  enable_read_truth_from_value_column_ =
+      pbs_value_column_migration_phase == kMigrationPhase1 ||
+      pbs_value_column_migration_phase == kMigrationPhase2;
+
   return SuccessExecutionResult();
 }
 
@@ -448,41 +570,40 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSync(
       [&](spanner::Transaction txn) -> cloud::StatusOr<spanner::Mutations> {
         spanner::KeySet spanner_key_set =
             CreateSpannerKeySet(consume_budgets_context.request->budgets);
-        cloud::StatusOr<absl::flat_hash_map<PbsPrimaryKey, spanner::Json>>
-            results = ReadPrivacyBudgetsForKeys(client, txn, table_name_,
-                                                spanner_key_set);
-        if (!results.ok()) {
-          return results.status();
-        }
 
         absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation> pbs_mutations;
-        if (auto [status, execution_result] =
-                CreatePbsMutations(*results, pbs_mutations);
-            !status.ok()) {
-          captured_execution_result = execution_result;
-          return status;
+
+        if (enable_read_truth_from_value_column_) {
+          if (auto [status, execution_result] =
+                  ReadPrivacyBudgetsForKeys<spanner::Json>(
+                      client, txn, table_name_, spanner_key_set, pbs_mutations);
+              !status.ok()) {
+            captured_execution_result = execution_result;
+            return status;
+          }
+        } else {
+          if (auto [status, execution_result] =
+                  ReadPrivacyBudgetsForKeys<privacy_sandbox_pbs::BudgetValue>(
+                      client, txn, table_name_, spanner_key_set, pbs_mutations);
+              !status.ok()) {
+            captured_execution_result = execution_result;
+            return status;
+          }
         }
 
         if (auto [status, execution_result, budget_exhausted_indices] =
-                ValidatePbsMutations(consume_budgets_context.request->budgets,
-                                     pbs_mutations);
+                UpdatePbsMutationsToConsumeBudgetsOrNotifyBudgetExhausted(
+                    consume_budgets_context.request->budgets, pbs_mutations);
             !status.ok()) {
           captured_execution_result = execution_result;
           captured_budget_exhausted_indices = budget_exhausted_indices;
           return status;
         }
 
-        if (auto [status, execution_result] =
-                UpdatePbsMutationsToConsumeBudgets(
-                    consume_budgets_context.request->budgets, pbs_mutations);
-            !status.ok()) {
-          captured_execution_result = execution_result;
-          return status;
-        }
-
         spanner::Mutations mutations;
-        if (auto [status, execution_result] =
-                CreateSpannerMutations(pbs_mutations, table_name_, mutations);
+        if (auto [status, execution_result] = CreateSpannerMutations(
+                pbs_mutations, table_name_, enable_write_to_value_column_,
+                enable_write_to_value_proto_column_, mutations);
             !status.ok()) {
           captured_execution_result = execution_result;
           return status;

@@ -25,7 +25,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 
-using std::array;
 using std::map;
 using std::runtime_error;
 using std::string;

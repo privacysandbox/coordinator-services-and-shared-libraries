@@ -66,11 +66,6 @@ function validate_input() {
       echo "ERROR: Environment directory [$environment_dir] does not exist."
       exit 1
   fi
-
-  if [ ! -f "$container_image_tar" ]; then
-      echo "ERROR: PBS container image tar [$container_image_tar] does not exist."
-      exit 1
-  fi
 }
 
 if [[ "$#" -lt 1 || $1 == "help" ]]; then
@@ -143,7 +138,6 @@ done
 export TF_IN_AUTOMATION=1
 
 environment_dir="./environments_mp_$coordinator/$environment"
-container_image_tar="./dist/reproducible_pbs_container_aws.tar"
 plan_version_suffix="$environment"_"$coordinator"_"$release_version"
 # Fail early if expected files do not exist
 validate_input

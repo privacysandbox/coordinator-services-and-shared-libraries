@@ -22,12 +22,6 @@
 namespace google::scp::pbs {
 static constexpr char kTotalHttp2ServerThreadsCount[] =
     "google_scp_core_http2server_threads_count";
-static constexpr char kServiceMetricsNamespace[] =
-    "google_scp_pbs_metrics_namespace";
-static constexpr char kServiceMetricsBatchPush[] =
-    "google_scp_pbs_metrics_batch_push_enabled";
-static constexpr char kServiceMetricsBatchTimeDurationMs[] =
-    "google_scp_pbs_metrics_batch_time_duration_ms";
 static constexpr char kBudgetKeyTableName[] =
     "google_scp_pbs_budget_key_table_name";
 static constexpr char kAsyncExecutorQueueSize[] =
@@ -152,4 +146,8 @@ static constexpr char kOtelPrintDataToConsoleEnabled[] =
 
 // Container type (cloud_run or compute_engine)
 static constexpr char kContainerType[] = "google_scp_pbs_container_type";
+
+// Migration phase for ValueProto column.
+static constexpr char kValueProtoMigrationPhase[] =
+    "google_scp_pbs_value_proto_migration_phase";
 }  // namespace google::scp::pbs

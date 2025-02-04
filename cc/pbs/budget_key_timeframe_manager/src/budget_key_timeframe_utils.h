@@ -17,16 +17,8 @@
 #pragma once
 
 #include <chrono>
-#include <memory>
-#include <string>
-#include <unordered_set>
-#include <vector>
 
-#include "cc/core/common/serialization/src/serialization.h"
-#include "cc/pbs/budget_key_timeframe_manager/src/proto/budget_key_timeframe_manager.pb.h"
-#include "cc/pbs/interface/budget_key_timeframe_manager_interface.h"
 #include "cc/pbs/interface/type_def.h"
-#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs::budget_key_timeframe_manager {
 
@@ -52,21 +44,6 @@ class Utils {
   }
 
   /**
-   * @brief Gets Time Buckets that the provided timestamps belong to.
-   *
-   * @param timestamps The timestamps to calculate the time buckets from.
-   * @return unordered_set<TimeBucket> Time buckets
-   */
-  static std::unordered_set<TimeBucket> GetUniqueTimeBuckets(
-      const std::vector<core::Timestamp> timestamps) noexcept {
-    std::unordered_set<TimeBucket> time_buckets;
-    for (auto timestamp : timestamps) {
-      time_buckets.insert(GetTimeBucket(timestamp));
-    }
-    return time_buckets;
-  }
-
-  /**
    * @brief Gets the Time group from the provided timestamp.
    *
    * @param timestamp The timestamp to calculate the time bucket from.
@@ -79,21 +56,6 @@ class Utils {
                                 converted_time_bucket.time_since_epoch())
                                 .count();
     return days_since_epoch;
-  }
-
-  /**
-   * @brief Get the Time Groups that the provided timestamps belong to.
-   *
-   * @param timestamps The timestamps to calculate the time groups from.
-   * @return unordered_set<TimeGroup> Time groups
-   */
-  static std::unordered_set<TimeGroup> GetUniqueTimeGroups(
-      const std::vector<core::Timestamp>& timestamps) {
-    std::unordered_set<TimeGroup> time_groups;
-    for (auto timestamp : timestamps) {
-      time_groups.insert(GetTimeGroup(timestamp));
-    }
-    return time_groups;
   }
 };
 };  // namespace google::scp::pbs::budget_key_timeframe_manager

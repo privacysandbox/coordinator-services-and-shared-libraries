@@ -29,14 +29,12 @@
 #include "typedef.h"
 
 using std::atomic;
-using std::function;
 using std::is_same_v;
 using std::make_shared;
 using std::memory_order_relaxed;
 using std::mt19937;
 using std::random_device;
 using std::shared_ptr;
-using std::thread;
 using std::uniform_int_distribution;
 using std::vector;
 using std::this_thread::get_id;

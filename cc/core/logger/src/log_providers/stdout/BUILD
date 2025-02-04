@@ -29,9 +29,9 @@ cc_library(
         "//cc/core/logger/interface:logger_interface_lib",
         "//cc/core/logger/src:logger_lib",
         "@boost//:algorithm",
+        "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
-        "@nlohmann_json//:lib",
     ],
 )

@@ -22,9 +22,7 @@
 #include "cc/core/utils/src/http.h"
 #include "opentelemetry/metrics/provider.h"
 
-using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::RetryStrategy;
-using google::scp::core::common::RetryStrategyType;
 using std::make_unique;
 using std::shared_ptr;
 

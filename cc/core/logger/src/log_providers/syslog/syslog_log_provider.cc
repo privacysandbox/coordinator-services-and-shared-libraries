@@ -34,7 +34,6 @@
 
 namespace google::scp::core::logger::log_providers {
 
-using ::absl::StrAppend;
 using ::absl::StrCat;
 using ::google::scp::core::common::ToString;
 using ::google::scp::core::common::Uuid;

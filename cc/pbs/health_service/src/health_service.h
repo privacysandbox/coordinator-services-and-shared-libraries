@@ -17,26 +17,15 @@
 #pragma once
 
 #include <filesystem>
-#include <functional>
 #include <memory>
 #include <string>
-#include <system_error>
-#include <vector>
 
 #include "absl/base/nullability.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/http_server_interface.h"
-#include "cc/core/interface/transaction_manager_interface.h"
-#include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/cpio/client_providers/interface/metric_client_provider_interface.h"
-#include "cc/pbs/interface/budget_key_provider_interface.h"
-#include "cc/pbs/interface/front_end_service_interface.h"
-#include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "cc/public/cpio/interface/metric_client/metric_client_interface.h"
-#include "cc/public/cpio/utils/metric_aggregation/interface/simple_metric_interface.h"
 #include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/observer_result.h"
@@ -51,13 +40,10 @@ class HealthService : public core::ServiceInterface {
   HealthService(
       const std::shared_ptr<core::HttpServerInterface>& http_server,
       const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
-      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor,
-      const std::shared_ptr<cpio::MetricClientInterface>& metric_client)
+      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor)
       : http_server_(http_server),
         config_provider_(config_provider),
-        async_executor_(async_executor),
-        metric_client_(metric_client),
-        last_metric_push_steady_ns_timestamp_(0) {}
+        async_executor_(async_executor) {}
 
   ~HealthService();
 
@@ -143,15 +129,6 @@ class HealthService : public core::ServiceInterface {
   std::shared_ptr<core::ConfigProviderInterface> config_provider_;
   // Async executor instance.
   std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
-  // Metric client instance for custom metric recording.
-  std::shared_ptr<cpio::MetricClientInterface> metric_client_;
-  // The simple metric instance for instance memory usage.
-  std::shared_ptr<cpio::SimpleMetricInterface> instance_memory_usage_metric_;
-  // The simple metric instance for instance FS usage.
-  std::shared_ptr<cpio::SimpleMetricInterface>
-      instance_filesystem_storage_usage_metric_;
-  // Metric should not be pushed too quickly, so keep track of the last push.
-  std::chrono::nanoseconds last_metric_push_steady_ns_timestamp_;
   // The OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
   // The OpenTelemetry Instrument for instance memory usage.
@@ -160,11 +137,6 @@ class HealthService : public core::ServiceInterface {
   // The OpenTelemetry Instrument for instance file system storage usage.
   std::shared_ptr<opentelemetry::metrics::ObservableInstrument>
       filesystem_storage_usage_instrument_;
-
- private:
-  // Initialize MetricClient.
-  //
-  core::ExecutionResult InitMetricClientInterface();
 };
 
 }  // namespace google::scp::pbs

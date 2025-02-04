@@ -3,15 +3,15 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file"
 ################################################################################
 # Rules JVM External: Begin
 ################################################################################
-RULES_JVM_EXTERNAL_TAG = "4.0"
+RULES_JVM_EXTERNAL_TAG = "6.6"
 
-RULES_JVM_EXTERNAL_SHA = "31701ad93dbfe544d597dbe62c9a1fdd76d81d8a9150c2bf1ecf928ecdf97169"
+RULES_JVM_EXTERNAL_SHA = "3afe5195069bd379373528899c03a3072f568d33bd96fe037bd43b1f590535e7"
 
 http_archive(
     name = "rules_jvm_external",
     sha256 = RULES_JVM_EXTERNAL_SHA,
     strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
+    url = "https://github.com/bazel-contrib/rules_jvm_external/releases/download/%s/rules_jvm_external-%s.tar.gz" % (RULES_JVM_EXTERNAL_TAG, RULES_JVM_EXTERNAL_TAG),
 )
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
@@ -156,7 +156,7 @@ maven_install(
         "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.8.0",
         "com.google.api.grpc:proto-google-common-protos:2.9.2",
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
-        "com.google.guava:guava:32.1.3-jre",
+        "com.google.guava:guava:33.3.1-jre",
         "com.google.guava:guava-testlib:32.1.3-jre",
         "com.google.inject:guice:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
@@ -311,7 +311,9 @@ switched_rules_by_language(
     java = True,
 )
 
+###########################
 # Boost
+###########################
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 
 boost_deps()
@@ -525,37 +527,60 @@ npm_install(
 #######################
 ## Python dependencies #
 #######################
+load("@rules_python//python:repositories.bzl", "py_repositories")
 
-load("@rules_python//python:pip.bzl", "pip_install")
+py_repositories()
+
+load("@rules_python//python:pip.bzl", "pip_parse")
 
 # Separate test dependencies are needed for GCP Auth lambda because the regular requirements.txt
 # install the cloud spanner dependency and it times out during local builds. This spanner dependency is only needed
 # for actual code and not for unit tests. Creating a separate test dependencies bundle allows pulling only those deps
 # needed for tests during local builds
-pip_install(
+pip_parse(
     name = "py3_privacybudget_gcp_pbs_auth_handler_test_deps",
-    requirements = "//:python/privacybudget/gcp/pbs_auth_handler/config/test_requirements.txt",
+    requirements_lock = "//:python/privacybudget/gcp/pbs_auth_handler/config/test_requirements.txt",
 )
 
-pip_install(
+load("@py3_privacybudget_gcp_pbs_auth_handler_test_deps//:requirements.bzl", py3_privacybudget_gcp_pbs_auth_handler_test = "install_deps")
+
+py3_privacybudget_gcp_pbs_auth_handler_test()
+
+pip_parse(
     name = "py3_privacybudget_gcp_operator_onboarding_deps",
-    requirements = "//:python/privacybudget/gcp/operator_onboarding/requirements.txt",
+    requirements_lock = "//:python/privacybudget/gcp/operator_onboarding/requirements.txt",
 )
 
-pip_install(
+load("@py3_privacybudget_gcp_operator_onboarding_deps//:requirements.bzl", py3_privacybudget_gcp_operator_onboarding = "install_deps")
+
+py3_privacybudget_gcp_operator_onboarding()
+
+pip_parse(
     name = "py3_privacybudget_aws_pbs_auth_handler_deps",
-    requirements = "//:python/privacybudget/aws/pbs_auth_handler/requirements.txt",
+    requirements_lock = "//:python/privacybudget/aws/pbs_auth_handler/requirements.txt",
 )
 
-pip_install(
+load("@py3_privacybudget_aws_pbs_auth_handler_deps//:requirements.bzl", "install_deps", py3_privacybudget_aws_pbs_auth_handler_install_deps = "install_deps")
+
+py3_privacybudget_aws_pbs_auth_handler_install_deps()
+
+pip_parse(
     name = "py3_privacybudget_aws_pbs_synthetic_deps",
-    requirements = "//:python/privacybudget/aws/pbs_synthetic/requirements.txt",
+    requirements_lock = "//:python/privacybudget/aws/pbs_synthetic/requirements.txt",
 )
 
-pip_install(
+load("@py3_privacybudget_aws_pbs_synthetic_deps//:requirements.bzl", py3_privacybudgt_aws_pbs_synthetic_install_deps = "install_deps")
+
+py3_privacybudgt_aws_pbs_synthetic_install_deps()
+
+pip_parse(
     name = "py3_mpkhs_aws_privatekey_synthetic_deps",
-    requirements = "//:python/mpkhs/aws/privatekey_synthetic/requirements.txt",
+    requirements_lock = "//:python/mpkhs/aws/privatekey_synthetic/requirements.txt",
 )
+
+load("@py3_mpkhs_aws_privatekey_synthetic_deps//:requirements.bzl", py3_mpkhs_aws_privatekey_synthetic_install_deps = "install_deps")
+
+py3_mpkhs_aws_privatekey_synthetic_install_deps()
 
 http_file(
     name = "py3_certifi_cert",
@@ -568,6 +593,17 @@ http_file(
     sha256 = "dc0922831d4111ed86013741b03325332147bc38723fbef7b23e55ee4b70761f",
     urls = ["https://github.com/python-hyper/hyper/raw/v0.7.0/hyper/certs.pem"],
 )
+
+###########################
+# Envoy API Dependencies
+###########################
+load("@envoy_api//bazel:repositories.bzl", "api_dependencies")
+
+api_dependencies()
+
+load("@com_envoyproxy_protoc_gen_validate//:dependencies.bzl", protoc_gen_validate_deps = "go_third_party")
+
+protoc_gen_validate_deps()
 
 #######################
 ## rules_esbuild setup #

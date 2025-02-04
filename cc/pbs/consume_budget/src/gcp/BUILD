@@ -26,10 +26,11 @@ cc_library(
         "//cc/core/interface:service_interface_lib",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
         "//cc/pbs/interface:pbs_interface_lib",
+        "//cc/pbs/proto/storage:budget_value_cc_proto",
         "//cc/public/core/interface:errors",
         "//cc/public/core/interface:execution_result",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
-        "@nlohmann_json//:lib",
+        "@com_github_nlohmann_json//:singleheader-json",
     ],
 )
 

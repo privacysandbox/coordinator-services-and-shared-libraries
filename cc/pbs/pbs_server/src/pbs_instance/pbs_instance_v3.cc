@@ -37,7 +37,6 @@
 namespace google::scp::pbs {
 
 using ::google::scp::core::AsyncExecutor;
-using ::google::scp::core::ConfigProvider;
 using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
@@ -117,8 +116,6 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
       cloud_platform_dependency_factory_->ConstructInstanceMetadataClient(
           http1_client_, http2_client_, async_executor_, io_async_executor_,
           auth_token_provider_);
-  metric_client_ = cloud_platform_dependency_factory_->ConstructMetricClient(
-      async_executor_, io_async_executor_, instance_client_provider_);
 
   pass_thru_authorization_proxy_ =
       std::make_shared<PassThruAuthorizationProxy>();
@@ -143,7 +140,7 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
         /*thread_pool_size=*/1, async_executor_, pass_thru_authorization_proxy_,
         aws_authorization_proxy, config_provider_, http2_server_options);
     health_service_ = std::make_shared<HealthService>(
-        health_http_server_, config_provider_, async_executor_, metric_client_);
+        health_http_server_, config_provider_, async_executor_);
   }
 
   budget_consumption_helper_ =
@@ -178,7 +175,6 @@ ExecutionResult PBSInstanceV3::Init() noexcept {
   INIT_PBS_COMPONENT(http2_client_);
   INIT_PBS_COMPONENT(authorization_proxy_);
   INIT_PBS_COMPONENT(instance_client_provider_);
-  INIT_PBS_COMPONENT(metric_client_);
   INIT_PBS_COMPONENT(pass_thru_authorization_proxy_);
   INIT_PBS_COMPONENT(http_server_);
   INIT_PBS_COMPONENT(budget_consumption_helper_);
@@ -204,7 +200,6 @@ ExecutionResult PBSInstanceV3::Run() noexcept {
   RUN_PBS_COMPONENT(http2_client_);
   RUN_PBS_COMPONENT(authorization_proxy_);
   RUN_PBS_COMPONENT(instance_client_provider_);
-  RUN_PBS_COMPONENT(metric_client_);
   RUN_PBS_COMPONENT(pass_thru_authorization_proxy_);
   RUN_PBS_COMPONENT(http_server_);
   RUN_PBS_COMPONENT(budget_consumption_helper_);
@@ -228,7 +223,6 @@ ExecutionResult PBSInstanceV3::Stop() noexcept {
   STOP_PBS_COMPONENT(budget_consumption_helper_);
   STOP_PBS_COMPONENT(health_service_);
   STOP_PBS_COMPONENT(pass_thru_authorization_proxy_);
-  STOP_PBS_COMPONENT(metric_client_);
   STOP_PBS_COMPONENT(instance_client_provider_);
   STOP_PBS_COMPONENT(authorization_proxy_);
   STOP_PBS_COMPONENT(http2_client_);

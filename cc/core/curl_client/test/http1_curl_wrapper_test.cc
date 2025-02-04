@@ -17,6 +17,8 @@
 
 #include <gtest/gtest.h>
 
+#include <utility>
+
 #include "cc/core/curl_client/src/error_codes.h"
 #include "cc/core/test/utils/http1_helper/test_http1_server.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
@@ -51,7 +53,7 @@ class Http1CurlWrapperTest
         subject_([]() {
           auto wrapper_or = Http1CurlWrapper::MakeWrapper();
           assert(wrapper_or.Successful());
-          return move(*wrapper_or);
+          return std::move(*wrapper_or);
         }()) {}
 
   status GetResponseStatusToReturn() { return get<0>(GetParam()); }

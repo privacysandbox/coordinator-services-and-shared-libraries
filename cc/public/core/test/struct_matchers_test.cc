@@ -20,7 +20,6 @@
 using std::string;
 using std::vector;
 using testing::ElementsAre;
-using testing::Eq;
 using testing::Field;
 using testing::Gt;
 using testing::HasSubstr;

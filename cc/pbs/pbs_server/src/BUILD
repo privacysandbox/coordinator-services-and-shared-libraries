@@ -26,17 +26,8 @@ cc_library(
 )
 
 cloud_platform_copts = select({
-    "//cc:cloud_platform_aws": [
-        "-DPBS_AWS=1",
-    ],
-    "//cc:cloud_platform_aws_integration_test": [
-        "-DPBS_AWS_INTEGRATION_TEST=1",
-    ],
     "//cc:cloud_platform_gcp": [
         "-DPBS_GCP=1",
-    ],
-    "//cc:cloud_platform_gcp_integration_test": [
-        "-DPBS_GCP_INTEGRATION_TEST=1",
     ],
     "//cc:cloud_platform_local": [
         "-DPBS_LOCAL=1",
@@ -55,19 +46,9 @@ cc_binary(
     ],
     malloc = "@jemalloc//:libjemalloc_static",
     deps = select({
-        "//cc:cloud_platform_aws": [
-            "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws:pbs_aws_cloud_platform_dependency_factory_lib",
-            "//cc/pbs/pbs_server/src/pbs_instance",
-        ],
-        "//cc:cloud_platform_aws_integration_test": [
-            "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/aws_integration_test:pbs_aws_integration_test_cloud_platform_dependency_factory_lib",
-            "//cc/pbs/pbs_server/src/pbs_instance",
-        ],
         "//cc:cloud_platform_gcp": ["//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp:pbs_gcp_cloud_platform_dependency_factory_lib"],
-        "//cc:cloud_platform_gcp_integration_test": ["//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp_integration_test:pbs_gcp_integration_test_cloud_platform_dependency_factory_lib"],
         "//cc:cloud_platform_local": [
             "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local:pbs_local_cloud_platform_dependency_factory_lib",
-            "//cc/pbs/pbs_server/src/pbs_instance",
         ],
         "//conditions:default": [],
     }) + [

@@ -25,7 +25,6 @@
 #include "cc/core/async_executor/src/typedef.h"
 
 using google::scp::core::common::ConcurrentQueue;
-using std::atomic;
 using std::make_shared;
 using std::make_unique;
 using std::mutex;

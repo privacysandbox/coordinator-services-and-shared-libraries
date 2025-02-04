@@ -47,23 +47,17 @@ namespace google::scp::pbs {
 namespace {
 
 using ::google::scp::core::AuthorizationMetadata;
-using ::google::scp::core::AuthorizedMetadata;
-using ::google::scp::core::AwsV4Signer;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::HttpHeaders;
 using ::google::scp::core::HttpRequest;
 using ::google::scp::core::HttpResponse;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::test::IsSuccessful;
 using ::google::scp::core::test::IsSuccessfulAndHolds;
 using ::google::scp::core::test::ResultIs;
 using ::google::scp::core::utils::Base64Encode;
-using ::std::make_pair;
 using ::std::make_shared;
-using ::std::shared_ptr;
 using ::std::string;
 using ::testing::ContainsRegex;
 using ::testing::Eq;

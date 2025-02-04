@@ -26,7 +26,6 @@
 #include "cc/core/logger/src/log_utils.h"
 
 using google::scp::core::common::TimeProvider;
-using google::scp::core::common::ToString;
 using google::scp::core::common::Uuid;
 using std::cout;
 using std::endl;
