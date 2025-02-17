@@ -7,5 +7,5 @@ hyper==0.7.0
 hyperframe==3.2.0
 hpack==3.0.0
 h2==2.6.2
-idna==3.6
+idna==3.7
 charset-normalizer==3.0.1
