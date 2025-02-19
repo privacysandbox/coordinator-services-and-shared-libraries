@@ -95,4 +95,10 @@ module "multipartykeyhosting_secondary" {
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
   key_storage_service_image            = var.key_storage_service_image
   key_storage_service_custom_audiences = var.key_storage_service_custom_audiences
+
+  aws_key_sync_enabled          = var.aws_key_sync_enabled
+  aws_key_sync_role_arn         = var.aws_key_sync_role_arn
+  aws_key_sync_kms_key_uri      = var.aws_key_sync_kms_key_uri
+  aws_key_sync_keydb_region     = var.aws_key_sync_keydb_region
+  aws_key_sync_keydb_table_name = var.aws_key_sync_keydb_table_name
 }

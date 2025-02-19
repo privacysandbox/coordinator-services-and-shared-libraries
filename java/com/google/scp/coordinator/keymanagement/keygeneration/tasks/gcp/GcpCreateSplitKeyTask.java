@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp;
 
 import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
@@ -10,6 +26,10 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStor
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKeySyncEnabled;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKeySyncKeyAead;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKeySyncKeyDb;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.AwsKeySyncKmsKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKmsKeyAead;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
@@ -33,6 +53,11 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
 
   private final Aead peerCoordinatorKmsKeyAead;
 
+  private final boolean keySyncEnabled;
+  private Optional<String> keySyncKmsUri;
+  private Optional<Aead> keySyncAead;
+  private Optional<KeyDb> keySyncDb;
+
   @Inject
   public GcpCreateSplitKeyTask(
       @KmsKeyAead Aead kmsKeyAead,
@@ -40,9 +65,17 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       @PeerCoordinatorKmsKeyAead Aead peerCoordinatorKmsKeyAead,
       KeyIdFactory keyIdFactory,
       KeyDb keyDb,
-      KeyStorageClient keyStorageClient) {
+      KeyStorageClient keyStorageClient,
+      @AwsKeySyncEnabled boolean awsKeySyncEnabled,
+      @AwsKeySyncKmsKeyUri Optional<String> awsKeySyncKmsKeyUri,
+      @AwsKeySyncKeyAead Optional<Aead> awsKeySyncKeyAead,
+      @AwsKeySyncKeyDb Optional<KeyDb> awsKeySyncKeyDb) {
     super(kmsKeyAead, keyEncryptionKeyUri, Optional.empty(), keyDb, keyStorageClient, keyIdFactory);
     this.peerCoordinatorKmsKeyAead = peerCoordinatorKmsKeyAead;
+    this.keySyncEnabled = awsKeySyncEnabled;
+    this.keySyncKmsUri = awsKeySyncKmsKeyUri;
+    this.keySyncAead = awsKeySyncKeyAead;
+    this.keySyncDb = awsKeySyncKeyDb;
   }
 
   /**
@@ -53,7 +86,19 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    */
   public void createSplitKey(int count, int validityInDays, int ttlInDays, Instant activation)
       throws ServiceException {
-    createSplitKeyBase(count, validityInDays, ttlInDays, activation, Optional.empty());
+    if (keySyncEnabled) {
+      createSplitKeyWithAwsKeySyncBase(
+          count,
+          validityInDays,
+          ttlInDays,
+          activation,
+          Optional.empty(),
+          keySyncKmsUri.get(),
+          keySyncAead.get(),
+          keySyncDb.get());
+    } else {
+      createSplitKeyBase(count, validityInDays, ttlInDays, activation, Optional.empty());
+    }
   }
 
   /**

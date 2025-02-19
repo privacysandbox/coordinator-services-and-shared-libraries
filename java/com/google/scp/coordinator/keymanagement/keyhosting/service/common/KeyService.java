@@ -34,7 +34,6 @@ import com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetActivePublic
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.ListRecentEncryptionKeysTask;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
-import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptedPrivateKeyRequestProto.GetEncryptedPrivateKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptionKeyRequestProto.GetEncryptionKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysRequestProto.ListRecentEncryptionKeysRequest;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
@@ -148,12 +147,6 @@ public final class KeyService {
   private static Long calculateCacheControlValue(Long expirationTime, Long maximumTime) {
     long remainingSeconds = between(now(), ofEpochMilli(expirationTime)).toSeconds();
     return Math.min(remainingSeconds, maximumTime);
-  }
-
-  /** Extracts the private key ID from the resource name in the request. */
-  private static String getPrivateKeyId(GetEncryptedPrivateKeyRequest request)
-      throws ServiceException {
-    return getVariableFromPath(PRIVATE_KEY_RESOURCE_PATTERN, request.getName(), KEY_ID_FIELD);
   }
 
   /** Extracts the encryption key ID from the resource name in the request. */

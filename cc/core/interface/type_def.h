@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/strings/string_view.h"
 #include "cc/core/common/proto/common.pb.h"
 
 namespace google::scp::core {

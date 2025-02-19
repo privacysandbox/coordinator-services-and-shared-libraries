@@ -13,6 +13,23 @@
 # limitations under the License.
 
 variable "environment" {
-  description = "Description for the environment, e.g. dev, staging, production."
+  description = "Coordinator environment name."
   type        = string
+}
+
+# For backward compatibility with existing KMS key names.
+variable "environment_prefix" {
+  description = "Prefix to the environment name, for backward compatibility with old KMS naming conventions."
+  type        = string
+  default     = ""
+}
+
+################################################################################
+# Cross-cloud key synchronization variables.
+################################################################################
+
+variable "key_sync_service_account_unique_id" {
+  description = "Unique ID of the GCP service account used for key generation."
+  type        = string
+  default     = ""
 }

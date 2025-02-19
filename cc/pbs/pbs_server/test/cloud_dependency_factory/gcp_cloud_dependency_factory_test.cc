@@ -24,8 +24,6 @@
 #include "cc/core/http2_client/mock/mock_http_client.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/configuration_keys.h"
-#include "cc/cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -37,8 +35,6 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::http2_client::mock::MockHttpClient;
 using google::scp::core::test::ResultIs;
-using google::scp::cpio::client_providers::InstanceClientProviderInterface;
-using google::scp::cpio::client_providers::mock::MockInstanceClientProvider;
 using std::make_shared;
 using std::shared_ptr;
 
@@ -59,8 +55,6 @@ class GcpCloudDependencyFactoryTest : public ::testing::Test {
         async_executor2_(make_shared<core::AsyncExecutor>(2, 10000, true)),
         mock_http_client_(make_shared<MockHttpClient>()),
         mock_config_provider_(make_shared<MockConfigProvider>()),
-        mock_instance_client_provider_(
-            make_shared<MockInstanceClientProvider>()),
         gcp_factory_(mock_config_provider_) {}
 
   void SetUp() override {
@@ -103,7 +97,6 @@ class GcpCloudDependencyFactoryTest : public ::testing::Test {
   shared_ptr<AsyncExecutorInterface> async_executor2_;
   shared_ptr<MockHttpClient> mock_http_client_;
   shared_ptr<MockConfigProvider> mock_config_provider_;
-  shared_ptr<InstanceClientProviderInterface> mock_instance_client_provider_;
   GcpDependencyFactory gcp_factory_;
 };
 
@@ -113,16 +106,6 @@ TEST_F(GcpCloudDependencyFactoryTest, ConstructAuthorizationProxyClient) {
   EXPECT_THAT(proxy->Init(), ResultIs(SuccessExecutionResult()));
   EXPECT_THAT(proxy->Run(), ResultIs(SuccessExecutionResult()));
   EXPECT_THAT(proxy->Stop(), ResultIs(SuccessExecutionResult()));
-}
-
-TEST_F(GcpCloudDependencyFactoryTest, ConstructInstanceMetadataClient) {
-  auto metadata_client = gcp_factory_.ConstructInstanceMetadataClient(
-      mock_http_client_, nullptr, /*http2_client*/ nullptr,
-      /*async_executor*/ nullptr,
-      /*io_async_executor*/ nullptr /*auth_token_provider*/);
-  EXPECT_THAT(metadata_client->Init(), ResultIs(SuccessExecutionResult()));
-  EXPECT_THAT(metadata_client->Run(), ResultIs(SuccessExecutionResult()));
-  EXPECT_THAT(metadata_client->Stop(), ResultIs(SuccessExecutionResult()));
 }
 
 TEST_F(GcpCloudDependencyFactoryTest, ConstructBudgetConsumptionHelper) {

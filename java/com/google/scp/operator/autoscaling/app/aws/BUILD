@@ -55,7 +55,7 @@ pkg_files(
 java_binary(
     name = "AsgCapacityHandlerLambda",
     resources = [
-        "//licenses/THIRD_PARTY_NOTICES/aws_asg_capacity_handler_lambda:licenses",
+        "//licenses/THIRD_PARTY_NOTICES/aws_AsgCapacityHandlerLambdaDeploy:licenses",
     ],
     runtime_deps = [
         ":AsgCapacityHandler",
@@ -100,7 +100,7 @@ pkg_files(
 java_binary(
     name = "TerminatedInstanceHandlerLambda",
     resources = [
-        "//licenses/THIRD_PARTY_NOTICES/aws_terminated_instance_handler_lambda:licenses",
+        "//licenses/THIRD_PARTY_NOTICES/aws_TerminatedInstanceHandlerLambdaDeploy:licenses",
     ],
     runtime_deps = [
         ":TerminatedInstanceHandler",

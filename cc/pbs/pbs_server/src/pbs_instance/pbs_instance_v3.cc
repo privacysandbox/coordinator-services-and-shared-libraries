@@ -22,7 +22,6 @@
 #include "cc/core/authorization_proxy/src/pass_thru_authorization_proxy.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/config_provider/src/config_provider.h"
-#include "cc/core/curl_client/src/http1_curl_client.h"
 #include "cc/core/http2_client/src/http2_client.h"
 #include "cc/core/http2_server/src/http2_server.h"
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
@@ -40,7 +39,6 @@ using ::google::scp::core::AsyncExecutor;
 using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::Http1CurlClient;
 using ::google::scp::core::Http2Server;
 using ::google::scp::core::HttpClient;
 using ::google::scp::core::PassThruAuthorizationProxy;
@@ -86,12 +84,8 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
     // On initialization of metric_router_, Meter Provider would be set globally
     // for PBS. Services can access the Meter Provider using
     // opentelemetry::metrics::Provider::GetMeterProvider()
-    //
-    // instance_client_provider here is passed as nullptr to avoid a dependency
-    // cycle. This is okay because PBSInstanceV3 is only used by PBS on GCP,
-    // which doesn't use instance_client_provider.
-    metric_router_ = cloud_platform_dependency_factory_->ConstructMetricRouter(
-        /*instance_client_provider=*/nullptr);
+    metric_router_ =
+        cloud_platform_dependency_factory_->ConstructMetricRouter();
   }
 
   // Construct foundational components.
@@ -101,21 +95,12 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
   io_async_executor_ = std::make_shared<AsyncExecutor>(
       pbs_instance_config_.io_async_executor_thread_pool_size,
       pbs_instance_config_.io_async_executor_queue_size);
-  http1_client_ =
-      std::make_shared<Http1CurlClient>(async_executor_, io_async_executor_);
   http2_client_ = std::make_shared<HttpClient>(
       async_executor_, core::HttpClientOptions(), metric_router_.get());
 
   authorization_proxy_ =
       cloud_platform_dependency_factory_->ConstructAuthorizationProxyClient(
           async_executor_, http2_client_);
-  auth_token_provider_ =
-      cloud_platform_dependency_factory_->ConstructInstanceAuthorizer(
-          http1_client_);
-  instance_client_provider_ =
-      cloud_platform_dependency_factory_->ConstructInstanceMetadataClient(
-          http1_client_, http2_client_, async_executor_, io_async_executor_,
-          auth_token_provider_);
 
   pass_thru_authorization_proxy_ =
       std::make_shared<PassThruAuthorizationProxy>();
@@ -171,10 +156,8 @@ ExecutionResult PBSInstanceV3::Init() noexcept {
   SCP_INFO(kPBSInstance, kZeroUuid, "PBSInstanceV3 initializing dependencies.");
   INIT_PBS_COMPONENT(async_executor_);
   INIT_PBS_COMPONENT(io_async_executor_);
-  INIT_PBS_COMPONENT(http1_client_);
   INIT_PBS_COMPONENT(http2_client_);
   INIT_PBS_COMPONENT(authorization_proxy_);
-  INIT_PBS_COMPONENT(instance_client_provider_);
   INIT_PBS_COMPONENT(pass_thru_authorization_proxy_);
   INIT_PBS_COMPONENT(http_server_);
   INIT_PBS_COMPONENT(budget_consumption_helper_);
@@ -196,10 +179,8 @@ ExecutionResult PBSInstanceV3::Run() noexcept {
 
   RUN_PBS_COMPONENT(async_executor_);
   RUN_PBS_COMPONENT(io_async_executor_);
-  RUN_PBS_COMPONENT(http1_client_);
   RUN_PBS_COMPONENT(http2_client_);
   RUN_PBS_COMPONENT(authorization_proxy_);
-  RUN_PBS_COMPONENT(instance_client_provider_);
   RUN_PBS_COMPONENT(pass_thru_authorization_proxy_);
   RUN_PBS_COMPONENT(http_server_);
   RUN_PBS_COMPONENT(budget_consumption_helper_);
@@ -223,10 +204,8 @@ ExecutionResult PBSInstanceV3::Stop() noexcept {
   STOP_PBS_COMPONENT(budget_consumption_helper_);
   STOP_PBS_COMPONENT(health_service_);
   STOP_PBS_COMPONENT(pass_thru_authorization_proxy_);
-  STOP_PBS_COMPONENT(instance_client_provider_);
   STOP_PBS_COMPONENT(authorization_proxy_);
   STOP_PBS_COMPONENT(http2_client_);
-  STOP_PBS_COMPONENT(http1_client_);
   STOP_PBS_COMPONENT(io_async_executor_);
   STOP_PBS_COMPONENT(async_executor_);
 

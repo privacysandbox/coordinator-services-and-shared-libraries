@@ -210,3 +210,37 @@ variable "export_otel_metrics" {
   type        = bool
   default     = false
 }
+
+################################################################################
+# Variables for AWS cross-cloud key synchronization.
+################################################################################
+
+variable "aws_key_sync_enabled" {
+  description = "Enable AWS cross-cloud key synchronization."
+  type        = bool
+  default     = false
+}
+
+variable "aws_key_sync_role_arn" {
+  description = "ARN of the AWS role to be assumed for cross-cloud key sync."
+  type        = string
+  default     = ""
+}
+
+variable "aws_key_sync_kms_key_uri" {
+  description = "URI of the AWS KMS key used to wrap legacy AWS private keys."
+  type        = string
+  default     = ""
+}
+
+variable "aws_key_sync_keydb_region" {
+  description = "Region of the Dynamodb KeyDB table for key sync writes."
+  type        = string
+  default     = ""
+}
+
+variable "aws_key_sync_keydb_table_name" {
+  description = "Table name of the Dynamodb KeyDB for key sync writes."
+  type        = string
+  default     = ""
+}

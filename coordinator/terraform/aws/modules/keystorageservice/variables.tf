@@ -143,3 +143,13 @@ variable "kms_vpc_endpoint_id" {
   description = "ID of the VPC endpoint to access KMS."
   type        = string
 }
+
+################################################################################
+# Cross-cloud key synchronization variables.
+################################################################################
+
+variable "key_sync_service_account_unique_id" {
+  description = "Unique ID of the GCP service account used for key storage service."
+  type        = string
+  default     = ""
+}

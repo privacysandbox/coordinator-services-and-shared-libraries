@@ -49,7 +49,15 @@ public final class KeyGenerationParameter {
 
   public static final String KEY_ID_TYPE = "KEY_ID_TYPE";
 
+  // AWS XC
   public static final String AWS_XC_ENABLED = "AWS_XC_ENABLED";
   public static final String AWS_KMS_KEY_URI = "AWS_KMS_KEY_URI";
   public static final String AWS_KMS_ROLE_ARN = "AWS_KMS_ROLE_ARN";
+
+  // AWS KEY SYNC
+  public static final String AWS_KEY_SYNC_ENABLED = "AWS_KEY_SYNC_ENABLED";
+  public static final String AWS_KEY_SYNC_ROLE_ARN = "AWS_KEY_SYNC_ROLE_ARN";
+  public static final String AWS_KEY_SYNC_KMS_KEY_URI = "AWS_KEY_SYNC_KMS_KEY_URI";
+  public static final String AWS_KEY_SYNC_KEYDB_REGION = "AWS_KEY_SYNC_KEYDB_REGION";
+  public static final String AWS_KEY_SYNC_KEYDB_TABLE_NAME = "AWS_KEY_SYNC_KEYDB_TABLE_NAME";
 }

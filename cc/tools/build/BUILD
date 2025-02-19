@@ -18,7 +18,7 @@ load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "instal
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit", "container_run_and_commit_layer")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 exports_files(["build_container_params.bzl"])
 

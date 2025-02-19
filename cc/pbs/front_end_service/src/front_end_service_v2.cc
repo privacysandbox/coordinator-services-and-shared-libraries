@@ -27,7 +27,6 @@
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
-#include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/errors.h"
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/interface/http_types.h"
@@ -70,6 +69,8 @@ using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
 using ::google::scp::pbs::FrontEndUtils;
 
 inline constexpr char kFrontEndService[] = "FrontEndServiceV2";
+static constexpr char kTransactionLastExecutionTimestampHeader[] =
+    "x-gscp-transaction-last-execution-timestamp";
 inline constexpr char kFakeLastExecutionTimestamp[] = "1234";
 
 // The extracted transaction_id is unused in BeginTransaction of
@@ -81,14 +82,12 @@ inline constexpr char kFakeLastExecutionTimestamp[] = "1234";
 //    any error. If the transaction ID can be extracted in BeginTransaction,
 //    it is likely that it can also be extracted in PrepareTransaction, so it
 //    helps PBS detect potential extraction issue earlier.
-// The same reasoning applies to transaction_secret in BeginTransaction and
-// the extraction of transaction_id and transaction_secret in other phases.
+// The same reasoning applies to other phases.
 //
 // The transaction_id will be returned if there isn't any extraction issue. The
 // transaction_id will only be used for logging purposes.
-ExecutionResultOr<std::string> ExtractBackwardCompatibleHeaders(
-    const AsyncContext<HttpRequest, HttpResponse>& http_context,
-    bool should_extract_last_execution_timestamp) {
+ExecutionResultOr<std::string> ExtractTransactionId(
+    const AsyncContext<HttpRequest, HttpResponse>& http_context) {
   if (http_context.request == nullptr ||
       http_context.request->headers == nullptr) {
     return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
@@ -99,22 +98,6 @@ ExecutionResultOr<std::string> ExtractBackwardCompatibleHeaders(
           http_context.request->headers, transaction_id);
       !execution_result.Successful()) {
     return execution_result;
-  }
-
-  std::string transaction_secret;
-  if (auto execution_result = FrontEndUtils::ExtractTransactionSecret(
-          http_context.request->headers, transaction_secret);
-      !execution_result.Successful()) {
-    return execution_result;
-  }
-
-  if (should_extract_last_execution_timestamp) {
-    Timestamp last_execution_timestamp;
-    if (auto execution_result = FrontEndUtils::ExtractLastExecutionTimestamp(
-            http_context.request->headers, last_execution_timestamp);
-        !execution_result.Successful()) {
-      return execution_result;
-    }
   }
   return ToString(transaction_id);
 }
@@ -400,9 +383,7 @@ ExecutionResult FrontEndServiceV2::BeginTransaction(
     total_request_counter_->Add(1, labels);
   }
   ExecutionResultOr<std::string> transaction_id =
-      ExtractBackwardCompatibleHeaders(
-          http_context, /*should_extract_last_execution_timestamp=*/
-          false);
+      ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
@@ -447,9 +428,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
   }
 
   ExecutionResultOr<std::string> transaction_id =
-      ExtractBackwardCompatibleHeaders(
-          http_context, /*should_extract_last_execution_timestamp=*/
-          true);
+      ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
@@ -669,9 +648,7 @@ ExecutionResult FrontEndServiceV2::CommitTransaction(
   }
 
   ExecutionResultOr<std::string> transaction_id =
-      ExtractBackwardCompatibleHeaders(
-          http_context, /*should_extract_last_execution_timestamp=*/
-          true);
+      ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
@@ -718,9 +695,7 @@ ExecutionResult FrontEndServiceV2::NotifyTransaction(
   }
 
   ExecutionResultOr<std::string> transaction_id =
-      ExtractBackwardCompatibleHeaders(
-          http_context, /*should_extract_last_execution_timestamp=*/
-          true);
+      ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
@@ -767,9 +742,7 @@ FrontEndServiceV2::AbortTransaction(
   }
 
   ExecutionResultOr<std::string> transaction_id =
-      ExtractBackwardCompatibleHeaders(
-          http_context, /*should_extract_last_execution_timestamp=*/
-          true);
+      ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,
@@ -816,9 +789,7 @@ FrontEndServiceV2::EndTransaction(
   }
 
   ExecutionResultOr<std::string> transaction_id =
-      ExtractBackwardCompatibleHeaders(
-          http_context, /*should_extract_last_execution_timestamp=*/
-          true);
+      ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
     if (client_error_counter_) {
       labels.emplace(kErrorReasonLabel,

@@ -42,6 +42,11 @@ variable "encryption_key_domain" {
   type        = string
 }
 
+variable "encryption_key_cloud_run_domain" {
+  description = "Domain to use to create a managed SSL cert for the cloud run service."
+  type        = string
+}
+
 variable "encryption_key_service_zip" {
   description = "Path to the jar file for cloudfunction."
   type        = string

@@ -14,8 +14,7 @@
 
 # Network Endpoint Group to route to Cloud Functions
 resource "google_compute_region_network_endpoint_group" "encryption_key_service_network_endpoint_group" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count                 = local.use_cloud_function ? 1 : 0
   project               = var.project_id
   name                  = "${var.environment}-${var.region}-encryption-key-service-endpoint-group"
   network_endpoint_type = "SERVERLESS"
@@ -27,22 +26,19 @@ resource "google_compute_region_network_endpoint_group" "encryption_key_service_
 
 # Network Endpoint Group to route to Cloud Run
 resource "google_compute_region_network_endpoint_group" "encryption_key_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
   project               = var.project_id
   name                  = "${var.environment}-${var.region}-encryption-key-service-cloud-run"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
   cloud_run {
-    service = google_cloud_run_v2_service.private_key_service[0].name
+    service = google_cloud_run_v2_service.private_key_service.name
   }
 }
 
 # Backend service that groups network endpoint groups to Cloud Functions for
 # Load Balancer to use.
 resource "google_compute_backend_service" "encryption_key_service_loadbalancer_backend" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count       = local.use_cloud_function ? 1 : 0
   project     = var.project_id
   name        = "${var.environment}-encryption-key-service-backend"
   description = "Backend service to point Encryption Key Cloud Function."
@@ -62,17 +58,16 @@ resource "google_compute_backend_service" "encryption_key_service_loadbalancer_b
 # Backend service that groups network endpoint groups to Cloud Run for Load
 # Balancer to use.
 resource "google_compute_backend_service" "encryption_key_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
   project     = var.project_id
   name        = "${var.environment}-encryption-key-service-cloud-run"
   description = "Load balancer backend service for Encryption Key services."
 
-  enable_cdn = false
+  enable_cdn            = false
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   backend {
     description = var.environment
-    group       = google_compute_region_network_endpoint_group.encryption_key_service_cloud_run[0].id
+    group       = google_compute_region_network_endpoint_group.encryption_key_service_cloud_run.id
   }
 
   log_config {
@@ -82,8 +77,7 @@ resource "google_compute_backend_service" "encryption_key_service_cloud_run" {
 
 # URL Map creates Load balancer to Cloud Functions
 resource "google_compute_url_map" "encryption_key_service_loadbalancer" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count           = local.use_cloud_function ? 1 : 0
   project         = var.project_id
   name            = "${var.environment}-encryption-key-service-loadbalancer"
   default_service = google_compute_backend_service.encryption_key_service_loadbalancer_backend[0].id
@@ -91,16 +85,14 @@ resource "google_compute_url_map" "encryption_key_service_loadbalancer" {
 
 # URL Map creates Load balancer to Cloud Run
 resource "google_compute_url_map" "encryption_key_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
   project         = var.project_id
   name            = "${var.environment}-encryption-key-service-cloud-run"
-  default_service = google_compute_backend_service.encryption_key_service_cloud_run[0].id
+  default_service = google_compute_backend_service.encryption_key_service_cloud_run.id
 }
 
 # Proxy to loadbalancer for Cloud Functions. HTTP without custom domain
 resource "google_compute_target_http_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count = !(var.use_cloud_run || var.enable_domain_management) ? 1 : 0
+  count = !var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-encryption-key-service-proxy"
@@ -110,7 +102,7 @@ resource "google_compute_target_http_proxy" "encryption_key_service_loadbalancer
 
 # Proxy to loadbalancer for Cloud Functions. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count = !var.use_cloud_run && var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-encryption-key-service-proxy"
@@ -123,39 +115,46 @@ resource "google_compute_target_https_proxy" "encryption_key_service_loadbalance
 
 # Proxy to loadbalancer for Cloud Run. HTTP without custom domain
 resource "google_compute_target_http_proxy" "encryption_key_service_cloud_run" {
-  count = var.use_cloud_run && !var.enable_domain_management ? 1 : 0
+  count = !var.enable_domain_management ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-encryption-key-service-cloud-run"
-  url_map = google_compute_url_map.encryption_key_service_cloud_run[0].id
+  url_map = google_compute_url_map.encryption_key_service_cloud_run.id
 }
 
 # Proxy to loadbalancer for Cloud Run. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "encryption_key_service_cloud_run" {
-  count = var.use_cloud_run && var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-encryption-key-service-cloud-run"
-  url_map = google_compute_url_map.encryption_key_service_cloud_run[0].id
+  url_map = google_compute_url_map.encryption_key_service_cloud_run.id
 
   ssl_certificates = [
-    google_compute_managed_ssl_certificate.encryption_key_service_loadbalancer[0].id
+    google_compute_managed_ssl_certificate.encryption_key_service_loadbalancer[0].id,
+    google_compute_managed_ssl_certificate.encryption_key_service_cloud_run_loadbalancer[0].id
   ]
 }
 
 # Reserve IP address.
 resource "google_compute_global_address" "encryption_key_service_ip_address" {
+  count   = local.use_cloud_function ? 1 : 0
   project = var.project_id
   name    = "${var.environment}-encryption-key-service-ip-address"
 }
 
+# Reserve IP address.
+resource "google_compute_global_address" "encryption_key_service_cloud_run" {
+  project = var.project_id
+  name    = "${var.environment}-encryption-key-service-cloud-run"
+}
+
 # Map IP address and loadbalancer proxy to Cloud Functions
 resource "google_compute_global_forwarding_rule" "encryption_key_service_loadbalancer_config" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count      = local.use_cloud_function ? 1 : 0
   project    = var.project_id
   name       = "${var.environment}-encryption-key-service-frontend-configuration"
-  ip_address = google_compute_global_address.encryption_key_service_ip_address.address
+  ip_address = google_compute_global_address.encryption_key_service_ip_address[0].address
   port_range = var.enable_domain_management ? "443" : "80"
 
   target = (
@@ -167,12 +166,11 @@ resource "google_compute_global_forwarding_rule" "encryption_key_service_loadbal
 
 # Map IP address and loadbalancer proxy to Cloud Run
 resource "google_compute_global_forwarding_rule" "encryption_key_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
-  project    = var.project_id
-  name       = "${var.environment}-encryption-key-service-cloud-run"
-  ip_address = google_compute_global_address.encryption_key_service_ip_address.address
-  port_range = var.enable_domain_management ? "443" : "80"
+  project               = var.project_id
+  name                  = "${var.environment}-encryption-key-service-cloud-run"
+  ip_address            = google_compute_global_address.encryption_key_service_cloud_run.address
+  port_range            = var.enable_domain_management ? "443" : "80"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   target = (
     var.enable_domain_management ?
@@ -192,5 +190,15 @@ resource "google_compute_managed_ssl_certificate" "encryption_key_service_loadba
 
   managed {
     domains = [var.encryption_key_domain]
+  }
+}
+
+resource "google_compute_managed_ssl_certificate" "encryption_key_service_cloud_run_loadbalancer" {
+  count   = var.enable_domain_management ? 1 : 0
+  project = var.project_id
+  name    = "${var.environment}-encryption-key-cloud-run-cert"
+
+  managed {
+    domains = [var.encryption_key_cloud_run_domain]
   }
 }

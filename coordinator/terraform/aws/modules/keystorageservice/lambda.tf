@@ -27,8 +27,11 @@ module "lambda_roles" {
 }
 
 module "worker_enclave_encryption_key" {
-  source      = "../shared/workerenclaveencryptionkey"
-  environment = "tp2-${var.environment}"
+  source             = "../shared/workerenclaveencryptionkey"
+  environment        = var.environment
+  environment_prefix = "tp2"
+
+  key_sync_service_account_unique_id = var.key_sync_service_account_unique_id
 }
 
 resource "aws_s3_bucket_object" "key_storage_package" {

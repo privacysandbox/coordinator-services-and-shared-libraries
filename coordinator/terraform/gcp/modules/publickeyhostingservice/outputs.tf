@@ -13,5 +13,9 @@
 # limitations under the License.
 
 output "get_public_key_loadbalancer_ip" {
-  value = google_compute_global_address.get_public_key_ip_address.address
+  value = local.use_cloud_function ? google_compute_global_address.get_public_key_ip_address[0].address : null
+}
+
+output "public_key_cloud_run_loadbalancer_ip" {
+  value = google_compute_global_address.public_key_cloud_run.address
 }

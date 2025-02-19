@@ -444,3 +444,13 @@ variable "unified_keyhosting_dashboard_time_period_seconds" {
   description = "Time period that acts as window for dashboard metrics. Measured in seconds."
   type        = number
 }
+
+################################################################################
+# Cross-cloud key synchronization variables.
+################################################################################
+
+variable "key_sync_service_account_unique_id" {
+  description = "Unique ID of the GCP service account used for key storage service."
+  type        = string
+  default     = ""
+}

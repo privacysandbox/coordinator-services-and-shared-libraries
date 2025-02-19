@@ -129,3 +129,31 @@ resource "aws_appautoscaling_policy" "keydb_write_policy" {
     target_value = var.autoscaling_write_target_percentage
   }
 }
+
+resource "aws_iam_policy" "keydb_key_sync_policy" {
+  count       = var.key_sync_service_account_unique_id != "" ? 1 : 0
+  name        = "${var.environment}-kdb-key-sync-policy"
+  path        = "/"
+  description = "IAM policy allowing key sync GCP service account to write to keydb"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        "Action" : [
+          "dynamodb:PutItem"
+        ]
+        "Resource" : [
+          aws_dynamodb_table.keydb.arn
+        ]
+        "Effect" : "Allow"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "keydb_key_sync_policy_attachment" {
+  count      = var.key_sync_service_account_unique_id != "" ? 1 : 0
+  role       = "${var.environment}-key-sync-assume-role"
+  policy_arn = one(aws_iam_policy.keydb_key_sync_policy[*].arn)
+}

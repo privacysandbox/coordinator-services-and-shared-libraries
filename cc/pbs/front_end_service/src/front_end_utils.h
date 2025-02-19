@@ -133,51 +133,6 @@ class FrontEndUtils {
                                   : kMetricLabelValueOperator;
   }
 
-  static core::ExecutionResult ExtractLastExecutionTimestamp(
-      const std::shared_ptr<core::HttpHeaders>& request_headers,
-      core::Timestamp& timestamp) noexcept {
-    static std::string transaction_last_execution_timestamp(
-        kTransactionLastExecutionTimestampHeader);
-
-    auto header_iter =
-        request_headers->find(transaction_last_execution_timestamp);
-    if (header_iter == request_headers->end()) {
-      return core::FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
-    }
-
-    try {
-      if (header_iter->second.length() > 20 ||
-          !std::all_of(header_iter->second.begin(), header_iter->second.end(),
-                       ::isdigit)) {
-        return core::FailureExecutionResult(
-            core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
-      }
-
-      char* end;
-      timestamp = strtoull(header_iter->second.c_str(), &end, 10);
-      return core::SuccessExecutionResult();
-    } catch (...) {
-      return core::FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
-    }
-  }
-
-  static core::ExecutionResult ExtractTransactionSecret(
-      const std::shared_ptr<core::HttpHeaders>& request_headers,
-      std::string& transaction_secret) noexcept {
-    static std::string transaction_secret_header(kTransactionSecretHeader);
-
-    auto header_iter = request_headers->find(transaction_secret_header);
-    if (header_iter == request_headers->end()) {
-      return core::FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
-    }
-
-    transaction_secret = header_iter->second;
-    return core::SuccessExecutionResult();
-  }
-
   static core::ExecutionResult ExtractTransactionOrigin(
       const std::shared_ptr<core::HttpHeaders>& request_headers,
       std::string& transaction_origin) noexcept {

@@ -763,24 +763,6 @@ TEST(FrontEndUtilsTest, ExtractTransactionId) {
             SuccessExecutionResult());
 }
 
-TEST(FrontEndUtilsTest, ExtractTransactionSecret) {
-  auto headers = std::make_shared<HttpHeaders>();
-  std::string transaction_secret;
-  EXPECT_EQ(
-      FrontEndUtils::ExtractTransactionSecret(headers, transaction_secret),
-      FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
-
-  std::string extracted_transaction_secret;
-  headers->insert(
-      {std::string(kTransactionSecretHeader), std::string("secret")});
-  EXPECT_EQ(FrontEndUtils::ExtractTransactionSecret(
-                headers, extracted_transaction_secret),
-            SuccessExecutionResult());
-
-  EXPECT_EQ(extracted_transaction_secret, std::string("secret"));
-}
-
 TEST(FrontEndUtilsTest, ExtractTransactionOrigin) {
   auto headers = std::make_shared<HttpHeaders>();
   std::string transaction_origin;

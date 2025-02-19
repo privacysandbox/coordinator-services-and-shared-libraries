@@ -13,12 +13,21 @@
 # limitations under the License.
 
 output "load_balancer_ip" {
-  value = google_compute_global_address.key_storage.address
+  value = local.use_cloud_function ? google_compute_global_address.key_storage[0].address : null
+}
+
+output "load_balancer_ip_cloud_run" {
+  value = google_compute_global_address.key_storage_service_cloud_run.address
 }
 
 output "key_storage_cloudfunction_url" {
   description = "The audience claim URL used by the key generation service."
-  value       = var.use_cloud_run ? google_cloud_run_v2_service.key_storage_service[0].uri : google_cloudfunctions2_function.key_storage_cloudfunction[0].url
+  value       = local.use_cloud_function ? google_cloudfunctions2_function.key_storage_cloudfunction[0].url : null
+}
+
+output "key_storage_service_cloud_run_audience_url" {
+  description = "The audience claim URL used by the key generation service."
+  value       = google_cloud_run_v2_service.key_storage_service.uri
 }
 
 output "key_storage_service_account_unique_id" {

@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "pbs_local_cloud_platform_dependency_factory_lib",

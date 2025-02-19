@@ -20,7 +20,7 @@ package(default_visibility = ["//visibility:public"])
 java_binary(
     name = "AwsApigatewayFrontend",
     resources = [
-        "//licenses/THIRD_PARTY_NOTICES/aws_aws_api_gateway_frontend_handler_lambda:licenses",
+        "//licenses/THIRD_PARTY_NOTICES/frontend_AwsApiGatewayFrontendDeploy:licenses",
     ],
     runtime_deps = [
         "//java/com/google/scp/operator/frontend/injection/modules:frontend_module",

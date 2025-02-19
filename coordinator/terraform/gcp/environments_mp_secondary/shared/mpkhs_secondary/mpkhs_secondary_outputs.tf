@@ -20,6 +20,10 @@ output "encryption_key_service_loadbalancer_ip" {
   value = module.multipartykeyhosting_secondary.encryption_key_service_loadbalancer_ip
 }
 
+output "encryption_key_service_cloud_run_loadbalancer_ip" {
+  value = module.multipartykeyhosting_secondary.encryption_key_service_cloud_run_loadbalancer_ip
+}
+
 output "encryption_key_base_url" {
   value = module.multipartykeyhosting_secondary.encryption_key_base_url
 }
@@ -30,6 +34,10 @@ output "key_storage_cloudfunction_url" {
 
 output "key_storage_service_loadbalancer_ip" {
   value = module.multipartykeyhosting_secondary.key_storage_service_loadbalancer_ip
+}
+
+output "key_storage_service_cloud_run_loadbalancer_ip" {
+  value = module.multipartykeyhosting_secondary.key_storage_service_cloud_run_loadbalancer_ip
 }
 
 output "key_storage_base_url" {

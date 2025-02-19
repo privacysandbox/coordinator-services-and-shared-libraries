@@ -22,7 +22,6 @@
 #include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_authorization_proxy.h"
-#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_instance_metadata_client.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/resource/resource_detector.h"
@@ -86,28 +85,8 @@ LocalDependencyFactory::ConstructBudgetConsumptionHelper(
       std::move(*spanner_connection));
 }
 
-std::unique_ptr<cpio::client_providers::InstanceClientProviderInterface>
-LocalDependencyFactory::ConstructInstanceMetadataClient(
-    std::shared_ptr<core::HttpClientInterface> http1_client,
-    std::shared_ptr<core::HttpClientInterface> http2_client,
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
-        auth_token_provider) noexcept {
-  return std::make_unique<LocalInstanceClientProvider>();
-}
-
-std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
-LocalDependencyFactory::ConstructInstanceAuthorizer(
-    std::shared_ptr<core::HttpClientInterface> http1_client) noexcept {
-  return nullptr;
-}
-
 std::unique_ptr<core::MetricRouter>
-LocalDependencyFactory::ConstructMetricRouter(
-    absl::Nullable<std::shared_ptr<
-        cpio::client_providers::InstanceClientProviderInterface>>
-        instance_client_provider) noexcept {
+LocalDependencyFactory::ConstructMetricRouter() noexcept {
   bool is_otel_print_data_to_console_enabled = false;
   config_provider_->Get(kOtelPrintDataToConsoleEnabled,
                         is_otel_print_data_to_console_enabled);

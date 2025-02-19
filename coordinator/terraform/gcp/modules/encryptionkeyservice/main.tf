@@ -24,6 +24,7 @@ terraform {
 locals {
   cloudfunction_name_suffix = "encryption-key-service-cloudfunction"
   cloudfunction_package_zip = var.encryption_key_service_zip
+  use_cloud_function        = var.encryption_key_service_zip != null
   cloud_run_name            = "private-key-service"
 }
 
@@ -39,7 +40,7 @@ resource "google_service_account" "encryption_key_service_account" {
 }
 
 resource "google_storage_bucket_object" "encryption_key_service_package_bucket_object" {
-  count = !var.use_cloud_run ? 1 : 0
+  count = local.use_cloud_function ? 1 : 0
   # Need hash in name so cloudfunction knows to redeploy when code changes
   name   = "${var.environment}_${local.cloudfunction_name_suffix}_${filesha256(local.cloudfunction_package_zip)}"
   bucket = var.package_bucket_name
@@ -47,8 +48,7 @@ resource "google_storage_bucket_object" "encryption_key_service_package_bucket_o
 }
 
 resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count    = local.use_cloud_function ? 1 : 0
   project  = var.project_id
   name     = "${var.environment}-${var.region}-${local.cloudfunction_name_suffix}"
   location = var.region
@@ -105,8 +105,7 @@ resource "google_spanner_database_iam_member" "encryption_key_service_spannerdb_
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "encryption_key_service_iam_policy" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count    = local.use_cloud_function ? 1 : 0
   project  = var.project_id
   location = google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].location
   service  = google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].name
@@ -117,8 +116,6 @@ resource "google_cloud_run_service_iam_member" "encryption_key_service_iam_polic
 
 # Cloud Run Service to get the encryption keys.
 resource "google_cloud_run_v2_service" "private_key_service" {
-  count = var.use_cloud_run ? 1 : 0
-
   project  = var.project_id
   name     = "${var.environment}-${var.region}-${local.cloud_run_name}"
   location = var.region
@@ -176,11 +173,9 @@ resource "google_cloud_run_v2_service" "private_key_service" {
 
 # IAM entry to invoke the cloud run service.
 resource "google_cloud_run_service_iam_member" "private_key_service" {
-  count = var.use_cloud_run ? 1 : 0
-
   project  = var.project_id
-  location = google_cloud_run_v2_service.private_key_service[0].location
-  service  = google_cloud_run_v2_service.private_key_service[0].name
+  location = google_cloud_run_v2_service.private_key_service.location
+  service  = google_cloud_run_v2_service.private_key_service.name
 
   role   = "roles/run.invoker"
   member = "group:${var.allowed_operator_user_group}"

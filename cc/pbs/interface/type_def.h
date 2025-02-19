@@ -30,10 +30,7 @@ typedef size_t ArrayIndex;
 typedef core::Timestamp TimeBucket;
 
 static constexpr char kTransactionIdHeader[] = "x-gscp-transaction-id";
-static constexpr char kTransactionLastExecutionTimestampHeader[] =
-    "x-gscp-transaction-last-execution-timestamp";
 static constexpr char kTransactionOriginHeader[] = "x-gscp-transaction-origin";
-static constexpr char kTransactionSecretHeader[] = "x-gscp-transaction-secret";
 static constexpr char kBeginTransactionPath[] = "/v1/transactions:begin";
 static constexpr char kPrepareTransactionPath[] = "/v1/transactions:prepare";
 static constexpr char kCommitTransactionPath[] = "/v1/transactions:commit";

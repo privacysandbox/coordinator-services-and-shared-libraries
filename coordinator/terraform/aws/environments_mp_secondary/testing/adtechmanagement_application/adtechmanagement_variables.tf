@@ -1,1 +1,0 @@
-../../shared/adtechmanagement_application/adtechmanagement_variables.tf

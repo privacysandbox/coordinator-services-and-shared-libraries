@@ -18,8 +18,11 @@ locals {
 }
 
 module "worker_enclave_encryption_key" {
-  source      = "../shared/workerenclaveencryptionkey"
-  environment = "tp1-${var.environment}"
+  source             = "../shared/workerenclaveencryptionkey"
+  environment        = var.environment
+  environment_prefix = "tp1"
+
+  key_sync_service_account_unique_id = var.key_sync_service_account_unique_id
 }
 
 # Used to sign public EncryptionKeys during key creation

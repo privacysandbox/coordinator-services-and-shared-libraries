@@ -76,3 +76,28 @@ resource "aws_iam_role_policy_attachment" "peer_coordinator_policy" {
   role       = aws_iam_role.peer_coordinator_assume_role.name
   policy_arn = aws_iam_policy.peer_coordinator_policy.arn
 }
+
+################################################################################
+# Key synchronization role
+################################################################################
+
+resource "aws_iam_role" "key_sync_role" {
+  count = var.key_sync_service_account_unique_id != "" ? 1 : 0
+  name  = "${var.environment}-key-sync-assume-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        "Effect" : "Allow",
+        "Principal" : { "Federated" : "accounts.google.com" },
+        "Action" : "sts:AssumeRoleWithWebIdentity"
+        "Condition" : {
+          "StringEquals" : {
+            "accounts.google.com:sub" : var.key_sync_service_account_unique_id
+          }
+        }
+      }
+    ]
+  })
+}

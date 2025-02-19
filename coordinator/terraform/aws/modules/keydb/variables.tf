@@ -66,3 +66,13 @@ variable "keydb_replica_regions" {
   description = "Regions where keydb table will be replicated"
   type        = list(string)
 }
+
+################################################################################
+# Key synchronization variables.
+################################################################################
+
+variable "key_sync_service_account_unique_id" {
+  description = "Unique ID of the GCP service account used for key generation."
+  type        = string
+  default     = ""
+}

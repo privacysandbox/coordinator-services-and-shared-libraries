@@ -22,13 +22,15 @@ terraform {
 }
 
 locals {
-  service_subdomain_suffix = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  parent_domain_name       = var.parent_domain_name != null ? var.parent_domain_name : ""
-  key_storage_domain       = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.key_storage_service_subdomain}.${local.parent_domain_name}"
-  encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
-  notification_channel_id  = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
-  package_bucket_prefix    = "${var.project_id}_${var.environment}"
-  package_bucket_name      = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
+  service_subdomain_suffix        = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
+  parent_domain_name              = var.parent_domain_name != null ? var.parent_domain_name : ""
+  key_storage_domain              = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.key_storage_service_subdomain}.${local.parent_domain_name}"
+  encryption_key_domain           = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
+  encryption_key_cloud_run_domain = var.environment != "prod" ? "${var.encryption_key_service_subdomain}-cr${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}-cr.${local.parent_domain_name}"
+
+  notification_channel_id = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
+  package_bucket_prefix   = "${var.project_id}_${var.environment}"
+  package_bucket_name     = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
 }
 
 module "vpc" {
@@ -148,6 +150,13 @@ module "keystorageservice" {
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
+
+  # AWS cross-cloud key sync variables
+  aws_key_sync_enabled          = var.aws_key_sync_enabled
+  aws_key_sync_role_arn         = var.aws_key_sync_role_arn
+  aws_key_sync_kms_key_uri      = var.aws_key_sync_kms_key_uri
+  aws_key_sync_keydb_region     = var.aws_key_sync_keydb_region
+  aws_key_sync_keydb_table_name = var.aws_key_sync_keydb_table_name
 }
 
 module "encryptionkeyservice" {
@@ -177,8 +186,9 @@ module "encryptionkeyservice" {
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
-  encryption_key_domain    = local.encryption_key_domain
+  enable_domain_management        = var.enable_domain_management
+  encryption_key_domain           = local.encryption_key_domain
+  encryption_key_cloud_run_domain = local.encryption_key_cloud_run_domain
 
   # Alarms
   alarms_enabled                       = var.alarms_enabled
@@ -204,8 +214,12 @@ module "domain_a_records" {
   parent_domain_name_project = var.parent_domain_name_project
 
   service_domain_to_address_map = var.enable_domain_management ? {
-    (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+    # If use_cloud_run = True, point A record to the IP Address of Cloud Run LB otherise point to Cloud Function LB
+    (local.key_storage_domain) : var.use_cloud_run ? module.keystorageservice.load_balancer_ip_cloud_run : module.keystorageservice.load_balancer_ip,
+    (local.encryption_key_domain) : var.use_cloud_run ? module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip,
+
+    # A records for Cloud Run domain. Will be removed once Cloud Run migration is complete
+    (local.encryption_key_cloud_run_domain) : module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip
   } : {}
 }
 

@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "error_codes",

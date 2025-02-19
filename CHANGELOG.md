@@ -1,5 +1,72 @@
 # Changelog
 
+## [1.18.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.17.0...v1.18.0) (2025-02-18)
+
+### Important Note
+- [GCP only] Configure `phase_2` in the PBS Spanner migration and enable writes to the ValueProto column.
+  - In the `auto.tfvars` for `distributedpbs_application`, add the following variables:
+    ```
+    pbs_application_environment_variables = [
+      ...
+      {
+        name  = "google_scp_pbs_value_proto_migration_phase"
+        value = "phase_2"
+      },
+    ]
+    ```
+  - This terraform configuration variable is needed to enable writing the `ValueProto` column along with the `Value` column. This is the next step in migrating PBS Spanner to use the `ValueProto` column instead of the `Value` column.
+  - Quick description of the PBS Spanner migration phases:
+    - `phase_1` : Writes and reads from the `Value` column only. The `ValueProto` column is ignored. This is the default state.
+    - `phase_2` : Writes both `ValueProto` and `Value` column but reads from `Value` column only.
+    - `phase_3` : Writes both `ValueProto` and `Value` column but reads from `ValueProto` column only.
+    - `phase_4` : Writes and reads from `ValueProto` column only. The `Value` column is ignored.
+  - Rollback instructions: Rollback the terraform changes performed in the above steps and deploy PBS in the current version.
+    - Default value of `google_scp_pbs_value_proto_migration_phase` is `phase_1` in which PBS neither writes nor reads the `ValueProto` column.
+    - Rolling back this environment variable in `phase_1` should sufficiently restore PBS to it's previous state.
+- [GCP only] Configure MPKHS services running on Cloud Run.
+  - Note that MPKHS will continue to use Cloud Functions. Cloud Run services will be provisioned alongside, but will not be serving.
+  - For Primary Coordinator:
+    ```
+    use_cloud_run                        = false
+    public_key_service_image             = <url_to_public_key_service_image>
+    private_key_service_image            = <url_to_private_key_service_image>
+    private_key_service_custom_audiences = [
+      ...,
+    ]
+    ```
+  - For Secondary Coordinator:
+    ```
+    use_cloud_run                        = false
+    private_key_service_image            = <url_to_private_key_service_image>
+    key_storage_service_image            = <url_to_key_storage_service_image>
+    private_key_service_custom_audiences = [
+      ...,
+    ]
+    key_storage_service_custom_audiences = [
+      ...,
+    ]
+    ```
+
+### Changes
+
+- Removed unused code from PBS after support of GCP only deployment
+- Migrated part of external dependencies to `MODULE.bazel`
+- Removed nodejs dependencies in `WORKSPACE.bzlmod`
+- Removed unused `get_encrypted_private_key_request.proto` in MPKHS
+- Set `--test_output=errors` option for bazel build command
+- Updated `CC_BUILD_CONTAINER_REGISTRY` to point to new location for hosted images
+- Updated Google Cloud dependencies
+- Updated bazel version to `7.5.0` without enabling bzlmod
+- Updated container dependencies
+- Updated content of bzlmod file
+- Updated import of `cc_proto_library` to import the rules from `com_google_protobuf`
+- Updated visibility rules for most packages under `cc/...`
+- [GCP only] Added files for managing `KeyDb` DDL statements
+- [GCP only] Added option for syncing keys to another pair of Coordinators during the key generation process to support migrations
+- [GCP only] Disabled MPKHS cloud functions deployment when `_package_zip` terraform variable is not provided
+- [GCP only] Guarded removal of AWS xCC KMS keys with `prevent_destroy`
+- [GCP only] Prepared MPKHS cloud run migration
+
 ## [1.17.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.16.0...v1.17.0) (2025-02-04)
 
 ### Changes

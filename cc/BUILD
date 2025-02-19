@@ -14,13 +14,12 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 package_group(
     name = "pbs_visibility",
     packages = [
         "//cc/core/...",
-        "//cc/cpio/...",
         "//cc/pbs/...",
         "//cc/process_launcher/...",
         "//cc/public/...",

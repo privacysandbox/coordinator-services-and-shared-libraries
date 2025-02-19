@@ -115,4 +115,6 @@ module "multipartykeyhosting_secondary" {
 
   unified_keyhosting_dashboard_time_period_seconds = var.unified_keyhosting_dashboard_time_period_seconds
   custom_alarm_label                               = var.custom_alarm_label
+
+  key_sync_service_account_unique_id = var.key_sync_service_account_unique_id
 }

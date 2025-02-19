@@ -27,7 +27,6 @@ cc_test(
         "//cc/core/config_provider/mock:core_config_provider_mock",
         "//cc/core/config_provider/src:config_provider_lib",
         "//cc/core/http2_client/mock:http2_client_mock",
-        "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
         "//cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp:pbs_gcp_cloud_platform_dependency_factory_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",

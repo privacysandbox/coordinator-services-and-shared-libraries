@@ -23,8 +23,6 @@
 #include "cc/core/interface/http_client_interface.h"
 #include "cc/core/interface/initializable_interface.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 
 namespace google::scp::pbs {
@@ -76,42 +74,14 @@ class CloudPlatformDependencyFactoryInterface
       google::scp::core::AsyncExecutorInterface* async_executor,
       google::scp::core::AsyncExecutorInterface*
           io_async_executor) noexcept = 0;
-  /**
-   * @brief Create a Instance Authorizer object for Instance Metadata client.
-   *
-   * @param http1_client
-   * @return std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
-   */
-  virtual std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
-  ConstructInstanceAuthorizer(
-      std::shared_ptr<core::HttpClientInterface> http1_client) noexcept = 0;
-
-  /**
-   * @brief Construct Instance Metadata client
-   *
-   * @param http_client
-   * @return std::unique_ptr<
-   * cpio::client_providers::InstanceClientProviderInterface>
-   */
-  virtual std::unique_ptr<
-      cpio::client_providers::InstanceClientProviderInterface>
-  ConstructInstanceMetadataClient(
-      std::shared_ptr<core::HttpClientInterface> http1_client,
-      std::shared_ptr<core::HttpClientInterface> http2_client,
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
-          auth_token_provider) noexcept = 0;
 
   /**
    * @brief Construct Metric Router for Otel metrics collection
    * @param Optional instance_client_provider
    * @return std::unique_ptr<core::MetricRouter>
    */
-  virtual std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      absl::Nullable<std::shared_ptr<
-          cpio::client_providers::InstanceClientProviderInterface>>
-          instance_client_provider) noexcept = 0;
+  virtual std::unique_ptr<core::MetricRouter>
+  ConstructMetricRouter() noexcept = 0;
 };
 
 }  // namespace google::scp::pbs

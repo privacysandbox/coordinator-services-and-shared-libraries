@@ -19,7 +19,6 @@ package(default_visibility = ["//visibility:public"])
 pkg_filegroup(
     name = "mp_secondary_coordinator_demo",
     srcs = [
-        "//coordinator/terraform/aws/environments_mp_secondary/demo/adtechmanagement_application:adtechmanagement_demo",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_demo",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_link",
         "//coordinator/terraform/aws/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_outputs_link",

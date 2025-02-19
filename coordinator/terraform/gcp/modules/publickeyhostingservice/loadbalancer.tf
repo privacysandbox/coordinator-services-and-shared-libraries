@@ -14,7 +14,7 @@
 
 # Network Endpoint Group to route to Cloud Functions in each region
 resource "google_compute_region_network_endpoint_group" "get_public_key_network_endpoint_group" {
-  for_each = !var.use_cloud_run ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
+  for_each = local.use_cloud_function ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
 
   project               = var.project_id
   name                  = "${var.environment}-${each.value.location}-get-public-key-endpoint-group"
@@ -27,7 +27,7 @@ resource "google_compute_region_network_endpoint_group" "get_public_key_network_
 
 # Network Endpoint Group to route to Cloud Run in each region
 resource "google_compute_region_network_endpoint_group" "public_key_service_cloud_run" {
-  for_each = var.use_cloud_run ? google_cloud_run_v2_service.public_key_service : {}
+  for_each = google_cloud_run_v2_service.public_key_service
 
   project               = var.project_id
   name                  = "${var.environment}-${each.value.location}-public-key-service-cloud-run"
@@ -41,8 +41,7 @@ resource "google_compute_region_network_endpoint_group" "public_key_service_clou
 # Backend service that groups network endpoint groups to Cloud Functions for
 # Load Balancer to use.
 resource "google_compute_backend_service" "get_public_key_loadbalancer_backend" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count       = local.use_cloud_function ? 1 : 0
   name        = "${var.environment}-get-public-key-backend"
   project     = var.project_id
   description = "Backend service to point Public Key Cloud Functions."
@@ -78,13 +77,12 @@ resource "google_compute_backend_service" "get_public_key_loadbalancer_backend" 
 # Backend service that groups network endpoint groups to Cloud Run for Load
 # Balancer to use.
 resource "google_compute_backend_service" "public_key_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
   name        = "${var.environment}-public-key-service-cloud-run"
   project     = var.project_id
   description = "Load balancer backend service for Public Key services."
 
-  enable_cdn = var.enable_get_public_key_cdn
+  enable_cdn            = var.enable_get_public_key_cdn
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   cdn_policy {
     cache_mode  = var.enable_get_public_key_cdn ? "CACHE_ALL_STATIC" : null
@@ -114,8 +112,7 @@ resource "google_compute_backend_service" "public_key_service_cloud_run" {
 
 # URL Map creates Load balancer to Cloud Functions
 resource "google_compute_url_map" "get_public_key_loadbalancer" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count           = local.use_cloud_function ? 1 : 0
   project         = var.project_id
   name            = "${var.environment}-get-public-key-loadbalancer"
   default_service = google_compute_backend_service.get_public_key_loadbalancer_backend[0].id
@@ -123,16 +120,14 @@ resource "google_compute_url_map" "get_public_key_loadbalancer" {
 
 # URL Map creates Load balancer to Cloud Run
 resource "google_compute_url_map" "public_key_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
   project         = var.project_id
   name            = "${var.environment}-public-key-service-cloud-run"
-  default_service = google_compute_backend_service.public_key_service_cloud_run[0].id
+  default_service = google_compute_backend_service.public_key_service_cloud_run.id
 }
 
 # Proxy to loadbalancer for Cloud Functions. HTTP without custom domain
 resource "google_compute_target_http_proxy" "get_public_key_loadbalancer_proxy" {
-  count = !(var.use_cloud_run || var.enable_domain_management) ? 1 : 0
+  count = !var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-get-public-key-proxy"
@@ -141,7 +136,7 @@ resource "google_compute_target_http_proxy" "get_public_key_loadbalancer_proxy" 
 
 # Proxy to loadbalancer for Cloud Functions. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "get_public_key_loadbalancer_proxy" {
-  count = !var.use_cloud_run && var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-get-public-key-proxy"
@@ -154,39 +149,46 @@ resource "google_compute_target_https_proxy" "get_public_key_loadbalancer_proxy"
 
 # Proxy to loadbalancer for Cloud Run. HTTP without custom domain
 resource "google_compute_target_http_proxy" "public_key_service_cloud_run" {
-  count = var.use_cloud_run && !var.enable_domain_management ? 1 : 0
+  count = !var.enable_domain_management ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-public-key-service-cloud-run"
-  url_map = google_compute_url_map.public_key_service_cloud_run[0].id
+  url_map = google_compute_url_map.public_key_service_cloud_run.id
 }
 
 # Proxy to loadbalancer for Cloud Run. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "public_key_service_cloud_run" {
-  count = var.use_cloud_run && var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-public-key-service-cloud-run"
-  url_map = google_compute_url_map.public_key_service_cloud_run[0].id
+  url_map = google_compute_url_map.public_key_service_cloud_run.id
 
   ssl_certificates = [
-    google_compute_managed_ssl_certificate.get_public_key_loadbalancer[0].id
+    google_compute_managed_ssl_certificate.get_public_key_loadbalancer[0].id,
+    google_compute_managed_ssl_certificate.public_key_cloud_run_loadbalancer[0].id
   ]
 }
 
 # Reserve IP address.
 resource "google_compute_global_address" "get_public_key_ip_address" {
+  count   = local.use_cloud_function ? 1 : 0
   project = var.project_id
   name    = "${var.environment}-get-public-key-ip-address"
 }
 
+# Reserve IP address.
+resource "google_compute_global_address" "public_key_cloud_run" {
+  project = var.project_id
+  name    = "${var.environment}-public-key-cloud-run"
+}
+
 # Map IP address and loadbalancer proxy to Cloud Functions
 resource "google_compute_global_forwarding_rule" "get_public_key_loadbalancer_config" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count      = local.use_cloud_function ? 1 : 0
   project    = var.project_id
   name       = "${var.environment}-get-public-key-frontend-configuration"
-  ip_address = google_compute_global_address.get_public_key_ip_address.address
+  ip_address = google_compute_global_address.get_public_key_ip_address[0].address
   port_range = var.enable_domain_management ? "443" : "80"
 
   target = (
@@ -198,12 +200,11 @@ resource "google_compute_global_forwarding_rule" "get_public_key_loadbalancer_co
 
 # Map IP address and loadbalancer proxy to Cloud Run
 resource "google_compute_global_forwarding_rule" "public_key_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
-  project    = var.project_id
-  name       = "${var.environment}-public-key-service-cloud-run"
-  ip_address = google_compute_global_address.get_public_key_ip_address.address
-  port_range = var.enable_domain_management ? "443" : "80"
+  project               = var.project_id
+  name                  = "${var.environment}-public-key-service-cloud-run"
+  ip_address            = google_compute_global_address.public_key_cloud_run.address
+  port_range            = var.enable_domain_management ? "443" : "80"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   target = (
     var.enable_domain_management ?
@@ -223,5 +224,15 @@ resource "google_compute_managed_ssl_certificate" "get_public_key_loadbalancer" 
 
   managed {
     domains = concat([var.public_key_domain], var.public_key_service_alternate_domain_names)
+  }
+}
+
+resource "google_compute_managed_ssl_certificate" "public_key_cloud_run_loadbalancer" {
+  count   = var.enable_domain_management ? 1 : 0
+  project = var.project_id
+  name    = "${var.environment}-public-key-cloud-run-cert"
+
+  managed {
+    domains = [var.public_key_cloud_run_domain]
   }
 }

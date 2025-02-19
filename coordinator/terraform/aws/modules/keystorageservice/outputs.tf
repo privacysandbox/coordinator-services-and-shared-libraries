@@ -63,3 +63,7 @@ output "create_key_lambda_cloudwatch_log_group_name" {
 output "get_data_key_lambda_cloudwatch_log_group_name" {
   value = aws_cloudwatch_log_group.get_data_key_lambda_cloudwatch.name
 }
+
+output "key_sync_assume_role_arn" {
+  value = one(aws_iam_role.key_sync_role[*].arn)
+}

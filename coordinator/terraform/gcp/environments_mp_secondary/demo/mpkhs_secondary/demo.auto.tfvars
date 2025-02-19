@@ -25,6 +25,18 @@ key_storage_service_cloudfunction_memory_mb    = 1024
 encryption_key_service_zip = "../../../jars/EncryptionKeyServiceHttpCloudFunctionDeploy.zip"
 key_storage_service_zip    = "../../../jars/KeyStorageServiceHttpCloudFunctionDeploy.zip"
 
+private_key_service_image = "<url_to_private_key_service_image>"
+private_key_service_custom_audiences = [
+  "<Service URLs for the private key cloud function service>"
+]
+key_storage_service_image = "<url_to_key_storage_service_image>"
+key_storage_service_custom_audiences = [
+  "<Service URLs for the key storage cloud function service>"
+]
+# To use cloud run services for public and private key service as opposed to
+# cloud functions
+use_cloud_run = true
+
 enable_domain_management   = true
 parent_domain_name         = "<domain name from domainrecordsetup>"
 parent_domain_name_project = "<project_id from domainrecordsetup>"

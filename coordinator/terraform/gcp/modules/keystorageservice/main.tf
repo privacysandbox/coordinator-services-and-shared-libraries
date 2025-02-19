@@ -24,6 +24,7 @@ terraform {
 locals {
   key_storage_package_zip = var.key_storage_service_zip
   cloud_run_name          = "key-storage-service"
+  use_cloud_function      = local.key_storage_package_zip != null
 }
 
 module "version" {
@@ -38,16 +39,15 @@ resource "google_service_account" "key_storage_service_account" {
 }
 
 resource "google_storage_bucket_object" "key_storage_archive" {
-  count = !var.use_cloud_run ? 1 : 0
   # Need hash in name so cloudfunction knows to redeploy when code changes
+  count  = local.use_cloud_function ? 1 : 0
   name   = "${var.environment}_key_storage_${filesha256(local.key_storage_package_zip)}"
   bucket = var.package_bucket_name
   source = local.key_storage_package_zip
 }
 
 resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count       = local.use_cloud_function ? 1 : 0
   project     = var.project_id
   name        = "${var.environment}-${var.region}-${var.key_storage_cloudfunction_name}"
   location    = var.region
@@ -72,16 +72,21 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
     service_account_email = google_service_account.key_storage_service_account.email
     ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
-      PROJECT_ID          = var.project_id
-      GCP_KMS_URI         = "gcp-kms://${var.key_encryption_key_id}"
-      SPANNER_INSTANCE    = var.spanner_instance_name
-      SPANNER_DATABASE    = var.spanner_database_name
-      VERSION             = module.version.version
-      LOG_EXECUTION_ID    = "true"
-      EXPORT_OTEL_METRICS = var.export_otel_metrics
-      AWS_XC_ENABLED      = var.aws_xc_enabled ? "true" : null
-      AWS_KMS_URI         = var.aws_xc_enabled ? "aws-kms://${var.aws_kms_key_encryption_key_arn}" : null
-      AWS_KMS_ROLE_ARN    = var.aws_xc_enabled ? var.aws_kms_key_encryption_key_role_arn : null
+      PROJECT_ID                    = var.project_id
+      GCP_KMS_URI                   = "gcp-kms://${var.key_encryption_key_id}"
+      SPANNER_INSTANCE              = var.spanner_instance_name
+      SPANNER_DATABASE              = var.spanner_database_name
+      VERSION                       = module.version.version
+      LOG_EXECUTION_ID              = "true"
+      EXPORT_OTEL_METRICS           = var.export_otel_metrics
+      AWS_XC_ENABLED                = var.aws_xc_enabled ? "true" : null
+      AWS_KMS_URI                   = var.aws_xc_enabled ? "aws-kms://${var.aws_kms_key_encryption_key_arn}" : null
+      AWS_KMS_ROLE_ARN              = var.aws_xc_enabled ? var.aws_kms_key_encryption_key_role_arn : null
+      AWS_KEY_SYNC_ENABLED          = var.aws_key_sync_enabled ? "true" : null
+      AWS_KEY_SYNC_ROLE_ARN         = var.aws_key_sync_enabled ? var.aws_key_sync_role_arn : null
+      AWS_KEY_SYNC_KMS_KEY_URI      = var.aws_key_sync_enabled ? "aws-kms://${var.aws_key_sync_kms_key_uri}" : null
+      AWS_KEY_SYNC_KEYDB_REGION     = var.aws_key_sync_enabled ? var.aws_key_sync_keydb_region : null
+      AWS_KEY_SYNC_KEYDB_TABLE_NAME = var.aws_key_sync_enabled ? var.aws_key_sync_keydb_table_name : null
     }
   }
 
@@ -107,7 +112,7 @@ resource "google_spanner_database_iam_member" "keydb_iam_policy" {
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
-  for_each = !var.use_cloud_run ? setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : []) : toset([])
+  for_each = local.use_cloud_function ? setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : []) : []
 
   project  = var.project_id
   location = google_cloudfunctions2_function.key_storage_cloudfunction[0].location
@@ -119,8 +124,6 @@ resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
 
 # Cloud Run Service for Key Storage Service.
 resource "google_cloud_run_v2_service" "key_storage_service" {
-  count = var.use_cloud_run ? 1 : 0
-
   project  = var.project_id
   name     = "${var.environment}-${var.region}-${local.cloud_run_name}"
   location = var.region
@@ -162,6 +165,26 @@ resource "google_cloud_run_v2_service" "key_storage_service" {
         name  = "AWS_KMS_ROLE_ARN"
         value = var.aws_xc_enabled ? var.aws_kms_key_encryption_key_role_arn : null
       }
+      env {
+        name  = "AWS_KEY_SYNC_ENABLED"
+        value = var.aws_key_sync_enabled ? "true" : null
+      }
+      env {
+        name  = "AWS_KEY_SYNC_ROLE_ARN"
+        value = var.aws_key_sync_enabled ? var.aws_key_sync_role_arn : null
+      }
+      env {
+        name  = "AWS_KEY_SYNC_KMS_KEY_URI"
+        value = var.aws_key_sync_enabled ? "aws-kms://${var.aws_key_sync_kms_key_uri}" : null
+      }
+      env {
+        name  = "AWS_KEY_SYNC_KEYDB_REGION"
+        value = var.aws_key_sync_enabled ? var.aws_key_sync_keydb_region : null
+      }
+      env {
+        name  = "AWS_KEY_SYNC_KEYDB_TABLE_NAME"
+        value = var.aws_key_sync_enabled ? var.aws_key_sync_keydb_table_name : null
+      }
 
       resources {
         limits = {
@@ -193,11 +216,11 @@ resource "google_cloud_run_v2_service" "key_storage_service" {
 
 # IAM entry to invoke the cloud run service.
 resource "google_cloud_run_service_iam_member" "key_storage_service" {
-  for_each = var.use_cloud_run ? setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : []) : toset([])
+  for_each = setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : [])
 
   project  = var.project_id
-  location = google_cloud_run_v2_service.key_storage_service[0].location
-  service  = google_cloud_run_v2_service.key_storage_service[0].name
+  location = google_cloud_run_v2_service.key_storage_service.location
+  service  = google_cloud_run_v2_service.key_storage_service.name
 
   role   = "roles/run.invoker"
   member = each.key

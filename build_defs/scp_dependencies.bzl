@@ -37,11 +37,11 @@ load("//build_defs/shared:google_cloud_sdk.bzl", "google_cloud_sdk")
 load("//build_defs/shared:google_java_format.bzl", "google_java_format")
 load("//build_defs/shared:grpc.bzl", "grpc")
 load("//build_defs/shared:packer.bzl", "packer")
+load("//build_defs/shared:platforms.bzl", "platforms")
 load("//build_defs/shared:protobuf.bzl", "protobuf")
 load("//build_defs/shared:protobuf_javascript.bzl", "protobuf_javascript")
 load("//build_defs/shared:rpm.bzl", "rpm")
 load("//build_defs/shared:terraform.bzl", "terraform")
-load("//build_defs/shared:platforms.bzl", "platforms")
 
 def scp_dependencies(protobuf_version, protobuf_repo_hash):
     absl()

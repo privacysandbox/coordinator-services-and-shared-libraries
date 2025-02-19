@@ -24,6 +24,7 @@ terraform {
 locals {
   cloudfunction_name_suffix = "get-public-key-cloudfunction"
   cloudfunction_package_zip = var.get_public_key_service_zip
+  use_cloud_function        = local.cloudfunction_package_zip != null
   cloud_run_name            = "public-key-service"
 }
 
@@ -32,8 +33,8 @@ module "version" {
 }
 
 resource "google_storage_bucket_object" "get_public_key_package_bucket_object" {
-  count = !var.use_cloud_run ? 1 : 0
   # Need hash in name so cloudfunction knows to redeploy when code changes
+  count  = local.use_cloud_function ? 1 : 0
   name   = "${var.environment}_${local.cloudfunction_name_suffix}_${filesha256(local.cloudfunction_package_zip)}"
   bucket = var.package_bucket_name
   source = local.cloudfunction_package_zip
@@ -57,7 +58,7 @@ resource "google_spanner_database_iam_member" "get_public_key_spannerdb_iam_poli
 }
 
 resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
-  for_each = !var.use_cloud_run ? var.regions : []
+  for_each = local.use_cloud_function ? var.regions : []
 
   project  = var.project_id
   name     = "${var.environment}-${each.key}-${local.cloudfunction_name_suffix}"
@@ -107,7 +108,7 @@ resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "get_public_key_iam_policy" {
-  for_each = !var.use_cloud_run ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
+  for_each = local.use_cloud_function ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
 
   project  = var.project_id
   location = each.value.location
@@ -127,7 +128,7 @@ resource "google_project_iam_member" "get_public_key_service_monitoring_iam_poli
 
 # Cloud Run Service to serve public keys.
 resource "google_cloud_run_v2_service" "public_key_service" {
-  for_each = var.use_cloud_run ? var.regions : []
+  for_each = var.regions
 
   project  = var.project_id
   name     = "${var.environment}-${each.key}-${local.cloud_run_name}"
@@ -188,7 +189,7 @@ resource "google_cloud_run_v2_service" "public_key_service" {
 
 # IAM entry to invoke the cloud run service.
 resource "google_cloud_run_service_iam_member" "public_key_service" {
-  for_each = var.use_cloud_run ? google_cloud_run_v2_service.public_key_service : {}
+  for_each = google_cloud_run_v2_service.public_key_service
 
   project  = var.project_id
   location = each.value.location

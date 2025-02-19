@@ -25,6 +25,10 @@ resource "aws_kms_key" "key_encryption_key" {
   description         = "${var.environment}-key-encryption-key"
   enable_key_rotation = true
   multi_region        = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_kms_alias" "key_encryption_key_alias" {

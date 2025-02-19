@@ -72,7 +72,7 @@ java_library(
 java_binary(
     name = "AwsChangeHandlerLambda",
     resources = [
-        "//licenses/THIRD_PARTY_NOTICES/aws_aws_change_handler_lambda:licenses",
+        "//licenses/THIRD_PARTY_NOTICES/aws_AwsChangeHandlerLambdaDeploy:licenses",
     ],
     runtime_deps = [
         ":aws",
@@ -100,7 +100,7 @@ pkg_files(
 java_binary(
     name = "AwsFrontendCleanupLambda",
     resources = [
-        "//licenses/THIRD_PARTY_NOTICES/aws_aws_frontend_cleanup_handler_lambda:licenses",
+        "//licenses/THIRD_PARTY_NOTICES/aws_AwsFrontendCleanupLambdaDeploy:licenses",
     ],
     runtime_deps = [
         ":aws",

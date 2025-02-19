@@ -27,6 +27,15 @@ encryption_key_service_cloudfunction_memory_mb = 1024
 get_public_key_service_zip = "../../../jars/PublicKeyServiceHttpCloudFunctionDeploy.zip"
 encryption_key_service_zip = "../../../jars/EncryptionKeyServiceHttpCloudFunctionDeploy.zip"
 
+public_key_service_image  = "<url_to_public_key_service_image>"
+private_key_service_image = "<url_to_private_key_service_image>"
+private_key_service_custom_audiences = [
+  "<Service URLs for the private key cloud function service>"
+]
+# To use cloud run services for public and private key service as opposed to
+# cloud functions
+use_cloud_run = true
+
 # Multi region location
 # https://cloud.google.com/storage/docs/locations
 mpkhs_package_bucket_location = "US"
@@ -49,7 +58,10 @@ key_generation_tee_allowed_sa = "<output from mpkhs_secondary in secondary coord
 
 key_storage_service_base_url = "<output from key_storage_base_url in secondary coordinator>"
 
-key_storage_service_cloudfunction_url = "<output from key_storage_cloudfunction_url in secondary coordinator>"
+# Use this when use_cloud_run = false
+# key_storage_service_cloudfunction_url = "<output from key_storage_cloudfunction_url in secondary coordinator>"
+
+key_storage_service_cloudfunction_url = "<dns name for key_storage_service>"
 
 peer_coordinator_kms_key_uri = "<output from key_encryption_key_id in secondary coordinator>"
 

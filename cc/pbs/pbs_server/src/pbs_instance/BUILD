@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cloud_platform_copts = select({
     "//cc:cloud_platform_gcp": [
@@ -74,7 +74,6 @@ cc_library(
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
         "//cc/core/common/global_logger/src:global_logger_lib",
         "//cc/core/config_provider/src:config_provider_lib",
-        "//cc/core/curl_client/src:http1_curl_client_lib",
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/http2_server/src:core_http2_server_lib",
         "//cc/core/interface:interface_lib",

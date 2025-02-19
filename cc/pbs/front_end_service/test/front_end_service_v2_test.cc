@@ -211,10 +211,6 @@ void InsertCommonHeaders(
   http_context.request->headers = std::make_shared<HttpHeaders>();
   http_context.request->headers->insert(
       {std::string(kTransactionIdHeader), std::string(transaction_id)});
-  http_context.request->headers->insert(
-      {std::string(kTransactionSecretHeader), std::string(secret)});
-  http_context.request->headers->insert(
-      {std::string(kTransactionLastExecutionTimestampHeader), "123"});
   http_context.request->auth_context.authorized_domain =
       std::make_shared<std::string>(autorized_domain);
   http_context.request->headers->insert(
@@ -574,9 +570,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
   ASSERT_TRUE(has_captured);
   EXPECT_TRUE(captured_http_context.result)
       << core::GetErrorMessage(captured_http_context.result.status_code);
-  EXPECT_TRUE(captured_http_context.response->headers->find(
-                  kTransactionLastExecutionTimestampHeader) !=
-              captured_http_context.response->headers->end());
 
   ASSERT_EQ(captured_consume_budgets_context.request->budgets.size(), 2);
   EXPECT_EQ(
@@ -736,9 +729,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
   EXPECT_FALSE(captured_http_context.result);
   EXPECT_EQ(captured_http_context.result.status_code,
             SC_CONSUME_BUDGET_EXHAUSTED);
-  EXPECT_TRUE(captured_http_context.response->headers->find(
-                  kTransactionLastExecutionTimestampHeader) ==
-              captured_http_context.response->headers->end());
   EXPECT_EQ(captured_http_context.response->body.ToString(),
             kBudgetExhaustedResponseBody);
 }
@@ -855,9 +845,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
   EXPECT_FALSE(captured_http_context.result);
   EXPECT_EQ(captured_http_context.result.status_code,
             errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
-  EXPECT_TRUE(captured_http_context.response->headers->find(
-                  kTransactionLastExecutionTimestampHeader) ==
-              captured_http_context.response->headers->end());
 }
 
 TEST(FrontEndServiceV2Test, TestCommitTransaction) {

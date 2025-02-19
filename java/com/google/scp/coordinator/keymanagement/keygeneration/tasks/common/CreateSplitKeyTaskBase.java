@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateSplitKeyTaskBase.class);
+
   private static final int KEY_SERVICE_MAX_RETRY = 5;
 
   protected final Aead keyEncryptionKeyAead;
@@ -90,26 +91,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     this.keyStorageClient = keyStorageClient;
     this.keyIdFactory = keyIdFactory;
   }
-
-  /**
-   * Encrypts a key split for Coordinator B and returns it as an Encrypted key. Optionally use
-   * dataKey to encrypt.
-   *
-   * @throws ServiceException in case of encryption errors.
-   */
-  protected abstract String encryptPeerCoordinatorSplit(
-      ByteString keySplit, Optional<DataKey> dataKey, String publicKey) throws ServiceException;
-
-  /**
-   * Takes in an encrypted KeySplit for Coordinator B and an unsignedKey to send to the KeyStorage
-   * service for database storage and verification respectively. Returns an EncryptionKey with the
-   * keystorage response. Optionally creates a key with a dataKey.
-   *
-   * @throws ServiceException in case of key storage errors.
-   */
-  protected abstract EncryptionKey sendKeySplitToPeerCoordinator(
-      EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<DataKey> dataKey)
-      throws ServiceException;
 
   /**
    * Counts the number of active keys in the KeyDB and creates enough keys to both replace any keys
@@ -287,22 +268,10 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           "Sent key " + unsignedCoordinatorBKey.getKeyId() + " to peer coordinator successfully.");
 
       // Accumulate signatures and store to KeyDB
-      EncryptionKey signedCoordinatorAKey =
-          unsignedCoordinatorAKey.toBuilder()
-              // Need to clear KeySplitData before adding the combined KeySplitData list.
-              .clearKeySplitData()
-              .addAllKeySplitData(
-                  combineKeySplitData(
-                      partyBResponse.getKeySplitDataList(),
-                      unsignedCoordinatorAKey.getKeySplitDataList()))
-              .build();
-
-      // Note: We want to store the keys as they are generated and signed.
-      keyDb.createKey(signedCoordinatorAKey, true);
+      String persistedKeyId = signAndPersistKey(keyDb, unsignedCoordinatorAKey, partyBResponse);
       LOGGER.info(
           String.format(
-              "Updated placeholder key %s to persistent key successfully.",
-              signedCoordinatorAKey.getKeyId()));
+              "Updated placeholder key %s to persistent key successfully.", persistedKeyId));
     } catch (ServiceException e) {
       LOGGER.warn(
           "Failed to send key in peer coordinator or update placeholder key to persistent key due"
@@ -315,6 +284,254 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         LOGGER.info("Retry sending/creating key. Current retry count: " + keyServiceRetryCount);
         createSplitKeyBase(
             validityInDays, ttlInDays, activation, dataKey, keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when sending key to peer coordinator.");
+      throw e;
+    }
+  }
+
+  /**
+   * GCP key generation with key sync to AWS. Performs encryption key generation and splitting, key
+   * storage request, and database persistence with signatures to both GCP and AWS Key Database.
+   * Coordinator B encryption and key storage creation are handled by abstract methods implemented
+   * in each cloud provider.
+   *
+   * <p>NOTE: The following method is of limited time use during the AWS cross-cloud coordinator
+   * migration.
+   *
+   * @param activation the instant when the key should be active for encryption.
+   * @param dataKey Passed to encryptPeerCoordinatorSplit and sendKeySplitToPeerCoordinator as
+   *     needed for each cloud provider.
+   * @param keySyncKmsUri AWS KMS URI used to wrap private key as part of key sync.
+   * @param keySyncAead AWS KMS AEAD used to wrap private key as part of key sync.
+   * @param keySyncDb AWS DynamoDB instance used to persist key as part of key sync.
+   */
+  protected final void createSplitKeyWithAwsKeySyncBase(
+      int count,
+      int validityInDays,
+      int ttlInDays,
+      Instant activation,
+      Optional<DataKey> dataKey,
+      String keySyncKmsUri,
+      Aead keySyncAead,
+      KeyDb keySyncDb)
+      throws ServiceException {
+    LOGGER.info("Running under key sync mode..");
+    LOGGER.info(String.format("Trying to generate %d keys.", count));
+    for (int i = 0; i < count; i++) {
+      createSplitKeyWithAwsKeySyncBase(
+          validityInDays, ttlInDays, activation, dataKey, keySyncKmsUri, keySyncAead, keySyncDb, 0);
+    }
+    LOGGER.info(
+        String.format("Successfully generated %s keys to be active on %s.", count, activation));
+  }
+
+  private void createSplitKeyWithAwsKeySyncBase(
+      int validityInDays,
+      int ttlInDays,
+      Instant activation,
+      Optional<DataKey> dataKey,
+      String keySyncKmsUri,
+      Aead keySyncAead,
+      KeyDb keySyncDb,
+      int keyServiceRetryCount)
+      throws ServiceException {
+    // 1. Try remove all placeholder keys in keyDb first before creating keys.
+    try {
+      removePlaceholderKeys(keyDb);
+    } catch (ServiceException e) {
+      LOGGER.warn("Error when removing placeholder keys.\n" + e.getErrorReason());
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info(
+            "Retry removing placeholder keys. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyWithAwsKeySyncBase(
+            validityInDays,
+            ttlInDays,
+            activation,
+            dataKey,
+            keySyncKmsUri,
+            keySyncAead,
+            keySyncDb,
+            keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when removing placeholder keys.");
+      throw e;
+    }
+
+    // 2. Generate the key splits and encrypt the splits using both GCP and AWS KMS.
+    Instant creationTime = Instant.now();
+    EncryptionKey unsignedCoordinatorAKey;
+    EncryptionKey unsignedAwsCoordinatorAKey;
+    EncryptionKey unsignedCoordinatorBKey;
+    String encryptedKeySplitB;
+    try {
+      var keyTemplate = KeyParams.getDefaultKeyTemplate();
+      KeysetHandle privateKeysetHandle = KeysetHandle.generateNew(keyTemplate);
+      KeysetHandle publicKeysetHandle = privateKeysetHandle.getPublicKeysetHandle();
+
+      ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(privateKeysetHandle, 2);
+      String nextKeyId = keyIdFactory.getNextKeyId(keyDb);
+      EncryptionKey key =
+          buildEncryptionKey(
+              nextKeyId,
+              creationTime,
+              activation,
+              validityInDays,
+              ttlInDays,
+              publicKeysetHandle,
+              keyEncryptionKeyUri,
+              signatureKey);
+      unsignedCoordinatorAKey =
+          createCoordinatorAKey(keySplits.get(0), key, keyEncryptionKeyAead, keyEncryptionKeyUri);
+      EncryptionKey awsKey =
+          buildEncryptionKey(
+              nextKeyId,
+              creationTime,
+              activation,
+              validityInDays,
+              ttlInDays,
+              publicKeysetHandle,
+              keySyncKmsUri,
+              signatureKey);
+      unsignedAwsCoordinatorAKey =
+          createCoordinatorAKey(keySplits.get(0), awsKey, keySyncAead, keySyncKmsUri);
+      unsignedCoordinatorBKey = createCoordinatorBKey(key);
+
+      encryptedKeySplitB =
+          encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
+    } catch (GeneralSecurityException | IOException | ServiceException e) {
+      String msg = "Error generating keys.";
+      LOGGER.warn(msg + "\n" + e.getMessage());
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry generating keys. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyWithAwsKeySyncBase(
+            validityInDays,
+            ttlInDays,
+            activation,
+            dataKey,
+            keySyncKmsUri,
+            keySyncAead,
+            keySyncDb,
+            keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when generating keys.");
+      throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);
+    }
+
+    // 3. Reserve placeholder entry in the GCP keyDB of the cross-cloud coordinators.
+    try {
+      // Reserve the key ID with a placeholder key that's not valid yet. Will be made valid at a
+      // later step once key-split is successfully delivered to coordinator B.
+      LOGGER.info("Generating the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
+      keyDb.createKey(
+          unsignedCoordinatorAKey.toBuilder()
+              // Setting activation_time to expiration_time such that the key is invalid for now.
+              .setActivationTime(unsignedCoordinatorAKey.getExpirationTime())
+              .build(),
+          false);
+    } catch (ServiceException e) {
+      LOGGER.warn("Failed to insert placeholder key due to database error: " + e.getErrorReason());
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry creating key. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyWithAwsKeySyncBase(
+            validityInDays,
+            ttlInDays,
+            activation,
+            dataKey,
+            keySyncKmsUri,
+            keySyncAead,
+            keySyncDb,
+            keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when inserting placeholder key.");
+      throw e;
+    }
+
+    // 4. Send valid key split to Coordinator B create key service.
+    EncryptionKey partyBResponse;
+    try {
+      partyBResponse =
+          sendKeySplitToPeerCoordinator(unsignedCoordinatorBKey, encryptedKeySplitB, dataKey);
+      LOGGER.info(
+          "Sent key " + unsignedCoordinatorBKey.getKeyId() + " to peer coordinator successfully.");
+    } catch (ServiceException e) {
+      LOGGER.warn("Failed to send key to peer coordinator due to: " + e.getErrorReason());
+      LOGGER.info("Deleting the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
+      keyDb.deleteKey(unsignedCoordinatorAKey.getKeyId());
+
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry sending/creating key. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyWithAwsKeySyncBase(
+            validityInDays,
+            ttlInDays,
+            activation,
+            dataKey,
+            keySyncKmsUri,
+            keySyncAead,
+            keySyncDb,
+            keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when sending key to peer coordinator.");
+      throw e;
+    }
+
+    // 5. Encrypt and sign key split A with the AWS key sync KMS key and store to DynamoDB
+    try {
+      String persistedKeyId =
+          signAndPersistKey(keySyncDb, unsignedAwsCoordinatorAKey, partyBResponse);
+      LOGGER.info(
+          String.format("Successfully persisted key to Type-A DynamoDB KeyDB: %s", persistedKeyId));
+    } catch (ServiceException e) {
+      LOGGER.warn("Failed to persist key to Type-A DynamoDB KeyDB: " + e.getErrorReason());
+      LOGGER.info("Deleting the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
+      keyDb.deleteKey(unsignedCoordinatorAKey.getKeyId());
+
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry sending/creating key. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyWithAwsKeySyncBase(
+            validityInDays,
+            ttlInDays,
+            activation,
+            dataKey,
+            keySyncKmsUri,
+            keySyncAead,
+            keySyncDb,
+            keyServiceRetryCount + 1);
+        return;
+      }
+      LOGGER.error("Retries exhausted when sending key to peer coordinator.");
+      throw e;
+    }
+
+    // 6. Encrypt and sign split A with the xC GCP KMS, update the placeholder key and finalize key
+    // generation.
+    try {
+      String persistedKeyId = signAndPersistKey(keyDb, unsignedCoordinatorAKey, partyBResponse);
+      LOGGER.info(
+          String.format(
+              "Updated placeholder key %s to persistent key successfully.", persistedKeyId));
+    } catch (ServiceException e) {
+      LOGGER.warn(
+          "Failed to update placeholder key during key persistence due to: " + e.getErrorReason());
+      LOGGER.info("Deleting the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
+      keyDb.deleteKey(unsignedCoordinatorAKey.getKeyId());
+
+      if (keyServiceRetryCount < KEY_SERVICE_MAX_RETRY) {
+        LOGGER.info("Retry sending/creating key. Current retry count: " + keyServiceRetryCount);
+        createSplitKeyWithAwsKeySyncBase(
+            validityInDays,
+            ttlInDays,
+            activation,
+            dataKey,
+            keySyncKmsUri,
+            keySyncAead,
+            keySyncDb,
+            keyServiceRetryCount + 1);
         return;
       }
       LOGGER.error("Retries exhausted when sending key to peer coordinator.");
@@ -336,15 +553,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         .setJsonEncodedKeyset(encryptedKeySplitA)
         .setKeyEncryptionKeyUri(keyEncryptionKeyUri)
         .build();
-  }
-
-  /**
-   * Create unsigned EncryptionKey for Coordinator B, to send to Coordinator B in the Create Key
-   * service.
-   */
-  private static EncryptionKey createCoordinatorBKey(EncryptionKey key)
-      throws GeneralSecurityException, IOException {
-    return key.toBuilder().setJsonEncodedKeyset("").setKeyEncryptionKeyUri("").build();
   }
 
   /**
@@ -388,6 +596,35 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   }
 
   /**
+   * Create unsigned EncryptionKey for Coordinator B, to send to Coordinator B in the Create Key
+   * service.
+   */
+  private static EncryptionKey createCoordinatorBKey(EncryptionKey key)
+      throws GeneralSecurityException, IOException {
+    return key.toBuilder().setJsonEncodedKeyset("").setKeyEncryptionKeyUri("").build();
+  }
+
+  /**
+   * Encrypts a key split for Coordinator B and returns it as an Encrypted key. Optionally use
+   * dataKey to encrypt.
+   *
+   * @throws ServiceException in case of encryption errors.
+   */
+  protected abstract String encryptPeerCoordinatorSplit(
+      ByteString keySplit, Optional<DataKey> dataKey, String publicKey) throws ServiceException;
+
+  /**
+   * Takes in an encrypted KeySplit for Coordinator B and an unsignedKey to send to the KeyStorage
+   * service for database storage and verification respectively. Returns an EncryptionKey with the
+   * keystorage response. Optionally creates a key with a dataKey.
+   *
+   * @throws ServiceException in case of key storage errors.
+   */
+  protected abstract EncryptionKey sendKeySplitToPeerCoordinator(
+      EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<DataKey> dataKey)
+      throws ServiceException;
+
+  /**
    * Combine two {@link KeySplitData} lists into a single list. If two {@link KeySplitData} have the
    * same {@code keySplitKeyEncryptionUri}, only keep one arbitrary one.
    */
@@ -414,5 +651,23 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     }
     LOGGER.info(
         "Successfully removed all placeholder keys or no placeholder keys were found in Db.");
+  }
+
+  private static String signAndPersistKey(
+      KeyDb keyDb, EncryptionKey unsignedKey, EncryptionKey partyBResponse)
+      throws ServiceException {
+    EncryptionKey signedKey = signCoordinatorKeyWithPeerResponse(unsignedKey, partyBResponse);
+    keyDb.createKey(signedKey, true);
+    return signedKey.getKeyId();
+  }
+
+  private static EncryptionKey signCoordinatorKeyWithPeerResponse(
+      EncryptionKey unsignedKey, EncryptionKey peerResponse) {
+    return unsignedKey.toBuilder()
+        .clearKeySplitData()
+        .addAllKeySplitData(
+            combineKeySplitData(
+                peerResponse.getKeySplitDataList(), unsignedKey.getKeySplitDataList()))
+        .build();
   }
 }

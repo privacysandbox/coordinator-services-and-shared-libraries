@@ -50,3 +50,23 @@ output "encryption_key_signature_key_arn" {
   description = "Key associated with this coordinator used to sign public key material."
   value       = module.multipartykeyhosting_primary.encryption_key_signature_key_arn
 }
+
+output "key_sync_assume_role_arn" {
+  description = "ARN of the AWS role to be assumed for cross-cloud key sync."
+  value       = module.multipartykeyhosting_primary.key_sync_assume_role_arn
+}
+
+output "key_sync_kms_key_uri" {
+  description = "URI of the AWS KMS key used to wrap legacy AWS private keys."
+  value       = module.multipartykeyhosting_primary.kms_key_arn
+}
+
+output "key_sync_keydb_region" {
+  description = "Region of the Dynamodb KeyDB table for key sync writes."
+  value       = module.multipartykeyhosting_primary.key_sync_keydb_region
+}
+
+output "key_sync_keydb_table_name" {
+  description = "Table name of the Dynamodb KeyDB for key sync writes."
+  value       = module.multipartykeyhosting_primary.key_sync_keydb_table_name
+}

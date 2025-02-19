@@ -81,7 +81,7 @@ com_google_api_gax_java_repositories()
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 load("//build_defs/shared:java_grpc.bzl", "GAPIC_GENERATOR_JAVA_VERSION")
 
-JACKSON_VERSION = "2.15.2"
+JACKSON_VERSION = "2.16.1"
 
 AUTO_VALUE_VERSION = "1.7.4"
 
@@ -137,32 +137,29 @@ maven_install(
         "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.code.gson:gson:2.8.9",
-        "com.google.cloud:google-cloud-kms:2.10.0",
-        "com.google.cloud:google-cloud-pubsub:1.122.2",
-        "com.google.cloud:google-cloud-storage:2.13.1",
-        "com.google.cloud:google-cloud-spanner:6.74.1",
-        "com.google.cloud:google-cloud-secretmanager:2.7.0",
-        "com.google.cloud:google-cloud-compute:1.17.0",
-        "com.google.api.grpc:proto-google-cloud-compute-v1:1.17.0",
+        "com.google.cloud:google-cloud-kms:2.60.0",
+        "com.google.cloud:google-cloud-pubsub:1.136.1",
+        "com.google.cloud:google-cloud-storage:2.48.0",
+        "com.google.cloud:google-cloud-spanner:6.86.0",
+        "com.google.cloud:google-cloud-secretmanager:2.57.0",
+        "com.google.cloud:google-cloud-compute:1.67.0",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.67.0",
         "com.google.cloud.functions.invoker:java-function-invoker:" + CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION,
-        "com.google.auth:google-auth-library-oauth2-http:1.11.0",
-        "com.google.cloud.functions:functions-framework-api:1.0.4",
+        "com.google.auth:google-auth-library-oauth2-http:1.31.0",
+        "com.google.cloud.functions:functions-framework-api:1.1.4",
         "commons-logging:commons-logging:1.1.1",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
-        "com.google.http-client:google-http-client-jackson2:1.40.0",
+        "com.google.http-client:google-http-client-jackson2:1.45.3",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
-        "com.google.cloud:google-cloud-monitoring:3.8.0",
-        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.8.0",
+        "com.google.cloud:google-cloud-monitoring:3.58.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.58.0",
         "com.google.api.grpc:proto-google-common-protos:2.9.2",
-        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.guava:guava:33.3.1-jre",
         "com.google.guava:guava-testlib:32.1.3-jre",
         "com.google.inject:guice:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.google.jimfs:jimfs:1.2",
-        "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
-        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.testparameterinjector:test-parameter-injector:1.1",
         "com.google.truth.extensions:truth-java8-extension:1.1.2",
         "com.google.truth.extensions:truth-proto-extension:1.4.4",
@@ -219,7 +216,8 @@ maven_install(
         "io.grpc:grpc-netty:1.63.0",
         "com.google.crypto.tink:tink:1.11.0",
         "com.google.crypto.tink:tink-gcpkms:1.10.0",
-        "com.google.oauth-client:google-oauth-client:1.34.1",
+        "com.google.oauth-client:google-oauth-client:1.37.0",
+        "com.google.cloud:google-cloud-iamcredentials:2.57.0",
     ] + OTEL_ARTIFACTS,
     repositories = [
         "https://repo1.maven.org/maven2",
@@ -502,28 +500,6 @@ http_archive(
     url = "https://github.com/jemalloc/jemalloc/archive/refs/tags/5.3.0.zip",
 )
 
-#########################
-## NodeJS dependencies ##
-#########################
-
-http_archive(
-    name = "build_bazel_rules_nodejs",
-    sha256 = "94070eff79305be05b7699207fbac5d2608054dd53e6109f7d00d923919ff45a",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.2/rules_nodejs-5.8.2.tar.gz"],
-)
-
-load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
-
-build_bazel_rules_nodejs_dependencies()
-
-load("@build_bazel_rules_nodejs//:index.bzl", "npm_install")
-
-npm_install(
-    name = "npm",
-    package_json = "//typescript/coordinator/aws/adtechmanagement:package.json",
-    package_lock_json = "//typescript/coordinator/aws/adtechmanagement:package-lock.json",
-)
-
 #######################
 ## Python dependencies #
 #######################
@@ -560,7 +536,7 @@ pip_parse(
     requirements_lock = "//:python/privacybudget/aws/pbs_auth_handler/requirements.txt",
 )
 
-load("@py3_privacybudget_aws_pbs_auth_handler_deps//:requirements.bzl", "install_deps", py3_privacybudget_aws_pbs_auth_handler_install_deps = "install_deps")
+load("@py3_privacybudget_aws_pbs_auth_handler_deps//:requirements.bzl", py3_privacybudget_aws_pbs_auth_handler_install_deps = "install_deps")
 
 py3_privacybudget_aws_pbs_auth_handler_install_deps()
 
@@ -604,13 +580,5 @@ api_dependencies()
 load("@com_envoyproxy_protoc_gen_validate//:dependencies.bzl", protoc_gen_validate_deps = "go_third_party")
 
 protoc_gen_validate_deps()
-
-#######################
-## rules_esbuild setup #
-#######################
-
-load("@build_bazel_rules_nodejs//toolchains/esbuild:esbuild_repositories.bzl", "esbuild_repositories")
-
-esbuild_repositories(npm_repository = "npm")
 
 # gazelle:repo bazel_gazelle

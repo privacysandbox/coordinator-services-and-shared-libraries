@@ -17,16 +17,6 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "type_def",
-    hdrs = [
-        "type_def.h",
-    ],
-    deps = [
-        "//cc/core/interface:interface_lib",
-    ],
-)
-
-cc_library(
     name = "cpio_errors",
     hdrs = [
         "error_codes.h",

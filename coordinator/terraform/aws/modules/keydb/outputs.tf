@@ -21,3 +21,8 @@ output "key_db_name" {
   description = "The name of the DynamoDB table"
   value       = aws_dynamodb_table.keydb.name
 }
+
+output "key_db_region" {
+  description = "The primary region of the DynamoDB table"
+  value       = data.aws_region.current.name
+}

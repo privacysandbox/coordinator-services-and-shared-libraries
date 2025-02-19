@@ -25,15 +25,43 @@ terraform {
 data "aws_region" "current" {}
 
 locals {
-  region = data.aws_region.current.name
+  region       = data.aws_region.current.name
+  key_env_name = var.environment_prefix != "" ? "${var.environment_prefix}-${var.environment}" : "${var.environment}"
 }
 
 resource "aws_kms_key" "private_key_encryptor" {
-  description         = "${var.environment}_${local.region}_worker_key"
+  description         = "${local.key_env_name}_${local.region}_worker_key"
   enable_key_rotation = true
 }
 
 resource "aws_kms_alias" "private_key_encryptor_alias" {
-  name          = "alias/${var.environment}-${local.region}-worker-kms-key"
+  name          = "alias/${local.key_env_name}-${local.region}-worker-kms-key"
   target_key_id = aws_kms_key.private_key_encryptor.key_id
+}
+
+resource "aws_iam_policy" "kek_key_sync_policy" {
+  count = var.key_sync_service_account_unique_id != "" ? 1 : 0
+  name  = "${var.environment}-kek-key-sync-policy"
+  path  = "/"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        "Action" : [
+          "kms:Encrypt"
+        ]
+        "Resource" : [
+          aws_kms_key.private_key_encryptor.arn
+        ]
+        "Effect" : "Allow"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "kek_key_sync_policy_attachment" {
+  count      = var.key_sync_service_account_unique_id != "" ? 1 : 0
+  role       = "${var.environment}-key-sync-assume-role"
+  policy_arn = one(aws_iam_policy.kek_key_sync_policy[*].arn)
 }

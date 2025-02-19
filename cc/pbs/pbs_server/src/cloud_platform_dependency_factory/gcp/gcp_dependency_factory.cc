@@ -29,9 +29,6 @@
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
-#include "cc/cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
-#include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_provider.h"
-#include "cc/cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
 #include "cc/pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
 #include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
 #include "cc/pbs/interface/configuration_keys.h"
@@ -61,8 +58,6 @@ using ::google::scp::core::OtlpGrpcAuthedMetricExporter;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::TimeDuration;
 using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::cpio::client_providers::GcpAuthTokenProvider;
-using ::google::scp::cpio::client_providers::GcpInstanceClientProvider;
 
 static constexpr char kGcpDependencyProvider[] = "kGCPDependencyProvider";
 
@@ -200,30 +195,8 @@ GcpDependencyFactory::ConstructBudgetConsumptionHelper(
       std::move(*spanner_connection));
 }
 
-std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
-GcpDependencyFactory::ConstructInstanceAuthorizer(
-    std::shared_ptr<core::HttpClientInterface> http1_client) noexcept {
-  return std::make_unique<GcpAuthTokenProvider>(http1_client);
-}
-
-std::unique_ptr<cpio::client_providers::InstanceClientProviderInterface>
-GcpDependencyFactory::ConstructInstanceMetadataClient(
-    std::shared_ptr<core::HttpClientInterface> http1_client,
-    std::shared_ptr<core::HttpClientInterface> http2_client,
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-    std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
-        auth_token_provider) noexcept {
-  std::string container_type;
-  config_provider_->Get(google::scp::pbs::kContainerType, container_type);
-  return std::make_unique<GcpInstanceClientProvider>(
-      auth_token_provider, http1_client, http2_client, container_type);
-}
-
-std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
-    absl::Nullable<std::shared_ptr<
-        cpio::client_providers::InstanceClientProviderInterface>>
-        instance_client_provider) noexcept {
+std::unique_ptr<core::MetricRouter>
+GcpDependencyFactory::ConstructMetricRouter() noexcept {
   auto resource_detector = google::cloud::otel::MakeResourceDetector();
   opentelemetry::sdk::resource::ResourceAttributes resource_attributes = {
       {opentelemetry::sdk::resource::SemanticConventions::kServiceName, "pbs"},
@@ -233,14 +206,10 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
   resource = resource.Merge(
       opentelemetry::sdk::resource::Resource::Create(resource_attributes));
 
-  return this->ConstructMetricRouter(instance_client_provider,
-                                     std::move(resource));
+  return this->ConstructMetricRouter(std::move(resource));
 }
 
 std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
-    absl::Nullable<std::shared_ptr<
-        cpio::client_providers::InstanceClientProviderInterface>>
-        instance_client_provider,
     opentelemetry::sdk::resource::Resource resource) noexcept {
   const std::string exporter_config = GetConfigValue(
       std::string(core::kOtelMetricsExporterKey),

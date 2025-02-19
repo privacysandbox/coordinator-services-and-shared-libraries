@@ -44,3 +44,15 @@ output "peer_coordinator_assume_role_arn" {
 output "encryption_key_signature_key_arn" {
   value = module.keystorageservice.encryption_key_signature_key_arn
 }
+
+output "key_sync_assume_role_arn" {
+  value = module.keystorageservice.key_sync_assume_role_arn
+}
+
+output "key_sync_keydb_region" {
+  value = module.keydb.key_db_region
+}
+
+output "key_sync_keydb_table_name" {
+  value = module.keydb.key_db_name
+}

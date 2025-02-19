@@ -13,11 +13,11 @@
 # limitations under the License.
 
 locals {
-  function_name = !var.use_cloud_run ? google_cloudfunctions2_function.key_storage_cloudfunction[0].name : ""
+  function_name = local.use_cloud_function ? google_cloudfunctions2_function.key_storage_cloudfunction[0].name : null
 }
 
 module "keystorageservice_loadbalancer_alarms" {
-  count  = var.alarms_enabled && !var.use_cloud_run ? 1 : 0
+  count  = var.alarms_enabled && local.use_cloud_function ? 1 : 0
   source = "../shared/loadbalancer_alarms"
 
   project_id              = var.project_id
@@ -33,7 +33,7 @@ module "keystorageservice_loadbalancer_alarms" {
 }
 
 module "keystorageservice_cloudfunction_alarms" {
-  count  = var.alarms_enabled && !var.use_cloud_run ? 1 : 0
+  count  = var.alarms_enabled && local.use_cloud_function ? 1 : 0
   source = "../shared/cloudfunction_alarms"
 
   project_id              = var.project_id
@@ -50,7 +50,7 @@ module "keystorageservice_cloudfunction_alarms" {
 }
 
 module "keystorageservice_monitoring_dashboard" {
-  count  = var.alarms_enabled && !var.use_cloud_run ? 1 : 0
+  count  = var.alarms_enabled && local.use_cloud_function ? 1 : 0
   source = "../shared/cloudfunction_dashboards"
 
   project_id    = var.project_id

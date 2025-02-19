@@ -23,3 +23,7 @@ output "key_generation_enclave_role_arn" {
 output "encryption_key_signature_key_arn" {
   value = var.enable_public_key_signature ? aws_kms_key.encryption_key_signature_key[0].arn : ""
 }
+
+output "key_sync_assume_role_arn" {
+  value = one(aws_iam_role.key_sync_role[*].arn)
+}

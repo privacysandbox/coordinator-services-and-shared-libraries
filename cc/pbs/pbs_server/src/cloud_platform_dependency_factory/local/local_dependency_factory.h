@@ -46,23 +46,7 @@ class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
       google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept
       override;
 
-  std::unique_ptr<cpio::client_providers::AuthTokenProviderInterface>
-  ConstructInstanceAuthorizer(std::shared_ptr<core::HttpClientInterface>
-                                  http1_client) noexcept override;
-
-  std::unique_ptr<cpio::client_providers::InstanceClientProviderInterface>
-  ConstructInstanceMetadataClient(
-      std::shared_ptr<core::HttpClientInterface> http1_client,
-      std::shared_ptr<core::HttpClientInterface> http2_client,
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::AsyncExecutorInterface> io_async_executor,
-      std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
-          auth_token_provider) noexcept override;
-
-  std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
-      absl::Nullable<std::shared_ptr<
-          cpio::client_providers::InstanceClientProviderInterface>>
-          instance_client_provider) noexcept override;
+  std::unique_ptr<core::MetricRouter> ConstructMetricRouter() noexcept override;
 
  private:
   core::ExecutionResult ReadConfigurations();

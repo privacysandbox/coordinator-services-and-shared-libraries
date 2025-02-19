@@ -19,8 +19,7 @@ locals {
 
 # Network Endpoint Group to route to Cloud Functions
 resource "google_compute_region_network_endpoint_group" "key_storage_endpoint_group" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count                 = local.use_cloud_function ? 1 : 0
   project               = var.project_id
   name                  = "${var.environment}-keystoragegroup"
   network_endpoint_type = "SERVERLESS"
@@ -32,22 +31,19 @@ resource "google_compute_region_network_endpoint_group" "key_storage_endpoint_gr
 
 # Network Endpoint Group to route to Cloud Run
 resource "google_compute_region_network_endpoint_group" "key_storage_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
   project               = var.project_id
   name                  = "${var.environment}-key-storage-service-cloud-run"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
   cloud_run {
-    service = google_cloud_run_v2_service.key_storage_service[0].name
+    service = google_cloud_run_v2_service.key_storage_service.name
   }
 }
 
 # Backend service that groups network endpoint groups to Cloud Functions for
 # Load Balancer to use.
 resource "google_compute_backend_service" "key_storage" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count   = local.use_cloud_function ? 1 : 0
   project = var.project_id
   name    = "${local.name}-backend-default"
 
@@ -59,21 +55,19 @@ resource "google_compute_backend_service" "key_storage" {
 # Backend service that groups network endpoint groups to Cloud Run for Load
 # Balancer to use.
 resource "google_compute_backend_service" "key_storage_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
-  project     = var.project_id
-  name        = "${local.name}-key-storage-service-cloud-run"
-  description = "Load balancer backend service for Key Storage services."
+  project               = var.project_id
+  name                  = "${var.environment}-key-storage-service-cloud-run"
+  description           = "Load balancer backend service for Key Storage services."
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   backend {
-    group = google_compute_region_network_endpoint_group.key_storage_service_cloud_run[0].id
+    group = google_compute_region_network_endpoint_group.key_storage_service_cloud_run.id
   }
 }
 
 # URL Map creates Load balancer to Cloud Functions
 resource "google_compute_url_map" "key_storage" {
-  count = !var.use_cloud_run ? 1 : 0
-
+  count           = local.use_cloud_function ? 1 : 0
   project         = var.project_id
   name            = "${local.name}-url-map"
   default_service = google_compute_backend_service.key_storage[0].id
@@ -81,16 +75,14 @@ resource "google_compute_url_map" "key_storage" {
 
 # URL Map creates Load balancer to Cloud Run
 resource "google_compute_url_map" "key_storage_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
   project         = var.project_id
-  name            = "${local.name}-key-storage-service-cloud-run"
-  default_service = google_compute_backend_service.key_storage_service_cloud_run[0].id
+  name            = "${var.environment}-key-storage-service-cloud-run"
+  default_service = google_compute_backend_service.key_storage_service_cloud_run.id
 }
 
 # Proxy to loadbalancer for Cloud Functions. HTTP without custom domain
 resource "google_compute_target_http_proxy" "key_storage" {
-  count = !(var.use_cloud_run || var.enable_domain_management) ? 1 : 0
+  count = !var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project = var.project_id
   name    = "${local.name}-http-proxy"
@@ -99,7 +91,7 @@ resource "google_compute_target_http_proxy" "key_storage" {
 
 # Proxy to loadbalancer for Cloud Functions. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "key_storage" {
-  count = !var.use_cloud_run && var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project = var.project_id
   name    = "${local.name}-https-proxy"
@@ -112,19 +104,19 @@ resource "google_compute_target_https_proxy" "key_storage" {
 
 # Proxy to loadbalancer for Cloud Run. HTTP without custom domain
 resource "google_compute_target_http_proxy" "key_storage_service_cloud_run" {
-  count = var.use_cloud_run && !var.enable_domain_management ? 1 : 0
+  count = !var.enable_domain_management ? 1 : 0
 
-  name    = "${local.name}-key-storage-service-cloud-run"
-  url_map = google_compute_url_map.key_storage_service_cloud_run[0].id
+  name    = "${var.environment}-key-storage-service-cloud-run"
+  url_map = google_compute_url_map.key_storage_service_cloud_run.id
 }
 
 # Proxy to loadbalancer for Cloud Run. HTTPS with custom domain
 resource "google_compute_target_https_proxy" "key_storage_service_cloud_run" {
-  count = var.use_cloud_run && var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management ? 1 : 0
 
   project = var.project_id
-  name    = "${local.name}-key-storage-service-cloud-run"
-  url_map = google_compute_url_map.key_storage_service_cloud_run[0].id
+  name    = "${var.environment}-key-storage-service-cloud-run"
+  url_map = google_compute_url_map.key_storage_service_cloud_run.id
 
   ssl_certificates = [
     google_compute_managed_ssl_certificate.key_storage[0].id
@@ -132,40 +124,45 @@ resource "google_compute_target_https_proxy" "key_storage_service_cloud_run" {
 }
 
 resource "google_compute_global_address" "key_storage" {
+  count   = local.use_cloud_function ? 1 : 0
   project = var.project_id
   name    = "${local.name}-address"
 }
 
+resource "google_compute_global_address" "key_storage_service_cloud_run" {
+  project = var.project_id
+  name    = "${var.environment}-key-storage-service-cloud-run"
+}
+
 # Map IP address and loadbalancer HTTP proxy to Cloud Functions
 resource "google_compute_global_forwarding_rule" "http" {
-  count = (!var.use_cloud_run) && (!var.enable_domain_management) ? 1 : 0
+  count = !var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project    = var.project_id
   name       = local.name
   target     = google_compute_target_http_proxy.key_storage[0].id
-  ip_address = google_compute_global_address.key_storage.address
+  ip_address = google_compute_global_address.key_storage[0].address
   port_range = "80"
 }
 
 # Map IP address and loadbalancer HTTPS proxy to Cloud Functions
 resource "google_compute_global_forwarding_rule" "https" {
-  count = (!var.use_cloud_run) && var.enable_domain_management ? 1 : 0
+  count = var.enable_domain_management && local.use_cloud_function ? 1 : 0
 
   project    = var.project_id
   name       = "${local.name}-https"
   target     = google_compute_target_https_proxy.key_storage[0].id
-  ip_address = google_compute_global_address.key_storage.address
+  ip_address = google_compute_global_address.key_storage[0].address
   port_range = "443"
 }
 
 # Map IP address and loadbalancer proxy to Cloud Run
 resource "google_compute_global_forwarding_rule" "key_storage_service_cloud_run" {
-  count = var.use_cloud_run ? 1 : 0
-
-  project    = var.project_id
-  name       = "${local.name}-key-storage-service-cloud-run"
-  ip_address = google_compute_global_address.key_storage.address
-  port_range = var.enable_domain_management ? "443" : "80"
+  project               = var.project_id
+  name                  = "${var.environment}-key-storage-service-cloud-run"
+  ip_address            = google_compute_global_address.key_storage_service_cloud_run.address
+  port_range            = var.enable_domain_management ? "443" : "80"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   target = (
     var.enable_domain_management ?

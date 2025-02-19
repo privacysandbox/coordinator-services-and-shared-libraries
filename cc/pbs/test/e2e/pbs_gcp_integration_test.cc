@@ -27,7 +27,6 @@
 #include "google/cloud/spanner/admin/instance_admin_client.h"
 #include "google/cloud/spanner/admin/instance_admin_connection.h"
 #include "google/cloud/status_or.h"
-#include "google/cloud/storage/options.h"
 
 namespace google::scp::pbs {
 namespace {
@@ -210,8 +209,6 @@ HttpHeaders CreateHttpHeaders() {
       {"x-auth-token", "unused"},
       {"x-gscp-claimed-identity", "https://fake.com"},
       {"x-gscp-transaction-id", "00000000-0000-0000-0000-000000000000"},
-      {"x-gscp-transaction-secret", "unused"},
-      {"x-gscp-transaction-last-execution-timestamp", "123"},
       {"user-agent", "testing/1.2.3"},
   });
   return headers;

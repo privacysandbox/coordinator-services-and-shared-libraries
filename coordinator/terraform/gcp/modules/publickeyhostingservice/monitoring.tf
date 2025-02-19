@@ -13,17 +13,17 @@
 # limitations under the License.
 
 locals {
-  load_balancer_name      = !var.use_cloud_run ? google_compute_url_map.get_public_key_loadbalancer[0].name : ""
-  cloud_functions         = !var.use_cloud_run ? [for cf in google_cloudfunctions2_function.get_public_key_cloudfunction : cf] : []
-  cloud_function_a_name   = !var.use_cloud_run ? local.cloud_functions[0].name : ""
-  cloud_function_a_region = !var.use_cloud_run ? local.cloud_functions[0].location : ""
-  cloud_function_b_name   = !var.use_cloud_run ? local.cloud_functions[1].name : ""
-  cloud_function_b_region = !var.use_cloud_run ? local.cloud_functions[1].location : ""
+  load_balancer_name      = local.use_cloud_function ? google_compute_url_map.get_public_key_loadbalancer[0].name : null
+  cloud_functions         = local.use_cloud_function ? [for cf in google_cloudfunctions2_function.get_public_key_cloudfunction : cf] : []
+  cloud_function_a_name   = local.use_cloud_function ? local.cloud_functions[0].name : null
+  cloud_function_a_region = local.use_cloud_function ? local.cloud_functions[0].location : null
+  cloud_function_b_name   = local.use_cloud_function ? local.cloud_functions[1].name : null
+  cloud_function_b_region = local.use_cloud_function ? local.cloud_functions[1].location : null
 }
 
 module "load_balancer_alarms" {
   source = "../shared/loadbalancer_alarms"
-  count  = var.alarms_enabled && !var.use_cloud_run ? 1 : 0
+  count  = var.alarms_enabled && local.use_cloud_function ? 1 : 0
 
   project_id              = var.project_id
   environment             = var.environment
@@ -39,7 +39,7 @@ module "load_balancer_alarms" {
 
 module "cloud_function_alarms" {
   source   = "../shared/cloudfunction_alarms"
-  for_each = var.alarms_enabled && !var.use_cloud_run ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
+  for_each = var.alarms_enabled && local.use_cloud_function ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
 
   project_id              = var.project_id
   environment             = var.environment
@@ -55,7 +55,7 @@ module "cloud_function_alarms" {
 }
 
 resource "google_monitoring_dashboard" "dashboard" {
-  count = var.alarms_enabled && !var.use_cloud_run ? 1 : 0
+  count = var.alarms_enabled && local.use_cloud_function ? 1 : 0
 
   project = var.project_id
   dashboard_json = jsonencode(

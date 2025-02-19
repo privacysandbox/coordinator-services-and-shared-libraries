@@ -25,27 +25,15 @@ resource "google_spanner_database" "keydb" {
   instance                 = google_spanner_instance.keydb_instance.name
   name                     = "${var.environment}-keydb"
   version_retention_period = var.key_db_retention_period
+
+  # Do NOT modify existing DDL files. Terraform would recreate the database, causing data loss.
+  # Instead, create a file containing the new DDL statements and append it to this list.
   ddl = [
-    <<-EOT
-    CREATE TABLE KeySets (
-      KeyId STRING(50) NOT NULL,
-      PublicKey STRING(1000) NOT NULL,
-      PrivateKey STRING(1000) NOT NULL,
-      PublicKeyMaterial STRING(500) NOT NULL,
-      KeySplitData JSON,
-      KeyType STRING(500) NOT NULL,
-      KeyEncryptionKeyUri STRING(1000) NOT NULL,
-      ExpiryTime TIMESTAMP NOT NULL,
-      TtlTime TIMESTAMP NOT NULL,
-      CreatedAt TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
-      UpdatedAt TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true))
-    PRIMARY KEY (KeyId),
-    ROW DELETION POLICY (OLDER_THAN(TtlTime, INTERVAL 0 DAY))
-  EOT
-    , "CREATE INDEX KeySetsByExpiryTime ON KeySets(ExpiryTime)"
-    , "ALTER TABLE KeySets ADD COLUMN ActivationTime TIMESTAMP"
-    , "CREATE INDEX KeySetsByExpiryActivationDesc ON KeySets(ExpiryTime DESC, ActivationTime DESC)"
-    , "DROP INDEX KeySetsByExpiryTime"
+    file("${path.module}/files/01_create_keysets_table.sql"),
+    trimspace(file("${path.module}/files/02_create_expiry_time_index.sql")),
+    trimspace(file("${path.module}/files/03_add_activation_time_column.sql")),
+    trimspace(file("${path.module}/files/04_create_activation_expiry_index.sql")),
+    trimspace(file("${path.module}/files/05_drop_expiry_time_index.sql")),
   ]
 
   deletion_protection = true

@@ -25,8 +25,6 @@
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/interface/service_interface.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
-#include "cc/cpio/client_providers/interface/auth_token_provider_interface.h"
-#include "cc/cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
@@ -54,10 +52,6 @@ class PBSInstanceV3 : public core::ServiceInterface {
   std::shared_ptr<core::HttpClientInterface> http1_client_;
   std::shared_ptr<core::HttpClientInterface> http2_client_;
   std::shared_ptr<core::AuthorizationProxyInterface> authorization_proxy_;
-  std::shared_ptr<cpio::client_providers::AuthTokenProviderInterface>
-      auth_token_provider_;
-  std::shared_ptr<cpio::client_providers::InstanceClientProviderInterface>
-      instance_client_provider_;
   std::shared_ptr<core::AuthorizationProxyInterface>
       pass_thru_authorization_proxy_;
   std::shared_ptr<core::HttpServerInterface> http_server_;

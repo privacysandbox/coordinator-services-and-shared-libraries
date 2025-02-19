@@ -13,7 +13,7 @@
 # limitations under the License.
 
 load("@rules_pkg//:mappings.bzl", "pkg_attributes", "pkg_files")
-load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_zip")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -23,10 +23,10 @@ pkg_files(
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:EncryptionKeyServiceLambdaDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PublicKeyApiGatewayHandlerDeploy",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/service/aws:KeyStorageServiceLambdaDeploy",
-        "//python/privacybudget/aws/pbs_auth_handler:pbs_auth_handler_lambda_zipper",
-        "//python/privacybudget/aws/pbs_synthetic:pbs_heartbeat_pkg",
         "//python/mpkhs/aws/privatekey_synthetic:privatekey_heartbeat_pkg",
         "//python/mpkhs/aws/publickey_synthetic:publickey_heartbeat_pkg",
+        "//python/privacybudget/aws/pbs_auth_handler:pbs_auth_handler_lambda_zipper",
+        "//python/privacybudget/aws/pbs_synthetic:pbs_heartbeat_pkg",
     ],
     prefix = "dist",
 )
@@ -57,12 +57,10 @@ pkg_tar(
         "//coordinator/terraform/aws/applications:roleprovider_module_pkg",
         "//coordinator/terraform/aws/environments_mp_primary/demo:mp_primary_coordinator_demo",
         "//coordinator/terraform/aws/environments_mp_primary/shared:mp_primary_coordinator_shared",
-        "//coordinator/terraform/aws/environments_mp_primary/testing:mp_primary_coordinator_testing",
         "//coordinator/terraform/aws/environments_mp_prober/demo:mp_prober_coordinator_demo",
         "//coordinator/terraform/aws/environments_mp_prober/shared:mp_prober_coordinator_shared",
         "//coordinator/terraform/aws/environments_mp_secondary/demo:mp_secondary_coordinator_demo",
         "//coordinator/terraform/aws/environments_mp_secondary/shared:mp_secondary_coordinator_shared",
-        "//coordinator/terraform/aws/environments_mp_secondary/testing:mp_secondary_coordinator_testing",
         "//coordinator/terraform/aws/modules:apigateway_pkg",
         "//coordinator/terraform/aws/modules:bazel_module_pkg",
         "//coordinator/terraform/aws/modules:distributed_pbs_auth_db_pkg",

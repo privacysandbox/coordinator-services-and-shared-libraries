@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.scp.coordinator.keymanagement.keystorage.service.gcp;
 
 import com.google.crypto.tink.Aead;
@@ -8,6 +24,7 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotati
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyWithSyncTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpSignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
@@ -27,14 +44,23 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
   private static final String SPANNER_ENDPOINT_ENV_VAR = "SPANNER_ENDPOINT";
   private static final String GCP_KMS_URI_ENV_VAR = "GCP_KMS_URI";
   private static final String AWS_XC_ENABLED_ENV_VAR = "AWS_XC_ENABLED";
+  private static final String AWS_KEY_SYNC_ENABLED_ENV_VAR = "AWS_KEY_SYNC_ENABLED";
 
   /** Returns ReadStalenessSeconds as Integer from environment variables. Default value of 15 */
   private Integer getReadStalenessSeconds(Map<String, String> env) {
     return Integer.valueOf(env.getOrDefault(READ_STALENESS_SEC_ENV_VAR, "15"));
   }
 
+  private static Boolean getBooleanEnvVariable(Map<String, String> env, String paramName) {
+    return env.getOrDefault(paramName, "false").equalsIgnoreCase("true");
+  }
+
   private Boolean isAwsXcEnabled(Map<String, String> env) {
-    return env.getOrDefault(AWS_XC_ENABLED_ENV_VAR, "false").equalsIgnoreCase("true");
+    return getBooleanEnvVariable(env, AWS_XC_ENABLED_ENV_VAR);
+  }
+
+  private Boolean isAwsKeySyncEnabled(Map<String, String> env) {
+    return getBooleanEnvVariable(env, AWS_KEY_SYNC_ENABLED_ENV_VAR);
   }
 
   @Override
@@ -56,6 +82,11 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
       install(new AwsEncryptionAeadModule(env));
     } else {
       install(new GcpEncryptionAeadModule(gcpKmsUri));
+    }
+    if (isAwsKeySyncEnabled(env)) {
+      install(new AwsKeySyncModule(env));
+      // Override CreateKeyTask with the implementation with key synchronization.
+      bind(CreateKeyTask.class).to(GcpCreateKeyWithSyncTask.class);
     }
 
     // TODO: refactor so that GCP does not need these. Placeholder values since they are not used

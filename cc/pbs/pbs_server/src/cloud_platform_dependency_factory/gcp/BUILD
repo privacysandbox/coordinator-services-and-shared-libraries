@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "pbs_gcp_cloud_platform_dependency_factory_lib",
@@ -33,8 +33,6 @@ cc_library(
         "//cc/core/telemetry/src/authentication:telemetry_authentication",
         "//cc/core/telemetry/src/common:telemetry_common",
         "//cc/core/telemetry/src/metric:telemetry_metric",
-        "//cc/cpio/client_providers/auth_token_provider/src/gcp:gcp_auth_token_provider_lib",
-        "//cc/cpio/client_providers/instance_client_provider/src/gcp:gcp_instance_client_provider_lib",
         "//cc/pbs/authorization/src/aws:aws_http_request_response_auth_interceptor",
         "//cc/pbs/authorization/src/gcp:gcp_http_request_response_auth_interceptor",
         "//cc/pbs/consume_budget/src/gcp:consume_budget",

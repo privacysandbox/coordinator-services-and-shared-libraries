@@ -47,3 +47,15 @@ output "public_key_api" {
 output "encryptionkeyservice_base_url" {
   value = format("%s/%s", (var.enable_domain_management ? "https://${module.privatekeydomainprovider[0].private_key_domain}" : module.apigateway.api_gateway_url), var.api_version)
 }
+
+output "key_sync_assume_role_arn" {
+  value = module.split_key_generation_service.key_sync_assume_role_arn
+}
+
+output "key_sync_keydb_region" {
+  value = module.keydb.key_db_region
+}
+
+output "key_sync_keydb_table_name" {
+  value = module.keydb.key_db_name
+}

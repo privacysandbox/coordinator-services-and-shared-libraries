@@ -65,6 +65,8 @@ module "keydb" {
   write_capacity                      = var.keydb_write_capacity
   autoscaling_write_max_capacity      = var.keydb_autoscaling_write_max_capacity
   autoscaling_write_target_percentage = var.keydb_autoscaling_write_target_percentage
+
+  key_sync_service_account_unique_id = var.key_sync_service_account_unique_id
 }
 
 module "vpc" {
@@ -149,6 +151,8 @@ module "keystorageservice" {
   dynamodb_vpc_endpoint_id = var.enable_vpc ? module.vpc[0].dynamodb_vpc_endpoint_id : null
   private_subnet_ids       = var.enable_vpc ? module.vpc[0].private_subnet_ids : null
   kms_vpc_endpoint_id      = var.enable_vpc ? module.vpc[0].kms_vpc_endpoint_id : null
+
+  key_sync_service_account_unique_id = var.key_sync_service_account_unique_id
 }
 
 # Topic is used for alarms such that messages are not sensitive data.

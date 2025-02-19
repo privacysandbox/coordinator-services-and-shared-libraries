@@ -37,6 +37,11 @@ variable "public_key_domain" {
   type        = string
 }
 
+variable "public_key_cloud_run_domain" {
+  description = "Domain to use to create a managed SSL cert for the cloud run service."
+  type        = string
+}
+
 variable "public_key_service_alternate_domain_names" {
   description = "A list of alternate domain names for the public key service for which to add as a subject alternative name in the SSL certificate. Eg: [service-example.com]"
   type        = list(string)

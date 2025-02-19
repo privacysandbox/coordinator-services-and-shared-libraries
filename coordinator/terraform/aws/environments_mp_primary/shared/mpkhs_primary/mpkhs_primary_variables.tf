@@ -684,3 +684,13 @@ variable "public_keyhosting_dashboard_time_period_seconds" {
   type        = number
   default     = 60
 }
+
+################################################################################
+# Cross-cloud key synchronization variables.
+################################################################################
+
+variable "key_sync_service_account_unique_id" {
+  description = "Unique ID of the GCP service account used for key generation."
+  type        = string
+  default     = ""
+}

@@ -29,6 +29,10 @@ locals {
   notification_channel_id  = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
   package_bucket_prefix    = "${var.project_id}_${var.environment}"
   package_bucket_name      = length("${local.package_bucket_prefix}_mpkhs_primary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_primary_package_jars" : "${local.package_bucket_prefix}_mpkhs_a_pkg"
+
+  # Domain names for Cloud Run endpoints
+  public_key_cloud_run_domain     = var.environment != "prod" ? "${var.public_key_service_subdomain}-cr${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.public_key_service_subdomain}-cr.${local.parent_domain_name}"
+  encryption_key_cloud_run_domain = var.environment != "prod" ? "${var.encryption_key_service_subdomain}-cr${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}-cr.${local.parent_domain_name}"
 }
 
 module "vpc" {
@@ -147,6 +151,7 @@ module "publickeyhostingservice" {
   # Domain Management
   enable_domain_management                  = var.enable_domain_management
   public_key_domain                         = local.public_key_domain
+  public_key_cloud_run_domain               = local.public_key_cloud_run_domain
   public_key_service_alternate_domain_names = var.public_key_service_alternate_domain_names
 
   # Alarms
@@ -191,8 +196,9 @@ module "encryptionkeyservice" {
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
-  encryption_key_domain    = local.encryption_key_domain
+  enable_domain_management        = var.enable_domain_management
+  encryption_key_domain           = local.encryption_key_domain
+  encryption_key_cloud_run_domain = local.encryption_key_cloud_run_domain
 
   # Alarms
   alarms_enabled                       = var.alarms_enabled
@@ -218,8 +224,13 @@ module "domain_a_records" {
   parent_domain_name_project = var.parent_domain_name_project
 
   service_domain_to_address_map = var.enable_domain_management ? {
-    (local.public_key_domain) : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+    # If use_cloud_run = True, point A record to the IP Address of Cloud Run LB otherise point to Cloud Function LB
+    (local.public_key_domain) : var.use_cloud_run ? module.publickeyhostingservice.public_key_cloud_run_loadbalancer_ip : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
+    (local.encryption_key_domain) : var.use_cloud_run ? module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+
+    # A records for Cloud Run domain. Will be removed once Cloud Run migration is complete
+    (local.public_key_cloud_run_domain) : module.publickeyhostingservice.public_key_cloud_run_loadbalancer_ip,
+    (local.encryption_key_cloud_run_domain) : module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip
   } : {}
 }
 
@@ -371,4 +382,54 @@ module "aws_kms_role_arn" {
   environment     = var.environment
   parameter_name  = "AWS_KMS_ROLE_ARN"
   parameter_value = var.aws_kms_key_encryption_key_role_arn
+}
+
+module "aws_key_sync_enabled" {
+  count  = var.aws_key_sync_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_KEY_SYNC_ENABLED"
+  parameter_value = "true"
+}
+
+module "aws_key_sync_role_arn" {
+  count  = var.aws_key_sync_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_KEY_SYNC_ROLE_ARN"
+  parameter_value = var.aws_key_sync_role_arn
+}
+
+module "aws_key_sync_kms_key_uri" {
+  count  = var.aws_key_sync_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_KEY_SYNC_KMS_KEY_URI"
+  parameter_value = "aws-kms://${var.aws_key_sync_kms_key_uri}"
+}
+
+module "aws_key_sync_keydb_region" {
+  count  = var.aws_key_sync_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_KEY_SYNC_KEYDB_REGION"
+  parameter_value = var.aws_key_sync_keydb_region
+}
+
+module "aws_key_sync_keydb_table_name" {
+  count  = var.aws_key_sync_enabled ? 1 : 0
+  source = "../../modules/parameters"
+
+  project_id      = var.project_id
+  environment     = var.environment
+  parameter_name  = "AWS_KEY_SYNC_KEYDB_TABLE_NAME"
+  parameter_value = var.aws_key_sync_keydb_table_name
 }

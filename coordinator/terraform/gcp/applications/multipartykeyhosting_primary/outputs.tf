@@ -16,6 +16,10 @@ output "get_public_key_loadbalancer_ip" {
   value = module.publickeyhostingservice.get_public_key_loadbalancer_ip
 }
 
+output "public_key_cloud_run_loadbalancer_ip" {
+  value = module.publickeyhostingservice.public_key_cloud_run_loadbalancer_ip
+}
+
 output "public_key_base_url" {
   value = var.enable_domain_management ? "https://${local.public_key_domain}" : "http://${module.publickeyhostingservice.get_public_key_loadbalancer_ip}"
 }
@@ -26,6 +30,10 @@ output "encryption_key_service_cloudfunction_url" {
 
 output "encryption_key_service_loadbalancer_ip" {
   value = module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+}
+
+output "encryption_key_service_cloud_run_loadbalancer_ip" {
+  value = module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip
 }
 
 output "encryption_key_base_url" {
