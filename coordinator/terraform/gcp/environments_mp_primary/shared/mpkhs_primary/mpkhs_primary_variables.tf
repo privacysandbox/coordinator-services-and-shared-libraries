@@ -159,6 +159,12 @@ variable "instance_disk_image" {
   default     = "confidential-space-images/confidential-space-debug"
 }
 
+variable "enable_key_generation" {
+  description = "Whether to enable the key generation cloud scheduler job for key rotation."
+  type        = bool
+  default     = true
+}
+
 variable "key_generation_logging_enabled" {
   description = "Whether to enable logging for Key Generation instance."
   type        = bool

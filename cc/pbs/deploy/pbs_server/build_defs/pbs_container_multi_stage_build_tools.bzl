@@ -178,6 +178,13 @@ def load_pbs_container_multi_stage_container_build_tools():
         "rm /logrotate_and_dependencies.tar",
     ]
 
+    pbs_lite_container_runtime_dependencies_layer_commands = [
+        "addgroup adm",
+        "ln -s /busybox/sh /bin/sh",
+        "cd / && tar -xf shared_objects.tar",
+        "rm /shared_objects.tar",
+    ]
+
     pkg_tar(
         name = "pbs_binary_tar",
         srcs = [
@@ -270,6 +277,15 @@ def load_pbs_container_multi_stage_container_build_tools():
         tags = ["manual"],
     )
 
+    container_image(
+        name = "pbs_lite_container_base_image",
+        base = "@debian_12_runtime//image",
+        files = [
+            ":pbs_packages_shared_objects_extract/shared_objects.tar",
+        ],
+        tags = ["manual"],
+    )
+
     container_cmd = ["/opt/google/pbs/scp_process_launcher"]
     rsyslog_daemon = {
         "args": [
@@ -317,6 +333,19 @@ def load_pbs_container_multi_stage_container_build_tools():
         )
 
     for platform in pbs_container_platforms:
+        # Extract the dependencies and remove the tars
+        container_run_and_commit_layer(
+            name = "pbs_lite_container_runtime_dependencies_layer_" + platform,
+            commands = pbs_lite_container_runtime_dependencies_layer_commands,
+            docker_run_flags = [
+                "--entrypoint=''",
+                "--user root",
+            ],
+            image = "pbs_lite_container_base_image.tar",
+            tags = ["manual"],
+        )
+
+    for platform in pbs_container_platforms:
         container_image(
             name = "pbs_container_" + platform,
             base = "@debian_11_runtime//image",
@@ -334,10 +363,10 @@ def load_pbs_container_multi_stage_container_build_tools():
     for platform in pbs_container_platforms:
         container_image(
             name = "pbs_cloud_run_container_" + platform,
-            base = "@debian_11_runtime//image",
+            base = "@debian_12_runtime//image",
             cmd = "/opt/google/pbs/privacy_budget_service",
             entrypoint = None,
-            layers = [":pbs_container_runtime_dependencies_layer_" + platform],
+            layers = [":pbs_lite_container_runtime_dependencies_layer_" + platform],
             tags = ["manual"],
             tars = [
                 ":pbs_binary_tar",

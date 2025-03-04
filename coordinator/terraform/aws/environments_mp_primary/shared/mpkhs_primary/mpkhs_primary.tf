@@ -41,6 +41,7 @@ module "multipartykeyhosting_primary" {
   key_generation_ami_name_prefix           = var.key_generation_ami_name_prefix
   key_generation_ami_owners                = var.key_generation_ami_owners
   keystorage_api_base_url                  = var.keystorage_api_base_url
+  enable_key_rotation                      = var.enable_key_rotation
   key_generation_frequency_in_hours        = var.key_generation_frequency_in_hours
   key_generation_count                     = var.key_generation_count
   key_generation_validity_in_days          = var.key_generation_validity_in_days

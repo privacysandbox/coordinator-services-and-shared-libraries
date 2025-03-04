@@ -47,6 +47,11 @@ variable "instance_disk_image" {
   type        = string
 }
 
+variable "enable_key_generation" {
+  description = "Whether to enable the key generation cloud scheduler job for key rotation."
+  type        = bool
+}
+
 variable "key_generation_cron_schedule" {
   description = <<-EOT
   Frequency for key generation cron job. Must be valid cron statement. Example value: 0 10 * * 1

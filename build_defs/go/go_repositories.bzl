@@ -200,6 +200,7 @@ def go_repositories():
         sum = "h1:oVLqHXhnYtUwM89y9T1fXGaK9wTkXHgNp8/ZNMQzUxE=",
         version = "v1.5.0",
     )
+
     go_repository(
         name = "com_github_pmezard_go_difflib",
         build_file_proto_mode = "disable_global",

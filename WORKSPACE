@@ -489,6 +489,14 @@ container_pull(
     tag = "debug-nonroot-amd64",
 )
 
+container_pull(
+    name = "debian_12_runtime",
+    digest = "sha256:051eda6fa5784574146b45f72289a5a7c36a6cfff6550eecd841f474d4c988f1",
+    registry = "gcr.io",
+    repository = "distroless/cc-debian12",
+    tag = "debug-nonroot-amd64",
+)
+
 ################################################################################
 # Download Containers: End
 ################################################################################

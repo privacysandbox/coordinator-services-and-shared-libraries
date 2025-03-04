@@ -1,0 +1,106 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Bazel WORKSPACE file for the purpose of migrating to bzlmod.
+"""
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("//build_defs/go:go_repositories.bzl", "go_repositories")
+
+go_repositories()
+
+go_rules_dependencies()
+
+go_register_toolchains(version = "1.23.0")
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
+gazelle_dependencies()
+
+load("//build_defs/shared:bazel_docker_rules.bzl", "bazel_docker_rules")
+
+bazel_docker_rules()
+
+load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+
+container_repositories()
+
+load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+
+container_deps()
+
+load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+load("//build_defs:container_dependencies.bzl", container_dependencies = "CONTAINER_DEPS")
+
+[
+    container_pull(
+        name = img_name,
+        digest = img_info["digest"],
+        registry = img_info["registry"],
+        repository = img_info["repository"],
+    )
+    for img_name, img_info in container_dependencies.items()
+]
+
+# Distroless image for running C++.
+container_pull(
+    name = "cc_base",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+    tag = "latest",
+)
+
+# Needed for cc reproducible builds
+load(
+    "//cc/tools/build:build_container_params.bzl",
+    "CC_BUILD_CONTAINER_REGISTRY",
+    "CC_BUILD_CONTAINER_REPOSITORY",
+    "CC_BUILD_CONTAINER_TAG",
+)
+
+container_pull(
+    name = "prebuilt_cc_build_container_image_pull",
+    registry = CC_BUILD_CONTAINER_REGISTRY,
+    repository = CC_BUILD_CONTAINER_REPOSITORY,
+    tag = CC_BUILD_CONTAINER_TAG,
+)
+
+# Needed for cc/pbs/deploy/pbs_server/build_defs
+container_pull(
+    name = "debian_11",
+    digest = "sha256:9d23db14fbdc095689c423af56b9525538de139a1bbe950b4f0467698fb874d2",
+    registry = "index.docker.io",
+    repository = "amd64/debian",
+    tag = "11",
+)
+
+container_pull(
+    name = "debian_11_runtime",
+    digest = "sha256:105e444974ba7de61aef04a3cfab9ca0ba80babfd9da8295f6df546639d9571e",
+    registry = "gcr.io",
+    repository = "distroless/cc-debian11",
+    tag = "debug-nonroot-amd64",
+)
+
+container_pull(
+    name = "debian_12_runtime",
+    digest = "sha256:051eda6fa5784574146b45f72289a5a7c36a6cfff6550eecd841f474d4c988f1",
+    registry = "gcr.io",
+    repository = "distroless/cc-debian12",
+    tag = "debug-nonroot-amd64",
+)

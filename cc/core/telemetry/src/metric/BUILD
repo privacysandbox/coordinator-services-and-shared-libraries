@@ -39,6 +39,7 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/types:span",
         "@io_opentelemetry_cpp//api",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_exporter",
         "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",

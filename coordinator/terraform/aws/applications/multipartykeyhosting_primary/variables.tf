@@ -108,6 +108,11 @@ variable "keystorage_api_base_url" {
   type        = string
 }
 
+variable "enable_key_rotation" {
+  description = "Whether to enable the CloudWatch event for key rotation."
+  type        = bool
+}
+
 variable "key_generation_frequency_in_hours" {
   description = "Cron frequency in hours between of key generation invocations."
   type        = number

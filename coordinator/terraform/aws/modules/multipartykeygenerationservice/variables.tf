@@ -92,12 +92,6 @@ variable "asg_name" {
   description = "The name of auto scaling group."
 }
 
-variable "initial_capacity_ec2_instances" {
-  description = "Initial capacity for ec2 instances."
-  type        = number
-  default     = 1 //TODO: Change to 0 when auto scaling based on SQS message queue implemented
-}
-
 variable "max_ec2_instances" {
   description = "Upper bound for autoscaling for ec2 instances."
   type        = number

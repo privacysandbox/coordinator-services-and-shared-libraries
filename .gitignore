@@ -1,6 +1,3 @@
-# Ignore Bzlmod lock file until it is more stable
-MODULE.bazel.lock
-
 bazel-*
 !bazel-buildifier
 .project

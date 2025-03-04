@@ -272,6 +272,94 @@ public final class TransactionOrchestratorTest {
         .isEqualTo(StatusCode.TRANSACTION_ORCHESTRATOR_CONSUME_BUDGET_FAILURE);
   }
 
+  @Test
+  public void performHealthCheckUnauthenticated() {
+    when(privacyBudgetClient1.performActionHealthCheck(transactionRequest))
+        .thenReturn(
+            HealthCheckResponse.builder()
+                .setExecutionResult(
+                    ExecutionResult.create(
+                        ExecutionStatus.FAILURE, StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED))
+                .build());
+
+    TransactionOrchestratorException transactionOrchestratorException =
+        assertThrows(
+            TransactionOrchestratorException.class,
+            () -> transactionOrchestrator.execute(transactionRequest));
+    expect
+        .that(transactionOrchestratorException.getStatusCode())
+        .isEqualTo(StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED);
+  }
+
+  @Test
+  public void performHealthCheckUnauthorized() {
+    when(privacyBudgetClient1.performActionHealthCheck(transactionRequest))
+        .thenReturn(
+            HealthCheckResponse.builder()
+                .setExecutionResult(
+                    ExecutionResult.create(
+                        ExecutionStatus.FAILURE, StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED))
+                .build());
+
+    TransactionOrchestratorException transactionOrchestratorException =
+        assertThrows(
+            TransactionOrchestratorException.class,
+            () -> transactionOrchestrator.execute(transactionRequest));
+    expect
+        .that(transactionOrchestratorException.getStatusCode())
+        .isEqualTo(StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED);
+  }
+
+  @Test
+  public void performConsumeBudgetUnauthenticated() {
+    when(privacyBudgetClient1.performActionHealthCheck(transactionRequest))
+        .thenReturn(createHealthCheckResponseSuccess());
+    when(privacyBudgetClient2.performActionHealthCheck(transactionRequest))
+        .thenReturn(createHealthCheckResponseSuccess());
+
+    when(privacyBudgetClient1.performActionConsumeBudget(transactionRequest))
+        .thenReturn(
+            ConsumeBudgetResponse.builder()
+                .setExecutionResult(
+                    ExecutionResult.create(
+                        ExecutionStatus.FAILURE, StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED))
+                .setExhaustedPrivacyBudgetUnitsByOrigin(ImmutableList.of())
+                .build());
+
+    TransactionOrchestratorException transactionOrchestratorException =
+        assertThrows(
+            TransactionOrchestratorException.class,
+            () -> transactionOrchestrator.execute(transactionRequest));
+    expect
+        .that(transactionOrchestratorException.getStatusCode())
+        .isEqualTo(StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED);
+  }
+
+  @Test
+  public void performConsumeBudgetUnauthorized() {
+    when(privacyBudgetClient1.performActionHealthCheck(transactionRequest))
+        .thenReturn(createHealthCheckResponseSuccess());
+    when(privacyBudgetClient2.performActionHealthCheck(transactionRequest))
+        .thenReturn(createHealthCheckResponseSuccess());
+
+    when(privacyBudgetClient1.performActionConsumeBudget(transactionRequest))
+        .thenReturn(
+            ConsumeBudgetResponse.builder()
+                .setExecutionResult(
+                    ExecutionResult.create(
+                        ExecutionStatus.FAILURE, StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED))
+                .setExhaustedPrivacyBudgetUnitsByOrigin(ImmutableList.of())
+                .build());
+
+    TransactionOrchestratorException transactionOrchestratorException =
+        assertThrows(
+            TransactionOrchestratorException.class,
+            () -> transactionOrchestrator.execute(transactionRequest));
+    expect
+        .that(transactionOrchestratorException.getStatusCode())
+        .isEqualTo(StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED);
+  }
+
   private static TransactionRequest generateTransactionRequest() {
     final Instant timeInstant1 = Instant.ofEpochMilli(1658960799);
     final Instant timeInstant2 = Instant.ofEpochMilli(1658960845);

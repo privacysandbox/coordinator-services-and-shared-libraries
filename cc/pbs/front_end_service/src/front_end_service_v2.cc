@@ -68,10 +68,18 @@ using ::google::scp::core::errors::
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
 using ::google::scp::pbs::FrontEndUtils;
 
-inline constexpr char kFrontEndService[] = "FrontEndServiceV2";
-static constexpr char kTransactionLastExecutionTimestampHeader[] =
+constexpr char kFrontEndService[] = "FrontEndServiceV2";
+constexpr char kTransactionLastExecutionTimestampHeader[] =
     "x-gscp-transaction-last-execution-timestamp";
-inline constexpr char kFakeLastExecutionTimestamp[] = "1234";
+constexpr char kFakeLastExecutionTimestamp[] = "1234";
+
+// Considering an estimated load of 75 keys per transaction with a standard
+// deviation of 20.
+// The maximum number of keys is approximately 20,000.
+constexpr std::array<double, 26> kKeysBoundaries = {
+    1.0,    1.5,    2.3,    3.4,    5.1,    7.6,     11.4,    17.1,   25.6,
+    38.4,   57.7,   86.5,   129.7,  194.6,  291.9,   437.9,   656.8,  985.3,
+    1477.9, 2216.8, 3325.3, 4987.9, 7481.8, 11222.7, 16864.1, 25251.2};
 
 // The extracted transaction_id is unused in BeginTransaction of
 // front_end_service_v2.cc, but the extraction serves two purposes:
@@ -134,16 +142,6 @@ void FrontEndServiceV2::MetricInit() noexcept {
     return;
   }
   meter_ = metric_router_->GetOrCreateMeter(kFrontEndServiceV2Meter);
-
-  // Considering an estimated load of 75 keys per transaction with a standard
-  // deviation of 20.
-  // The maximum number of keys is approximately 20,000.
-  // Reference:
-  // go/bucketizer?base=1.5&scale_factor=1&max_value=20000&mean=75&std_dev=20&linear=false
-  static std::vector<double> kKeysBoundaries = {
-      1.0,    1.5,    2.3,    3.4,    5.1,    7.6,     11.4,    17.1,   25.6,
-      38.4,   57.7,   86.5,   129.7,  194.6,  291.9,   437.9,   656.8,  985.3,
-      1477.9, 2216.8, 3325.3, 4987.9, 7481.8, 11222.7, 16864.1, 25251.2};
 
   metric_router_->CreateViewForInstrument(
       /*meter_name=*/kFrontEndServiceV2Meter,

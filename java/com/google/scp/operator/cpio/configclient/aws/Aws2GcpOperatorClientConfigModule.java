@@ -124,7 +124,7 @@ public final class Aws2GcpOperatorClientConfigModule extends AbstractModule {
         coordinatorBCredentials,
         config
             .coordinatorBEncryptionKeyServiceCloudfunctionUrl()
-            .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl().get()));
+            .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl()));
   }
 
   /** Provider for a {@code AwsSessionCredentialsProvider} class to access coordinator A. */

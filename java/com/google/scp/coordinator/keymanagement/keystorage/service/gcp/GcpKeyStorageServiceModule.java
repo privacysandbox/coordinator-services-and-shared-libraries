@@ -72,10 +72,6 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
     String spannerDatabaseId = env.getOrDefault(SPANNER_DATABASE_ENV_VAR, "keydb");
     String spannerEndpoint = env.get(SPANNER_ENDPOINT_ENV_VAR);
 
-    // Business layer bindings
-    bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
-    bind(SignDataKeyTask.class).to(GcpSignDataKeyTask.class);
-
     Aead gcpAead = GcpAeadProvider.getGcpAead(gcpKmsUri, Optional.empty());
     bind(Aead.class).annotatedWith(DecryptionAead.class).toInstance(gcpAead);
     if (isAwsXcEnabled(env)) {
@@ -85,9 +81,11 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
     }
     if (isAwsKeySyncEnabled(env)) {
       install(new AwsKeySyncModule(env));
-      // Override CreateKeyTask with the implementation with key synchronization.
       bind(CreateKeyTask.class).to(GcpCreateKeyWithSyncTask.class);
+    } else {
+      bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
     }
+    bind(SignDataKeyTask.class).to(GcpSignDataKeyTask.class);
 
     // TODO: refactor so that GCP does not need these. Placeholder values since they are not used
     bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");

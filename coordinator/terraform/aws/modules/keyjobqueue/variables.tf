@@ -17,6 +17,11 @@ variable "environment" {
   type        = string
 }
 
+variable "enable_key_rotation" {
+  description = "Whether to enable the CloudWatch event for key rotation."
+  type        = bool
+}
+
 variable "key_job_queue_name" {
   description = "Name of the SQS queue to create for key jobs. Must end in .fifo"
   type        = string

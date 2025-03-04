@@ -32,32 +32,32 @@ import org.apache.hc.core5.http.protocol.HttpContext;
 public final class GcpHttpInterceptorUtil {
 
   /** Create http interceptor for gcp http clients with url as audience */
-  public static org.apache.http.HttpRequestInterceptor createHttpInterceptor(String url)
+  public static org.apache.http.HttpRequestInterceptor createHttpInterceptor(String audience)
       throws IOException {
-    return createHttpInterceptor(GoogleCredentials.getApplicationDefault(), url);
+    return createHttpInterceptor(GoogleCredentials.getApplicationDefault(), audience);
   }
 
   public static org.apache.http.HttpRequestInterceptor createHttpInterceptor(
-      GoogleCredentials credentials, String url) {
-    return new GcpHttpInterceptor(credentials, url);
+      GoogleCredentials credentials, String audience) {
+    return new GcpHttpInterceptor(credentials, audience);
   }
 
   /**
    * Create HTTP Interceptor for GCP HTTP clients with url as audience. This is for use when
    * communicating with the PBS server - not with GCP directly.
    *
-   * @param url The TargetAudience url to use
+   * @param audience The TargetAudience url to use
    * @return A HttpRequestInterceptor that applies the generated GCP AccessToken to the intercepted
    *     HTTP request.
    */
   public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(
-      GoogleCredentials credentials, String url) {
-    return new GcpPbsHttpInterceptor(credentials, url);
+      GoogleCredentials credentials, String audience) {
+    return new GcpPbsHttpInterceptor(credentials, audience);
   }
 
-  public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(String url)
-      throws IOException {
-    return new GcpPbsHttpInterceptor(GoogleCredentials.getApplicationDefault(), url);
+  public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(
+      String audience) throws IOException {
+    return new GcpPbsHttpInterceptor(GoogleCredentials.getApplicationDefault(), audience);
   }
 
   private abstract static class GcpHttpInterceptorBase {
@@ -66,13 +66,13 @@ public final class GcpHttpInterceptorUtil {
 
     public GcpHttpInterceptorBase(
         GoogleCredentials sourceCredentials,
-        String url,
+        String audience,
         Consumer<IdTokenCredentials.Builder>... extraSettings) {
 
       IdTokenCredentials.Builder builder =
           IdTokenCredentials.newBuilder()
               .setIdTokenProvider((IdTokenProvider) sourceCredentials)
-              .setTargetAudience(url)
+              .setTargetAudience(audience)
               // Setting the ID token options.
               .setOptions(
                   Arrays.asList(Option.FORMAT_FULL, Option.LICENSES_TRUE, Option.INCLUDE_EMAIL));
@@ -91,8 +91,8 @@ public final class GcpHttpInterceptorUtil {
   private static final class GcpHttpInterceptor extends GcpHttpInterceptorBase
       implements org.apache.http.HttpRequestInterceptor {
 
-    public GcpHttpInterceptor(GoogleCredentials sourceCredentials, String url) {
-      super(sourceCredentials, url);
+    public GcpHttpInterceptor(GoogleCredentials sourceCredentials, String audience) {
+      super(sourceCredentials, audience);
     }
 
     @Override
@@ -106,10 +106,10 @@ public final class GcpHttpInterceptorUtil {
   private static final class GcpPbsHttpInterceptor extends GcpHttpInterceptorBase
       implements org.apache.hc.core5.http.HttpRequestInterceptor {
 
-    public GcpPbsHttpInterceptor(GoogleCredentials sourceCredentials, String url) {
+    public GcpPbsHttpInterceptor(GoogleCredentials sourceCredentials, String audience) {
       super(
           sourceCredentials,
-          url,
+          audience,
           builder ->
               builder
                   .setExpirationMargin(Duration.ofMinutes(10))

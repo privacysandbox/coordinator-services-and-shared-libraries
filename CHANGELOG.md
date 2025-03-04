@@ -1,4 +1,21 @@
 # Changelog
+## [1.19.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.18.0...v1.19.0) (2025-03-04)
+
+### Changes
+  - Added Terraform option to enable / disable key rotation.
+  - Changed `KGDS (Key Generation and Distribution Service)` to persist the correct key split data in `keydb` database under key sync mode
+  - Fixed having a non-trivially destructible static variable in PBS frontend service
+  - Propagate auth errors from `PrivacyBudgetClientImplV2` to `TransactionOrchestratorImpl`
+  - Refactored `OperatorClientConfig` to make `coordinator_a_wip_provider` and `coordinator_a_sa` optional for `AWS_TO_GCP` client
+  - Replaced deprecated `@rules_proto` with `@com_google_protobuf`
+  - Upgrade PBS image to use debian 12
+  - Updated root directory of `cpplint`
+  - Updated `amazonlinux` container version
+  - Updated `debian` container version
+  - [AWS only] Unset `desired_capacity` attribute from `aws_autoscaling_group` `split_key_rotation_group` resource in `multipartykeygenerationservice` module
+  - [GCP only] Fixed Key Storage Service `CreateKeyTask` binding issue when `AWS_KEY_SYNC_ENABLED=true`
+  - [GCP only] Granted `iam.serviceAccountOpenIdTokenCreator` role to the verified service account
+
 
 ## [1.18.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.17.0...v1.18.0) (2025-02-18)
 

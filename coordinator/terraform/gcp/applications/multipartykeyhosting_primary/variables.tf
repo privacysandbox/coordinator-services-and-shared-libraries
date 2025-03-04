@@ -100,6 +100,11 @@ variable "public_key_load_balancer_logs_enabled" {
 # Key Generation Variables.
 ################################################################################
 
+variable "enable_key_generation" {
+  description = "Whether to enable the key generation cloud scheduler job for key rotation."
+  type        = bool
+}
+
 variable "key_generation_image" {
   description = "The Key Generation Application docker image."
   type        = string

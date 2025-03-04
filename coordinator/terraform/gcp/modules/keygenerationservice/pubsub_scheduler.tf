@@ -61,6 +61,7 @@ resource "google_cloud_scheduler_job" "key_generation_cron" {
   description = "Cron job to publish message to Key Generation pubsub topic"
   schedule    = var.key_generation_cron_schedule
   time_zone   = var.key_generation_cron_time_zone
+  paused      = var.enable_key_generation ? false : true
 
   pubsub_target {
     topic_name = format("projects/%s/topics/%s", var.project_id, google_pubsub_topic.key_generation_pubsub_topic.name)

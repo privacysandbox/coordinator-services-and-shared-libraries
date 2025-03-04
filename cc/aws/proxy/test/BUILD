@@ -142,6 +142,7 @@ cc_test(
     copts = [
         "-std=c++17",
     ],
+    flaky = True,
     deps = [
         "//cc/aws/proxy/src:proxy_lib",
         "@com_google_googletest//:gtest_main",

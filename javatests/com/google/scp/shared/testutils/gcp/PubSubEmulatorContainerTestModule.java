@@ -61,7 +61,7 @@ public class PubSubEmulatorContainerTestModule extends AbstractModule {
   @Provides
   @Singleton
   public TransportChannelProvider provideChannelProvider(PubSubEmulatorContainer emulator) {
-    String hostport = emulator.getEmulatorEndpoint();
+    String hostport = emulator.getHostEndpoint();
     ManagedChannel channel = ManagedChannelBuilder.forTarget(hostport).usePlaintext().build();
     return FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
   }

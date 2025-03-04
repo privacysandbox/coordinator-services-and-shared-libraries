@@ -96,6 +96,13 @@ resource "google_service_account" "wip_verified" {
   display_name = var.wip_verified_service_account_display_name
 }
 
+# Allow the verified service account to create ID tokens for itself
+resource "google_service_account_iam_member" "verified_user_id_token_creator" {
+  service_account_id = google_service_account.wip_verified.id
+  member             = "serviceAccount:${google_service_account.wip_verified.email}"
+  role               = "roles/iam.serviceAccountOpenIdTokenCreator"
+}
+
 # Allowlist IAM binding for all if enable_attestation = false
 resource "google_service_account_iam_member" "workload_identity_member_disabled_attestation" {
   count              = var.enable_attestation ? 0 : 1

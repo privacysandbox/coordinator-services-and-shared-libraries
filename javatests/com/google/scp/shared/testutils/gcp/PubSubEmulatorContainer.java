@@ -53,7 +53,20 @@ public final class PubSubEmulatorContainer extends GenericContainer<PubSubEmulat
    *     reachable from the test host machine. Directly usable as a parameter to the
    *     io.grpc.ManagedChannelBuilder#forTarget(java.lang.String) method.
    */
-  public String getEmulatorEndpoint() {
+  public String getHostEndpoint() {
     return getContainerIpAddress() + ":" + getMappedPort(PORT);
+  }
+
+  /**
+   * @return a <code>host:port</code> pair corresponding to the address and port of the container.
+   */
+  public String getContainerEndpoint() {
+    return getContainerInfo().getNetworkSettings().getNetworks().entrySet().stream()
+            .findFirst()
+            .get()
+            .getValue()
+            .getIpAddress()
+        + ":"
+        + getExposedPorts().get(0);
   }
 }

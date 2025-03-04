@@ -69,6 +69,11 @@ public class TransactionOrchestratorImpl implements TransactionOrchestrator {
         transactionRequest.transactionId(),
         TransactionPhase.HEALTH_CHECK,
         privacyBudgetServerIdentifier);
+    StatusCode statusCode = healthCheckResponse.executionResult().statusCode();
+    if (statusCode == StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED
+        || statusCode == StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED) {
+      throw new TransactionOrchestratorException(statusCode);
+    }
     throw new TransactionOrchestratorException(
         StatusCode.TRANSACTION_ORCHESTRATOR_HEALTH_CHECK_FAILURE);
   }
@@ -98,10 +103,11 @@ public class TransactionOrchestratorImpl implements TransactionOrchestrator {
         TransactionPhase.CONSUME_BUDGET,
         privacyBudgetServerIdentifier,
         consumeBudgetResponse.executionResult());
+
+    StatusCode statusCode = consumeBudgetResponse.executionResult().statusCode();
     // Return the response if consuming budget was successful or if the budget was exhausted.
     if (consumeBudgetResponse.executionResult().executionStatus() == ExecutionStatus.SUCCESS
-        || consumeBudgetResponse.executionResult().statusCode()
-            == StatusCode.PRIVACY_BUDGET_CLIENT_BUDGET_EXHAUSTED) {
+        || statusCode == StatusCode.PRIVACY_BUDGET_CLIENT_BUDGET_EXHAUSTED) {
       return consumeBudgetResponse;
     }
 
@@ -114,6 +120,10 @@ public class TransactionOrchestratorImpl implements TransactionOrchestrator {
     // budget in one coordinator and then something goes wrong in the second). We do not throw an
     // exception in the case that PBS returns budget exhausted because that is expected behavior
     // when trying to consume budget that has already been consumed.
+    if (statusCode == StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED
+        || statusCode == StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED) {
+      throw new TransactionOrchestratorException(statusCode);
+    }
     throw new TransactionOrchestratorException(
         StatusCode.TRANSACTION_ORCHESTRATOR_CONSUME_BUDGET_FAILURE);
   }

@@ -254,7 +254,6 @@ resource "aws_iam_role_policy" "split_key_gen_policy" {
 resource "aws_autoscaling_group" "split_key_rotation_group" {
   name                = "${var.environment}_${var.asg_name}"
   vpc_zone_identifier = var.enable_vpc ? var.secure_vpc_subnet_ids : [for s in aws_subnet.split_key_subnet : s.id]
-  desired_capacity    = var.initial_capacity_ec2_instances
   max_size            = var.max_ec2_instances
   min_size            = var.min_ec2_instances
 

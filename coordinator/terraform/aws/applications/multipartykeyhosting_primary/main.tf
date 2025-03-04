@@ -77,8 +77,9 @@ module "keymanagementpackagebucket_secondary" {
 module "key_job_queue" {
   source = "../../modules/keyjobqueue"
 
-  environment        = var.environment
-  key_job_queue_name = local.key_rotation_job_queue_name
+  environment         = var.environment
+  enable_key_rotation = var.enable_key_rotation
+  key_job_queue_name  = local.key_rotation_job_queue_name
 }
 
 module "vpc" {

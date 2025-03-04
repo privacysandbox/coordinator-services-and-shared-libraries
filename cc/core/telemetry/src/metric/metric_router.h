@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "absl/synchronization/mutex.h"
+#include "absl/types/span.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/config_provider_interface.h"
@@ -141,7 +142,7 @@ class MetricRouter {
    * @param aggregation_type    The type of the aggregation, such as Drop,
    * Histogram, LastValue, Sum, Default, defining the kind of data
    * aggregation for this this instrument's data.
-   * @param boundaries         A vector of boundary values for aggregation. Used
+   * @param boundaries         A span of boundary values for aggregation. Used
    * primarily with histogram-type instruments to define bucket boundaries for
    * data distribution.
    * @param version            (Optional) The exact version of the meter to
@@ -164,7 +165,7 @@ class MetricRouter {
       absl::string_view meter_name, absl::string_view instrument_name,
       opentelemetry::sdk::metrics::InstrumentType instrument_type,
       opentelemetry::sdk::metrics::AggregationType aggregation_type,
-      const std::vector<double>& boundaries, absl::string_view version = "1.0",
+      absl::Span<const double> boundaries, absl::string_view version = "1.0",
       absl::string_view schema_url = "",
       absl::string_view view_description = "", absl::string_view unit = "");
 

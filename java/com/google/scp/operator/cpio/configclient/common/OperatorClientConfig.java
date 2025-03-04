@@ -32,12 +32,12 @@ public abstract class OperatorClientConfig {
   }
 
   /** CoordinatorA Workload Identity Pool Provider. */
-  public abstract String coordinatorAWipProvider();
+  public abstract Optional<String> coordinatorAWipProvider();
 
   /**
    * CoordinatorA Service Account which TEE can impersonate and has access to protected resources.
    */
-  public abstract String coordinatorAServiceAccountToImpersonate();
+  public abstract Optional<String> coordinatorAServiceAccountToImpersonate();
 
   /** CoordinatorB Workload Identity Pool Provider. */
   public abstract Optional<String> coordinatorBWipProvider();
@@ -54,7 +54,7 @@ public abstract class OperatorClientConfig {
   public abstract String coordinatorAEncryptionKeyServiceBaseUrl();
 
   /** Coordinator B encryption key service url */
-  public abstract Optional<String> coordinatorBEncryptionKeyServiceBaseUrl();
+  public abstract String coordinatorBEncryptionKeyServiceBaseUrl();
 
   /** Coordinator A encryption key service cloudfunction url */
   public abstract Optional<String> coordinatorAEncryptionKeyServiceCloudfunctionUrl();
@@ -67,11 +67,11 @@ public abstract class OperatorClientConfig {
   public abstract static class Builder {
 
     /** Set the CoordinatorA Workload Identity Pool Provider. */
-    public abstract Builder setCoordinatorAWipProvider(String coordinatorAWipProvider);
+    public abstract Builder setCoordinatorAWipProvider(Optional<String> coordinatorAWipProvider);
 
     /** Set the CoordinatorA Service Account which can be impersonated by TEE. */
     public abstract Builder setCoordinatorAServiceAccountToImpersonate(
-        String coordinatorAServiceAccountToImpersonate);
+        Optional<String> coordinatorAServiceAccountToImpersonate);
 
     /** Set the CoordinatorB Workload Identity Pool Provider. */
     public abstract Builder setCoordinatorBWipProvider(Optional<String> coordinatorBWipProvider);
@@ -89,7 +89,7 @@ public abstract class OperatorClientConfig {
 
     /** Set coordinator B encryption key service base url */
     public abstract Builder setCoordinatorBEncryptionKeyServiceBaseUrl(
-        Optional<String> coordinatorBEncryptionKeyServiceBaseUrl);
+        String coordinatorBEncryptionKeyServiceBaseUrl);
 
     /** Set coordinator A encryption key service base url */
     public abstract Builder setCoordinatorAEncryptionKeyServiceCloudfunctionUrl(

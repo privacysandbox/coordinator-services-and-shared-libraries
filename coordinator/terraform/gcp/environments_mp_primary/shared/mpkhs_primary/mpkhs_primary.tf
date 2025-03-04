@@ -48,6 +48,7 @@ module "multipartykeyhosting_primary" {
   get_public_key_service_zip = var.get_public_key_service_zip
   encryption_key_service_zip = var.encryption_key_service_zip
 
+  enable_key_generation                         = var.enable_key_generation
   key_generation_image                          = var.key_generation_image
   key_generation_count                          = var.key_generation_count
   key_generation_cron_schedule                  = var.key_generation_cron_schedule

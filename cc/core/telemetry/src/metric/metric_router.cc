@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "opentelemetry/metrics/provider.h"
@@ -136,7 +137,7 @@ ExecutionResult MetricRouter::CreateViewForInstrument(
     absl::string_view meter_name, absl::string_view instrument_name,
     opentelemetry::sdk::metrics::InstrumentType instrument_type,
     opentelemetry::sdk::metrics::AggregationType aggregation_type,
-    const std::vector<double>& boundaries, absl::string_view version,
+    absl::Span<const double> boundaries, absl::string_view version,
     absl::string_view schema_url, absl::string_view view_description,
     absl::string_view unit) {
   auto meter_selector =
@@ -146,7 +147,8 @@ ExecutionResult MetricRouter::CreateViewForInstrument(
 
   auto histogram_aggregation_config = std::make_shared<
       opentelemetry::sdk::metrics::HistogramAggregationConfig>();
-  histogram_aggregation_config->boundaries_ = boundaries;
+  histogram_aggregation_config->boundaries_ =
+      std::vector<double>(boundaries.begin(), boundaries.end());
 
   std::unique_ptr<opentelemetry::sdk::metrics::View> view =
       opentelemetry::sdk::metrics::ViewFactory::Create(

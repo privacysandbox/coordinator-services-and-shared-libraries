@@ -65,7 +65,8 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
       return GoogleCredentials.getApplicationDefault();
     }
     return CredentialsHelper.getAttestedCredentials(
-        config.coordinatorAWipProvider(), config.coordinatorAServiceAccountToImpersonate());
+        config.coordinatorAWipProvider().get(),
+        config.coordinatorAServiceAccountToImpersonate().get());
   }
 
   /**
@@ -76,9 +77,7 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
   @CoordinatorBCredentials
   @Singleton
   GoogleCredentials provideCoordinatorBCredentials(OperatorClientConfig config) throws IOException {
-    // For single party solution, we will not have coordinatorB details, so use default
-    // credentials. These are not used for single party solution.
-    if (config.useLocalCredentials() || config.coordinatorBWipProvider().isEmpty()) {
+    if (config.useLocalCredentials()) {
       return GoogleCredentials.getApplicationDefault();
     }
     return CredentialsHelper.getAttestedCredentials(
@@ -104,13 +103,10 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
   @Singleton
   public HttpClientWrapper provideCoordinatorBHttpClient(OperatorClientConfig config)
       throws IOException {
-    if (config.coordinatorBEncryptionKeyServiceBaseUrl().isPresent()) {
-      return getHttpClientWrapper(
-          config
-              .coordinatorBEncryptionKeyServiceCloudfunctionUrl()
-              .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl().get()));
-    }
-    return HttpClientWrapper.createDefault();
+    return getHttpClientWrapper(
+        config
+            .coordinatorBEncryptionKeyServiceCloudfunctionUrl()
+            .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl()));
   }
 
   @Override
@@ -118,9 +114,9 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
     install(new GcpClientConfigModule());
   }
 
-  private static HttpClientWrapper getHttpClientWrapper(String url) throws IOException {
+  private static HttpClientWrapper getHttpClientWrapper(String audience) throws IOException {
     return HttpClientWrapper.builder()
-        .setInterceptor(GcpHttpInterceptorUtil.createHttpInterceptor(url))
+        .setInterceptor(GcpHttpInterceptorUtil.createHttpInterceptor(audience))
         .setExponentialBackoff(
             COORDINATOR_HTTPCLIENT_RETRY_INITIAL_INTERVAL,
             COORDINATOR_HTTPCLIENT_RETRY_MULTIPLIER,

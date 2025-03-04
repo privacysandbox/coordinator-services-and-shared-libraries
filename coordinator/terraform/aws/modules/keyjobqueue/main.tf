@@ -68,6 +68,7 @@ resource "aws_sqs_queue_policy" "sqs_event_policy" {
 resource "aws_cloudwatch_event_rule" "key_rotation_rule" {
   name                = "${var.environment}_split-key-rotation-rule"
   schedule_expression = "rate(6 hours)"
+  is_enabled          = var.enable_key_rotation
 }
 
 resource "aws_cloudwatch_event_target" "key_rotation_event_target" {

@@ -95,13 +95,34 @@ public final class GcpCreateKeyWithSyncTask implements CreateKeyTask {
     ReencryptedKeySplits validatedKeySplit =
         validatedPrivateKeySplit(encryptedKeySplit, encryptionKey.getPublicKeyMaterial());
 
+    String typeAKeySyncKmsUri = encryptionKey.getKeySplitData(1).getKeySplitKeyEncryptionKeyUri();
     finalizeAndPersistEncryptionKey(
-        encryptionKey, keySyncEncryptionKeyUri, validatedKeySplit.awsKeySplit, keySyncDb);
+        updateKeySplitDataWithKeyURI(encryptionKey, typeAKeySyncKmsUri),
+        keySyncEncryptionKeyUri,
+        validatedKeySplit.awsKeySplit,
+        keySyncDb);
+
+    String typeAKmsUri = encryptionKey.getKeySplitData(0).getKeySplitKeyEncryptionKeyUri();
     EncryptionKey newEncryptionKey =
         finalizeAndPersistEncryptionKey(
-            encryptionKey, encryptionKeyUri, validatedKeySplit.gcpKeySplit, keyDb);
+            updateKeySplitDataWithKeyURI(encryptionKey, typeAKmsUri),
+            encryptionKeyUri,
+            validatedKeySplit.gcpKeySplit,
+            keyDb);
 
-    return newEncryptionKey;
+    // Update key split data to include both AWS and cross-cloud KMS encryption key URIs.
+    EncryptionKey encryptionKeyToReturn =
+        newEncryptionKey.toBuilder()
+            .clearKeySplitData()
+            .addKeySplitData(
+                KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(encryptionKeyUri).build())
+            .addKeySplitData(
+                KeySplitData.newBuilder()
+                    .setKeySplitKeyEncryptionKeyUri(keySyncEncryptionKeyUri)
+                    .build())
+            .build();
+
+    return encryptionKeyToReturn;
   }
 
   @Override
@@ -152,5 +173,12 @@ public final class GcpCreateKeyWithSyncTask implements CreateKeyTask {
             .build();
     keyDb.createKey(newEncryptionKey);
     return newEncryptionKey;
+  }
+
+  private static EncryptionKey updateKeySplitDataWithKeyURI(EncryptionKey key, String kmsKey) {
+    return key.toBuilder()
+        .clearKeySplitData()
+        .addKeySplitData(KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(kmsKey).build())
+        .build();
   }
 }

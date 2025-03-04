@@ -81,24 +81,8 @@ public final class CloudFunctionEmulatorContainer
                 functionJarPath,
                 functionClassTarget)
             .dependsOn(spannerEmulatorContainer)
-            .withEnv(
-                "SPANNER_EMULATOR_HOST",
-                "http://"
-                    + spannerEmulatorContainer
-                        .getContainerInfo()
-                        .getNetworkSettings()
-                        .getNetworks()
-                        .entrySet()
-                        .stream()
-                        .findFirst()
-                        .get()
-                        .getValue()
-                        .getIpAddress()
-                    + ":"
-                    + SpannerEmulatorContainer.GRPC_PORT);
-    if (envVariables.isPresent()) {
-      container.withEnv(envVariables.get());
-    }
+            .withEnv("SPANNER_EMULATOR_HOST", spannerEmulatorContainer.getContainerGrpcAddress());
+    envVariables.ifPresent(container::withEnv);
     container.start();
     return container;
   }
@@ -116,36 +100,9 @@ public final class CloudFunctionEmulatorContainer
                 functionJarPath,
                 functionClassTarget)
             .dependsOn(spannerEmulatorContainer)
-            .withEnv(
-                "SPANNER_EMULATOR_HOST",
-                "http://"
-                    + spannerEmulatorContainer
-                        .getContainerInfo()
-                        .getNetworkSettings()
-                        .getNetworks()
-                        .entrySet()
-                        .stream()
-                        .findFirst()
-                        .get()
-                        .getValue()
-                        .getIpAddress()
-                    + ":"
-                    + SpannerEmulatorContainer.GRPC_PORT)
+            .withEnv("SPANNER_EMULATOR_HOST", spannerEmulatorContainer.getContainerGrpcAddress())
             .dependsOn(pubSubEmulatorContainer)
-            .withEnv(
-                "PUBSUB_EMULATOR_HOST",
-                pubSubEmulatorContainer
-                        .getContainerInfo()
-                        .getNetworkSettings()
-                        .getNetworks()
-                        .entrySet()
-                        .stream()
-                        .findFirst()
-                        .get()
-                        .getValue()
-                        .getIpAddress()
-                    + ":"
-                    + pubSubEmulatorContainer.getExposedPorts().get(0));
+            .withEnv("PUBSUB_EMULATOR_HOST", pubSubEmulatorContainer.getContainerEndpoint());
     container.start();
     return container;
   }

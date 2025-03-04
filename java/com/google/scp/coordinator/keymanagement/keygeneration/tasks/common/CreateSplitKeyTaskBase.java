@@ -268,7 +268,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           "Sent key " + unsignedCoordinatorBKey.getKeyId() + " to peer coordinator successfully.");
 
       // Accumulate signatures and store to KeyDB
-      String persistedKeyId = signAndPersistKey(keyDb, unsignedCoordinatorAKey, partyBResponse);
+      String persistedKeyId =
+          signAndPersistKey(keyDb, unsignedCoordinatorAKey, partyBResponse, true);
       LOGGER.info(
           String.format(
               "Updated placeholder key %s to persistent key successfully.", persistedKeyId));
@@ -397,7 +398,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               signatureKey);
       unsignedAwsCoordinatorAKey =
           createCoordinatorAKey(keySplits.get(0), awsKey, keySyncAead, keySyncKmsUri);
-      unsignedCoordinatorBKey = createCoordinatorBKey(key);
+      unsignedCoordinatorBKey =
+          KeySplitDataUtil.addKeySplitData(createCoordinatorBKey(key), keySyncKmsUri, signatureKey);
 
       encryptedKeySplitB =
           encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
@@ -482,12 +484,19 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
     // 5. Encrypt and sign key split A with the AWS key sync KMS key and store to DynamoDB
     try {
+      String peerCoordinatorKeySyncKmsUri =
+          partyBResponse.getKeySplitData(1).getKeySplitKeyEncryptionKeyUri();
       String persistedKeyId =
-          signAndPersistKey(keySyncDb, unsignedAwsCoordinatorAKey, partyBResponse);
+          signAndPersistKey(
+              keySyncDb,
+              updateKeySplitDataWithKeyURI(unsignedAwsCoordinatorAKey, keySyncKmsUri, signatureKey),
+              updateKeySplitDataWithKeyURI(
+                  partyBResponse, peerCoordinatorKeySyncKmsUri, signatureKey),
+              false);
       LOGGER.info(
           String.format("Successfully persisted key to Type-A DynamoDB KeyDB: %s", persistedKeyId));
-    } catch (ServiceException e) {
-      LOGGER.warn("Failed to persist key to Type-A DynamoDB KeyDB: " + e.getErrorReason());
+    } catch (ServiceException | GeneralSecurityException e) {
+      LOGGER.warn("Failed to persist key to Type-A DynamoDB KeyDB: " + e.getMessage());
       LOGGER.info("Deleting the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
       keyDb.deleteKey(unsignedCoordinatorAKey.getKeyId());
 
@@ -505,19 +514,28 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         return;
       }
       LOGGER.error("Retries exhausted when sending key to peer coordinator.");
-      throw e;
+      throw new ServiceException(Code.UNAVAILABLE, "UNAVAILABLE", e.getMessage(), e);
     }
 
     // 6. Encrypt and sign split A with the xC GCP KMS, update the placeholder key and finalize key
     // generation.
     try {
-      String persistedKeyId = signAndPersistKey(keyDb, unsignedCoordinatorAKey, partyBResponse);
+      String peerCoordinatorKeyEncryptionKeyUri =
+          partyBResponse.getKeySplitData(0).getKeySplitKeyEncryptionKeyUri();
+      String persistedKeyId =
+          signAndPersistKey(
+              keyDb,
+              updateKeySplitDataWithKeyURI(
+                  unsignedCoordinatorAKey, keyEncryptionKeyUri, signatureKey),
+              updateKeySplitDataWithKeyURI(
+                  partyBResponse, peerCoordinatorKeyEncryptionKeyUri, signatureKey),
+              true);
       LOGGER.info(
           String.format(
               "Updated placeholder key %s to persistent key successfully.", persistedKeyId));
-    } catch (ServiceException e) {
+    } catch (ServiceException | GeneralSecurityException e) {
       LOGGER.warn(
-          "Failed to update placeholder key during key persistence due to: " + e.getErrorReason());
+          "Failed to update placeholder key during key persistence due to: " + e.getMessage());
       LOGGER.info("Deleting the placeholder key: " + unsignedCoordinatorAKey.getKeyId());
       keyDb.deleteKey(unsignedCoordinatorAKey.getKeyId());
 
@@ -535,7 +553,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         return;
       }
       LOGGER.error("Retries exhausted when sending key to peer coordinator.");
-      throw e;
+      throw new ServiceException(Code.UNAVAILABLE, "UNAVAILABLE", e.getMessage(), e);
     }
   }
 
@@ -653,11 +671,18 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         "Successfully removed all placeholder keys or no placeholder keys were found in Db.");
   }
 
+  private static EncryptionKey updateKeySplitDataWithKeyURI(
+      EncryptionKey key, String kmsKeyUri, Optional<PublicKeySign> signatureKey)
+      throws GeneralSecurityException {
+    return KeySplitDataUtil.addKeySplitData(
+        key.toBuilder().clearKeySplitData().build(), kmsKeyUri, signatureKey);
+  }
+
   private static String signAndPersistKey(
-      KeyDb keyDb, EncryptionKey unsignedKey, EncryptionKey partyBResponse)
+      KeyDb keyDb, EncryptionKey unsignedKey, EncryptionKey partyBResponse, boolean overwriteKey)
       throws ServiceException {
     EncryptionKey signedKey = signCoordinatorKeyWithPeerResponse(unsignedKey, partyBResponse);
-    keyDb.createKey(signedKey, true);
+    keyDb.createKey(signedKey, overwriteKey);
     return signedKey.getKeyId();
   }
 

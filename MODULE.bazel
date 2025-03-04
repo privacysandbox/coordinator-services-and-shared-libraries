@@ -1,0 +1,443 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Bazel module.
+"""
+
+module(
+    name = "privacy_sandbox_coordinator_services_and_shared_libraries",
+    version = "1.16.0",
+)
+
+bazel_dep(name = "abseil-cpp", version = "20240722.1", repo_name = "com_google_absl")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "boringssl", version = "0.20250114.0")
+bazel_dep(name = "c-ares", version = "1.15.0", repo_name = "com_github_cares_cares")
+bazel_dep(name = "crc32c", version = "1.1.0", repo_name = "com_github_google_crc32c")
+bazel_dep(name = "curl", version = "8.8.0.bcr.2", repo_name = "com_github_curl_curl")
+bazel_dep(name = "envoy_api", version = "0.0.0-20250128-4de3c74")
+bazel_dep(name = "gazelle", version = "0.42.0", repo_name = "bazel_gazelle")
+bazel_dep(name = "google_benchmark", version = "1.9.1")
+bazel_dep(name = "googletest", version = "1.14.0", repo_name = "com_google_googletest")
+bazel_dep(name = "grpc-java", version = "1.69.0", repo_name = "io_grpc_grpc_java")
+bazel_dep(name = "grpc", version = "1.69.0", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "nlohmann_json", version = "3.11.3.bcr.1", repo_name = "com_github_nlohmann_json")
+bazel_dep(name = "onetbb", version = "2021.10.0", repo_name = "oneTBB")
+bazel_dep(name = "openssl", version = "3.3.1.bcr.1")
+bazel_dep(name = "opentelemetry-cpp", version = "1.19.0", repo_name = "io_opentelemetry_cpp")
+bazel_dep(name = "opentelemetry-proto", version = "1.5.0", repo_name = "com_github_opentelemetry_proto")
+bazel_dep(name = "platforms", version = "0.0.11")
+bazel_dep(name = "protobuf", version = "29.3", repo_name = "com_google_protobuf")
+bazel_dep(name = "protoc-gen-validate", version = "1.0.4.bcr.2")
+bazel_dep(name = "re2", version = "2024-07-02.bcr.1", repo_name = "com_googlesource_code_re2")
+bazel_dep(name = "rpmpack", version = "0.6.0", repo_name = "com_github_google_rpmpack")
+bazel_dep(name = "rules_cc", version = "0.0.17")
+bazel_dep(name = "rules_foreign_cc", version = "0.13.0")
+bazel_dep(name = "rules_go", version = "0.52.0", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "rules_java", version = "7.12.2")
+bazel_dep(name = "rules_jvm_external", version = "6.6")
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+bazel_dep(name = "rules_proto", version = "6.0.0")
+bazel_dep(name = "rules_python", version = "1.1.0")
+bazel_dep(name = "xds", version = "0.0.0-20240423-555b57e", repo_name = "com_github_cncf_xds")
+bazel_dep(name = "zlib", version = "1.3.1.bcr.4")
+
+single_version_override(
+    module_name = "rules_cc",
+    version = "0.0.17",
+)
+
+bazel_dep(name = "rules_boost", repo_name = "com_github_nelhage_rules_boost")
+archive_override(
+    module_name = "rules_boost",
+    integrity = "sha256-ZLcmvYKc2FqgLvR96ApPXxp8+sXKqhBlCK66PY/uFIo=",
+    strip_prefix = "rules_boost-e3adfd8d6733c914d2b91a65fb7175af09602281",
+    urls = "https://github.com/nelhage/rules_boost/archive/e3adfd8d6733c914d2b91a65fb7175af09602281.tar.gz",
+)
+
+non_module_boost_repositories = use_extension("@com_github_nelhage_rules_boost//:boost/repositories.bzl", "non_module_dependencies")
+use_repo(
+    non_module_boost_repositories,
+    "boost",
+)
+
+bazel_dep(name = "googleapis", version = "0.0.0-20240819-fe8ba054a", repo_name = "com_google_googleapis")
+archive_override(
+    module_name = "googleapis",
+    integrity = "sha256-BRPw9Ar2O9Bdx4nKzDNKts7CfMidtZZVfLLf6JGUY+Q=",
+    patch_strip = 1,
+    # Patch module support into googleapis
+    patches = ["//build_defs:googleapis.patch"],
+    strip_prefix = "googleapis-fe8ba054ad4f7eca946c2d14a63c3f07c0b586a0",
+    urls = [
+        "https://github.com/googleapis/googleapis/archive/fe8ba054ad4f7eca946c2d14a63c3f07c0b586a0.tar.gz",
+    ],
+)
+
+switched_rules = use_extension("@com_google_googleapis//:extensions.bzl", "switched_rules")
+switched_rules.use_languages(
+    cc = True,
+    grpc = True,
+    java = True,
+)
+use_repo(switched_rules, "com_google_googleapis_imports")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# TODO: Migrate to BCR
+# https://github.com/bazelbuild/bazel-central-registry/pull/2742
+http_archive(
+    name = "com_github_googleapis_google_cloud_cpp",
+    sha256 = "358e3b6277a71634de7b7cb1cef14b728f6af6e450fbc9b0e5847882729b32ea",
+    strip_prefix = "google-cloud-cpp-c7242253b17a1754e06444bd042849ec101729c8",
+    urls = ["https://github.com/googleapis/google-cloud-cpp/archive/c7242253b17a1754e06444bd042849ec101729c8.zip"],  # 2024-06-11
+)
+
+http_archive(
+    name = "com_github_nghttp2_nghttp2",
+    build_file = "//build_defs/cc/shared/build_targets:nghttp2.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//build_defs/cc/shared/build_targets:nghttp2.patch"],
+    sha256 = "62f50f0e9fc479e48b34e1526df8dd2e94136de4c426b7680048181606832b7c",
+    strip_prefix = "nghttp2-1.47.0",
+    urls = [
+        "https://github.com/nghttp2/nghttp2/releases/download/v1.47.0/nghttp2-1.47.0.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "jemalloc",
+    build_file = "//build_defs/cc/shared/build_targets:libjemalloc.BUILD",
+    sha256 = "1f35888bad9fd331f5a03445bc1bff808a59378be61fef01e9736179d76f2fab",
+    url = "https://github.com/jemalloc/jemalloc/archive/refs/tags/5.3.0.zip",
+)
+
+http_archive(
+    name = "google-cloud-sdk",
+    build_file_content = """
+package(default_visibility = ["//visibility:public"])
+exports_files(["google-cloud-sdk"])
+""",
+    # latest from https://cloud.google.com/storage/docs/gsutil_install#linux as of 2021-12-16
+    sha256 = "94328b9c6559a1b7ec2eeaab9ef0e4702215e16e8327c5b99718750526ae1efe",
+    url = "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-367.0.0-linux-x86_64.tar.gz",
+)
+
+http_archive(
+    name = "terraform",
+    build_file_content = """
+package(default_visibility = ["//visibility:public"])
+exports_files(["terraform"])
+""",
+    sha256 = "728b6fbcb288ad1b7b6590585410a98d3b7e05efe4601ef776c37e15e9a83a96",
+    url = "https://releases.hashicorp.com/terraform/1.2.3/terraform_1.2.3_linux_amd64.zip",
+)
+
+http_archive(
+    name = "gperftools",
+    build_file = "//build_defs/cc/shared/build_targets:gperftools.BUILD",
+    sha256 = "c69fef855628c81ef56f12e3c58f2b7ce1f326c0a1fe783e5cae0b88cbbe9a80",
+    strip_prefix = "gperftools-2.15",
+    urls = [
+        "https://github.com/gperftools/gperftools/releases/download/gperftools-2.15/gperftools-2.15.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "packer",
+    build_file_content = """
+package(default_visibility = ["//visibility:public"])
+exports_files(["packer"])
+""",
+    sha256 = "57d0411e578aea62918d36ed186951139d5d49d44b76e5666d1fbf2427b385ae",
+    url = "https://releases.hashicorp.com/packer/1.8.6/packer_1.8.6_linux_amd64.zip",
+)
+
+http_archive(
+    name = "aws_nitro_enclaves_sdk_c",
+    build_file = "//build_defs/aws/kmstool:kmstool.BUILD",
+    patch_args = ["-p1"],
+    patches = [
+        "//build_defs/aws/kmstool:kmstool.patch",
+        "//build_defs/aws/kmstool:dockerfile_git_shallow_clone.patch",
+    ],
+    sha256 = "bc937626e1058c2464e60dde3a410855b87987e6da23433d78e77aedc8a152ec",
+    strip_prefix = "aws-nitro-enclaves-sdk-c-e3425251b5fd573a730101b091f770ad21b9ee56",
+    urls = ["https://github.com/aws/aws-nitro-enclaves-sdk-c/archive/e3425251b5fd573a730101b091f770ad21b9ee56.zip"],
+)
+
+http_archive(
+    name = "libpsl",
+    build_file = "//build_defs/cc/shared/build_targets:libpsl.BUILD",
+    sha256 = "e35991b6e17001afa2c0ca3b10c357650602b92596209b7492802f3768a6285f",
+    strip_prefix = "libpsl-0.21.2",
+    urls = [
+        "https://github.com/rockdaboot/libpsl/releases/download/0.21.2/libpsl-0.21.2.tar.gz",
+    ],
+)
+
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_file(
+    name = "bazelisk",
+    downloaded_file_path = "bazelisk",
+    executable = True,
+    sha256 = "84e946ed8537eaaa4d540df338a593e373e70c5ddca9f2f49e1aaf3a04bdd6ca",
+    urls = ["https://github.com/bazelbuild/bazelisk/releases/download/v1.14.0/bazelisk-linux-amd64"],
+)
+
+http_file(
+    name = "google_java_format",
+    downloaded_file_path = "google-java-format.jar",
+    sha256 = "a356bb0236b29c57a3ab678f17a7b027aad603b0960c183a18f1fe322e4f38ea",
+    urls = ["https://github.com/google/google-java-format/releases/download/v1.15.0/google-java-format-1.15.0-all-deps.jar"],
+)
+
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.23.0")
+
+go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_work = "//:go.work")
+go_deps.module(
+    path = "github.com/bazelbuild/buildtools",
+    sum = "h1:FGzENZi+SX9I7h9xvMtRA3rel8hCEfyzSixteBgn7MU=",
+    version = "v0.0.0-20240918101019-be1c24cc9a44",
+)
+
+# All *direct* Go dependencies of all `go.mod` files referenced by the `go.work`
+# file have to be listed explicitly.
+use_repo(
+    go_deps,
+    "com_github_bazelbuild_buildtools",
+    "com_github_googleapis_gax_go_v2",
+    "com_github_kylelemons_godebug",
+    "com_github_stretchr_testify",
+    "com_google_cloud_go_spanner",
+)
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    ignore_root_user_error = True,
+    is_default = True,
+    python_version = "3.8",
+)
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "py3_privacybudget_gcp_pbs_auth_handler_test_deps",
+    python_version = "3.8",
+    requirements_lock = "//:python/privacybudget/gcp/pbs_auth_handler/config/test_requirements.txt",
+)
+use_repo(pip, "py3_privacybudget_gcp_pbs_auth_handler_test_deps")
+pip.parse(
+    hub_name = "py3_privacybudget_gcp_operator_onboarding_deps",
+    python_version = "3.8",
+    requirements_lock = "//:python/privacybudget/gcp/operator_onboarding/requirements.txt",
+)
+use_repo(pip, "py3_privacybudget_gcp_operator_onboarding_deps")
+pip.parse(
+    hub_name = "py3_privacybudget_aws_pbs_auth_handler_deps",
+    python_version = "3.8",
+    requirements_lock = "//:python/privacybudget/aws/pbs_auth_handler/requirements.txt",
+)
+use_repo(pip, "py3_privacybudget_aws_pbs_auth_handler_deps")
+pip.parse(
+    hub_name = "py3_privacybudget_aws_pbs_synthetic_deps",
+    python_version = "3.8",
+    requirements_lock = "//:python/privacybudget/aws/pbs_synthetic/requirements.txt",
+)
+use_repo(pip, "py3_privacybudget_aws_pbs_synthetic_deps")
+pip.parse(
+    hub_name = "py3_mpkhs_aws_privatekey_synthetic_deps",
+    python_version = "3.8",
+    requirements_lock = "//:python/mpkhs/aws/privatekey_synthetic/requirements.txt",
+)
+use_repo(pip, "py3_mpkhs_aws_privatekey_synthetic_deps")
+
+http_file(
+    name = "py3_certifi_cert",
+    sha256 = "2c11c3ce08ffc40d390319c72bc10d4f908e9c634494d65ed2cbc550731fd524",
+    urls = ["https://github.com/certifi/python-certifi/raw/2022.12.07/certifi/cacert.pem"],
+)
+
+http_file(
+    name = "py3_hyper_cert",
+    sha256 = "dc0922831d4111ed86013741b03325332147bc38723fbef7b23e55ee4b70761f",
+    urls = ["https://github.com/python-hyper/hyper/raw/v0.7.0/hyper/certs.pem"],
+)
+
+JACKSON_VERSION = "2.16.1"
+
+AUTO_VALUE_VERSION = "1.7.4"
+
+AWS_SDK_VERSION = "2.21.17"
+
+GOOGLE_GAX_VERSION = "2.20.1"
+
+AUTO_SERVICE_VERSION = "1.0"
+
+JAVA_OTEL_VERSION = "1.38.0"
+
+PROTOBUF_JAVA_VERSION_PREFIX = "4."
+
+PROTOBUF_CORE_VERSION = "29.3"
+
+OTEL_ARTIFACTS = [
+    "com.google.cloud.opentelemetry:exporter-metrics:0.31.0",
+    # Note from https://github.com/open-telemetry/semantic-conventions-java:
+    # Although this is for stable semantic conventions, the artifact still has the -alpha and comes with no
+    # compatibility guarantees. The goal is to mark this artifact stable.
+    "io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha",
+    "io.opentelemetry:opentelemetry-api:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-common:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-metrics:" + JAVA_OTEL_VERSION,
+    # As of adding, https://repo1.maven.org/maven2/io/opentelemetry/contrib/opentelemetry-gcp-resources/ only shows
+    # that alpha version is available.
+    "io.opentelemetry.contrib:opentelemetry-gcp-resources:" + JAVA_OTEL_VERSION + "-alpha",
+    "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:" + JAVA_OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-testing:" + JAVA_OTEL_VERSION,
+]
+
+GAPIC_GENERATOR_JAVA_VERSION = "2.19.0"
+
+CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION = "1.1.0"
+
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven",
+    artifacts = [
+        "com.amazonaws:aws-lambda-java-core:1.2.1",
+        "com.amazonaws:aws-lambda-java-events:3.8.0",
+        "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.1.0",
+        "com.amazonaws:aws-java-sdk-sqs:1.11.860",
+        "com.amazonaws:aws-java-sdk-s3:1.11.860",
+        "com.amazonaws:aws-java-sdk-kms:1.11.860",
+        "com.amazonaws:aws-java-sdk-core:1.11.860",
+        "com.beust:jcommander:1.81",
+        "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.core:jackson-core:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.core:jackson-databind:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-guava:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:" + JACKSON_VERSION,
+        "com.google.acai:acai:1.1",
+        "com.google.auto.factory:auto-factory:1.0",
+        "com.google.auto.service:auto-service-annotations:" + AUTO_SERVICE_VERSION,
+        "com.google.auto.service:auto-service:" + AUTO_SERVICE_VERSION,
+        "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
+        "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
+        "com.google.code.findbugs:jsr305:3.0.2",
+        "com.google.code.gson:gson:2.8.9",
+        "com.google.cloud:google-cloud-kms:2.60.0",
+        "com.google.cloud:google-cloud-pubsub:1.136.1",
+        "com.google.cloud:google-cloud-storage:2.48.0",
+        "com.google.cloud:google-cloud-spanner:6.86.0",
+        "com.google.cloud:google-cloud-secretmanager:2.57.0",
+        "com.google.cloud:google-cloud-compute:1.67.0",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.67.0",
+        "com.google.cloud.functions.invoker:java-function-invoker:" + CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION,
+        "com.google.auth:google-auth-library-oauth2-http:1.31.0",
+        "com.google.cloud.functions:functions-framework-api:1.1.4",
+        "commons-logging:commons-logging:1.1.1",
+        "com.google.api:gax:" + GOOGLE_GAX_VERSION,
+        "com.google.http-client:google-http-client-jackson2:1.45.3",
+        "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
+        "com.google.cloud:google-cloud-monitoring:3.58.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.58.0",
+        "com.google.api.grpc:proto-google-common-protos:2.9.2",
+        "com.google.guava:guava:33.3.1-jre",
+        "com.google.guava:guava-testlib:32.1.3-jre",
+        "com.google.inject:guice:5.1.0",
+        "com.google.inject.extensions:guice-testlib:5.1.0",
+        "com.google.jimfs:jimfs:1.2",
+        "com.google.testparameterinjector:test-parameter-injector:1.1",
+        "com.google.truth.extensions:truth-java8-extension:1.1.2",
+        "com.google.truth.extensions:truth-proto-extension:1.4.4",
+        "com.google.truth:truth:1.4.4",
+        "com.jayway.jsonpath:json-path:2.5.0",
+        "io.github.resilience4j:resilience4j-core:1.7.1",
+        "io.github.resilience4j:resilience4j-retry:1.7.1",
+        "javax.annotation:javax.annotation-api:1.3.2",
+        "javax.inject:javax.inject:1",
+        "junit:junit:4.12",
+        "org.apache.avro:avro:1.10.2",
+        "org.apache.commons:commons-math3:3.6.1",
+        "org.apache.httpcomponents:httpcore:4.4.14",
+        "org.apache.httpcomponents:httpclient:4.5.13",
+        "org.apache.httpcomponents.client5:httpclient5:5.1.3",
+        "org.apache.httpcomponents.core5:httpcore5:5.1.4",
+        "org.apache.httpcomponents.core5:httpcore5-h2:5.1.4",  # Explicit transitive dependency to avoid https://issues.apache.org/jira/browse/HTTPCLIENT-2222
+        "org.apache.logging.log4j:log4j-1.2-api:2.17.0",
+        "org.apache.logging.log4j:log4j-core:2.17.0",
+        "org.assertj:assertj-core:3.26.3",
+        "org.awaitility:awaitility:3.0.0",
+        "org.mock-server:mockserver-core:5.11.2",
+        "org.mock-server:mockserver-junit-rule:5.11.2",
+        "org.mock-server:mockserver-client-java:5.11.2",
+        "org.hamcrest:hamcrest-library:1.3",
+        "org.mockito:mockito-core:3.11.2",
+        "org.mockito:mockito-inline:3.11.2",
+        "org.slf4j:slf4j-api:2.0.16",
+        "org.slf4j:slf4j-simple:2.0.16",
+        "org.slf4j:slf4j-log4j12:2.0.16",
+        "org.testcontainers:testcontainers:1.15.3",
+        "org.testcontainers:localstack:1.15.3",
+        "software.amazon.awssdk:apigateway:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:arns:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:autoscaling:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:aws-sdk-java:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:dynamodb-enhanced:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:dynamodb:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:cloudwatch:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:ec2:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:pricing:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:s3-transfer-manager:2.20.130",
+        "software.amazon.awssdk:aws-core:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:ssm:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:sqs:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:url-connection-client:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
+        "com.google.api:gapic-generator-java:" + GAPIC_GENERATOR_JAVA_VERSION,  # To use generated gRpc Java interface
+        "io.grpc:grpc-netty:1.63.0",
+        "com.google.crypto.tink:tink:1.11.0",
+        "com.google.crypto.tink:tink-gcpkms:1.10.0",
+        "com.google.oauth-client:google-oauth-client:1.37.0",
+        "com.google.cloud:google-cloud-iamcredentials:2.57.0",
+    ] + OTEL_ARTIFACTS,
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+)
+use_repo(maven, "maven")
+
+maven.install(
+    name = "maven_yaml",
+    artifacts = [
+        "org.yaml:snakeyaml:1.27",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+    # Pin the working version for snakeyaml.
+    version_conflict_policy = "pinned",
+)
+use_repo(maven, "maven_yaml")

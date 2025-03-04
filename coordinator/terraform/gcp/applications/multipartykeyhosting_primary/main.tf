@@ -101,6 +101,7 @@ module "keygenerationservice" {
   key_generation_monitoring_enabled = var.key_generation_monitoring_enabled
 
   # Business Rules Args
+  enable_key_generation         = var.enable_key_generation
   key_generation_cron_schedule  = var.key_generation_cron_schedule
   key_generation_cron_time_zone = var.key_generation_cron_time_zone
   key_generation_tee_allowed_sa = var.key_generation_tee_allowed_sa
