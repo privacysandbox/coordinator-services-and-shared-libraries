@@ -18,6 +18,7 @@ package(default_visibility = ["//visibility:public"])
 
 java_test(
     name = "S3BlobStorageClientTest",
+    size = "large",
     srcs = ["S3BlobStorageClientTest.java"],
     runtime_deps = [
         # LocalStackContainers uses v1 API in the background.
@@ -46,6 +47,7 @@ java_test(
 
 java_test(
     name = "S3HttpRangedStreamTest",
+    size = "large",
     srcs = ["S3HttpRangedStreamTest.java"],
     runtime_deps = [
         # LocalStackContainers uses v1 API in the background.

@@ -28,7 +28,7 @@ public final class CloudFunctionEmulatorContainer
 
   private static final String invokerJarFilename = "java-function-invoker-1.1.0.jar";
   private static final String invokerJarPath =
-      "external/maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/1.1.0/"
+      "external/rules_jvm_external~~maven~maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/1.1.0/"
           + invokerJarFilename;
   private static final int invokerPort = 8080; // default internal port for the invoker jar process
 

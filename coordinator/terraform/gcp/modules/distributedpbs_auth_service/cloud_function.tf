@@ -93,6 +93,7 @@ resource "google_cloudfunctions2_function" "pbs_auth_cloudfunction" {
       AUTH_V2_SPANNER_INSTANCE_ID               = var.pbs_auth_spanner_instance_name
       AUTH_V2_SPANNER_DATABASE_ID               = var.pbs_auth_spanner_database_name
       AUTH_V2_SPANNER_TABLE_NAME                = var.pbs_auth_v2_spanner_table_name
+      LOG_EXECUTION_ID                          = true
     }
 
     ingress_settings = var.limit_traffic_to_internal_and_lb ? "ALLOW_INTERNAL_AND_GCLB" : "ALLOW_ALL"

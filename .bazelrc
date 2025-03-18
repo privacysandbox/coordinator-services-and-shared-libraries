@@ -1,6 +1,3 @@
-# Migration to Bzlmod is not ready yet
-common --noenable_bzlmod
-
 build --announce_rc
 build --verbose_failures
 build --color=yes

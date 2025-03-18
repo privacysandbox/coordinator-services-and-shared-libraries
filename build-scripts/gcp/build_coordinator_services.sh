@@ -24,15 +24,21 @@ KEYSTRSVC_IMAGE_NAME=$5
 IMAGE_TAG=$6
 TAR_BUCKET=$7
 TAR_PATH=$8
+PBS_IMAGE_NAME=${9:-privacy-budget-service}
 
-KEY_GENERATION_LOG=$(pwd)/buildlog.txt
+BUILD_LOG=$(pwd)/buildlog.txt
 cp cc/tools/build/build_container_params.bzl.prebuilt cc/tools/build/build_container_params.bzl
 COORDINATOR_VERSION=$(cat version.txt)
 
 bazel run //coordinator/keygeneration/gcp:key_generation_app_mp_gcp_image_prod \
   --sandbox_writable_path=$HOME/.docker \
   -- -dst "${IMAGE_REPO_PATH}/${KEYGEN_IMAGE_NAME}:${IMAGE_TAG}" \
-  | tee "${KEY_GENERATION_LOG}"
+  | tee "${BUILD_LOG}"
+
+bazel run //coordinator/privacybudget/gcp:pbs_cloud_run_container_image \
+   --sandbox_writable_path=$HOME/.docker \
+  -- -dst "${IMAGE_REPO_PATH}/${PBS_IMAGE_NAME}:${IMAGE_TAG}" \
+  | tee "${BUILD_LOG}"
 
 # Builds and pushes the container image for Public Key Service when
 # PUBKEYSVC_IMAGE_NAME is not set to "skip" explicitly.
@@ -65,18 +71,37 @@ TAR_MANIPULATION_TMP_DIR=$(mktemp -d -t ci-XXXXXXXXXX)
 gunzip < "${COORDINATOR_TAR_FILE}" > "${TAR_MANIPULATION_TMP_DIR}/scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar"
 
 pushd $TAR_MANIPULATION_TMP_DIR
+# Generate the image_params.auto.tfvars file with service container images for mpkhs_primary
 mkdir -p environments_mp_primary/shared/mpkhs_primary/ && mkdir -p environments_mp_primary/demo/mpkhs_primary/
-
 cat <<EOT >> environments_mp_primary/shared/mpkhs_primary/image_params.auto.tfvars
 ########################################################################
 # Prefiled values for container image lookup based on released version #
 ########################################################################
 
-key_generation_image = "${IMAGE_REPO_PATH}/${KEYGEN_IMAGE_NAME}:${IMAGE_TAG}"
+key_generation_image      = "${IMAGE_REPO_PATH}/${KEYGEN_IMAGE_NAME}:${IMAGE_TAG}"
+private_key_service_image = "${IMAGE_REPO_PATH}/${ENCKEYSVC_IMAGE_NAME}:${IMAGE_TAG}"
+public_key_service_image  = "${IMAGE_REPO_PATH}/${PUBKEYSVC_IMAGE_NAME}:${IMAGE_TAG}"
 EOT
-
 ln -s ../../shared/mpkhs_primary/image_params.auto.tfvars environments_mp_primary/demo/mpkhs_primary/image_params.auto.tfvars
-tar --append --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar ./environments_mp_primary/shared/mpkhs_primary/image_params.auto.tfvars ./environments_mp_primary/demo/mpkhs_primary/image_params.auto.tfvars
+
+# Generate the image_params.auto.tfvars file with service container images for mpkhs_secondary
+mkdir -p environments_mp_secondary/shared/mpkhs_secondary/ && mkdir -p environments_mp_secondary/demo/mpkhs_secondary/
+cat <<EOT >> environments_mp_secondary/shared/mpkhs_secondary/image_params.auto.tfvars
+########################################################################
+# Prefiled values for container image lookup based on released version #
+########################################################################
+
+key_storage_service_image = "${IMAGE_REPO_PATH}/${KEYSTRSVC_IMAGE_NAME}:${IMAGE_TAG}"
+private_key_service_image = "${IMAGE_REPO_PATH}/${ENCKEYSVC_IMAGE_NAME}:${IMAGE_TAG}"
+public_key_service_image  = "${IMAGE_REPO_PATH}/${PUBKEYSVC_IMAGE_NAME}:${IMAGE_TAG}"
+EOT
+ln -s ../../shared/mpkhs_secondary/image_params.auto.tfvars environments_mp_secondary/demo/mpkhs_secondary/image_params.auto.tfvars
+
+tar --append --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar \
+  ./environments_mp_primary/shared/mpkhs_primary/image_params.auto.tfvars \
+  ./environments_mp_primary/demo/mpkhs_primary/image_params.auto.tfvars \
+  ./environments_mp_secondary/shared/mpkhs_secondary/image_params.auto.tfvars \
+  ./environments_mp_secondary/demo/mpkhs_secondary/image_params.auto.tfvars
 tar --list --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar
 
 popd

@@ -22,6 +22,7 @@ cc_library(
     hdrs = ["aws_http_request_response_auth_interceptor.h"],
     deps = [
         "//cc/core/authorization_service/src:core_authorization_service",
+        "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",

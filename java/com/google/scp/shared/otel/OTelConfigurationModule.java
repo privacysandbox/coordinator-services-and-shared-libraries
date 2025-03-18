@@ -19,6 +19,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.opentelemetry.metric.GoogleCloudMetricExporter;
 import com.google.cloud.opentelemetry.metric.MetricConfiguration;
 import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.opentelemetry.api.OpenTelemetry;
@@ -32,6 +33,7 @@ import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.semconv.ServiceAttributes;
 import java.io.IOException;
 import java.util.Collections;
 import org.slf4j.Logger;
@@ -47,8 +49,20 @@ public class OTelConfigurationModule extends AbstractModule {
   private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
   private static final String EXPORT_OTEL_METRICS = "EXPORT_OTEL_METRICS";
 
+  private final String serviceName;
+
+  /**
+   * Initializes the OTelConfigurationModule
+   *
+   * @param serviceName used for the service.name resource
+   */
+  public OTelConfigurationModule(String serviceName) {
+    this.serviceName = serviceName;
+  }
+
   @Provides
   @Singleton
+  @Inject
   OpenTelemetry provideOpenTelemetry() throws IOException {
     // TODO(b/371424019): KeyGeneration service does not run in cloud run functions. It uses a
     // different method for getting variables. Will need to have another way to get this envvar when
@@ -72,7 +86,11 @@ public class OTelConfigurationModule extends AbstractModule {
                 .build());
 
     ConfigProperties cp = DefaultConfigProperties.createFromMap(Collections.emptyMap());
-    Resource resource = new GCPResourceProvider().createResource(cp);
+    Resource resource =
+        new GCPResourceProvider()
+            .createResource(cp)
+            .merge(
+                Resource.create(Attributes.of(ServiceAttributes.SERVICE_NAME, this.serviceName)));
     Attributes attrs = resource.getAttributes();
     attrs.forEach(
         (attr, val) -> {

@@ -267,42 +267,6 @@ TEST(FrontEndServiceV2Test, TestBeginTransaction) {
 
   execution_result = front_end_service_v2_peer.BeginTransaction(http_context);
 
-  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
-
-  // test metric counters
-  const std::map<std::string, std::string> begin_transaction_label_kv = {
-      {"transaction_phase", "BEGIN"},
-      {"reporting_origin", "OPERATOR"},
-  };
-
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(begin_transaction_label_kv)));
-
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_FALSE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
-
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
 }
@@ -325,50 +289,6 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithEmptyHeader) {
       << core::GetErrorMessage(execution_result.status_code);
 
   execution_result = front_end_service_v2_peer.BeginTransaction(http_context);
-
-  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
-
-  const std::map<std::string, std::string> begin_transaction_label_kv = {
-      {"transaction_phase", "BEGIN"},
-      {"reporting_origin", "OPERATOR"},
-  };
-
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(begin_transaction_label_kv)));
-
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_TRUE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      client_error_metric_point_data.value()));
-
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-  auto client_error_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          client_error_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
-
-  ASSERT_EQ(std::get<int64_t>(client_error_sum_point_data.value_), 1)
-      << "Expected client_error_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_FALSE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
@@ -474,15 +394,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
       keys_per_transaction_metric_point_data = core::GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
@@ -490,21 +401,8 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
 
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_FALSE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
   ASSERT_TRUE(keys_per_transaction_metric_point_data.has_value());
   ASSERT_TRUE(successful_budget_consumed_metric_point_data.has_value());
-
-  // Total requests.
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   // 2 keys/budgets in this transaction.
   EXPECT_TRUE(
@@ -644,15 +542,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
       keys_per_transaction_metric_point_data = core::GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
@@ -663,30 +552,9 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
       budget_exhausted_metric_point_data = core::GetMetricPointData(
           "google.scp.pbs.consume_budget.budget_exhausted", dimensions, data);
 
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_TRUE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
   ASSERT_TRUE(keys_per_transaction_metric_point_data.has_value());
   ASSERT_FALSE(successful_budget_consumed_metric_point_data.has_value());
   ASSERT_TRUE(budget_exhausted_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      client_error_metric_point_data.value()));
-
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-  auto client_error_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          client_error_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
-
-  ASSERT_EQ(std::get<int64_t>(client_error_sum_point_data.value_), 1)
-      << "Expected client_error_sum_point_data.value_ to be 1 (int64_t)";
 
   // 2 keys/budgets in this transaction.
   EXPECT_TRUE(
@@ -789,15 +657,6 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
       keys_per_transaction_metric_point_data = core::GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
@@ -805,29 +664,8 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
 
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_FALSE(client_error_metric_point_data.has_value());
-  ASSERT_TRUE(server_error_metric_point_data.has_value());
   ASSERT_TRUE(keys_per_transaction_metric_point_data.has_value());
   ASSERT_FALSE(successful_budget_consumed_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      server_error_metric_point_data.value()));
-
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-  auto server_error_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          server_error_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
-
-  ASSERT_EQ(std::get<int64_t>(server_error_sum_point_data.value_), 1)
-      << "Expected server_error_sum_point_data.value_ to be 1 (int64_t)";
 
   // 2 keys/budgets in this transaction.
   EXPECT_TRUE(
@@ -871,38 +709,6 @@ TEST(FrontEndServiceV2Test, TestCommitTransaction) {
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
       options.metric_router->GetExportedData();
 
-  const std::map<std::string, std::string> commit_transaction_label_kv = {
-      {"transaction_phase", "COMMIT"},
-      {"reporting_origin", "OPERATOR"},
-  };
-
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(commit_transaction_label_kv)));
-
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_FALSE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
-
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
 }
@@ -931,38 +737,6 @@ TEST(FrontEndServiceV2Test, TestNotifyTransaction) {
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
       options.metric_router->GetExportedData();
 
-  const std::map<std::string, std::string> notify_transaction_label_kv = {
-      {"transaction_phase", "NOTIFY"},
-      {"reporting_origin", "OPERATOR"},
-  };
-
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(notify_transaction_label_kv)));
-
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_FALSE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
-
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
 }
@@ -988,41 +762,6 @@ TEST(FrontEndServiceV2Test, TestAbortTransaction) {
 
   execution_result = front_end_service_v2_peer.AbortTransaction(http_context);
 
-  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
-
-  const std::map<std::string, std::string> abort_transaction_label_kv = {
-      {"transaction_phase", "ABORT"},
-      {"reporting_origin", "OPERATOR"},
-  };
-
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(abort_transaction_label_kv)));
-
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_FALSE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
-
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);
 }
@@ -1047,41 +786,6 @@ TEST(FrontEndServiceV2Test, TestEndTransaction) {
       << core::GetErrorMessage(execution_result.status_code);
 
   execution_result = front_end_service_v2_peer.EndTransaction(http_context);
-
-  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
-
-  const std::map<std::string, std::string> end_transaction_label_kv = {
-      {"transaction_phase", "END"},
-      {"reporting_origin", "OPERATOR"},
-  };
-
-  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(end_transaction_label_kv)));
-
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      total_request_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.requests", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      client_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.client_errors", dimensions, data);
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      server_error_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.frontend.server_errors", dimensions, data);
-
-  ASSERT_TRUE(total_request_metric_point_data.has_value());
-  ASSERT_FALSE(client_error_metric_point_data.has_value());
-  ASSERT_FALSE(server_error_metric_point_data.has_value());
-
-  ASSERT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      total_request_metric_point_data.value()));
-  auto total_request_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          total_request_metric_point_data.value());
-
-  ASSERT_EQ(std::get<int64_t>(total_request_sum_point_data.value_), 1)
-      << "Expected total_request_sum_point_data.value_ to be 1 (int64_t)";
 
   EXPECT_TRUE(execution_result.Successful())
       << core::GetErrorMessage(execution_result.status_code);

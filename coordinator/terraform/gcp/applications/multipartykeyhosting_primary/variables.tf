@@ -402,7 +402,7 @@ variable "encryption_key_service_request_concurrency" {
 variable "get_public_key_cpus" {
   description = "The number of CPUs used in a single container instance."
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "encryption_key_service_cpus" {
@@ -572,7 +572,7 @@ variable "encryptionkeyservice_alarm_duration_sec" {
 variable "export_otel_metrics" {
   description = "Enable exporting OTEL metrics from MPKHS."
   type        = bool
-  default     = false
+  default     = true
 }
 
 ################################################################################

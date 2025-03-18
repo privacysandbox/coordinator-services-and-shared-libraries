@@ -22,7 +22,6 @@ cc_test(
     srcs = ["errors_test.cc"],
     deps = [
         "//cc/public/core/interface:errors",
-        "//cc/public/cpio/interface:cpio_errors",
         "@com_google_googletest//:gtest_main",
     ],
 )

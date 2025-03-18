@@ -34,7 +34,6 @@
 #include "cc/core/interface/async_context.h"
 #include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
-#include "cc/core/test/utils/auto_init_run_stop.h"
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"

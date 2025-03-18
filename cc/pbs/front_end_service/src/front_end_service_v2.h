@@ -136,19 +136,6 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
 
-  // OpenTelemetry instrument for measuring the count of requests.
-  // This will be tracked in all the transaction phases.
-  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-      total_request_counter_;
-
-  // OpenTelemetry instrument for measuring the count of client errors.
-  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-      client_error_counter_;
-
-  // OpenTelemetry instrument for measuring the count of PBS server errors.
-  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>>
-      server_error_counter_;
-
   // OpenTelemetry instrument for measuring the count of keys/budgets per
   // transaction/job.
   std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>

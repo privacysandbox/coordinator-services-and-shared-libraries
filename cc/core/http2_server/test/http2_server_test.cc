@@ -640,30 +640,6 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
       std::get_if<int64_t>(&response_body_histogram_data.max_);
   EXPECT_EQ(*response_body_histogram_data_max, 0);
 
-  // Pbs requests
-  const std::map<std::string, std::string> pbs_requests_label_kv = {
-      {"http.response.status_code", "200"}};
-
-  const opentelemetry::sdk::common::OrderedAttributeMap pbs_requests_dimensions(
-      (opentelemetry::common::KeyValueIterableView<
-          std::map<std::string, std::string>>(pbs_requests_label_kv)));
-
-  std::optional<opentelemetry::sdk::metrics::PointType>
-      pbs_requests_metric_point_data = core::GetMetricPointData(
-          "google.scp.pbs.requests", pbs_requests_dimensions, data);
-
-  EXPECT_TRUE(pbs_requests_metric_point_data.has_value());
-
-  EXPECT_TRUE(std::holds_alternative<opentelemetry::sdk::metrics::SumPointData>(
-      pbs_requests_metric_point_data.value()));
-
-  auto pbs_requests_sum_point_data =
-      std::get<opentelemetry::sdk::metrics::SumPointData>(
-          pbs_requests_metric_point_data.value());
-
-  EXPECT_EQ(std::get<int64_t>(pbs_requests_sum_point_data.value_), 1)
-      << "Expected pbs_requests_sum_point_data.value_ to be 1 (int64_t)";
-
   EXPECT_SUCCESS(http2_client->Stop());
   EXPECT_SUCCESS(http_server->Stop());
   EXPECT_SUCCESS(async_executor_for_client_->Stop());

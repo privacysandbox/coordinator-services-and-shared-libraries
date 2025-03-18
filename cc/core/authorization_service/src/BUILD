@@ -18,17 +18,8 @@ package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "core_authorization_service",
-    srcs = glob(
-        [
-            "**/*.h",
-            "**/*.cc",
-        ],
-    ),
+    srcs = ["error_codes.h"],
     deps = [
-        "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
-        "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
-        "//cc/core/utils/src:core_utils",
-        "@com_github_nlohmann_json//:singleheader-json",
     ],
 )

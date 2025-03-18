@@ -146,6 +146,7 @@ java_test(
 
 java_test(
     name = "CreateJobIntegrationTest",
+    size = "large",
     srcs = ["CreateJobIntegrationTest.java"],
     runtime_deps = [
         # LocalStackContainers uses v1 API in the background for auth.
@@ -184,6 +185,7 @@ java_test(
 
 java_test(
     name = "GetJobIntegrationTest",
+    size = "large",
     srcs = ["GetJobIntegrationTest.java"],
     runtime_deps = [
         # LocalStackContainers uses v1 API in the background for auth.
@@ -241,6 +243,7 @@ java_test(
 
 java_test(
     name = "DdbStreamJobMetadataLookupTest",
+    size = "large",
     srcs = ["DdbStreamJobMetadataLookupTest.java"],
     # Test passes locally but fails in kokoro, with a JobKeyExistsException thrown in setUp
     tags = ["manual"],
@@ -289,6 +292,7 @@ java_test(
 
 java_test(
     name = "AwsFailedJobQueueWriteCleanupTest",
+    size = "large",
     srcs = ["AwsFailedJobQueueWriteCleanupTest.java"],
     data = [
         ":AwsFailedJobQueueWriteCleanupTestLambdaDeploy",

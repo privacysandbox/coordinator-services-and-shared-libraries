@@ -105,8 +105,7 @@ class Http2Server : public HttpServerInterface {
         private_key_file_(*options.private_key_file),
         certificate_chain_file_(*options.certificate_chain_file),
         tls_context_(boost::asio::ssl::context::sslv23),
-        metric_router_(metric_router),
-        migrate_http_status_code_(false) {}
+        metric_router_(metric_router) {}
 
   ~Http2Server();
 
@@ -341,16 +340,6 @@ class Http2Server : public HttpServerInterface {
       const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
 
   /**
-   * Records the number of PBS requests when complete (OnHttp2Response),
-   * including information related to the request and response.
-   *
-   * @param http_context The http context containing the request and response
-   * objects.
-   */
-  void RecordPbsRequests(
-      const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
-
-  /**
    * Callback function used by OpenTelemetry to observe the number of active
    * Http2 requests.
    *
@@ -398,13 +387,6 @@ class Http2Server : public HttpServerInterface {
   // OpenTelemetry Instrument for measuring response body size (uncompressed).
   std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
       server_response_body_size_;
-
-  // OpenTelemetry Instrument for counting the number of completed PBS
-  // requests.
-  std::shared_ptr<opentelemetry::metrics::Counter<uint64_t>> pbs_requests_;
-
-  // Flag to handle the safe migration of the http status codes from 4xx to 5xx.
-  bool migrate_http_status_code_;
 };
 
 }  // namespace google::scp::core

@@ -14,13 +14,10 @@
 
 #include "docker_helper.h"
 
-#include <chrono>
 #include <cstdio>
-#include <iostream>
 #include <map>
 #include <stdexcept>
 #include <string>
-#include <thread>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -38,24 +35,6 @@ static constexpr char kGcpImage[] =
 namespace google::scp::core::test {
 string PortMapToSelf(string port) {
   return port + ":" + port;
-}
-
-int StartLocalStackContainer(const string& network,
-                             const string& container_name,
-                             const string& exposed_port) {
-  map<string, string> env_variables;
-  env_variables["EDGE_PORT"] = exposed_port;
-  return StartContainer(network, container_name, kLocalstackImage,
-                        PortMapToSelf(exposed_port), "4510-4559",
-                        env_variables);
-}
-
-int StartGcpContainer(const string& network, const string& container_name,
-                      const string& exposed_port) {
-  map<string, string> env_variables;
-  return StartContainer(network, container_name, kGcpImage,
-                        PortMapToSelf(exposed_port), "9000-9050",
-                        env_variables);
 }
 
 int StartContainer(
@@ -102,19 +81,6 @@ string BuildStartContainerCmd(
       "%s",
       name_network, container_name, ports_mapping, envs,
       addition_args.empty() ? addition_args : addition_args + " ", image_name);
-}
-
-int CreateImage(const string& image_target, const string& args) {
-  return std::system(BuildCreateImageCmd(image_target, args).c_str());
-}
-
-string BuildCreateImageCmd(const string& image_target, const string& args) {
-  auto cmd = absl::StrFormat(
-      "bazel build --action_env=BAZEL_CXXOPTS='-std=c++20' %s", image_target);
-  if (!args.empty()) {
-    cmd += " " + args;
-  }
-  return cmd;
 }
 
 int LoadImage(const std::string& image_name) {
@@ -180,15 +146,4 @@ std::string GetIpAddress(const std::string& network_name,
   return result.substr(0, length);
 }
 
-void GrantPermissionToFolder(const string& container_name,
-                             const string& folder) {
-  string s = absl::StrCat("docker exec -itd " + container_name + " chmod 666 " +
-                          folder);
-  auto result = std::system(s.c_str());
-  if (result != 0) {
-    throw runtime_error("Failed to grant permission!");
-  } else {
-    std::cout << "Succeeded to grant permission!" << std::endl;
-  }
-}
 }  // namespace google::scp::core::test

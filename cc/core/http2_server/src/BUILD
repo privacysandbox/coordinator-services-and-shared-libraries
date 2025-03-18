@@ -26,7 +26,6 @@ cc_library(
     ),
     deps = [
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
-        "//cc/core/authorization_service/src:core_authorization_service",
         "//cc/core/interface:interface_lib",
         "@boost//:asio_ssl",
         "@boost//:system",

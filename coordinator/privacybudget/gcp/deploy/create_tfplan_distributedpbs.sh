@@ -71,6 +71,15 @@ function validate_input() {
   fi
 }
 
+warning_msg=$(cat <<-END
+  \n
+  Warning: create_tfplan_distributedpbs.sh is deprecated!\n
+  Please invoke terraform plan and apply directly on the distributedpbs_base and distributedpbs_application folders
+END
+)
+echo -e $warning_msg
+
+
 if [[ "$#" -lt 1 || $1 == "help" ]]; then
 help_msg=$(cat <<-END
   \n

@@ -36,7 +36,6 @@
 #include "absl/strings/str_join.h"
 #include "cc/core/authorization_service/src/error_codes.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
-#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
 #include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/type_def.h"
 #include "cc/core/utils/src/base64.h"

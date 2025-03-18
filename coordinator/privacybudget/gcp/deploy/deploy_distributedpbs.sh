@@ -211,6 +211,14 @@ function insert_remote_coordinator_auth_record() {
   fi
 }
 
+warning_msg=$(cat <<-END
+  \n
+  Warning: deploy_distributedpbs.sh is deprecated!\n
+  Please use initialize_distributedpbs.sh instead
+END
+)
+echo -e $warning_msg
+
 if [[ "$#" -lt 1 || $1 == "help" ]]; then
 help_msg=$(cat <<-END
   \n

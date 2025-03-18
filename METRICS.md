@@ -151,25 +151,6 @@ to in each metric's specific table.
 
 ---
 
-### Metric: google.scp.pbs.requests
-
-| Name                      | Instrument Type | Unit (UCUM) | Description                                                                        | Stability |
-|---------------------------|-----------------|-------------|------------------------------------------------------------------------------------|-----------|
-| `google.scp.pbs.requests` | Counter         | {Number}    | Total number of PBS requests (A transaction may include multiple requests to PBS). | Stable    |
-
-| Attribute                         | Type   | Description                                  | Examples        |
-|-----------------------------------|--------|----------------------------------------------|-----------------|
-| `server.address`                  | string | Local HTTP server name that received request | example.com     |
-| `server.port`                     | int    | Port of the local HTTP server                | 80; 8080; 443   |
-| `http.route`                      | string | The matched route, path template             | /users/:userID  |
-| `http.request.method`             | string | HTTP request method                          | GET; POST; HEAD |
-| `http.response.status_code`       | int    | HTTP response status code                    | 200             |
-| `pbs.claimed_identity`            | string | Claimed identity in PBS                      |                 |
-| `scp.http.request.client_version` | string | Client version in SCP                        |                 |
-| `pbs.auth_domain`                 | string | Authentication domain in PBS                 |                 |
-
----
-
 # Client Side Metrics Documentation
 
 This document provides a detailed list of client side metrics exported for the
@@ -389,56 +370,6 @@ referred to in each metric's specific table.
 
 ---
 
-### Metric: google.scp.pbs.frontend.requests
-
-| Name                               | Instrument Type | Unit (UCUM) | Description                                                   | Stability |
-|------------------------------------|-----------------|-------------|---------------------------------------------------------------|-----------|
-| `google.scp.pbs.frontend.requests` | Counter         | {Number}    | Total number of PBS requests received by the frontend service | Stable    |
-
-| Attribute                         | Type   | Description              | Examples              |
-|-----------------------------------|--------|--------------------------|-----------------------|
-| `transaction_phase`               | string | Phase of the transaction | Initialization, Final |
-| `reporting_origin`                | string | Origin of the report     | Internal, External    |
-| `pbs.claimed_identity`            | string | Claimed identity in PBS  |                       |
-| `scp.http.request.client_version` | string | Client version in SCP    |                       |
-| `pbs.auth_domain`                 | string | Authentication domain    | example.com           |
-
----
-
-### Metric: google.scp.pbs.frontend.client_errors
-
-| Name                                    | Instrument Type | Unit (UCUM) | Description                                    | Stability |
-|-----------------------------------------|-----------------|-------------|------------------------------------------------|-----------|
-| `google.scp.pbs.frontend.client_errors` | Counter         | {Number}    | Number of client errors (HTTP 4xx) encountered | Stable    |
-
-| Attribute                         | Type   | Description                 | Examples              |
-|-----------------------------------|--------|-----------------------------|-----------------------|
-| `transaction_phase`               | string | Phase of the transaction    | Initialization, Final |
-| `reporting_origin`                | string | Origin of the report        | Internal, External    |
-| `pbs.claimed_identity`            | string | Claimed identity in PBS     |                       |
-| `scp.http.request.client_version` | string | Client version in SCP       |                       |
-| `pbs.auth_domain`                 | string | Authentication domain       | example.com           |
-| `pbs.error_reason`                | string | Reason for the client error | timeout, unauthorized |
-
----
-
-### Metric: google.scp.pbs.frontend.server_errors
-
-| Name                                    | Instrument Type | Unit (UCUM) | Description                                    | Stability |
-|-----------------------------------------|-----------------|-------------|------------------------------------------------|-----------|
-| `google.scp.pbs.frontend.server_errors` | Counter         | {Number}    | Number of server errors (HTTP 5xx) encountered | Stable    |
-
-| Attribute                         | Type   | Description                 | Examples                    |
-|-----------------------------------|--------|-----------------------------|-----------------------------|
-| `transaction_phase`               | string | Phase of the transaction    | Initialization, Final       |
-| `reporting_origin`                | string | Origin of the report        | Internal, External          |
-| `pbs.claimed_identity`            | string | Claimed identity in PBS     |                             |
-| `scp.http.request.client_version` | string | Client version in SCP       |                             |
-| `pbs.auth_domain`                 | string | Authentication domain       | example.com                 |
-| `pbs.error_reason`                | string | Reason for the server error | server_busy, internal_error |
-
----
-
 ### Metric: google.scp.pbs.frontend.successful_budget_consumed
 
 | Name                                                 | Instrument Type | Unit (UCUM) | Description                                              | Stability |
@@ -543,44 +474,5 @@ can be referred to in each metric's specific table.
 | Name                                             | Instrument Type  | Unit (UCUM) | Description                   | Stability |
 |--------------------------------------------------|------------------|-------------|-------------------------------|-----------|
 | `google.scp.pbs.health.filesystem_storage_usage` | Observable Gauge | %           | File storage usage percentage | Stable    |
-
----
-
-### Metric: google.scp.pbs.frontend.requests
-
-| Name                               | Instrument Type | Unit (UCUM) | Description                                                   | Stability |
-|------------------------------------|-----------------|-------------|---------------------------------------------------------------|-----------|
-| `google.scp.pbs.frontend.requests` | Counter         | {Number}    | Total number of requests received by the PBS frontend service | Stable    |
-
-| Label Name          | Type   | Description              |
-|---------------------|--------|--------------------------|
-| `transaction_phase` | string | Phase of the transaction |
-| `reporting_origin`  | string | Origin of the report     |
-
----
-
-### Metric: google.scp.pbs.frontend.client_errors
-
-| Name                                    | Instrument Type | Unit (UCUM) | Description                                        | Stability |
-|-----------------------------------------|-----------------|-------------|----------------------------------------------------|-----------|
-| `google.scp.pbs.frontend.client_errors` | Counter         | {Number}    | Count of client errors in the PBS frontend service | Stable    |
-
-| Label Name          | Type   | Description              |
-|---------------------|--------|--------------------------|
-| `transaction_phase` | string | Phase of the transaction |
-| `reporting_origin`  | string | Origin of the report     |
-
----
-
-### Metric: google.scp.pbs.frontend.server_errors
-
-| Name                                    | Instrument Type | Unit (UCUM) | Description                                        | Stability |
-|-----------------------------------------|-----------------|-------------|----------------------------------------------------|-----------|
-| `google.scp.pbs.frontend.server_errors` | Counter         | {Number}    | Count of server errors in the PBS frontend service | Stable    |
-
-| Label Name          | Type   | Description              |
-|---------------------|--------|--------------------------|
-| `transaction_phase` | string | Phase of the transaction |
-| `reporting_origin`  | string | Origin of the report     |
 
 ---

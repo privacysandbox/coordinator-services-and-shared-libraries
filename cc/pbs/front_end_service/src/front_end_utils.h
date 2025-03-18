@@ -148,14 +148,6 @@ class FrontEndUtils {
     return core::SuccessExecutionResult();
   }
 
-  static opentelemetry::common::KeyValueIterableView<
-      absl::flat_hash_map<std::string, std::string>>
-  CreateMetricLabelsKV(
-      const absl::flat_hash_map<std::string, std::string>& metric_labels) {
-    return opentelemetry::common::KeyValueIterableView<
-        absl::flat_hash_map<std::string, std::string>>(metric_labels);
-  }
-
  private:
   static constexpr char kFrontEndUtils[] = "FrontEndUtils";
 };

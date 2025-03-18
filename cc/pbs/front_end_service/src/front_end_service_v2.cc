@@ -217,38 +217,6 @@ void FrontEndServiceV2::MetricInit() noexcept {
                 return meter_->CreateUInt64Histogram(
                     kBudgetExhausted, "Number of budgets exhausted");
               }));
-
-  total_request_counter_ =
-      std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
-          metric_router_->GetOrCreateSyncInstrument(
-              kMetricNameRequests,
-              [&]() -> std::shared_ptr<
-                        opentelemetry::metrics::SynchronousInstrument> {
-                return meter_->CreateUInt64Counter(
-                    kMetricNameRequests, "Total number of requests received");
-              }));
-
-  client_error_counter_ =
-      std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
-          metric_router_->GetOrCreateSyncInstrument(
-              kMetricNameClientErrors,
-              [&]() -> std::shared_ptr<
-                        opentelemetry::metrics::SynchronousInstrument> {
-                return meter_->CreateUInt64Counter(
-                    kMetricNameClientErrors,
-                    "Number of client errors (4xx status codes)");
-              }));
-
-  server_error_counter_ =
-      std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
-          metric_router_->GetOrCreateSyncInstrument(
-              kMetricNameServerErrors,
-              [&]() -> std::shared_ptr<
-                        opentelemetry::metrics::SynchronousInstrument> {
-                return meter_->CreateUInt64Counter(
-                    kMetricNameServerErrors,
-                    "Number of server errors (5xx status codes)");
-              }));
 }
 
 ExecutionResult FrontEndServiceV2::Init() noexcept {
@@ -359,36 +327,9 @@ ExecutionResult FrontEndServiceV2::ExecuteConsumeBudgetTransaction(
 ExecutionResult FrontEndServiceV2::BeginTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start BeginTransaction.");
-  const std::string reporting_origin_metric_label =
-      FrontEndUtils::GetReportingOriginMetricLabel(
-          http_context.request, remote_coordinator_claimed_identity_);
-
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kMetricLabelTransactionPhase, kMetricLabelBeginTransaction},
-      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label},
-      {core::kPbsClaimedIdentityLabel,
-       core::utils::GetClaimedIdentityOrUnknownValue(http_context)},
-      {core::kScpHttpRequestClientVersionLabel,
-       core::utils::GetUserAgentOrUnknownValue(http_context)}};
-
-  if (std::string* auth_domain =
-          http_context.request->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(core::kPbsAuthDomainLabel, *auth_domain);
-  }
-
-  if (total_request_counter_) {
-    total_request_counter_->Add(1, labels);
-  }
   ExecutionResultOr<std::string> transaction_id =
       ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel,
-                     google::scp::core::errors::GetErrorName(
-                         transaction_id.result().status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return transaction_id.result();
   }
 
@@ -421,19 +362,9 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
     labels.try_emplace(core::kPbsAuthDomainLabel, *auth_domain);
   }
 
-  if (total_request_counter_) {
-    total_request_counter_->Add(1, labels);
-  }
-
   ExecutionResultOr<std::string> transaction_id =
       ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel,
-                     google::scp::core::errors::GetErrorName(
-                         transaction_id.result().status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return transaction_id.result();
   }
 
@@ -450,11 +381,6 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
           *transaction_origin, http_context.request->body,
           consume_budget_context.request->budgets);
       !execution_result.Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel, google::scp::core::errors::GetErrorName(
-                                            execution_result.status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return execution_result;
   }
 
@@ -464,13 +390,6 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
         consume_budget_context.request->budgets.size(), labels, context);
   }
   if (consume_budget_context.request->budgets.size() == 0) {
-    if (client_error_counter_) {
-      labels.emplace(
-          kErrorReasonLabel,
-          google::scp::core::errors::GetErrorName(
-              core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE));
-      client_error_counter_->Add(1, labels);
-    }
     return FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE);
   }
@@ -509,11 +428,6 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
   if (auto execution_result =
           budget_consumption_helper_->ConsumeBudgets(consume_budget_context);
       !execution_result.Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel, google::scp::core::errors::GetErrorName(
-                                            execution_result.status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return execution_result;
   }
   return SuccessExecutionResult();
@@ -577,28 +491,12 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
         budgets_exhausted_->Record(budget_exhausted_indices.size(), labels,
                                    context);
       }
-
-      // Client error because budget is already exhausted.
-      if (client_error_counter_) {
-        labels.emplace(kErrorReasonLabel,
-                       google::scp::core::errors::GetErrorName(
-                           consume_budget_context.result.status_code));
-        client_error_counter_->Add(1, labels);
-      }
     } else {
       SCP_ERROR_CONTEXT(
           kFrontEndService, http_context, consume_budget_context.result,
           absl::StrFormat("Failed to consume budget. transaction_id: %s.",
                           transaction_id.c_str()),
           transaction_id.c_str());
-
-      // Server error because PBS server couldn't consume the budget.
-      if (server_error_counter_) {
-        labels.emplace(kErrorReasonLabel,
-                       google::scp::core::errors::GetErrorName(
-                           consume_budget_context.result.status_code));
-        server_error_counter_->Add(1, labels);
-      }
     }
 
     http_context.result = consume_budget_context.result;
@@ -623,37 +521,9 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
 ExecutionResult FrontEndServiceV2::CommitTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start CommitTransaction.");
-  const std::string reporting_origin_metric_label =
-      FrontEndUtils::GetReportingOriginMetricLabel(
-          http_context.request, remote_coordinator_claimed_identity_);
-
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kMetricLabelTransactionPhase, kMetricLabelCommitTransaction},
-      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label},
-      {core::kPbsClaimedIdentityLabel,
-       core::utils::GetClaimedIdentityOrUnknownValue(http_context)},
-      {core::kScpHttpRequestClientVersionLabel,
-       core::utils::GetUserAgentOrUnknownValue(http_context)}};
-
-  if (std::string* auth_domain =
-          http_context.request->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(core::kPbsAuthDomainLabel, *auth_domain);
-  }
-
-  if (total_request_counter_) {
-    total_request_counter_->Add(1, labels);
-  }
-
   ExecutionResultOr<std::string> transaction_id =
       ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel,
-                     google::scp::core::errors::GetErrorName(
-                         transaction_id.result().status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return transaction_id.result();
   }
 
@@ -670,37 +540,9 @@ ExecutionResult FrontEndServiceV2::CommitTransaction(
 ExecutionResult FrontEndServiceV2::NotifyTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start NotifyTransaction.");
-  const std::string reporting_origin_metric_label =
-      FrontEndUtils::GetReportingOriginMetricLabel(
-          http_context.request, remote_coordinator_claimed_identity_);
-
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kMetricLabelTransactionPhase, kMetricLabelNotifyTransaction},
-      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label},
-      {core::kPbsClaimedIdentityLabel,
-       core::utils::GetClaimedIdentityOrUnknownValue(http_context)},
-      {core::kScpHttpRequestClientVersionLabel,
-       core::utils::GetUserAgentOrUnknownValue(http_context)}};
-
-  if (std::string* auth_domain =
-          http_context.request->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(core::kPbsAuthDomainLabel, *auth_domain);
-  }
-
-  if (total_request_counter_) {
-    total_request_counter_->Add(1, labels);
-  }
-
   ExecutionResultOr<std::string> transaction_id =
       ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel,
-                     google::scp::core::errors::GetErrorName(
-                         transaction_id.result().status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return transaction_id.result();
   }
 
@@ -717,37 +559,9 @@ ExecutionResult FrontEndServiceV2::NotifyTransaction(
 FrontEndServiceV2::AbortTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start AbortTransaction.");
-  const std::string reporting_origin_metric_label =
-      FrontEndUtils::GetReportingOriginMetricLabel(
-          http_context.request, remote_coordinator_claimed_identity_);
-
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kMetricLabelTransactionPhase, kMetricLabelAbortTransaction},
-      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label},
-      {core::kPbsClaimedIdentityLabel,
-       core::utils::GetClaimedIdentityOrUnknownValue(http_context)},
-      {core::kScpHttpRequestClientVersionLabel,
-       core::utils::GetUserAgentOrUnknownValue(http_context)}};
-
-  if (std::string* auth_domain =
-          http_context.request->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(core::kPbsAuthDomainLabel, *auth_domain);
-  }
-
-  if (total_request_counter_) {
-    total_request_counter_->Add(1, labels);
-  }
-
   ExecutionResultOr<std::string> transaction_id =
       ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel,
-                     google::scp::core::errors::GetErrorName(
-                         transaction_id.result().status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return transaction_id.result();
   }
 
@@ -764,37 +578,9 @@ FrontEndServiceV2::AbortTransaction(
 FrontEndServiceV2::EndTransaction(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context, "Start EndTransaction.");
-  const std::string reporting_origin_metric_label =
-      FrontEndUtils::GetReportingOriginMetricLabel(
-          http_context.request, remote_coordinator_claimed_identity_);
-
-  absl::flat_hash_map<absl::string_view, std::string> labels = {
-      {kMetricLabelTransactionPhase, kMetricLabelEndTransaction},
-      {kMetricLabelKeyReportingOrigin, reporting_origin_metric_label},
-      {core::kPbsClaimedIdentityLabel,
-       core::utils::GetClaimedIdentityOrUnknownValue(http_context)},
-      {core::kScpHttpRequestClientVersionLabel,
-       core::utils::GetUserAgentOrUnknownValue(http_context)}};
-
-  if (std::string* auth_domain =
-          http_context.request->auth_context.authorized_domain.get();
-      auth_domain != nullptr) {
-    labels.try_emplace(core::kPbsAuthDomainLabel, *auth_domain);
-  }
-
-  if (total_request_counter_) {
-    total_request_counter_->Add(1, labels);
-  }
-
   ExecutionResultOr<std::string> transaction_id =
       ExtractTransactionId(http_context);
   if (!transaction_id.result().Successful()) {
-    if (client_error_counter_) {
-      labels.emplace(kErrorReasonLabel,
-                     google::scp::core::errors::GetErrorName(
-                         transaction_id.result().status_code));
-      client_error_counter_->Add(1, labels);
-    }
     return transaction_id.result();
   }
 

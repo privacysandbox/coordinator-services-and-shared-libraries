@@ -479,6 +479,7 @@ resource "google_cloud_run_v2_service" "pbs_instance" {
   count    = var.deploy_pbs_cloud_run ? 1 : 0
   name     = "${var.environment}-${var.region}-pbs-cloud-run"
   location = var.region
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   template {
     service_account = var.pbs_service_account_email
     containers {

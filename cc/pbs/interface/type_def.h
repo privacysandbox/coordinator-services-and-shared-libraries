@@ -49,12 +49,6 @@ inline constexpr absl::string_view kFrontEndServiceV2Meter =
     "Frontend Service v2";
 
 // Metric names
-static constexpr char kMetricNameRequests[] =
-    "google.scp.pbs.frontend.requests";
-static constexpr char kMetricNameClientErrors[] =
-    "google.scp.pbs.frontend.client_errors";
-static constexpr char kMetricNameServerErrors[] =
-    "google.scp.pbs.frontend.server_errors";
 static constexpr char kSuccessfulBudgetConsumed[] =
     "google.scp.pbs.frontend.successful_budget_consumed";
 static constexpr char kKeysPerTransaction[] =

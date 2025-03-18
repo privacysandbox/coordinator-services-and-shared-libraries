@@ -27,7 +27,6 @@
 #include <nlohmann/json.hpp>
 
 #include "absl/strings/str_cat.h"
-#include "cc/core/authorization_service/src/error_codes.h"
 #include "cc/core/common/concurrent_map/src/error_codes.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/http2_server/src/error_codes.h"
@@ -250,16 +249,6 @@ ExecutionResult Http2Server::OtelMetricInit() noexcept {
                     kByteUnit);
               }));
 
-  pbs_requests_ =
-      std::static_pointer_cast<opentelemetry::metrics::Counter<uint64_t>>(
-          metric_router_->GetOrCreateSyncInstrument(
-              kPbsRequestsMetric,
-              [&]() -> std::shared_ptr<
-                        opentelemetry::metrics::SynchronousInstrument> {
-                return meter_->CreateUInt64Counter(kPbsRequestsMetric,
-                                                   "Number of PBS Requests.");
-              }));
-
   return SuccessExecutionResult();
 }
 
@@ -287,21 +276,6 @@ ExecutionResult Http2Server::Init() noexcept {
                     "Failed to initialize TLS context with error code: %d",
                     nghttp2_error_code.value()));
       return execution_result;
-    }
-  }
-
-  if (config_provider_) {
-    auto result = config_provider_->Get(std::string(kMigrateHttpStatusCode),
-                                        migrate_http_status_code_);
-    if (result.Successful()) {
-      SCP_INFO(
-          kHttp2Server, kZeroUuid,
-          absl::StrFormat("google_scp_migrate_http_status_code is set to %s",
-                          migrate_http_status_code_ ? "true" : "false"));
-    } else {
-      SCP_INFO(kHttp2Server, kZeroUuid,
-               "google_scp_migrate_http_status_code could not be get from the "
-               "configuration, using the default value false.");
     }
   }
 
@@ -652,8 +626,7 @@ void Http2Server::OnHttp2Response(
     RequestTargetEndpointType endpoint_type) noexcept {
   http_context.response->code = HttpStatusCode::OK;
   if (!http_context.result.Successful()) {
-    auto error_code = GetErrorHttpStatusCode(http_context.result.status_code,
-                                             migrate_http_status_code_);
+    auto error_code = GetErrorHttpStatusCode(http_context.result.status_code);
     http_context.response->code = error_code;
     SCP_ERROR_CONTEXT(
         kHttp2Server, http_context, http_context.result,
@@ -673,9 +646,6 @@ void Http2Server::OnHttp2Response(
 
   // Record response body size in Bytes - response is prepared here to be sent.
   RecordResponseBodySize(http_context);
-
-  // Increment PBS requests counter.
-  RecordPbsRequests(http_context);
 
   // Capture the shared_ptr to keep the response object alive when the work
   // actually starts executing. Do not execute response->Send() on a thread
@@ -774,18 +744,6 @@ void Http2Server::RecordResponseBodySize(
   opentelemetry::context::Context context;
   server_response_body_size_->Record(http_context.response->body.length, labels,
                                      context);
-}
-
-void Http2Server::RecordPbsRequests(
-    const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context) {
-  if (!pbs_requests_) {
-    return;
-  }
-
-  absl::flat_hash_map<absl::string_view, std::string> labels =
-      GetOtelMetricLabels(http_context);
-
-  pbs_requests_->Add(1, labels);
 }
 
 void Http2Server::ObserveActiveRequestsCallback(

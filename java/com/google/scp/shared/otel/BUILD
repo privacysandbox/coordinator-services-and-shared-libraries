@@ -19,6 +19,7 @@ java_library(
     name = "otel",
     srcs = glob(["*.java"]),
     deps = [
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
         "//java/external:gcp_cloud_monitoring",
         "//java/external:gcp_exporter_metrics",
         "//java/external:gcp_monitoring_v3",
@@ -32,6 +33,7 @@ java_library(
         "//java/external:opentelemetry_sdk_common",
         "//java/external:opentelemetry_sdk_extension_autoconfigure_spi",
         "//java/external:opentelemetry_sdk_metrics",
+        "//java/external:opentelemetry_semconv",
         "//java/external:slf4j",
     ],
 )

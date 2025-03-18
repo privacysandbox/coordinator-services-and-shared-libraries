@@ -14,6 +14,7 @@
 
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:private"])
@@ -23,6 +24,13 @@ proto_library(
     srcs = [
         "budget_value.proto",
     ],
+)
+
+go_proto_library(
+    name = "budget_value_go_proto",
+    importpath = "cc/pbs/proto/storage/budget_value_go_proto",
+    protos = [":budget_value_proto"],
+    visibility = ["//go/update_privacy_budget:__subpackages__"],
 )
 
 cc_proto_library(

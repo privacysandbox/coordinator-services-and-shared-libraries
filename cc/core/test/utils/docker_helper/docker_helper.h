@@ -17,18 +17,9 @@
 #include <map>
 #include <string>
 
-#include "absl/strings/str_format.h"
-
 namespace google::scp::core::test {
+
 std::string PortMapToSelf(std::string port);
-
-int StartLocalStackContainer(const std::string& network,
-                             const std::string& container_name,
-                             const std::string& exposed_port);
-
-int StartGcpContainer(const std::string& network,
-                      const std::string& container_name,
-                      const std::string& exposed_port);
 
 int StartContainer(
     const std::string& network, const std::string& container_name,
@@ -37,8 +28,6 @@ int StartContainer(
     const std::map<std::string, std::string>& environment_variables =
         std::map<std::string, std::string>({}),
     const std::string& addition_args = "");
-
-int CreateImage(const std::string& image_target, const std::string& args = "");
 
 int LoadImage(const std::string& image_name);
 
@@ -55,9 +44,6 @@ std::string BuildRemoveNetworkCmd(const std::string& network_name);
 std::string BuildCreateNetworkCmd(const std::string& network_name);
 
 std::string BuildLoadImageCmd(const std::string& image_name);
-
-std::string BuildCreateImageCmd(const std::string& image_target,
-                                const std::string& args = "");
 
 std::string BuildStartContainerCmd(
     const std::string& network, const std::string& container_name,
@@ -77,13 +63,4 @@ std::string BuildStartContainerCmd(
 std::string GetIpAddress(const std::string& network_name,
                          const std::string& container_name);
 
-/**
- * @brief Run docker command to grant 666 permission to the given folder inside
- * the given container.
- *
- * @param container_name the name of the given container.
- * @param folder the given folder.
- */
-void GrantPermissionToFolder(const std::string& container_name,
-                             const std::string& folder);
 }  // namespace google::scp::core::test

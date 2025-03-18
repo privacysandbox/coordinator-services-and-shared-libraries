@@ -578,15 +578,4 @@ http_file(
     urls = ["https://github.com/python-hyper/hyper/raw/v0.7.0/hyper/certs.pem"],
 )
 
-###########################
-# Envoy API Dependencies
-###########################
-load("@envoy_api//bazel:repositories.bzl", "api_dependencies")
-
-api_dependencies()
-
-load("@com_envoyproxy_protoc_gen_validate//:dependencies.bzl", protoc_gen_validate_deps = "go_third_party")
-
-protoc_gen_validate_deps()
-
 # gazelle:repo bazel_gazelle

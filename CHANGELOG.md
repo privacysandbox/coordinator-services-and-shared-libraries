@@ -1,4 +1,32 @@
 # Changelog
+
+## [1.20.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.19.0...v1.20.0) (2025-03-18)
+
+### Important Note
+- Continue to use the bazel WORKSPACE
+  - The following steps are only required if you are unable to use bzlmod for dependency management.
+  - If your repository is depending on `javatests/com/google/scp/shared/testutils/gcp/CloudFunctionEmulatorContainer.java` you must patch `CloudFunctionEmulatorContainer.java` so that the value of `invokerJarPath` is `external/maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/1.1.0/`.
+  - To check if you are depending on `CloudFunctionEmulatorContainer.java`, you may use the following command `bazel query 'allpaths(//path/to/your/target,//javatests/com/google/scp/shared/testutils/gcp:gcp)'`
+
+### Changes
+  - Add budget_value Golang library
+  - Add deprecation warning message to PBS deploy scripts
+  - Add `PeriodicClosure` util
+  - Code cleanup by removing frontend `FrontEndUtils::CreateMetricLabelsKV` and `google.scp.pbs.requests` metrics, unused code under `//cc/core/…` and `cc/core/authorization_service/…`, pruning `envoy_api` dependencies
+  - Enable bzlmod for Coordinator Services
+  - Update Key Migration Tool to support xCC key migration use case.
+  - Update visibility rules for `cc/public/…`
+  - [AWS only] Update test size for java tests that depend on LocalStackContainers
+  - [GCP only] Add build of PBS image as part of GCP Cloud Build config
+  - [GCP only] Add `image_params.auto.tfvars` for mpkhs_secondary for Cloud Run container locations
+  - [GCP only] Add option to bypass terraform output lookups
+  - [GCP only] Add private and public key service images variables to `image_params.auto.tfvars` for mpkhs_primary
+  - [GCP only] Add `service.name` to KHS OTel resource attribute
+  - [GCP only] Disable external ingress for `pbs_instance` Cloud Run
+  - [GCP only] Set `cpu_idle` and `startup_cpu_boost` for MPKHS services Cloud Run
+  - [GCP only] Turn on KHS OTel metrics by default
+  - [GCP only] Remove flag `google_scp_migrate_http_status_code` after successful migration.
+
 ## [1.19.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.18.0...v1.19.0) (2025-03-04)
 
 ### Changes
@@ -15,7 +43,6 @@
   - [AWS only] Unset `desired_capacity` attribute from `aws_autoscaling_group` `split_key_rotation_group` resource in `multipartykeygenerationservice` module
   - [GCP only] Fixed Key Storage Service `CreateKeyTask` binding issue when `AWS_KEY_SYNC_ENABLED=true`
   - [GCP only] Granted `iam.serviceAccountOpenIdTokenCreator` role to the verified service account
-
 
 ## [1.18.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.17.0...v1.18.0) (2025-02-18)
 

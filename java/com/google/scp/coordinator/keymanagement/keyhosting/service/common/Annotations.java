@@ -36,7 +36,7 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface CacheControlMaximum {}
 
-  /** Binds disable activaiotn time */
+  /** Binds disable activation time */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)

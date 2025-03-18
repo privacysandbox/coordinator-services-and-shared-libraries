@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.scp.shared.otel.OTelConfigurationModule;
 import io.opentelemetry.api.OpenTelemetry;
 
 /** Handles requests to PublicKeyService and returns HTTP Response. */
@@ -32,9 +33,11 @@ public final class PublicKeyServiceHttpFunction extends PublicKeyServiceHttpFunc
     super(getPublicKeysRequestHandler, OTel);
   }
 
-  /** Creates a new instance of the {@code PrivateKeyServiceHttpFunction} class. */
+  /** Creates a new instance of the {@code PublicKeyServiceHttpFunction} class. */
   public PublicKeyServiceHttpFunction() {
-    this(Guice.createInjector(new GcpKeyServiceModule()));
+    this(
+        Guice.createInjector(
+            new OTelConfigurationModule("PublicKeyService"), new GcpKeyServiceModule()));
   }
 
   /** Creates a new instance of the {@code PublicKeyServiceHttpFunction} class. */

@@ -28,7 +28,6 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/otel",
         "//java/external:guice",
     ],
 )
@@ -48,6 +47,7 @@ java_library(
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/api/util",
         "//java/com/google/scp/shared/gcp/util",
+        "//java/com/google/scp/shared/otel",
         "//java/external:gcp_cloud_function",
         "//java/external:guava",
         "//java/external:guice",

@@ -127,6 +127,8 @@ pkg_tar(
         ":licenses_dir",
         ":operator_dir",
         ":python_dir",
+        "MODULE.bazel",
+        "WORKSPACE.bzlmod",
     ] + glob(["*.bzl"]),
     mode = "0777",
     package_dir = "scp",

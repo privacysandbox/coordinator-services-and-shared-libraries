@@ -147,6 +147,8 @@ resource "google_cloud_run_v2_service" "private_key_service" {
           cpu    = var.encryption_key_service_cpus
           memory = "${var.encryption_key_service_cloudfunction_memory_mb}M"
         }
+        cpu_idle          = true
+        startup_cpu_boost = true
       }
     }
 

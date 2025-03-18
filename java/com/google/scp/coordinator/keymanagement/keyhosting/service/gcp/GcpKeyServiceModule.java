@@ -21,7 +21,6 @@ import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annota
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
-import com.google.scp.shared.otel.OTelConfigurationModule;
 import java.util.Map;
 import java.util.Optional;
 
@@ -85,6 +84,5 @@ public final class GcpKeyServiceModule extends AbstractModule {
             .build();
     bind(SpannerKeyDbConfig.class).toInstance(config);
     install(new SpannerKeyDbModule());
-    install(new OTelConfigurationModule());
   }
 }

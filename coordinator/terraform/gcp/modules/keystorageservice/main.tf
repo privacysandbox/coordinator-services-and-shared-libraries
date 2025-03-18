@@ -191,6 +191,7 @@ resource "google_cloud_run_v2_service" "key_storage_service" {
           cpu    = 1
           memory = "${var.key_storage_cloudfunction_memory}M"
         }
+        cpu_idle = true
       }
     }
 

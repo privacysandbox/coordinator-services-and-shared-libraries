@@ -16,14 +16,23 @@
 
 #include <gtest/gtest.h>
 
-#include "cc/public/cpio/interface/error_codes.h"
+#include <string>
 
-using google::scp::core::errors::SC_CPIO_INTERNAL_ERROR;
-using std::string;
+#include "cc/core/interface/errors.h"
+
+namespace google::scp::core::errors {
+/// Registers component code as 0x0214 for CPIO common errors.
+REGISTER_COMPONENT_CODE(SC_CPIO, 0x0214)
+
+DEFINE_ERROR_CODE(SC_CPIO_INTERNAL_ERROR, SC_CPIO, 0x0001,
+                  "Internal Error in CPIO",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+
+}  // namespace google::scp::core::errors
 
 namespace google::scp::core::test {
 TEST(ErrorsTest, GetErrorMessageSuccessfully) {
-  EXPECT_EQ(string(GetErrorMessage(SC_CPIO_INTERNAL_ERROR)),
+  EXPECT_EQ(std::string(GetErrorMessage(errors::SC_CPIO_INTERNAL_ERROR)),
             "Internal Error in CPIO");
 }
 }  // namespace google::scp::core::test

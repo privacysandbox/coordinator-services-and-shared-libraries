@@ -44,7 +44,7 @@ artifacts.
 To trigger the artifacts build, run the following command from the root of the repo:
 
 ```sh
-gcloud builds submit --config=build-scripts/gcp/cloudbuild.yaml --substitutions=_BUILD_IMAGE_REPO_PATH="<YourBuildContainerRegistryRepoPath>",_BUILD_IMAGE_NAME="bazel-build-container",_BUILD_IMAGE_TAG="<YourBuildContainerImageTag>",_OUTPUT_IMAGE_REPO_PATH="<YourOutputContainerRegistryRepoPath>",_OUTPUT_KEYGEN_IMAGE_NAME="keygen_mp_gcp_prod",_OUTPUT_PUBKEYSVC_IMAGE_NAME="public-key-hosting-service",_OUTPUT_ENCKEYSVC_IMAGE_NAME="private-key-hosting-service",_OUTPUT_KEYSTRSVC_IMAGE_NAME="key-storage-service",_OUTPUT_IMAGE_TAG="<YourOutputImageCustomTag>",_TAR_PUBLISH_BUCKET="<YourArtifactsOutputBucketName>",_TAR_PUBLISH_BUCKET_PATH="<YourArtifactsOutputRelativePath>"
+gcloud builds submit --config=build-scripts/gcp/cloudbuild.yaml --substitutions=_BUILD_IMAGE_REPO_PATH="<YourBuildContainerRegistryRepoPath>",_BUILD_IMAGE_NAME="bazel-build-container",_BUILD_IMAGE_TAG="<YourBuildContainerImageTag>",_OUTPUT_IMAGE_REPO_PATH="<YourOutputContainerRegistryRepoPath>",_OUTPUT_KEYGEN_IMAGE_NAME="keygen_mp_gcp_prod",_OUTPUT_PUBKEYSVC_IMAGE_NAME="public-key-hosting-service",_OUTPUT_ENCKEYSVC_IMAGE_NAME="private-key-hosting-service",_OUTPUT_KEYSTRSVC_IMAGE_NAME="key-storage-service",_OUTPUT_IMAGE_TAG="<YourOutputImageCustomTag>",_TAR_PUBLISH_BUCKET="<YourArtifactsOutputBucketName>",_TAR_PUBLISH_BUCKET_PATH="<YourArtifactsOutputRelativePath>",_OUTPUT_PBS_IMAGE_IMAGE="privacy-budget-service"
 ```
 
 The build can take several minutes. You can check the status at
