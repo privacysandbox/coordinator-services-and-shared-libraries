@@ -48,7 +48,7 @@ class JsonArgParser {
   const google::scp::core::ExecutionResult Parse(std::string json_string,
                                                  T& parsed_value) noexcept {
     return google::scp::core::FailureExecutionResult(
-        google::scp::core::errors::ARGUMENT_PARSER_UNKNOWN_TYPE);
+        privacy_sandbox::pbs_common::ARGUMENT_PARSER_UNKNOWN_TYPE);
   };
 };
 
@@ -62,7 +62,8 @@ class JsonArgParser<ExecutableArgument> {
 
       if (!parsed.contains("executable_name")) {
         return google::scp::core::FailureExecutionResult(
-            google::scp::core::errors::ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON);
+            privacy_sandbox::pbs_common::
+                ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON);
       }
 
       parsed_value.executable_name =
@@ -79,7 +80,7 @@ class JsonArgParser<ExecutableArgument> {
       parsed_value.executable_name = std::string();
       parsed_value.command_line_args.clear();
       return google::scp::core::FailureExecutionResult(
-          google::scp::core::errors::ARGUMENT_PARSER_INVALID_JSON);
+          privacy_sandbox::pbs_common::ARGUMENT_PARSER_INVALID_JSON);
     }
 
     return google::scp::core::SuccessExecutionResult();

@@ -23,10 +23,14 @@
 
 #include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/core/common/uuid/src/uuid.h"
-#include "cc/core/logger/src/log_utils.h"
 
-using google::scp::core::common::TimeProvider;
-using google::scp::core::common::Uuid;
+namespace privacy_sandbox::pbs_common {
+
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::common::TimeProvider;
+using ::google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::LogLevel;
 using std::cout;
 using std::endl;
 using std::string;
@@ -35,8 +39,6 @@ using std::vector;
 using std::vsnprintf;
 
 constexpr size_t nano_seconds_multiplier = (1000 * 1000 * 1000);
-
-namespace google::scp::core::logger {
 
 ExecutionResult ConsoleLogProvider::Init() noexcept {
   return SuccessExecutionResult();
@@ -51,11 +53,12 @@ ExecutionResult ConsoleLogProvider::Stop() noexcept {
 }
 
 void ConsoleLogProvider::Log(
-    const LogLevel& level, const Uuid& correlation_id,
-    const Uuid& parent_activity_id, const Uuid& activity_id,
-    const string_view& component_name, const string_view& machine_name,
-    const string_view& cluster_name, const string_view& location,
-    const string_view& message, va_list args) noexcept {
+    const LogLevel& level,
+    const Uuid& correlation_id, const Uuid& parent_activity_id,
+    const Uuid& activity_id, const string_view& component_name,
+    const string_view& machine_name, const string_view& cluster_name,
+    const string_view& location, const string_view& message,
+    va_list args) noexcept {
   auto current_timestamp =
       TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
   auto current_timestamp_seconds = current_timestamp / nano_seconds_multiplier;
@@ -83,4 +86,4 @@ void ConsoleLogProvider::Log(
 void ConsoleLogProvider::Print(const string& output) noexcept {
   cout << output << endl;
 }
-}  // namespace google::scp::core::logger
+}  // namespace privacy_sandbox::pbs_common

@@ -15,21 +15,16 @@
  */
 #include "http2_response.h"
 
-#include <memory>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include <boost/exception/diagnostic_information.hpp>
 
-#include "cc/public/core/interface/execution_result.h"
-
+namespace privacy_sandbox::pbs_common {
 using nghttp2::asio_http2::header_map;
 using nghttp2::asio_http2::header_value;
 using std::string;
 using std::placeholders::_1;
 
-namespace google::scp::core {
 void NgHttp2Response::OnClose(OnCloseErrorCode close_error_code,
                               OnCloseCallback callback) noexcept {
   // While Onclose is running, ensure that there is no concurrent
@@ -86,4 +81,4 @@ void NgHttp2Response::SubmitWorkOnIoService(
   }
   ng2_response_.io_service().post(work);
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <filesystem>  // NOLINT
 #include <list>
+#include <string>
 #include <utility>
 
 #include "cc/core/config_provider/src/error_codes.h"
@@ -96,13 +97,15 @@ TEST(ConfigProviderTest, GetConfigsFailed) {
 
   EXPECT_SUCCESS(config.Init());
 
-  EXPECT_THAT(config.Get("server-name", out_string),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
+  EXPECT_THAT(
+      config.Get("server-name", out_string),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
 
-  EXPECT_THAT(config.Get("buffer-length", out_string),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      config.Get("buffer-length", out_string),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(ConfigProviderTest, InitFailed) {
@@ -114,7 +117,8 @@ TEST(ConfigProviderTest, InitFailed) {
 
   EXPECT_THAT(config.Init(),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE)));
 }
 
 TEST(ConfigProviderTest, ShowErrorInfo) {
@@ -126,7 +130,8 @@ TEST(ConfigProviderTest, ShowErrorInfo) {
 
   auto status_code = config.Init().status_code;
 
-  string status_description = errors::GetErrorMessage(status_code);
+  string status_description =
+      privacy_sandbox::pbs_common::GetErrorMessage(status_code);
 
   EXPECT_EQ(status_description, "Config provider cannot load config file");
 }

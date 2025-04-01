@@ -19,10 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "absl/base/nullability.h"
 #include "cc/core/interface/async_executor_interface.h"
-#include "cc/core/interface/type_def.h"
-#include "cc/pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
@@ -31,25 +28,30 @@ namespace google::scp::pbs {
 class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  public:
   GcpDependencyFactory(
-      std::shared_ptr<core::ConfigProviderInterface> config_provider);
+      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+          config_provider);
 
   core::ExecutionResult Init() noexcept override;
 
-  std::unique_ptr<core::AuthorizationProxyInterface>
+  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
+      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+          async_executor,
+      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+          http_client) noexcept override;
 
-  std::unique_ptr<core::AuthorizationProxyInterface>
+  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
   ConstructAwsAuthorizationProxyClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
+      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+          async_executor,
+      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+          http_client) noexcept override;
 
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
-      google::scp::core::AsyncExecutorInterface* async_executor,
-      google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept
-      override;
+      privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor,
+      privacy_sandbox::pbs_common::AsyncExecutorInterface*
+          io_async_executor) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter() noexcept override;
 
@@ -61,7 +63,8 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  protected:
   core::ExecutionResult ReadConfigurations();
 
-  std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+      config_provider_;
 
   // Configurations here
   std::string budget_key_table_name_;

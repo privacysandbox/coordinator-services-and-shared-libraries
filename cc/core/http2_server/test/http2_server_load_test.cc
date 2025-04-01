@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/authorization_proxy/src/pass_thru_authorization_proxy.h"
@@ -26,42 +27,27 @@
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/http2_client/src/http2_client.h"
 #include "cc/core/http2_server/src/http2_server.h"
-#include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/errors.h"
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/core/test/utils/logging_utils.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::AsyncContext;
-using google::scp::core::AsyncExecutor;
-using google::scp::core::AsyncExecutorInterface;
-using google::scp::core::AuthorizationProxyInterface;
-using google::scp::core::BytesBuffer;
-using google::scp::core::ConfigProviderInterface;
+namespace privacy_sandbox::pbs_common {
+namespace {
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::Http2Server;
-using google::scp::core::Http2ServerOptions;
-using google::scp::core::HttpClient;
-using google::scp::core::HttpClientInterface;
-using google::scp::core::HttpClientOptions;
-using google::scp::core::HttpRequest;
-using google::scp::core::HttpResponse;
-using google::scp::core::HttpServerInterface;
-using google::scp::core::LoggerInterface;
 using google::scp::core::PassThruAuthorizationProxy;
 using google::scp::core::SuccessExecutionResult;
-using google::scp::core::common::GlobalLogger;
 using google::scp::core::common::RetryStrategy;
 using google::scp::core::common::RetryStrategyOptions;
 using google::scp::core::common::RetryStrategyType;
 using google::scp::core::common::Uuid;
 using google::scp::core::config_provider::mock::MockConfigProvider;
-using google::scp::core::errors::HttpStatusCode;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::TestLoggingUtils;
 using google::scp::core::test::WaitUntil;
+using ::privacy_sandbox::pbs_common::HttpStatusCode;
 using std::atomic;
 using std::cout;
 using std::endl;
@@ -82,8 +68,6 @@ using ::testing::An;
 using ::testing::AnyOf;
 using ::testing::Contains;
 using ::testing::Eq;
-
-namespace google::scp::pbs::test {
 
 class HttpServerLoadTest : public testing::Test {
  protected:
@@ -113,7 +97,7 @@ class HttpServerLoadTest : public testing::Test {
         /*aws_authorization_proxy=*/nullptr, config_provider_);
 
     string path = "/v1/test";
-    core::HttpHandler handler =
+    HttpHandler handler =
         [this](AsyncContext<HttpRequest, HttpResponse>& context) {
           total_requests_received_on_server++;
           context.response = make_shared<HttpResponse>();
@@ -124,8 +108,8 @@ class HttpServerLoadTest : public testing::Test {
           context.Finish();
           return SuccessExecutionResult();
         };
-    EXPECT_SUCCESS(http_server_->RegisterResourceHandler(core::HttpMethod::POST,
-                                                         path, handler));
+    EXPECT_SUCCESS(
+        http_server_->RegisterResourceHandler(HttpMethod::POST, path, handler));
 
     // Init
     EXPECT_SUCCESS(async_executor_for_client_->Init());
@@ -150,7 +134,7 @@ class HttpServerLoadTest : public testing::Test {
 
   string host_ = "localhost";
   string port_ = "8099";  // TODO: Pick this randomly.
-  shared_ptr<core::ConfigProviderInterface> config_provider_;
+  shared_ptr<ConfigProviderInterface> config_provider_;
   shared_ptr<AsyncExecutorInterface> async_executor_for_server_;
   shared_ptr<AsyncExecutorInterface> async_executor_for_client_;
   shared_ptr<HttpServerInterface> http_server_;
@@ -207,11 +191,11 @@ TEST_F(HttpServerLoadTest,
          << "Initialized clients. Sending requests..." << endl;
     for (auto& http2_client : http2_clients) {
       auto request = make_shared<HttpRequest>();
-      request->method = core::HttpMethod::POST;
+      request->method = HttpMethod::POST;
       request->path =
           make_shared<string>("http://" + host_ + ":" + port_ + "/v1/test");
       AsyncContext<HttpRequest, HttpResponse> request_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<HttpRequest, HttpResponse>& result_context) {
             client_requests_completed_in_current_round++;
           });
@@ -231,11 +215,11 @@ TEST_F(HttpServerLoadTest,
     // Send another round of multiple requests on the same set of clients.
     for (auto& http2_client : http2_clients) {
       auto request = make_shared<HttpRequest>();
-      request->method = core::HttpMethod::POST;
+      request->method = HttpMethod::POST;
       request->path =
           make_shared<string>("http://" + host_ + ":" + port_ + "/v1/test");
       AsyncContext<HttpRequest, HttpResponse> request_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<HttpRequest, HttpResponse>& result_context) {
             client_requests_completed_in_current_round++;
           });
@@ -269,4 +253,6 @@ TEST_F(HttpServerLoadTest,
   is_qps_thread_stopped = true;
   qps_thread.join();
 }
-}  // namespace google::scp::pbs::test
+
+}  // namespace
+}  // namespace privacy_sandbox::pbs_common

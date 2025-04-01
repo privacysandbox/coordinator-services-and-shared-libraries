@@ -20,7 +20,6 @@
 
 #include "cc/core/interface/authorization_proxy_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
-#include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/http_request_response_auth_interceptor_interface.h"
 #include "cc/core/interface/http_types.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -28,25 +27,30 @@
 namespace google::scp::pbs {
 
 class GcpHttpRequestResponseAuthInterceptor
-    : public core::HttpRequestResponseAuthInterceptorInterface {
+    : public privacy_sandbox::pbs_common::
+          HttpRequestResponseAuthInterceptorInterface {
  public:
   GcpHttpRequestResponseAuthInterceptor() : config_provider_(nullptr) {}
 
   explicit GcpHttpRequestResponseAuthInterceptor(
-      std::shared_ptr<core::ConfigProviderInterface> config_provider)
+      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+          config_provider)
       : config_provider_(config_provider) {}
 
   core::ExecutionResult PrepareRequest(
-      const core::AuthorizationMetadata& authorization_metadata,
-      core::HttpRequest& http_request) override;
+      const privacy_sandbox::pbs_common::AuthorizationMetadata&
+          authorization_metadata,
+      privacy_sandbox::pbs_common::HttpRequest& http_request) override;
 
-  core::ExecutionResultOr<core::AuthorizedMetadata>
+  core::ExecutionResultOr<privacy_sandbox::pbs_common::AuthorizedMetadata>
   ObtainAuthorizedMetadataFromResponse(
-      const core::AuthorizationMetadata& authorization_metadata,
-      const core::HttpResponse& http_response) override;
+      const privacy_sandbox::pbs_common::AuthorizationMetadata&
+          authorization_metadata,
+      const privacy_sandbox::pbs_common::HttpResponse& http_response) override;
 
  private:
-  std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+      config_provider_;
 };
 
 }  // namespace google::scp::pbs

@@ -14,19 +14,13 @@
 
 #pragma once
 
-#include <chrono>
 #include <memory>
 #include <mutex>
-#include <queue>
-#include <thread>
-#include <vector>
 
 #include "cc/core/common/time_provider/src/time_provider.h"
-#include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
-#include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief  Is used by the async executor to encapsulate the async operations
@@ -40,10 +34,9 @@ class AsyncTask {
    *
    * @param async_operation The async operation to be executed.
    */
-  AsyncTask(
-      AsyncOperation async_operation = AsyncOperation([]() {}),
-      Timestamp execution_timestamp =
-          common::TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks())
+  AsyncTask(AsyncOperation async_operation = AsyncOperation([]() {}),
+            Timestamp execution_timestamp = google::scp::core::common::
+                TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks())
       : async_operation_(async_operation),
         execution_timestamp_(execution_timestamp),
         is_cancelled_(false) {}
@@ -115,4 +108,4 @@ class AsyncTaskCompareGreater {
     return lhs->GetExecutionTimestamp() > rhs->GetExecutionTimestamp();
   }
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

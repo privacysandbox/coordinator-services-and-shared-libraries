@@ -20,7 +20,7 @@
 
 using std::string;
 
-namespace google::scp::core::errors::test {
+namespace privacy_sandbox::pbs_common {
 TEST(ERRORS, ComponentCodeRegistered) {
   REGISTER_COMPONENT_CODE(COMPONENT_NAME, 0x7FFF)
 
@@ -97,4 +97,4 @@ TEST(ERRORS, NoAssociatedPublicErrorCode) {
   EXPECT_EQ(public_error_code, SC_UNKNOWN);
 }
 
-}  // namespace google::scp::core::errors::test
+}  // namespace privacy_sandbox::pbs_common

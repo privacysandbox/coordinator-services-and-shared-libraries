@@ -19,16 +19,22 @@
 #include <memory>
 #include <string>
 
+#include "cc/core/http2_client/src/http_client_def.h"
 #include "cc/core/utils/src/http.h"
 #include "opentelemetry/metrics/provider.h"
 
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::MetricRouter;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::RetryStrategy;
+using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
 using std::make_unique;
 using std::shared_ptr;
 
 constexpr char kHttpClient[] = "Http2Client";
-
-namespace google::scp::core {
 
 HttpClient::HttpClient(shared_ptr<AsyncExecutorInterface>& async_executor,
                        HttpClientOptions options,
@@ -101,7 +107,7 @@ void HttpClient::IncrementClientConnectionCreationError(
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)},
+       GetClaimedIdentityOrUnknownValue(http_context)},
   };
 
   if (std::string* auth_domain =
@@ -113,4 +119,4 @@ void HttpClient::IncrementClientConnectionCreationError(
   opentelemetry::context::Context context;
   client_connection_creation_error_counter_->Add(1, labels);
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

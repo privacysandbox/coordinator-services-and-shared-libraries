@@ -18,7 +18,7 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_CORE_UTILS, 0x0014)
 
@@ -36,4 +36,4 @@ DEFINE_ERROR_CODE(SC_CORE_UTILS_CURL_INIT_ERROR, SC_CORE_UTILS, 0x0003,
 DEFINE_ERROR_CODE(SC_CORE_REQUEST_HEADER_NOT_FOUND, SC_CORE_UTILS, 0x0004,
                   "Request header not found.", HttpStatusCode::BAD_REQUEST)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

@@ -21,7 +21,6 @@
 #include <string>
 
 #include "absl/base/nullability.h"
-#include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/http_server_interface.h"
@@ -35,12 +34,16 @@ namespace google::scp::pbs {
  * @brief To provide health check functionality, a health service will return
  * success execution result to all health inquiries.
  */
-class HealthService : public core::ServiceInterface {
+class HealthService : public privacy_sandbox::pbs_common::ServiceInterface {
  public:
   HealthService(
-      const std::shared_ptr<core::HttpServerInterface>& http_server,
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider,
-      const std::shared_ptr<core::AsyncExecutorInterface>& async_executor)
+      const std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>&
+          http_server,
+      const std::shared_ptr<
+          privacy_sandbox::pbs_common::ConfigProviderInterface>&
+          config_provider,
+      const std::shared_ptr<
+          privacy_sandbox::pbs_common::AsyncExecutorInterface>& async_executor)
       : http_server_(http_server),
         config_provider_(config_provider),
         async_executor_(async_executor) {}
@@ -71,8 +74,9 @@ class HealthService : public core::ServiceInterface {
    * @return core::ExecutionResult The execution result of the operation.
    */
   core::ExecutionResult CheckHealth(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context) noexcept;
 
   /**
    * @brief Check the memory and storage usage to determine heath.
@@ -124,11 +128,14 @@ class HealthService : public core::ServiceInterface {
       const std::string& directory) noexcept;
 
   // An instance of the http server.
-  std::shared_ptr<core::HttpServerInterface> http_server_;
+  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
+      http_server_;
   // An instance of the config provider.
-  std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+      config_provider_;
   // Async executor instance.
-  std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
+  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+      async_executor_;
   // The OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
   // The OpenTelemetry Instrument for instance memory usage.

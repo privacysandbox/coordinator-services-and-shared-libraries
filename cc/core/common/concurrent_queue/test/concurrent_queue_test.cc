@@ -51,8 +51,10 @@ TEST_F(ConcurrentQueueTests, ErrorOnMaxSize) {
   int i = 1;
   auto result = queue.TryEnqueue(i);
 
-  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          errors::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE)));
+  EXPECT_THAT(
+      result,
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE)));
 }
 
 TEST_F(ConcurrentQueueTests, ErrorOnNoElement) {
@@ -61,8 +63,10 @@ TEST_F(ConcurrentQueueTests, ErrorOnNoElement) {
   int i;
   auto result = queue.TryDequeue(i);
 
-  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          errors::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE)));
+  EXPECT_THAT(
+      result,
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE)));
 }
 
 TEST_F(ConcurrentQueueTests, MultiThreadedEnqueue) {

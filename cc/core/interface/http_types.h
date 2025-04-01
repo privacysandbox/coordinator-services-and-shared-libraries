@@ -18,15 +18,13 @@
 
 #include <map>
 #include <memory>
-#include <optional>
 #include <string>
-#include <vector>
 
-#include "cc/core/common/concurrent_map/src/concurrent_map.h"
+#include "cc/core/interface/errors.h"
 
 #include "type_def.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /// Http Methods enumerator.
 enum class HttpMethod {
   GET = 0,
@@ -75,7 +73,7 @@ struct HttpResponse {
   /// Represents the body of the response.
   BytesBuffer body;
   /// Represents the http status code.
-  errors::HttpStatusCode code = errors::HttpStatusCode::UNKNOWN;
+  HttpStatusCode code = HttpStatusCode::UNKNOWN;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

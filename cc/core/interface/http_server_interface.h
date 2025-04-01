@@ -17,20 +17,17 @@
 #pragma once
 
 #include <functional>
-#include <memory>
 #include <string>
-#include <vector>
 
 #include "async_context.h"
 #include "http_types.h"
 #include "service_interface.h"
-#include "type_def.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /// Type definition for the resource handler.
-typedef std::function<ExecutionResult(AsyncContext<HttpRequest, HttpResponse>&)>
-    HttpHandler;
+using HttpHandler = std::function<google::scp::core::ExecutionResult(
+    AsyncContext<HttpRequest, HttpResponse>&)>;
 
 /// Provides HTTP(S) server functionality.
 class HttpServerInterface : public ServiceInterface {
@@ -45,8 +42,8 @@ class HttpServerInterface : public ServiceInterface {
    * @param handler The handler of the specific path.
    * @return ExecutionResult
    */
-  virtual ExecutionResult RegisterResourceHandler(
+  virtual google::scp::core::ExecutionResult RegisterResourceHandler(
       HttpMethod http_method, std::string& resource_path,
       HttpHandler& handler) noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

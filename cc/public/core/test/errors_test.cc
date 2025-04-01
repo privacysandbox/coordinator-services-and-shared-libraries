@@ -20,7 +20,7 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 /// Registers component code as 0x0214 for CPIO common errors.
 REGISTER_COMPONENT_CODE(SC_CPIO, 0x0214)
 
@@ -28,11 +28,11 @@ DEFINE_ERROR_CODE(SC_CPIO_INTERNAL_ERROR, SC_CPIO, 0x0001,
                   "Internal Error in CPIO",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 TEST(ErrorsTest, GetErrorMessageSuccessfully) {
-  EXPECT_EQ(std::string(GetErrorMessage(errors::SC_CPIO_INTERNAL_ERROR)),
+  EXPECT_EQ(std::string(GetErrorMessage(SC_CPIO_INTERNAL_ERROR)),
             "Internal Error in CPIO");
 }
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

@@ -23,13 +23,13 @@
 #include "cc/core/logger/src/logger.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::LoggerInterface;
-using google::scp::core::common::GlobalLogger;
-using google::scp::core::logger::ConsoleLogProvider;
-using google::scp::core::logger::Logger;
-using google::scp::core::logger::log_providers::SyslogLogProvider;
-
 namespace google::scp::core::test {
+
+using ::privacy_sandbox::pbs_common::ConsoleLogProvider;
+using ::privacy_sandbox::pbs_common::GlobalLogger;
+using ::privacy_sandbox::pbs_common::Logger;
+using ::privacy_sandbox::pbs_common::LoggerInterface;
+using ::privacy_sandbox::pbs_common::SyslogLogProvider;
 
 void TestLoggingUtils::EnableLogOutputToConsole() {
   std::unique_ptr<LoggerInterface> logger_ptr =

@@ -24,6 +24,10 @@
 namespace google::scp::core::test {
 namespace {
 
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AsyncOperation;
+using ::privacy_sandbox::pbs_common::AsyncPriority;
+
 // Benchmarking 1: SpinLock counter increment.
 void BM_SpinLockIncrement(benchmark::State& state) {
   static opentelemetry::common::SpinLockMutex lock;

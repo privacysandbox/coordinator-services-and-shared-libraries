@@ -104,8 +104,9 @@ inline constexpr absl::string_view kOtelCredConfigKey =
 inline constexpr absl::string_view kOtelCredConfigValue = "";
 
 template <typename T>
-T GetConfigValue(const std::string& key, const T& default_value,
-                 ConfigProviderInterface& config_provider) {
+T GetConfigValue(
+    const std::string& key, const T& default_value,
+    privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider) {
   T result = default_value;
   auto execution_result = config_provider.Get(key, result);
   if (!execution_result.Successful()) {

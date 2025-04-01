@@ -22,7 +22,8 @@
 #include "cc/core/interface/authorization_proxy_interface.h"
 
 namespace google::scp::pbs {
-class LocalAuthorizationProxy : public core::AuthorizationProxyInterface {
+class LocalAuthorizationProxy
+    : public privacy_sandbox::pbs_common::AuthorizationProxyInterface {
  public:
   core::ExecutionResult Init() noexcept override {
     return core::SuccessExecutionResult();
@@ -37,11 +38,13 @@ class LocalAuthorizationProxy : public core::AuthorizationProxyInterface {
   }
 
   core::ExecutionResult Authorize(
-      core::AsyncContext<core::AuthorizationProxyRequest,
-                         core::AuthorizationProxyResponse>& context) noexcept
-      override {
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::AuthorizationProxyRequest,
+          privacy_sandbox::pbs_common::AuthorizationProxyResponse>&
+          context) noexcept override {
     context.result = core::SuccessExecutionResult();
-    context.response = std::make_shared<core::AuthorizationProxyResponse>();
+    context.response = std::make_shared<
+        privacy_sandbox::pbs_common::AuthorizationProxyResponse>();
     context.response->authorized_metadata.authorized_domain =
         std::make_shared<std::string>(
             context.request->authorization_metadata.claimed_identity);

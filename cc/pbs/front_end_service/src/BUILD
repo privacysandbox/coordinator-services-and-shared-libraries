@@ -24,13 +24,12 @@ cc_library(
     name = "front_end_utils",
     srcs = ["front_end_utils.cc"],
     hdrs = ["front_end_utils.h"],
-    visibility = ["//cc/pbs:__subpackages__"],
+    visibility = ["//cc:pbs_visibility"],
     deps = [
         ":error_codes",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
         "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@io_opentelemetry_cpp//sdk/src/metrics",
         "@libpsl",
     ],
 )
@@ -46,6 +45,7 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/pbs/budget_key_timeframe_manager/src:pbs_budget_key_timeframe_manager_lib",
+        "//cc/pbs/consume_budget/src:binary_budget_consumer",
         "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/consume_budget/src/gcp:error_codes",
         "//cc/pbs/interface:pbs_interface_lib",

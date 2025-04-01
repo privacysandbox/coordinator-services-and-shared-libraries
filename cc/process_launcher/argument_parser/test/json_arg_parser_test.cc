@@ -23,9 +23,9 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::errors::ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON;
-using google::scp::core::errors::ARGUMENT_PARSER_INVALID_JSON;
-using google::scp::core::errors::ARGUMENT_PARSER_UNKNOWN_TYPE;
+using ::privacy_sandbox::pbs_common::ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON;
+using ::privacy_sandbox::pbs_common::ARGUMENT_PARSER_INVALID_JSON;
+using ::privacy_sandbox::pbs_common::ARGUMENT_PARSER_UNKNOWN_TYPE;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
 using google::scp::process_launcher::ExecutableArgument;

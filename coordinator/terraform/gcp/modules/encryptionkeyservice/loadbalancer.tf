@@ -132,7 +132,6 @@ resource "google_compute_target_https_proxy" "encryption_key_service_cloud_run" 
 
   ssl_certificates = [
     google_compute_managed_ssl_certificate.encryption_key_service_loadbalancer[0].id,
-    google_compute_managed_ssl_certificate.encryption_key_service_cloud_run_loadbalancer[0].id
   ]
 }
 

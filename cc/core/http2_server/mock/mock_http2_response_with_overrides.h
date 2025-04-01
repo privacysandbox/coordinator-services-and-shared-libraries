@@ -21,7 +21,7 @@
 
 #include "cc/core/http2_server/src/http2_response.h"
 
-namespace google::scp::core::http2_server::mock {
+namespace privacy_sandbox::pbs_common {
 
 class MockNgHttp2ResponseWithOverrides : public NgHttp2Response {
  public:
@@ -30,4 +30,4 @@ class MockNgHttp2ResponseWithOverrides : public NgHttp2Response {
       : NgHttp2Response(ng2_response) {}
 };
 
-}  // namespace google::scp::core::http2_server::mock
+}  // namespace privacy_sandbox::pbs_common

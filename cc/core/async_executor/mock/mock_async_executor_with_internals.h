@@ -16,20 +16,18 @@
 
 #pragma once
 
-#include <atomic>
 #include <functional>
-#include <memory>
 
 #include "cc/core/async_executor/src/async_executor.h"
 
-namespace google::scp::core::async_executor::mock {
-class MockAsyncExecutorWithInternals : public core::AsyncExecutor {
+namespace privacy_sandbox::pbs_common {
+class MockAsyncExecutorWithInternals : public AsyncExecutor {
  public:
   MockAsyncExecutorWithInternals(size_t thread_count, size_t queue_cap)
-      : core::AsyncExecutor(thread_count, queue_cap) {}
+      : AsyncExecutor(thread_count, queue_cap) {}
 
-  ExecutionResult Schedule(const AsyncOperation& work,
-                           AsyncPriority priority) noexcept override {
+  google::scp::core::ExecutionResult Schedule(
+      const AsyncOperation& work, AsyncPriority priority) noexcept override {
     if (schedule_pre_caller) {
       auto new_work = [&, work]() {
         if (schedule_pre_caller()) {
@@ -43,7 +41,7 @@ class MockAsyncExecutorWithInternals : public core::AsyncExecutor {
     return AsyncExecutor::Schedule(work, priority);
   }
 
-  ExecutionResult Schedule(
+  google::scp::core::ExecutionResult Schedule(
       const AsyncOperation& work, AsyncPriority priority,
       AsyncExecutorAffinitySetting affinity) noexcept override {
     if (schedule_pre_caller) {
@@ -59,19 +57,19 @@ class MockAsyncExecutorWithInternals : public core::AsyncExecutor {
     return AsyncExecutor::Schedule(work, priority, affinity);
   }
 
-  ExecutionResult ScheduleFor(const AsyncOperation& work,
-                              Timestamp timestamp) noexcept override {
+  google::scp::core::ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp) noexcept override {
     std::function<bool()> callback;
     return ScheduleFor(work, timestamp, callback);
   }
 
-  ExecutionResult ScheduleFor(
+  google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       AsyncExecutorAffinitySetting affinity) noexcept override {
-    return ScheduleFor(work, timestamp, affinity);
+    return AsyncExecutor::ScheduleFor(work, timestamp, affinity);
   }
 
-  ExecutionResult ScheduleFor(
+  google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       std::function<bool()>& cancellation_callback) noexcept override {
     if (schedule_for_pre_caller) {
@@ -88,7 +86,7 @@ class MockAsyncExecutorWithInternals : public core::AsyncExecutor {
     return AsyncExecutor::ScheduleFor(work, timestamp, cancellation_callback);
   }
 
-  ExecutionResult ScheduleFor(
+  google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       std::function<bool()>& cancellation_callback,
       AsyncExecutorAffinitySetting affinity) noexcept override {
@@ -110,4 +108,4 @@ class MockAsyncExecutorWithInternals : public core::AsyncExecutor {
   std::function<bool()> schedule_pre_caller;
   std::function<bool()> schedule_for_pre_caller;
 };
-}  // namespace google::scp::core::async_executor::mock
+}  // namespace privacy_sandbox::pbs_common

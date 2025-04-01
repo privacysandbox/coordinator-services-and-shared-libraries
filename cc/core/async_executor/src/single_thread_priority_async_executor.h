@@ -20,13 +20,14 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <thread>
 #include <vector>
 
 #include "cc/core/interface/async_executor_interface.h"
 
 #include "async_task.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief A single threaded priority async executor. This executor will have one
  * thread working with one priority queue.
@@ -45,22 +46,22 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
         drop_tasks_on_stop_(drop_tasks_on_stop),
         affinity_cpu_number_(affinity_cpu_number) {}
 
-  ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
 
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
   /**
    * @brief Schedules a task to be executed at a certain time.
    *
    * @param work The task that needs to be scheduled.
    * @param timestamp The timestamp to the task to be executed.
-   * @return ExecutionResult The result of the execution with possible error
-   * code.
+   * @return google::scp::core::ExecutionResult The result of the execution
+   * with possible error code.
    */
-  ExecutionResult ScheduleFor(const AsyncOperation& work,
-                              Timestamp timestamp) noexcept;
+  google::scp::core::ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp) noexcept;
 
   /**
    * @brief Schedules a task to be executed at a certain time.
@@ -69,9 +70,10 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
    * @param timestamp The timestamp to the task to be executed.
    * @param cancellation_callback The callback to be used for cancelling the
    * scheduled work.
-   * @return ExecutionResult result of the execution with possible error code.
+   * @return google::scp::core::ExecutionResult result of the execution with
+   * possible error code.
    */
-  ExecutionResult ScheduleFor(
+  google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       std::function<bool()>& cancellation_callback) noexcept;
 
@@ -79,7 +81,7 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
    * @brief Returns the ID of the spawned thread object to enable looking it up
    * via thread IDs later. Will only be populated after Run() is called.
    */
-  ExecutionResultOr<std::thread::id> GetThreadId() const;
+  google::scp::core::ExecutionResultOr<std::thread::id> GetThreadId() const;
 
  private:
   /// Starts the internal worker thread.
@@ -128,4 +130,4 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
    */
   std::condition_variable condition_variable_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

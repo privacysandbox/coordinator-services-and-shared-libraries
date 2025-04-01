@@ -20,13 +20,10 @@
 
 #include <future>
 #include <memory>
-#include <random>
 #include <string>
 #include <thread>
 #include <utility>
 
-#include "absl/random/random.h"
-#include "absl/random/uniform_int_distribution.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/async_executor/src/async_executor.h"
@@ -45,25 +42,35 @@
 #include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/core/utils/src/base64.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "nlohmann/json.hpp"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
-namespace google::scp::core {
-namespace {
+namespace privacy_sandbox::pbs_common {
 
-using ::google::scp::core::AsyncExecutor;
-using ::google::scp::core::AuthorizationProxyInterface;
-using ::google::scp::core::Http2Server;
-using ::google::scp::core::HttpClient;
-using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
+class Http2ServerPeer {
+ public:
+  static int PortInUse(Http2Server& http2_server) {
+    return http2_server.PortInUse();
+  }
+};
+
+namespace {
+using ::google::scp::core::EnvConfigProvider;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionStatus;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::GetMetricPointData;
+using ::google::scp::core::InMemoryMetricRouter;
+using ::google::scp::core::PassThruAuthorizationProxy;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::authorization_proxy::mock::MockAuthorizationProxy;
+using ::google::scp::core::common::RetryStrategyOptions;
+using ::google::scp::core::common::RetryStrategyType;
 using ::google::scp::core::common::Uuid;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
-using ::google::scp::core::errors::HttpStatusCode;
-using ::google::scp::core::http2_server::mock::MockHttp2ServerWithOverrides;
-using ::google::scp::core::http2_server::mock::MockNgHttp2RequestWithOverrides;
-using ::google::scp::core::http2_server::mock::MockNgHttp2ResponseWithOverrides;
 using ::google::scp::core::test::ResultIs;
 using ::google::scp::core::test::WaitUntil;
 using ::google::scp::core::utils::Base64Encode;
@@ -87,10 +94,10 @@ class Http2ServerTest : public testing::Test {
     mock_config_provider_ = std::make_shared<MockConfigProvider>();
     mock_config_provider_->SetBool(kHttpServerDnsRoutingEnabled, true);
 
-    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
+    metric_router_ = std::make_unique<InMemoryMetricRouter>();
   }
 
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
+  std::unique_ptr<InMemoryMetricRouter> metric_router_;
   std::shared_ptr<MockConfigProvider> mock_config_provider_;
 };
 
@@ -131,13 +138,14 @@ TEST_F(Http2ServerTest, Run) {
                           mock_aws_authorization_proxy);
 
   EXPECT_SUCCESS(http_server.Run());
-  EXPECT_THAT(http_server.Run(), ResultIs(FailureExecutionResult(
-                                     errors::SC_HTTP2_SERVER_ALREADY_RUNNING)));
+  EXPECT_THAT(
+      http_server.Run(),
+      ResultIs(FailureExecutionResult(SC_HTTP2_SERVER_ALREADY_RUNNING)));
 
   EXPECT_SUCCESS(http_server.Stop());
-  EXPECT_THAT(http_server.Stop(),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_HTTP2_SERVER_ALREADY_STOPPED)));
+  EXPECT_THAT(
+      http_server.Stop(),
+      ResultIs(FailureExecutionResult(SC_HTTP2_SERVER_ALREADY_STOPPED)));
 }
 
 TEST_F(Http2ServerTest, RegisterHandlers) {
@@ -165,8 +173,7 @@ TEST_F(Http2ServerTest, RegisterHandlers) {
 
   EXPECT_THAT(
       http_server.RegisterResourceHandler(HttpMethod::GET, path, callback),
-      ResultIs(FailureExecutionResult(
-          errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+      ResultIs(FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 }
 
 TEST_F(Http2ServerTest, HandleHttp2Request) {
@@ -416,21 +423,19 @@ TEST_F(Http2ServerTest, HandleHttp2RequestFailed) {
   sync_context->http_handler = callback;
 
   http_server.HandleHttp2Request(ng_http2_context, callback);
-  http_server.OnHttp2Cleanup(*sync_context, /*error_code=*/ 0);
+  http_server.OnHttp2Cleanup(*sync_context, /*error_code=*/0);
 
-  EXPECT_EQ(
-      http_server.GetActiveRequests().Find(ng_http2_context.request->id,
-                                           sync_context),
-      FailureExecutionResult(errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
+  EXPECT_EQ(http_server.GetActiveRequests().Find(ng_http2_context.request->id,
+                                                 sync_context),
+            FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST));
 
   WaitUntil([&]() { return should_continue; });
 }
 
 TEST_F(Http2ServerTest, TestOtelMetric) {
   // Setup the server and the client.
-  std::shared_ptr<core::config_provider::mock::MockConfigProvider>
-      mock_config_provider =
-          std::make_shared<config_provider::mock::MockConfigProvider>();
+  std::shared_ptr<MockConfigProvider> mock_config_provider =
+      std::make_shared<MockConfigProvider>();
 
   std::shared_ptr<AuthorizationProxyInterface> authorization_proxy =
       std::make_shared<PassThruAuthorizationProxy>();
@@ -445,19 +450,14 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
                                       /* queue size */ 100000,
                                       /* drop_tasks_on_stop */ true);
   HttpClientOptions client_options(
-      common::RetryStrategyOptions(common::RetryStrategyType::Linear,
-                                   /* delay in ms */ 100, /* num retries */ 5),
+      RetryStrategyOptions(RetryStrategyType::Linear,
+                           /* delay in ms */ 100, /* num retries */ 5),
       /* max connections per host */ 1, /* read timeout in sec */ 5);
 
   auto http2_client = std::make_shared<HttpClient>(async_executor_for_client_);
 
   std::string host = "localhost";
-
-  absl::BitGen generator;
-  absl::uniform_int_distribution<int> distribution(1000, 9000);
-  int random_port_number = distribution(generator);
-
-  std::string port = std::to_string(random_port_number);
+  std::string port = "0";
 
   std::shared_ptr<AuthorizationProxyInterface> mock_aws_authorization_proxy =
       std::make_shared<MockAuthorizationProxy>();
@@ -469,18 +469,17 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
           metric_router_.get());
 
   std::string path = "/v1/test";
-  core::HttpHandler handler =
-      [](AsyncContext<HttpRequest, HttpResponse>& context) {
-        context.request->body = BytesBuffer("request body");
-        context.response = std::make_shared<HttpResponse>();
-        context.response->body = BytesBuffer("response body");
-        context.response->code = HttpStatusCode(200);
-        context.result = SuccessExecutionResult();
-        context.Finish();
-        return SuccessExecutionResult();
-      };
-  EXPECT_SUCCESS(http_server->RegisterResourceHandler(core::HttpMethod::POST,
-                                                      path, handler));
+  HttpHandler handler = [](AsyncContext<HttpRequest, HttpResponse>& context) {
+    context.request->body = BytesBuffer("request body");
+    context.response = std::make_shared<HttpResponse>();
+    context.response->body = BytesBuffer("response body");
+    context.response->code = HttpStatusCode(200);
+    context.result = SuccessExecutionResult();
+    context.Finish();
+    return SuccessExecutionResult();
+  };
+  EXPECT_SUCCESS(
+      http_server->RegisterResourceHandler(HttpMethod::POST, path, handler));
 
   EXPECT_SUCCESS(async_executor_for_client_->Init());
   EXPECT_SUCCESS(async_executor_for_server_->Init());
@@ -492,13 +491,14 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
   EXPECT_SUCCESS(http_server->Run());
   EXPECT_SUCCESS(http2_client->Run());
 
+  port = std::to_string(Http2ServerPeer::PortInUse(*http_server));
   // Create a request and use the client to send it to the server.
   nghttp2::asio_http2::server::request request;
   nghttp2::asio_http2::server::response response;
 
   auto mock_http2_request =
       std::make_shared<MockNgHttp2RequestWithOverrides>(request);
-  mock_http2_request->method = core::HttpMethod::POST;
+  mock_http2_request->method = HttpMethod::POST;
   mock_http2_request->body = BytesBuffer("request body");
   mock_http2_request->path = std::make_shared<std::string>(
       absl::StrCat("http://", host, ":", port, "/v1/test"));
@@ -537,8 +537,8 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       server_request_duration_metric_point_data =
-          core::GetMetricPointData("http.server.request.duration",
-                                   server_request_duration_dimensions, data);
+          GetMetricPointData("http.server.request.duration",
+                             server_request_duration_dimensions, data);
 
   EXPECT_TRUE(server_request_duration_metric_point_data.has_value());
 
@@ -573,7 +573,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
               std::map<std::string, std::string>>(active_requests_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      active_requests_metric_point_data = core::GetMetricPointData(
+      active_requests_metric_point_data = GetMetricPointData(
           "http.server.active_requests", active_requests_dimensions, data);
   EXPECT_TRUE(active_requests_metric_point_data.has_value());
 
@@ -594,7 +594,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
           std::map<std::string, std::string>>(request_body_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      request_body_metric_point_data = core::GetMetricPointData(
+      request_body_metric_point_data = GetMetricPointData(
           "http.server.request.body.size", request_body_dimensions, data);
 
   EXPECT_TRUE(request_body_metric_point_data.has_value());
@@ -623,7 +623,7 @@ TEST_F(Http2ServerTest, TestOtelMetric) {
               std::map<std::string, std::string>>(response_body_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      response_body_metric_point_data = core::GetMetricPointData(
+      response_body_metric_point_data = GetMetricPointData(
           "http.server.response.body.size", response_body_dimensions, data);
 
   EXPECT_TRUE(response_body_metric_point_data.has_value());
@@ -696,10 +696,11 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackFailure) {
   EXPECT_EQ(sync_context->failed.load(), true);
 
   http_server.OnHttp2PendingCallback(callback_execution_result, request_id);
-  http_server.OnHttp2Cleanup(*sync_context, /*error_code=*/ 0);
+  http_server.OnHttp2Cleanup(*sync_context, /*error_code=*/0);
   EXPECT_THAT(http_server.GetActiveRequests().Find(request_id, sync_context),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+
+                  SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
@@ -761,7 +762,7 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
           std::map<std::string, std::string>>(request_body_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      request_body_metric_point_data = core::GetMetricPointData(
+      request_body_metric_point_data = GetMetricPointData(
           "http.server.request.body.size", request_body_dimensions, data);
 
   EXPECT_TRUE(request_body_metric_point_data.has_value());
@@ -803,7 +804,8 @@ TEST_F(Http2ServerTest,
 
   EXPECT_THAT(http_server.Init(),
               ResultIs(FailureExecutionResult(
-                  errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
+
+                  SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
 }
 
 TEST_F(Http2ServerTest,
@@ -830,7 +832,8 @@ TEST_F(Http2ServerTest,
 
   EXPECT_THAT(http_server.Init(),
               ResultIs(FailureExecutionResult(
-                  errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
+
+                  SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
 }
 
 TEST_F(Http2ServerTest,
@@ -884,14 +887,6 @@ TEST_F(Http2ServerTest, ShouldInitCorrectlyRunAndStopWhenTlsIsEnabled) {
   EXPECT_SUCCESS(http_server.Stop());
 }
 
-static int GenerateRandomIntInRange(int min, int max) {
-  std::random_device randomdevice;
-  std::mt19937 random_number_engine(randomdevice());
-  std::uniform_int_distribution<int> uniform_distribution(min, max);
-
-  return uniform_distribution(random_number_engine);
-}
-
 void SubmitUntilSuccess(HttpClient& http_client,
                         AsyncContext<HttpRequest, HttpResponse>& context) {
   ExecutionResult execution_result = RetryExecutionResult(123);
@@ -904,8 +899,8 @@ void SubmitUntilSuccess(HttpClient& http_client,
 
 TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
   std::string host_address("localhost");
-  int random_port = GenerateRandomIntInRange(8000, 60000);
-  std::string port = std::to_string(random_port);
+  std::string port("0");
+
   std::shared_ptr<MockAuthorizationProxy> mock_authorization_proxy =
       std::make_shared<MockAuthorizationProxy>();
   std::shared_ptr<AuthorizationProxyInterface> mock_aws_authorization_proxy =
@@ -950,6 +945,8 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
 
   EXPECT_SUCCESS(http_server.Init());
   EXPECT_SUCCESS(http_server.Run());
+
+  port = std::to_string(Http2ServerPeer::PortInUse(http_server));
 
   // Start the client
   HttpClient http_client(async_executor);
@@ -996,7 +993,7 @@ TEST_F(Http2ServerTest, ShouldHandleRequestProperlyWhenTlsIsEnabled) {
           std::map<std::string, std::string>>(request_body_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      request_body_metric_point_data = core::GetMetricPointData(
+      request_body_metric_point_data = GetMetricPointData(
           "http.server.request.body.size", request_body_dimensions, data);
 
   EXPECT_TRUE(request_body_metric_point_data.has_value());
@@ -1036,7 +1033,8 @@ TEST_F(Http2ServerTest,
     bool callback_called = false;
     request.SetOnRequestBodyDataReceivedCallback([&](ExecutionResult result) {
       EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                              errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
+
+                              SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
       callback_called = true;
     });
     uint8_t data[11];
@@ -1092,7 +1090,8 @@ TEST_F(Http2ServerTest, OnBodyDataReceivedWithLessDataReturnsPartialDataError) {
     bool callback_called = false;
     request.SetOnRequestBodyDataReceivedCallback([&](ExecutionResult result) {
       EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                              errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
+
+                              SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
       callback_called = true;
     });
     uint8_t data[11];
@@ -1104,4 +1103,4 @@ TEST_F(Http2ServerTest, OnBodyDataReceivedWithLessDataReturnsPartialDataError) {
 }
 
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -34,15 +34,19 @@
 #include "cc/core/test/utils/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::AsyncExecutor;
-using google::scp::core::async_executor::mock::MockAsyncExecutor;
-using google::scp::core::common::AutoExpiryConcurrentMap;
-using google::scp::core::common::auto_expiry_concurrent_map::mock::
+namespace google::scp::core::common::test {
+
+using ::google::scp::core::common::AutoExpiryConcurrentMap;
+using ::google::scp::core::common::auto_expiry_concurrent_map::mock::
     MockAutoExpiryConcurrentMap;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::TestTimeoutException;
-using google::scp::core::test::WaitUntil;
-using google::scp::core::test::WaitUntilOrReturn;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::TestTimeoutException;
+using ::google::scp::core::test::WaitUntil;
+using ::google::scp::core::test::WaitUntilOrReturn;
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AsyncOperation;
+using ::privacy_sandbox::pbs_common::MockAsyncExecutor;
+using ::privacy_sandbox::pbs_common::Timestamp;
 using std::defer_lock;
 using std::find;
 using std::function;
@@ -57,7 +61,6 @@ using std::vector;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-namespace google::scp::core::common::test {
 class EmptyEntry {};
 
 using UnderlyingEntry = AutoExpiryConcurrentMap<
@@ -93,7 +96,8 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
   shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
@@ -104,7 +108,8 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
 
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
 
   underlying_entry->being_evicted = false;
 
@@ -114,7 +119,8 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
 
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
   EXPECT_GE(underlying_entry->expiration_time.load(), current_clock);
 }
@@ -131,7 +137,8 @@ TEST_F(AutoExpiryConcurrentMapTest,
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
   shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
@@ -142,7 +149,8 @@ TEST_F(AutoExpiryConcurrentMapTest,
 
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
   underlying_entry->being_evicted = false;
 
@@ -152,7 +160,8 @@ TEST_F(AutoExpiryConcurrentMapTest,
 
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
   EXPECT_GE(underlying_entry->expiration_time.load(), current_clock);
 }
@@ -175,7 +184,8 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessDisabled) {
 
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
   EXPECT_EQ(underlying_entry->expiration_time.load(), current_expiration);
@@ -200,7 +210,8 @@ TEST_F(AutoExpiryConcurrentMapTest,
 
   EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
   EXPECT_EQ(underlying_entry->expiration_time.load(), current_expiration);
@@ -224,7 +235,8 @@ TEST_F(AutoExpiryConcurrentMapTest, FindingElementExtendOnAccessEnabled) {
   underlying_entry->being_evicted = true;
   EXPECT_THAT(auto_expiry_map.Find(3, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
 
   uint64_t current_expiration = underlying_entry->expiration_time.load();
   EXPECT_NE(current_expiration, 0);
@@ -322,7 +334,8 @@ TEST_F(AutoExpiryConcurrentMapTest, Erase) {
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_THAT(auto_expiry_map.Erase(pair.first),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
   EXPECT_SUCCESS(auto_expiry_map.Erase(pair.first));
 }
@@ -366,12 +379,14 @@ TEST_F(AutoExpiryConcurrentMapTest, DisableEviction) {
 
   EXPECT_THAT(auto_expiry_map.DisableEviction(5),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 
   underlying_entry->being_evicted = true;
   EXPECT_THAT(auto_expiry_map.DisableEviction(3),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, EnableEviction) {
@@ -396,12 +411,14 @@ TEST_F(AutoExpiryConcurrentMapTest, EnableEviction) {
 
   EXPECT_THAT(auto_expiry_map.EnableEviction(5),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 
   underlying_entry->being_evicted = true;
   EXPECT_THAT(auto_expiry_map.EnableEviction(3),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, GarbageCollection) {
@@ -484,7 +501,8 @@ TEST_F(AutoExpiryConcurrentMapTest, OnRemoveEntryFromCacheLogged) {
   auto_expiry_map.OnRemoveEntryFromCacheLogged(map_pair, true);
   EXPECT_THAT(auto_expiry_map.Find(3, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 
   map_pair = std::make_pair(4, underlying_entry);
   auto_expiry_map.OnRemoveEntryFromCacheLogged(map_pair, false);
@@ -614,10 +632,12 @@ TEST(AutoExpiryConcurrentMapDeletionTest, DeletionForExpired) {
 
   EXPECT_THAT(auto_expiry_map.Find(3, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
   EXPECT_THAT(auto_expiry_map.Find(5, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
 
   deleters[0](true);
 
@@ -632,7 +652,8 @@ TEST(AutoExpiryConcurrentMapDeletionTest, DeletionForExpired) {
 
   EXPECT_THAT(auto_expiry_map.Find(3, entry),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+                  privacy_sandbox::pbs_common::
+                      SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
   EXPECT_SUCCESS(auto_expiry_map.Find(5, entry));
 
   WaitUntil([&]() { return schedule_for_called; });
@@ -646,7 +667,8 @@ TEST(AutoExpiryConcurrentMapEntryTest, ExtendEntryExpiration) {
 
   EXPECT_THAT(entry.ExtendExpiration(0),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_INVALID_EXPIRATION)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_INVALID_EXPIRATION)));
 
   auto current_time =
       TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks();
@@ -657,7 +679,8 @@ TEST(AutoExpiryConcurrentMapEntryTest, ExtendEntryExpiration) {
   auto cached_expiration = entry.expiration_time.load();
   EXPECT_THAT(entry.ExtendExpiration(10),
               ResultIs(FailureExecutionResult(
-                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
   EXPECT_EQ(cached_expiration, entry.expiration_time.load());
 }
 
@@ -692,7 +715,7 @@ TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
                                  string&, shared_ptr<string>&,
                                  std::function<void(bool)> completion_lambda) {
     unique_lock lock(gc_completion_lambdas_mutex);
-    gc_completion_lambdas.push_back(move(completion_lambda));
+    gc_completion_lambdas.push_back(std::move(completion_lambda));
   };
 
   AutoExpiryConcurrentMap<string, shared_ptr<string>> map(
@@ -741,7 +764,7 @@ TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
       WaitUntilOrReturn([&stop_completed]() { return stop_completed.load(); },
                         /*timeout=*/milliseconds(2000)),
       ResultIs(FailureExecutionResult(
-          core::test::errors::SC_TEST_UTILS_TEST_WAIT_TIMEOUT)));
+          privacy_sandbox::pbs_common::SC_TEST_UTILS_TEST_WAIT_TIMEOUT)));
 
   // Invoke the lambdas to complete the pending work, and unblocking the stopper
   // thread.

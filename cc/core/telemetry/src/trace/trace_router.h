@@ -50,7 +50,7 @@ namespace google::scp::core {
 class TraceRouter {
  public:
   explicit TraceRouter(
-      ConfigProviderInterface& config_provider,
+      privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider,
       const opentelemetry::sdk::resource::Resource& resource,
       std::unique_ptr<opentelemetry::sdk::trace::SpanExporter> span_exporter);
 

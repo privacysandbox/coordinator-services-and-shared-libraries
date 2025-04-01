@@ -19,7 +19,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 REGISTER_COMPONENT_CODE(ARGUMENT_PARSER, 0x0301)
 
 DEFINE_ERROR_CODE(ARGUMENT_PARSER_UNKNOWN_TYPE, ARGUMENT_PARSER, 0x0001,
@@ -32,4 +32,4 @@ DEFINE_ERROR_CODE(ARGUMENT_PARSER_INVALID_JSON, ARGUMENT_PARSER, 0x0002,
 DEFINE_ERROR_CODE(ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON, ARGUMENT_PARSER,
                   0x0003, "Invalid JSON executable argument object.",
                   HttpStatusCode::BAD_REQUEST)
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

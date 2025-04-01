@@ -14,16 +14,17 @@
 
 #include "cc/core/utils/src/http.h"
 
-#include <algorithm>
 #include <string>
 
 #include "cc/core/utils/src/error_codes.h"
 #include "gtest/gtest.h"
 
 namespace google::scp::core {
+namespace {
+using privacy_sandbox::pbs_common::HttpHeaders;
 
 TEST(HttpTest, NullHeadersExtractRequestClaimedIdentity) {
-  core::HttpHeaders null_headers;
+  HttpHeaders null_headers;
 
   ExecutionResultOr<std::string> extraction_result =
       utils::ExtractRequestClaimedIdentity(null_headers);
@@ -31,11 +32,11 @@ TEST(HttpTest, NullHeadersExtractRequestClaimedIdentity) {
   // Since headers are empty, the function should fail.
   EXPECT_FALSE(extraction_result.Successful());
   EXPECT_EQ(extraction_result.result().status_code,
-            core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+            privacy_sandbox::pbs_common::SC_CORE_REQUEST_HEADER_NOT_FOUND);
 }
 
 TEST(HttpTest, HeaderNotFoundExtractRequestClaimedIdentity) {
-  core::HttpHeaders empty_headers;  // Empty header map.
+  HttpHeaders empty_headers;  // Empty header map.
 
   ExecutionResultOr<std::string> extraction_result =
       utils::ExtractRequestClaimedIdentity(empty_headers);
@@ -43,11 +44,11 @@ TEST(HttpTest, HeaderNotFoundExtractRequestClaimedIdentity) {
   // Since the requested header is not found, the function should fail.
   EXPECT_FALSE(extraction_result.Successful());
   EXPECT_EQ(extraction_result.result().status_code,
-            core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+            privacy_sandbox::pbs_common::SC_CORE_REQUEST_HEADER_NOT_FOUND);
 }
 
 TEST(HttpTest, HeaderFoundExtractRequestClaimedIdentity) {
-  core::HttpHeaders request_headers;
+  HttpHeaders request_headers;
   std::string claimed_identity = "claimed_identity";
 
   request_headers.insert({"x-gscp-claimed-identity", claimed_identity});
@@ -61,7 +62,7 @@ TEST(HttpTest, HeaderFoundExtractRequestClaimedIdentity) {
 }
 
 TEST(HttpTest, NullHeadersExtractUserAgent) {
-  core::HttpHeaders null_headers;  // Create empty headers.
+  HttpHeaders null_headers;  // Create empty headers.
 
   ExecutionResultOr<std::string> extraction_result =
       utils::ExtractUserAgent(null_headers);
@@ -69,11 +70,11 @@ TEST(HttpTest, NullHeadersExtractUserAgent) {
   // Since headers are empty, the function should fail.
   EXPECT_FALSE(extraction_result.Successful());
   EXPECT_EQ(extraction_result.result().status_code,
-            core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+            privacy_sandbox::pbs_common::SC_CORE_REQUEST_HEADER_NOT_FOUND);
 }
 
 TEST(HttpTest, HeaderNotFoundExtractUserAgent) {
-  core::HttpHeaders empty_headers;  // Create an empty header map.
+  HttpHeaders empty_headers;  // Create an empty header map.
 
   ExecutionResultOr<std::string> extraction_result =
       utils::ExtractUserAgent(empty_headers);
@@ -81,7 +82,7 @@ TEST(HttpTest, HeaderNotFoundExtractUserAgent) {
   // Since the User-Agent header is not found, the function should fail.
   EXPECT_FALSE(extraction_result.Successful());
   EXPECT_EQ(extraction_result.result().status_code,
-            core::errors::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+            privacy_sandbox::pbs_common::SC_CORE_REQUEST_HEADER_NOT_FOUND);
 }
 
 TEST(HttpTest, ValidUserAgentHeader) {
@@ -109,7 +110,7 @@ TEST(HttpTest, ValidUserAgentHeader) {
 }
 
 TEST(HttpTest, InvalidUserAgentFormat) {
-  core::HttpHeaders request_headers;
+  HttpHeaders request_headers;
   std::string invalid_user_agent = "some-other-service/2.5.0";
 
   request_headers.insert({"user-agent", invalid_user_agent});
@@ -119,7 +120,7 @@ TEST(HttpTest, InvalidUserAgentFormat) {
 
   // The function should succeed but return the unknown value.
   EXPECT_TRUE(extraction_result.Successful());
-  EXPECT_EQ(*extraction_result, kUnknownValue);
+  EXPECT_EQ(*extraction_result, privacy_sandbox::pbs_common::kUnknownValue);
 
   invalid_user_agent = "aggregation-service/2.5";
   request_headers.clear();
@@ -128,7 +129,7 @@ TEST(HttpTest, InvalidUserAgentFormat) {
   extraction_result = utils::ExtractUserAgent(request_headers);
 
   EXPECT_TRUE(extraction_result.Successful());
-  EXPECT_EQ(*extraction_result, kUnknownValue);
+  EXPECT_EQ(*extraction_result, privacy_sandbox::pbs_common::kUnknownValue);
 
   invalid_user_agent =
       "aggregation-service/2.5 "
@@ -139,11 +140,11 @@ TEST(HttpTest, InvalidUserAgentFormat) {
   extraction_result = utils::ExtractUserAgent(request_headers);
 
   EXPECT_TRUE(extraction_result.Successful());
-  EXPECT_EQ(*extraction_result, kUnknownValue);
+  EXPECT_EQ(*extraction_result, privacy_sandbox::pbs_common::kUnknownValue);
 }
 
 TEST(HttpTest, EmptyUserAgentString) {
-  core::HttpHeaders request_headers;
+  HttpHeaders request_headers;
   request_headers.insert({"user-agent", ""});  // Empty User-Agent.
 
   ExecutionResultOr<std::string> extraction_result =
@@ -151,6 +152,8 @@ TEST(HttpTest, EmptyUserAgentString) {
 
   // The function should succeed and return the unknown value.
   EXPECT_TRUE(extraction_result.Successful());
-  EXPECT_EQ(*extraction_result, kUnknownValue);
+  EXPECT_EQ(*extraction_result, privacy_sandbox::pbs_common::kUnknownValue);
 }
+
+}  // namespace
 }  // namespace google::scp::core

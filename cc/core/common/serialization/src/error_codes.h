@@ -17,7 +17,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x000B for serialization.
 REGISTER_COMPONENT_CODE(SC_SERIALIZATION, 0x000B)
@@ -45,4 +45,4 @@ DEFINE_ERROR_CODE(SC_SERIALIZATION_INVALID_SERIALIZATION_TYPE, SC_SERIALIZATION,
 DEFINE_ERROR_CODE(SC_SERIALIZATION_VERSION_IS_INVALID, SC_SERIALIZATION, 0x0006,
                   "The proto message is invalid.", HttpStatusCode::BAD_REQUEST)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

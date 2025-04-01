@@ -28,6 +28,7 @@ cc_library(
         "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
         "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/pbs/consume_budget/src:budget_consumer",
         "@com_google_absl//absl/base:nullability",
     ],
 )

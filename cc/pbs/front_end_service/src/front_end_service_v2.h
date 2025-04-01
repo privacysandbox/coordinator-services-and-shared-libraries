@@ -18,19 +18,17 @@
 #include <memory>
 #include <string>
 
-#include "absl/container/flat_hash_map.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/interface/http_types.h"
-#include "cc/core/interface/type_def.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
+#include "cc/pbs/consume_budget/src/budget_consumer.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/front_end_service_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/metrics/meter.h"
-#include "opentelemetry/metrics/provider.h"
 
 namespace google::scp::pbs {
 
@@ -39,64 +37,99 @@ namespace google::scp::pbs {
 class FrontEndServiceV2 : public FrontEndServiceInterface {
  public:
   FrontEndServiceV2(
-      std::shared_ptr<core::HttpServerInterface> http_server,
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::ConfigProviderInterface> config_provider,
+      std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
+          http_server,
+      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+          async_executor,
+      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+          config_provider,
       BudgetConsumptionHelperInterface* budget_consumption_helper,
       core::MetricRouter* metric_router = nullptr);
 
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;
   core::ExecutionResult Stop() noexcept override;
-  core::ExecutionResult ExecuteConsumeBudgetTransaction(
-      core::AsyncContext<ConsumeBudgetTransactionRequest,
-                         ConsumeBudgetTransactionResponse>&
-          consume_budget_transaction_context) noexcept override;
 
  private:
   // Peer class for testing.
   friend class FrontEndServiceV2Peer;
 
+  // Executes common transaction phase
+  core::ExecutionResult CommonTransactionProcess(
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context,
+      absl::string_view transaction_phase);
+
   // Executes the begin transaction phase.
   core::ExecutionResult BeginTransaction(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   // Executes the prepare transaction phase.
   core::ExecutionResult PrepareTransaction(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   // Executes the commit transaction phase.
   core::ExecutionResult CommitTransaction(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   // Executes the notify transaction phase.
   core::ExecutionResult NotifyTransaction(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   // Executes the abort transaction phase.
   core::ExecutionResult AbortTransaction(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   // Executes the end transaction phase.
   core::ExecutionResult EndTransaction(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   void OnConsumeBudgetCallback(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse> http_context,
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>
+          http_context,
       std::string transaction_id,
-      core::AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
+      privacy_sandbox::pbs_common::AsyncContext<ConsumeBudgetsRequest,
+                                                ConsumeBudgetsResponse>&
           consume_budget_context);
 
   // Returns 404 to maintain compatibility with the client code.
   core::ExecutionResult GetTransactionStatus(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>&
-          http_context) noexcept;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+
+  // Returns the BudgetConsumer interface based on first seen "budget_type"
+  core::ExecutionResultOr<std::unique_ptr<BudgetConsumer>> GetBudgetConsumer(
+      const nlohmann::json& request_body);
+
+  core::ExecutionResult ParseRequestWithBudgetConsumer(
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context,
+      absl::string_view transaction_id,
+      ConsumeBudgetsRequest& consume_budget_request);
+
+  core::ExecutionResult ParseRequestWithoutBudgetConsumer(
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context,
+      absl::string_view transaction_id,
+      ConsumeBudgetsRequest& consume_budget_request);
 
   /**
    * @brief Helper to obtain transaction origin from HTTP Request
@@ -107,21 +140,25 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
    * @param http_context
    * @return std::shared_ptr<std::string>
    */
-  std::shared_ptr<std::string> ObtainTransactionOrigin(
-      core::AsyncContext<core::HttpRequest, core::HttpResponse>& http_context)
-      const;
+  std::string ObtainTransactionOrigin(
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context) const;
 
   // Initializes the metrics.
-  void MetricInit() noexcept;
+  void MetricInit();
 
   // An instance to the http server.
-  std::shared_ptr<core::HttpServerInterface> http_server_;
+  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
+      http_server_;
 
   // An instance of the async executor.
-  std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
+  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+      async_executor_;
 
   // An instance of the config provider.
-  std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+      config_provider_;
 
   /// The claimed-identity string of the remote coordinator. This value is
   /// present in the requests coming from the remote coordinator and can be
@@ -149,6 +186,9 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   // OpenTelemetry Instrument for measuring the number of budgets exhausted
   std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
       budgets_exhausted_;
+
+  // Should use budget consumer or continue on the old path
+  bool should_enable_budget_consumer_;
 };
 
 }  // namespace google::scp::pbs

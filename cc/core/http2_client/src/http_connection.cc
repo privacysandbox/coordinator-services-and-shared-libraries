@@ -33,14 +33,12 @@
 #include "cc/core/http2_client/src/error_codes.h"
 #include "cc/core/http2_client/src/http_client_def.h"
 #include "cc/core/interface/async_context.h"
+#include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/core/utils/src/http.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
-namespace google::scp::core {
-namespace {
-
+namespace privacy_sandbox::pbs_common {
 using ::boost::asio::executor_work_guard;
 using ::boost::asio::io_context;
 using ::boost::asio::io_service;
@@ -50,9 +48,15 @@ using ::boost::asio::ip::tcp;
 using ::boost::asio::ssl::context;
 using ::boost::posix_time::seconds;
 using ::boost::system::error_code;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::MetricRouter;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::common::kZeroUuid;
 using ::google::scp::core::common::ToString;
 using ::google::scp::core::common::Uuid;
+using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
 using ::google::scp::core::utils::GetEscapedUriWithQuery;
 using ::nghttp2::asio_http2::header_map;
 using ::nghttp2::asio_http2::client::configure_tls_context;
@@ -68,8 +72,6 @@ static constexpr char kContentLengthHeader[] = "content-length";
 static constexpr char kHttp2Client[] = "Http2Client";
 static constexpr char kHttpMethodGetTag[] = "GET";
 static constexpr char kHttpMethodPostTag[] = "POST";
-
-}  // namespace
 
 HttpConnection::HttpConnection(
     const std::shared_ptr<AsyncExecutorInterface>& async_executor,
@@ -97,8 +99,7 @@ ExecutionResult HttpConnection::Init() noexcept {
     error_code ec;
     configure_tls_context(ec, tls_context_);
     if (ec.failed()) {
-      auto result =
-          FailureExecutionResult(errors::SC_HTTP2_CLIENT_TLS_CTX_ERROR);
+      auto result = FailureExecutionResult(SC_HTTP2_CLIENT_TLS_CTX_ERROR);
       SCP_ERROR(kHttp2Client, kZeroUuid, result,
                 absl::StrFormat("Failed to initialize with tls ctx error %s.",
                                 ec.message().c_str()));
@@ -121,7 +122,8 @@ ExecutionResult HttpConnection::Init() noexcept {
     return SuccessExecutionResult();
   } catch (...) {
     auto result = FailureExecutionResult(
-        errors::SC_HTTP2_CLIENT_CONNECTION_INITIALIZATION_FAILED);
+
+        SC_HTTP2_CLIENT_CONNECTION_INITIALIZATION_FAILED);
     SCP_ERROR(kHttp2Client, kZeroUuid, result, "Failed to initialize.");
     return result;
   }
@@ -174,7 +176,7 @@ ExecutionResult HttpConnection::Stop() noexcept {
     return SuccessExecutionResult();
   } catch (...) {
     auto result =
-        FailureExecutionResult(errors::SC_HTTP2_CLIENT_CONNECTION_STOP_FAILED);
+        FailureExecutionResult(SC_HTTP2_CLIENT_CONNECTION_STOP_FAILED);
     SCP_ERROR(kHttp2Client, kZeroUuid, result, "Failed to stop.");
     return result;
   }
@@ -321,8 +323,7 @@ void HttpConnection::OnConnectionCreated(tcp::resolver::iterator) noexcept {
 
 void HttpConnection::OnConnectionError() noexcept {
   post(*io_service_, [this]() mutable {
-    auto failure =
-        FailureExecutionResult(errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED);
+    auto failure = FailureExecutionResult(SC_HTTP2_CLIENT_CONNECTION_DROPPED);
     SCP_ERROR(kHttp2Client, kZeroUuid, failure,
               absl::StrFormat("Connection %p for host %s got an error.", this,
                               host_.c_str()));
@@ -366,10 +367,10 @@ void HttpConnection::CancelPendingCallbacks() noexcept {
     // connection to be recycled.
     if (is_dropped_) {
       http_context.result =
-          RetryExecutionResult(errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED);
+          RetryExecutionResult(SC_HTTP2_CLIENT_CONNECTION_DROPPED);
     } else {
       http_context.result =
-          FailureExecutionResult(errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED);
+          FailureExecutionResult(SC_HTTP2_CLIENT_CONNECTION_DROPPED);
     }
 
     SCP_ERROR_CONTEXT(kHttp2Client, http_context, http_context.result,
@@ -400,7 +401,7 @@ ExecutionResult HttpConnection::Execute(
     AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept {
   if (!is_ready_) {
     auto failure =
-        RetryExecutionResult(errors::SC_HTTP2_CLIENT_NO_CONNECTION_ESTABLISHED);
+        RetryExecutionResult(SC_HTTP2_CLIENT_NO_CONNECTION_ESTABLISHED);
     SCP_ERROR_CONTEXT(kHttp2Client, http_context, failure,
                       "The connection isn't ready.");
     return failure;
@@ -434,8 +435,8 @@ void HttpConnection::SendHttpRequest(
       return;
     }
 
-    http_context.result = FailureExecutionResult(
-        errors::SC_HTTP2_CLIENT_HTTP_METHOD_NOT_SUPPORTED);
+    http_context.result =
+        FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_METHOD_NOT_SUPPORTED);
     SCP_ERROR_CONTEXT(kHttp2Client, http_context, http_context.result,
                       "Failed as request method not supported.");
     FinishContext(http_context.result, http_context, async_executor_);
@@ -490,8 +491,8 @@ void HttpConnection::SendHttpRequest(
       return;
     }
 
-    http_context.result = RetryExecutionResult(
-        errors::SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
+    http_context.result =
+        RetryExecutionResult(SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
     SCP_ERROR_CONTEXT(
         kHttp2Client, http_context, http_context.result,
         absl::StrFormat(
@@ -541,8 +542,8 @@ void HttpConnection::OnRequestResponseClosed(
     if (!result.Successful() && result != FailureExecutionResult(SC_UNKNOWN)) {
       http_context.result = result;
     } else {
-      http_context.result = RetryExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_REQUEST_CLOSE_ERROR);
+      http_context.result =
+          RetryExecutionResult(SC_HTTP2_CLIENT_HTTP_REQUEST_CLOSE_ERROR);
     }
     SCP_DEBUG_CONTEXT(
         kHttp2Client, http_context,
@@ -563,11 +564,10 @@ void HttpConnection::OnResponseCallback(
         submit_request_time) noexcept {
   http_context.response->headers = std::make_shared<HttpHeaders>();
   http_context.response->code =
-      static_cast<errors::HttpStatusCode>(http_response.status_code());
+      static_cast<HttpStatusCode>(http_response.status_code());
   RecordClientServerLatency(http_context, submit_request_time);
 
-  if (http_response.status_code() !=
-      static_cast<int>(errors::HttpStatusCode::OK)) {
+  if (http_response.status_code() != static_cast<int>(HttpStatusCode::OK)) {
     std::string headers_string;
     for (auto header : http_response.header()) {
       headers_string += header.first + " " + header.second.value + "|";
@@ -613,104 +613,122 @@ void HttpConnection::OnResponseBodyCallback(
 }
 
 ExecutionResult HttpConnection::ConvertHttpStatusCodeToExecutionResult(
-    const errors::HttpStatusCode status_code) noexcept {
+    const HttpStatusCode status_code) noexcept {
   switch (status_code) {
-    case errors::HttpStatusCode::OK:
-    case errors::HttpStatusCode::CREATED:
-    case errors::HttpStatusCode::ACCEPTED:
-    case errors::HttpStatusCode::NO_CONTENT:
-    case errors::HttpStatusCode::PARTIAL_CONTENT:
+    case HttpStatusCode::OK:
+    case HttpStatusCode::CREATED:
+    case HttpStatusCode::ACCEPTED:
+    case HttpStatusCode::NO_CONTENT:
+    case HttpStatusCode::PARTIAL_CONTENT:
       return SuccessExecutionResult();
-    case errors::HttpStatusCode::MULTIPLE_CHOICES:
+    case HttpStatusCode::MULTIPLE_CHOICES:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_MULTIPLE_CHOICES);
-    case errors::HttpStatusCode::MOVED_PERMANENTLY:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_MULTIPLE_CHOICES);
+    case HttpStatusCode::MOVED_PERMANENTLY:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_MOVED_PERMANENTLY);
-    case errors::HttpStatusCode::FOUND:
-      return FailureExecutionResult(errors::SC_HTTP2_CLIENT_HTTP_STATUS_FOUND);
-    case errors::HttpStatusCode::SEE_OTHER:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_MOVED_PERMANENTLY);
+    case HttpStatusCode::FOUND:
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_FOUND);
+    case HttpStatusCode::SEE_OTHER:
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_SEE_OTHER);
+    case HttpStatusCode::NOT_MODIFIED:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_SEE_OTHER);
-    case errors::HttpStatusCode::NOT_MODIFIED:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_NOT_MODIFIED);
+    case HttpStatusCode::TEMPORARY_REDIRECT:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_MODIFIED);
-    case errors::HttpStatusCode::TEMPORARY_REDIRECT:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_TEMPORARY_REDIRECT);
+    case HttpStatusCode::PERMANENT_REDIRECT:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_TEMPORARY_REDIRECT);
-    case errors::HttpStatusCode::PERMANENT_REDIRECT:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_PERMANENT_REDIRECT);
+    case HttpStatusCode::BAD_REQUEST:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_PERMANENT_REDIRECT);
-    case errors::HttpStatusCode::BAD_REQUEST:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_BAD_REQUEST);
+    case HttpStatusCode::UNAUTHORIZED:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_BAD_REQUEST);
-    case errors::HttpStatusCode::UNAUTHORIZED:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_UNAUTHORIZED);
+    case HttpStatusCode::FORBIDDEN:
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_FORBIDDEN);
+    case HttpStatusCode::NOT_FOUND:
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND);
+    case HttpStatusCode::METHOD_NOT_ALLOWED:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_UNAUTHORIZED);
-    case errors::HttpStatusCode::FORBIDDEN:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_METHOD_NOT_ALLOWED);
+    case HttpStatusCode::REQUEST_TIMEOUT:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_FORBIDDEN);
-    case errors::HttpStatusCode::NOT_FOUND:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_TIMEOUT);
+    case HttpStatusCode::CONFLICT:
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_CONFLICT);
+    case HttpStatusCode::GONE:
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_GONE);
+    case HttpStatusCode::LENGTH_REQUIRED:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND);
-    case errors::HttpStatusCode::METHOD_NOT_ALLOWED:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_LENGTH_REQUIRED);
+    case HttpStatusCode::PRECONDITION_FAILED:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_METHOD_NOT_ALLOWED);
-    case errors::HttpStatusCode::REQUEST_TIMEOUT:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_PRECONDITION_FAILED);
+    case HttpStatusCode::REQUEST_ENTITY_TOO_LARGE:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_TIMEOUT);
-    case errors::HttpStatusCode::CONFLICT:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE);
+    case HttpStatusCode::REQUEST_URI_TOO_LONG:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_CONFLICT);
-    case errors::HttpStatusCode::GONE:
-      return FailureExecutionResult(errors::SC_HTTP2_CLIENT_HTTP_STATUS_GONE);
-    case errors::HttpStatusCode::LENGTH_REQUIRED:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_URI_TOO_LONG);
+    case HttpStatusCode::UNSUPPORTED_MEDIA_TYPE:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_LENGTH_REQUIRED);
-    case errors::HttpStatusCode::PRECONDITION_FAILED:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE);
+    case HttpStatusCode::REQUEST_RANGE_NOT_SATISFIABLE:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_PRECONDITION_FAILED);
-    case errors::HttpStatusCode::REQUEST_ENTITY_TOO_LARGE:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_RANGE_NOT_SATISFIABLE);
+    case HttpStatusCode::MISDIRECTED_REQUEST:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE);
-    case errors::HttpStatusCode::REQUEST_URI_TOO_LONG:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_MISDIRECTED_REQUEST);
+    case HttpStatusCode::TOO_MANY_REQUESTS:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_URI_TOO_LONG);
-    case errors::HttpStatusCode::UNSUPPORTED_MEDIA_TYPE:
-      return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE);
-    case errors::HttpStatusCode::REQUEST_RANGE_NOT_SATISFIABLE:
-      return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_RANGE_NOT_SATISFIABLE);
-    case errors::HttpStatusCode::MISDIRECTED_REQUEST:
-      return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_MISDIRECTED_REQUEST);
-    case errors::HttpStatusCode::TOO_MANY_REQUESTS:
-      return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_TOO_MANY_REQUESTS);
-    case errors::HttpStatusCode::INTERNAL_SERVER_ERROR:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_TOO_MANY_REQUESTS);
+    case HttpStatusCode::INTERNAL_SERVER_ERROR:
       return RetryExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_INTERNAL_SERVER_ERROR);
-    case errors::HttpStatusCode::NOT_IMPLEMENTED:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_INTERNAL_SERVER_ERROR);
+    case HttpStatusCode::NOT_IMPLEMENTED:
       return RetryExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_IMPLEMENTED);
-    case errors::HttpStatusCode::BAD_GATEWAY:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_NOT_IMPLEMENTED);
+    case HttpStatusCode::BAD_GATEWAY:
+      return RetryExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_BAD_GATEWAY);
+    case HttpStatusCode::SERVICE_UNAVAILABLE:
       return RetryExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_BAD_GATEWAY);
-    case errors::HttpStatusCode::SERVICE_UNAVAILABLE:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_SERVICE_UNAVAILABLE);
+    case HttpStatusCode::GATEWAY_TIMEOUT:
       return RetryExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_SERVICE_UNAVAILABLE);
-    case errors::HttpStatusCode::GATEWAY_TIMEOUT:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_GATEWAY_TIMEOUT);
+    case HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED:
       return RetryExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_GATEWAY_TIMEOUT);
-    case errors::HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED:
-      return RetryExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
-    case errors::HttpStatusCode::UNKNOWN:
+
+          SC_HTTP2_CLIENT_HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
+    case HttpStatusCode::UNKNOWN:
       return FailureExecutionResult(SC_UNKNOWN);
     default:
       return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_HTTP_REQUEST_RESPONSE_STATUS_UNKNOWN);
+
+          SC_HTTP2_CLIENT_HTTP_REQUEST_RESPONSE_STATUS_UNKNOWN);
   }
 }
 
@@ -748,7 +766,7 @@ void HttpConnection::RecordClientServerLatency(
        std::to_string(static_cast<int>(http_context.response->code))},
       {kClientReturnCodeLabel, std::to_string(result.status_code)},
       {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
+       GetClaimedIdentityOrUnknownValue(http_context)}};
 
   opentelemetry::context::Context context;
   client_server_latency_->Record(latency_s, labels, context);
@@ -775,7 +793,7 @@ void HttpConnection::RecordClientRequestDuration(
        std::to_string(static_cast<int>(http_context.response->code))},
       {kClientReturnCodeLabel, std::to_string(result.status_code)},
       {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
+       GetClaimedIdentityOrUnknownValue(http_context)}};
 
   opentelemetry::context::Context context;
   client_request_duration_->Record(duration_s, labels, context);
@@ -807,7 +825,7 @@ void HttpConnection::RecordClientRequestBodySize(
       {kServerPort, service_},
       {kUrlScheme, is_https_ ? "https" : "http"},
       {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
+       GetClaimedIdentityOrUnknownValue(http_context)}};
 
   opentelemetry::context::Context context;
   client_request_body_size_->Record(http_context.request->body.length, labels,
@@ -830,11 +848,11 @@ void HttpConnection::RecordClientResponseBodySize(
        std::to_string(static_cast<int>(http_context.response->code))},
       {kClientReturnCodeLabel, std::to_string(result.status_code)},
       {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)}};
+       GetClaimedIdentityOrUnknownValue(http_context)}};
 
   opentelemetry::context::Context context;
   client_response_body_size_->Record(http_context.response->body.length, labels,
                                      context);
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -22,9 +22,8 @@
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/logger_interface.h"
 #include "cc/core/interface/service_interface.h"
-#include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::logger {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief The LogProviderInterface is implemented by classes that log messages
  * to a specific destination.
@@ -51,13 +50,13 @@ class LogProviderInterface : public ServiceInterface {
    * @param ... A set of strings to be formatted into the message.
    */
   virtual void Log(const LogLevel& level,
-                   const common::Uuid& parent_activity_id,
-                   const common::Uuid& activity_id,
-                   const common::Uuid& correlation_id,
+                   const google::scp::core::common::Uuid& parent_activity_id,
+                   const google::scp::core::common::Uuid& activity_id,
+                   const google::scp::core::common::Uuid& correlation_id,
                    const std::string_view& component_name,
                    const std::string_view& machine_name,
                    const std::string_view& cluster_name,
                    const std::string_view& location,
                    const std::string_view& message, va_list args) noexcept = 0;
 };
-}  // namespace google::scp::core::logger
+}  // namespace privacy_sandbox::pbs_common

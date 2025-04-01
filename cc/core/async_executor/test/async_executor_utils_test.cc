@@ -16,9 +16,16 @@
 
 #include <gtest/gtest.h>
 
+#include <thread>
+
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
+namespace {
+
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::test::ResultIs;
+
 TEST(AsyncExecutorUtilsTest, BasicTests) {
   EXPECT_SUCCESS(AsyncExecutorUtils::SetAffinity(1));
   cpu_set_t cpuset;
@@ -29,7 +36,8 @@ TEST(AsyncExecutorUtilsTest, BasicTests) {
   // Invalid CPU.
   EXPECT_THAT(
       AsyncExecutorUtils::SetAffinity(std::thread::hardware_concurrency()),
-      ResultIs(FailureExecutionResult(
-          errors::SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY)));
+      ResultIs(
+          FailureExecutionResult(SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY)));
 }
-}  // namespace google::scp::core::test
+}  // namespace
+}  // namespace privacy_sandbox::pbs_common

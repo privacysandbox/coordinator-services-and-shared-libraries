@@ -22,7 +22,7 @@
 #include "async_context.h"
 #include "service_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 typedef std::string AuthorizationToken;
 typedef std::string AuthorizedDomain;
 
@@ -51,8 +51,8 @@ class AuthorizationServiceInterface : public ServiceInterface {
    * @param authorization_context The context of the authorization operation.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual ExecutionResult Authorize(
+  virtual google::scp::core::ExecutionResult Authorize(
       AsyncContext<AuthorizationRequest, AuthorizationResponse>&
           authorization_context) noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

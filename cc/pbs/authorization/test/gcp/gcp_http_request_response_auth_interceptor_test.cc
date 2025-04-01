@@ -35,7 +35,6 @@
 #include "absl/strings/str_cat.h"
 #include "cc/core/authorization_service/src/error_codes.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
-#include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/type_def.h"
 #include "cc/core/utils/src/base64.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -43,17 +42,19 @@
 
 namespace google::scp::pbs {
 namespace {
-using ::google::scp::core::AuthorizationMetadata;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::HttpHeaders;
-using ::google::scp::core::HttpRequest;
-using ::google::scp::core::HttpResponse;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::test::IsSuccessful;
 using ::google::scp::core::test::IsSuccessfulAndHolds;
 using ::google::scp::core::test::ResultIs;
 using ::google::scp::core::utils::Base64Encode;
+using ::privacy_sandbox::pbs_common::AuthorizationMetadata;
+using ::privacy_sandbox::pbs_common::BytesBuffer;
+using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::HttpRequest;
+using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
 using ::std::make_shared;
 using ::std::string;
 using ::std::vector;
@@ -108,8 +109,8 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest, PrepareRequest) {
 
   const auto& headers = *http_request_.headers;
 
-  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
-  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
+  ASSERT_NE(headers.find(kClaimedIdentityHeader), headers.end());
+  ASSERT_EQ(headers.find(kClaimedIdentityHeader)->second, kIdentity);
 
   ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
   EXPECT_EQ(
@@ -126,8 +127,8 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
 
   const auto& headers = *http_request_.headers;
 
-  ASSERT_NE(headers.find(core::kClaimedIdentityHeader), headers.end());
-  ASSERT_EQ(headers.find(core::kClaimedIdentityHeader)->second, kIdentity);
+  ASSERT_NE(headers.find(kClaimedIdentityHeader), headers.end());
+  ASSERT_EQ(headers.find(kClaimedIdentityHeader)->second, kIdentity);
 
   ASSERT_NE(headers.find(kAuthorizationHeader), headers.end());
   EXPECT_EQ(
@@ -138,14 +139,16 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
        PrepareRequestFailsIfBadMetadata) {
   AuthorizationMetadata bad_metadata;
-  EXPECT_THAT(subject_.PrepareRequest(bad_metadata, http_request_),
-              ResultIs(core::FailureExecutionResult(
-                  core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+  EXPECT_THAT(
+      subject_.PrepareRequest(bad_metadata, http_request_),
+      ResultIs(core::FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   bad_metadata.authorization_token = "some_token";
-  EXPECT_THAT(subject_.PrepareRequest(bad_metadata, http_request_),
-              ResultIs(core::FailureExecutionResult(
-                  core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+  EXPECT_THAT(
+      subject_.PrepareRequest(bad_metadata, http_request_),
+      ResultIs(core::FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
@@ -157,20 +160,23 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
     EXPECT_THAT(Base64Encode(incomplete_json.dump(), jwt), IsSuccessful());
     authorization_metadata_.authorization_token =
         absl::StrCat("header.", jwt, ".signature");
-    EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
-                ResultIs(core::FailureExecutionResult(
-                    core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+    EXPECT_THAT(
+        subject_.PrepareRequest(authorization_metadata_, http_request_),
+        ResultIs(core::FailureExecutionResult(
+            privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
   }
 
   authorization_metadata_.authorization_token = "two.parts";
-  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
-              ResultIs(core::FailureExecutionResult(
-                  core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+  EXPECT_THAT(
+      subject_.PrepareRequest(authorization_metadata_, http_request_),
+      ResultIs(core::FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   authorization_metadata_.authorization_token = "bad.json.web_token";
-  EXPECT_THAT(subject_.PrepareRequest(authorization_metadata_, http_request_),
-              ResultIs(core::FailureExecutionResult(
-                  core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+  EXPECT_THAT(
+      subject_.PrepareRequest(authorization_metadata_, http_request_),
+      ResultIs(core::FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest, ObtainAuthorizedMetadata) {
@@ -181,7 +187,7 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest, ObtainAuthorizedMetadata) {
 
   AuthorizationMetadata request_auth_metadata;
   HttpResponse http_response;
-  http_response.body = core::BytesBuffer(response_json_str);
+  http_response.body = BytesBuffer(response_json_str);
   EXPECT_THAT(subject_.ObtainAuthorizedMetadataFromResponse(
                   request_auth_metadata, http_response),
               IsSuccessfulAndHolds(FieldsAre(Pointee(Eq("domain")))));
@@ -194,11 +200,12 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
 
   AuthorizationMetadata request_auth_metadata;
   HttpResponse http_response;
-  http_response.body = core::BytesBuffer(response_json_str);
-  EXPECT_THAT(subject_.ObtainAuthorizedMetadataFromResponse(
-                  request_auth_metadata, http_response),
-              ResultIs(core::FailureExecutionResult(
-                  core::errors::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+  http_response.body = BytesBuffer(response_json_str);
+  EXPECT_THAT(
+      subject_.ObtainAuthorizedMetadataFromResponse(request_auth_metadata,
+                                                    http_response),
+      ResultIs(core::FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 }  // namespace

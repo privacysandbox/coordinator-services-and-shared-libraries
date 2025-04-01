@@ -25,33 +25,40 @@ namespace google::scp::pbs {
 class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  public:
   LocalDependencyFactory(
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider)
+      const std::shared_ptr<
+          privacy_sandbox::pbs_common::ConfigProviderInterface>&
+          config_provider)
       : config_provider_(config_provider) {}
 
   core::ExecutionResult Init() noexcept override;
 
-  std::unique_ptr<core::AuthorizationProxyInterface>
+  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
+      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+          async_executor,
+      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+          http_client) noexcept override;
 
-  std::unique_ptr<core::AuthorizationProxyInterface>
+  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
   ConstructAwsAuthorizationProxyClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept override;
+      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+          async_executor,
+      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+          http_client) noexcept override;
 
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
-      google::scp::core::AsyncExecutorInterface* async_executor,
-      google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept
-      override;
+      privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor,
+      privacy_sandbox::pbs_common::AsyncExecutorInterface*
+          io_async_executor) noexcept override;
 
   std::unique_ptr<core::MetricRouter> ConstructMetricRouter() noexcept override;
 
  private:
   core::ExecutionResult ReadConfigurations();
 
-  std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+      config_provider_;
 };
 
 }  // namespace google::scp::pbs

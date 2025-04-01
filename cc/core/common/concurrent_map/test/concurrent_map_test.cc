@@ -55,7 +55,8 @@ TEST_F(ConcurrentMapTests, InsertExistingElement) {
   result = map.Insert(make_pair(1, 1), i);
 
   EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+                          privacy_sandbox::pbs_common::
+                              SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 }
 
 TEST_F(ConcurrentMapTests, DeleteExistingElement) {
@@ -69,7 +70,8 @@ TEST_F(ConcurrentMapTests, DeleteExistingElement) {
 
   result = map.Find(key, val);
   EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+                          privacy_sandbox::pbs_common::
+                              SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(ConcurrentMapTests, DeleteNonExistingElement) {
@@ -77,7 +79,8 @@ TEST_F(ConcurrentMapTests, DeleteNonExistingElement) {
   int i = 0;
   auto result = map.Erase(i);
   EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+                          privacy_sandbox::pbs_common::
+                              SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(ConcurrentMapTests, FindAnExistingElement) {

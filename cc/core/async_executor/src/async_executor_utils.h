@@ -14,38 +14,36 @@
 
 #pragma once
 
-#include <iostream>
-#include <optional>
-#include <thread>
-
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
 
 #include "error_codes.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 class AsyncExecutorUtils {
  public:
   /// Sets the affinity of the current thread to that cpu number.
-  static inline ExecutionResult SetAffinity(size_t cpu_number) noexcept {
+  static inline google::scp::core::ExecutionResult SetAffinity(
+      size_t cpu_number) noexcept {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(cpu_number, &cpuset);
     int rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
     if (rc != 0) {
-      auto result = FailureExecutionResult(
-          errors::SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY);
-      SCP_ERROR(kAsyncExecutorUtils, common::kZeroUuid, result,
+      auto result = google::scp::core::FailureExecutionResult(
+          SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY);
+      SCP_ERROR(kAsyncExecutorUtils, google::scp::core::common::kZeroUuid,
+                result,
                 absl::StrFormat("SetAffinity pthread_setaffinity_np failed: %s",
                                 strerror(rc)));
       return result;
     }
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
  private:
   static constexpr char kAsyncExecutorUtils[] = "AsyncExecutorUtils";
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

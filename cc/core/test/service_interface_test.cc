@@ -18,10 +18,9 @@
 
 #include <memory>
 
-
 namespace google::scp::core::test {
 
-class DummyService : public ServiceInterface {
+class DummyService : public privacy_sandbox::pbs_common::ServiceInterface {
  public:
   DummyService() : state_(State::kBad) {}
 

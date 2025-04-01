@@ -17,7 +17,6 @@
 #include <utility>
 
 #include "cc/core/common/uuid/src/uuid.h"
-#include "cc/core/interface/configuration_keys.h"
 #include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
 #include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
 #include "cc/pbs/interface/configuration_keys.h"
@@ -28,17 +27,18 @@
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
 namespace google::scp::pbs {
-
-using google::scp::core::AsyncExecutorInterface;
-using google::scp::core::AuthorizationProxyInterface;
-using google::scp::core::ConfigProviderInterface;
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::InMemoryMetricExporter;
-using google::scp::core::MetricRouter;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::common::kZeroUuid;
-using google::scp::core::common::Uuid;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::InMemoryMetricExporter;
+using ::google::scp::core::MetricRouter;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::HttpClientInterface;
 
 static constexpr char kLocalDependencyProvider[] = "kLocalDependencyProvider";
 
@@ -56,24 +56,23 @@ ExecutionResult LocalDependencyFactory::ReadConfigurations() {
 
 std::unique_ptr<AuthorizationProxyInterface>
 LocalDependencyFactory::ConstructAuthorizationProxyClient(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
+    std::shared_ptr<AsyncExecutorInterface> async_executor,
+    std::shared_ptr<HttpClientInterface> http_client) noexcept {
   return std::make_unique<LocalAuthorizationProxy>();
 }
 
 std::unique_ptr<AuthorizationProxyInterface>
 LocalDependencyFactory::ConstructAwsAuthorizationProxyClient(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
+    std::shared_ptr<AsyncExecutorInterface> async_executor,
+    std::shared_ptr<HttpClientInterface> http_client) noexcept {
   return nullptr;
 }
 
 std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
 LocalDependencyFactory::ConstructBudgetConsumptionHelper(
-    core::AsyncExecutorInterface* async_executor,
-    core::AsyncExecutorInterface* io_async_executor) noexcept {
-  google::scp::core::ExecutionResultOr<
-      std::shared_ptr<cloud::spanner::Connection>>
+    AsyncExecutorInterface* async_executor,
+    AsyncExecutorInterface* io_async_executor) noexcept {
+  ExecutionResultOr<std::shared_ptr<cloud::spanner::Connection>>
       spanner_connection =
           BudgetConsumptionHelper::MakeSpannerConnectionForProd(
               *config_provider_);

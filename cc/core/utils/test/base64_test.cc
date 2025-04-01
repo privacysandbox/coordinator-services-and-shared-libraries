@@ -29,9 +29,9 @@ namespace google::scp::core::utils::test {
 TEST(Base64Test, Base64EncodeInvalidValue) {
   string empty;
   string encoded;
-  EXPECT_THAT(
-      Base64Encode(empty, encoded),
-      ResultIs(FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT)));
+  EXPECT_THAT(Base64Encode(empty, encoded),
+              ResultIs(FailureExecutionResult(
+                  privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT)));
 }
 
 TEST(Base64Test, Base64EncodeValidValue) {
@@ -47,7 +47,8 @@ TEST(Base64Test, Base64DecodeInvalidValue) {
   string decoded;
   EXPECT_THAT(Base64Decode(encoded, decoded),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH)));
+                  privacy_sandbox::pbs_common::
+                      SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH)));
 }
 
 TEST(Base64Test, Base64DecodeValidValues) {
@@ -66,7 +67,8 @@ TEST(Base64Test, PadBase64EncodingTest) {
   // This scenario should never happen in reality but will return error.
   EXPECT_THAT(PadBase64Encoding("12345"),
               ResultIs(FailureExecutionResult(
-                  errors::SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH)));
+                  privacy_sandbox::pbs_common::
+                      SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH)));
 
   EXPECT_THAT(PadBase64Encoding("123456"), IsSuccessfulAndHolds("123456=="));
 

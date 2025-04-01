@@ -17,22 +17,20 @@
 
 #include <cstdarg>
 #include <memory>
-#include <string>
 #include <unordered_set>
 
-#include "cc/core/interface/errors.h"
 #include "cc/core/interface/logger_interface.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 class GlobalLogger {
  public:
-  static const std::unique_ptr<core::LoggerInterface>& GetGlobalLogger();
+  static const std::unique_ptr<LoggerInterface>& GetGlobalLogger();
   static bool IsLogLevelEnabled(const LogLevel log_level);
   static void SetGlobalLogLevels(
       const std::unordered_set<LogLevel>& log_levels);
-  static void SetGlobalLogger(std::unique_ptr<core::LoggerInterface> logger);
+  static void SetGlobalLogger(std::unique_ptr<LoggerInterface> logger);
 };
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common
 
 #define SCP_LOCATION                                                        \
   (std::string(__FILE__) + ":" + __func__ + ":" + std::to_string(__LINE__)) \
@@ -50,10 +48,10 @@ class GlobalLogger {
 
 #define __SCP_INFO_LOG(component_name, correlation_id, parent_activity_id, \
                        activity_id, message, ...)                          \
-  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&        \
-      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(          \
+  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&      \
+      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(        \
           google::scp::core::LogLevel::kInfo)) {                           \
-    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Info(      \
+    privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Info(    \
         component_name, correlation_id, parent_activity_id, activity_id,   \
         SCP_LOCATION, message, ##__VA_ARGS__);                             \
   }
@@ -68,10 +66,10 @@ class GlobalLogger {
 
 #define __SCP_DEBUG_LOG(component_name, correlation_id, parent_activity_id, \
                         activity_id, message, ...)                          \
-  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&         \
-      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(           \
+  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&       \
+      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(         \
           google::scp::core::LogLevel::kDebug)) {                           \
-    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Debug(      \
+    privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Debug(    \
         component_name, correlation_id, parent_activity_id, activity_id,    \
         SCP_LOCATION, message, ##__VA_ARGS__);                              \
   }
@@ -88,10 +86,10 @@ class GlobalLogger {
 
 #define __SCP_WARNING_LOG(component_name, correlation_id, parent_activity_id, \
                           activity_id, message, ...)                          \
-  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&           \
-      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(             \
+  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&         \
+      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(           \
           google::scp::core::LogLevel::kWarning)) {                           \
-    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Warning(      \
+    privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Warning(    \
         component_name, correlation_id, parent_activity_id, activity_id,      \
         SCP_LOCATION, message, ##__VA_ARGS__);                                \
   }
@@ -109,14 +107,14 @@ class GlobalLogger {
 
 #define __SCP_ERROR_LOG(component_name, correlation_id, parent_activity_id, \
                         activity_id, execution_result, message, ...)        \
-  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&         \
-      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(           \
+  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&       \
+      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(         \
           google::scp::core::LogLevel::kError)) {                           \
     auto message_with_error = std::string(message) +                        \
                               std::string(" Failed with: ") +               \
-                              google::scp::core::errors::GetErrorMessage(   \
+                              privacy_sandbox::pbs_common::GetErrorMessage( \
                                   execution_result.status_code);            \
-    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Error(      \
+    privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Error(    \
         component_name, correlation_id, parent_activity_id, activity_id,    \
         SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);           \
   }
@@ -136,14 +134,14 @@ class GlobalLogger {
 
 #define __SCP_CRITICAL_LOG(component_name, correlation_id, parent_activity_id, \
                            activity_id, execution_result, message, ...)        \
-  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&            \
-      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(              \
+  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&          \
+      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(            \
           google::scp::core::LogLevel::kCritical)) {                           \
     auto message_with_error = std::string(message) +                           \
                               std::string(" Failed with: ") +                  \
-                              google::scp::core::errors::GetErrorMessage(      \
+                              privacy_sandbox::pbs_common::GetErrorMessage(    \
                                   execution_result.status_code);               \
-    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Critical(      \
+    privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Critical(    \
         component_name, correlation_id, parent_activity_id, activity_id,       \
         SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);              \
   }
@@ -161,14 +159,14 @@ class GlobalLogger {
 
 #define __SCP_ALERT_LOG(component_name, correlation_id, parent_activity_id, \
                         activity_id, execution_result, message, ...)        \
-  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&         \
-      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(           \
+  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&       \
+      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(         \
           google::scp::core::LogLevel::kAlert)) {                           \
     auto message_with_error = std::string(message) +                        \
                               std::string(" Failed with: ") +               \
-                              google::scp::core::errors::GetErrorMessage(   \
+                              privacy_sandbox::pbs_common::GetErrorMessage( \
                                   execution_result.status_code);            \
-    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Alert(      \
+    privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Alert(    \
         component_name, correlation_id, parent_activity_id, activity_id,    \
         SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);           \
   }
@@ -189,14 +187,14 @@ class GlobalLogger {
 #define __SCP_EMERGENCY_LOG(component_name, correlation_id,                    \
                             parent_activity_id, activity_id, execution_result, \
                             message, ...)                                      \
-  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&            \
-      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(              \
+  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&          \
+      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(            \
           google::scp::core::LogLevel::kEmergency)) {                          \
     auto message_with_error = std::string(message) +                           \
                               std::string(" Failed with: ") +                  \
-                              google::scp::core::errors::GetErrorMessage(      \
+                              privacy_sandbox::pbs_common::GetErrorMessage(    \
                                   execution_result.status_code);               \
-    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Emergency(     \
+    privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Emergency(   \
         component_name, correlation_id, parent_activity_id, activity_id,       \
         SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);              \
   }

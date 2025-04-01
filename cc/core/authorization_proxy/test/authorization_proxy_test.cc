@@ -22,17 +22,29 @@
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/authorization_proxy/src/error_codes.h"
 #include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_client_interface.h"
 #include "cc/core/interface/http_request_response_auth_interceptor_interface.h"
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::AsyncExecutor;
+namespace google::scp::core::test {
+namespace {
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::AuthorizationMetadata;
+using ::privacy_sandbox::pbs_common::AuthorizationProxyRequest;
+using ::privacy_sandbox::pbs_common::AuthorizationProxyResponse;
+using ::privacy_sandbox::pbs_common::AuthorizedMetadata;
+using ::privacy_sandbox::pbs_common::HttpClientInterface;
+using ::privacy_sandbox::pbs_common::HttpRequest;
+using ::privacy_sandbox::pbs_common::
+    HttpRequestResponseAuthInterceptorInterface;
+using ::privacy_sandbox::pbs_common::HttpResponse;
 using std::make_shared;
 using std::shared_ptr;
 using ::testing::_;
 using ::testing::Return;
-
-namespace google::scp::core::test {
 
 class HttpRequestResponseAuthInterceptorMock
     : public HttpRequestResponseAuthInterceptorInterface {
@@ -88,9 +100,10 @@ TEST_F(AuthorizationProxyTest, InvalidServiceEndpointURI) {
   AuthorizationProxy proxy(invalid_server_endpoint_uri, async_executor_,
                            mock_http_client_,
                            std::move(authorization_http_helper));
-  EXPECT_THAT(proxy.Init(),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_INVALID_CONFIG)));
+  EXPECT_THAT(
+      proxy.Init(),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_INVALID_CONFIG)));
 }
 
 TEST_F(AuthorizationProxyTest, ValidServiceEndpointURI) {
@@ -114,27 +127,30 @@ TEST_F(AuthorizationProxyTest, AuthorizeWithInvalidAuthorizationMetadata) {
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request1;
   authorization_request1.request = make_shared<AuthorizationProxyRequest>();
-  EXPECT_THAT(proxy.Authorize(authorization_request1),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+  EXPECT_THAT(
+      proxy.Authorize(authorization_request1),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request2;
   authorization_request2.request = make_shared<AuthorizationProxyRequest>();
   authorization_request2.request->authorization_metadata.claimed_identity =
       "claimed_id";
-  EXPECT_THAT(proxy.Authorize(authorization_request2),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+  EXPECT_THAT(
+      proxy.Authorize(authorization_request2),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request3;
   authorization_request3.request = make_shared<AuthorizationProxyRequest>();
   authorization_request3.request->authorization_metadata.authorization_token =
       "auth_token";
-  EXPECT_THAT(proxy.Authorize(authorization_request3),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+  EXPECT_THAT(
+      proxy.Authorize(authorization_request3),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -159,9 +175,10 @@ TEST_F(AuthorizationProxyTest,
   authorization_request.request->authorization_metadata =
       authorization_metadata_;
 
-  EXPECT_THAT(proxy.Authorize(authorization_request),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+  EXPECT_THAT(
+      proxy.Authorize(authorization_request),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 }
 
 TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
@@ -190,7 +207,8 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
 
   EXPECT_THAT(proxy.Authorize(authorization_request),
               ResultIs(RetryExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -267,7 +285,8 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
 
   EXPECT_THAT(proxy.Authorize(authorization_request2),
               ResultIs(RetryExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
 
   // Request attempt 3.
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
@@ -278,7 +297,8 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
 
   EXPECT_THAT(proxy.Authorize(authorization_request3),
               ResultIs(RetryExecutionResult(
-                  errors::SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
+                  privacy_sandbox::pbs_common::
+                      SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -432,5 +452,5 @@ TEST_F(AuthorizationProxyTest,
     WaitUntil([&]() { return request_finished.load(); });
   }
 }
-
+}  // namespace
 }  // namespace google::scp::core::test

@@ -19,7 +19,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-using google::scp::core::errors::GetPublicErrorCode;
+using ::privacy_sandbox::pbs_common::GetPublicErrorCode;
 
 namespace google::scp::core::utils {
 ExecutionResult ConvertToPublicExecutionResult(

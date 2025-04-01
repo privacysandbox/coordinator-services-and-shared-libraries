@@ -21,9 +21,10 @@ namespace google::scp::core {
 
 REGISTER_COMPONENT_CODE(SC_PBS_TRACE, 0x0238)
 
-DEFINE_ERROR_CODE(SC_TRACE_PROVIDER_NOT_INITIALIZED, SC_PBS_TRACE, 0x0001,
-                  "Trace Provider is not initialized",
-                  errors::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(
+    SC_TRACE_PROVIDER_NOT_INITIALIZED, SC_PBS_TRACE, 0x0001,
+    "Trace Provider is not initialized",
+    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 }  // namespace google::scp::core
 #endif  // CC_CORE_TELEMETRY_SRC_TRACE_ERROR_CODES_H_

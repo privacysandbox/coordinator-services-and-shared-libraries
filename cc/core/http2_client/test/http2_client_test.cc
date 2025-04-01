@@ -20,7 +20,6 @@
 #include <functional>
 #include <future>
 #include <memory>
-#include <thread>
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
@@ -30,7 +29,7 @@
 
 #include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/async_executor/src/async_executor.h"
-#include "cc/core/http2_client/src/http_client_def.h"
+#include "cc/core/http2_client/src/error_codes.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
@@ -38,23 +37,25 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using namespace nghttp2::asio_http2;          // NOLINT
-using namespace nghttp2::asio_http2::server;  // NOLINT
-using namespace std::chrono_literals;         // NOLINT
-using namespace std::placeholders;            // NOLINT
-
-using google::scp::core::AsyncExecutor;
-using google::scp::core::TimeDuration;
-using google::scp::core::async_executor::mock::MockAsyncExecutor;
-using google::scp::core::common::RetryStrategyOptions;
-using google::scp::core::common::RetryStrategyType;
-using google::scp::core::test::IsSuccessful;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::WaitUntil;
+namespace privacy_sandbox::pbs_common {
+namespace {
+using ::google::scp::core::ExecutionStatus;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::GetMetricPointData;
+using ::google::scp::core::InMemoryMetricRouter;
+using ::google::scp::core::common::RetryStrategyOptions;
+using ::google::scp::core::common::RetryStrategyType;
+using ::google::scp::core::test::IsSuccessful;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::WaitUntil;
+using ::nghttp2::asio_http2::server::http2;
+using ::nghttp2::asio_http2::server::request;
+using ::nghttp2::asio_http2::server::response;
+using std::placeholders::_1;
+using std::placeholders::_2;
+using std::placeholders::_3;
 
 static constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 10;
-
-namespace google::scp::core {
 
 class RandomGenHandler : std::enable_shared_from_this<RandomGenHandler> {
  public:
@@ -178,10 +179,10 @@ TEST(HttpClientTest, FailedToConnect) {
   AsyncContext<HttpRequest, HttpResponse> context(
       std::move(request),
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
-        EXPECT_THAT(
-            context.result,
-            ResultIs(FailureExecutionResult(
-                errors::SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(
+
+                        SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
         finished.store(true);
       });
 
@@ -302,7 +303,8 @@ TEST_F(HttpClientTestII, FailedToGetResponse) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
-                        errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND)));
+
+                        SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND)));
         done.set_value();
       });
 
@@ -420,8 +422,8 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
           EXPECT_THAT(
               context.result,
               ResultIs(FailureExecutionResult(
-                  errors::
-                      SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
+
+                  SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
           done.set_value();
         });
     EXPECT_THAT(http_client->PerformRequest(context), IsSuccessful());
@@ -461,9 +463,8 @@ TEST_F(HttpClientTestII, ConnectionCreationFailure) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       client_connection_creation_error_metric_point_data =
-          core::GetMetricPointData("http.client.connection.creation_errors",
-                                   client_connection_creation_error_dimensions,
-                                   data);
+          GetMetricPointData("http.client.connection.creation_errors",
+                             client_connection_creation_error_dimensions, data);
 
   EXPECT_TRUE(client_connection_creation_error_metric_point_data.has_value());
 
@@ -481,4 +482,5 @@ TEST_F(HttpClientTestII, ConnectionCreationFailure) {
          "be 1 "
          "(int64_t)";
 }
-}  // namespace google::scp::core
+}  // namespace
+}  // namespace privacy_sandbox::pbs_common

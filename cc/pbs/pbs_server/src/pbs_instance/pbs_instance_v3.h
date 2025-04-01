@@ -32,11 +32,13 @@
 
 namespace google::scp::pbs {
 
-class PBSInstanceV3 : public core::ServiceInterface {
+class PBSInstanceV3 : public privacy_sandbox::pbs_common::ServiceInterface {
  public:
-  PBSInstanceV3(std::shared_ptr<core::ConfigProviderInterface> config_provider,
-                std::unique_ptr<CloudPlatformDependencyFactoryInterface>
-                    cloud_platform_dependency_factory);
+  PBSInstanceV3(
+      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+          config_provider,
+      std::unique_ptr<CloudPlatformDependencyFactoryInterface>
+          cloud_platform_dependency_factory);
 
   core::ExecutionResult Init() noexcept override;
   core::ExecutionResult Run() noexcept override;
@@ -45,18 +47,27 @@ class PBSInstanceV3 : public core::ServiceInterface {
  private:
   core::ExecutionResult CreateComponents() noexcept;
 
-  std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+      config_provider_;
 
-  std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
-  std::shared_ptr<core::AsyncExecutorInterface> io_async_executor_;
-  std::shared_ptr<core::HttpClientInterface> http1_client_;
-  std::shared_ptr<core::HttpClientInterface> http2_client_;
-  std::shared_ptr<core::AuthorizationProxyInterface> authorization_proxy_;
-  std::shared_ptr<core::AuthorizationProxyInterface>
+  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+      async_executor_;
+  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+      io_async_executor_;
+  std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+      http1_client_;
+  std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+      http2_client_;
+  std::shared_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+      authorization_proxy_;
+  std::shared_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
       pass_thru_authorization_proxy_;
-  std::shared_ptr<core::HttpServerInterface> http_server_;
-  std::shared_ptr<core::HttpServerInterface> health_http_server_;
-  std::shared_ptr<core::ServiceInterface> health_service_;
+  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
+      http_server_;
+  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
+      health_http_server_;
+  std::shared_ptr<privacy_sandbox::pbs_common::ServiceInterface>
+      health_service_;
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
       budget_consumption_helper_;
   std::shared_ptr<pbs::FrontEndServiceInterface> front_end_service_;

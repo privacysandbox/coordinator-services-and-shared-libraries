@@ -25,14 +25,16 @@
 
 #include "error_codes.h"
 
-using google::scp::core::BytesBuffer;
+namespace google::scp::core::utils {
+
+using ::privacy_sandbox::pbs_common::BytesBuffer;
 using std::make_unique;
 using std::string;
 
-namespace google::scp::core::utils {
 ExecutionResultOr<string> CalculateMd5Hash(const BytesBuffer& buffer) {
   if (buffer.length == 0) {
-    return FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
   }
 
   unsigned char digest_length[MD5_DIGEST_LENGTH];
@@ -46,7 +48,8 @@ ExecutionResultOr<string> CalculateMd5Hash(const BytesBuffer& buffer) {
 
 ExecutionResultOr<string> CalculateMd5Hash(const string& buffer) {
   if (buffer.length() == 0) {
-    return FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
   }
 
   unsigned char digest_length[MD5_DIGEST_LENGTH];

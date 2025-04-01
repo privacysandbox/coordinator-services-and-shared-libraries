@@ -27,13 +27,13 @@
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
-using google::scp::core::errors::GetErrorMessage;
+using ::privacy_sandbox::pbs_common::GetErrorMessage;
 
-using google::scp::core::errors::DAEMONIZER_FAILED_PARSING_INPUT;
-using google::scp::core::errors::
+using ::privacy_sandbox::pbs_common::DAEMONIZER_FAILED_PARSING_INPUT;
+using ::privacy_sandbox::pbs_common::
     DAEMONIZER_FAILED_WAITING_FOR_LAUNCHED_PROCESSES;
-using google::scp::core::errors::DAEMONIZER_INVALID_INPUT;
-using google::scp::core::errors::DAEMONIZER_UNKNOWN_ERROR;
+using ::privacy_sandbox::pbs_common::DAEMONIZER_INVALID_INPUT;
+using ::privacy_sandbox::pbs_common::DAEMONIZER_UNKNOWN_ERROR;
 
 namespace google::scp::process_launcher {
 ExecutionResult Daemonizer::Run() noexcept {

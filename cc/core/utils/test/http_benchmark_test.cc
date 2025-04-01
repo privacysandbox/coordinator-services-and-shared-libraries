@@ -14,10 +14,12 @@
 
 #include <benchmark/benchmark.h>
 
+#include "cc/core/interface/http_types.h"
 #include "cc/core/utils/src/http.h"
 
 namespace google::scp::core::utils {
 namespace {
+using ::privacy_sandbox::pbs_common::HttpHeaders;
 
 void BM_ExtractValidUserAgent(benchmark::State& state) {
   HttpHeaders request_headers;
@@ -30,7 +32,7 @@ void BM_ExtractValidUserAgent(benchmark::State& state) {
 }
 
 void BM_ExtractInvalidUserAgent(benchmark::State& state) {
-  core::HttpHeaders request_headers;
+  HttpHeaders request_headers;
   request_headers.insert({"user-agent", "some-other-service/2.5.0"});
 
   for (auto _ : state) {

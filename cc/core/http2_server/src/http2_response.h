@@ -26,7 +26,7 @@
 
 #include "cc/core/interface/http_server_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Wrapper object of a nghttp2::response object to interface with it.
  */
@@ -85,4 +85,4 @@ class NgHttp2Response : public HttpResponse {
   /// Mutex to synchronize on_close while sending response back on connection.
   std::mutex on_close_mutex_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

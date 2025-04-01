@@ -40,7 +40,7 @@ ExecutionResultOr<std::string> AwsTokenFetcher::FetchIdToken(
     SCP_ERROR(kAwsTokenFetcher, google::scp::core::common::kZeroUuid,
               execution_result.result(),
               "[Aws Token Fetch] Id token fetch failed: %s",
-              google::scp::core::errors::GetErrorMessage(
+              privacy_sandbox::pbs_common::GetErrorMessage(
                   execution_result.result().status_code));
   }
   return execution_result;

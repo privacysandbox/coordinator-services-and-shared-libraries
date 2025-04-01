@@ -30,17 +30,19 @@
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::AsyncContext;
-using google::scp::core::async_executor::mock::MockAsyncExecutor;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::WaitUntil;
+namespace google::scp::core::common::test {
+namespace {
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::WaitUntil;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::MockAsyncExecutor;
 using std::atomic;
 using std::function;
 using std::make_shared;
 using std::string;
 using std::chrono::milliseconds;
 
-namespace google::scp::core::common::test {
 TEST(OperationDispatcherTests, SuccessfulOperation) {
   std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
@@ -98,9 +100,10 @@ TEST(OperationDispatcherTests, RetryOperation) {
   atomic<bool> condition(false);
   AsyncContext<string, string> context;
   context.callback = [&](AsyncContext<string, string>& context) {
-    EXPECT_THAT(context.result,
-                ResultIs(FailureExecutionResult(
-                    core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES)));
+    EXPECT_THAT(
+        context.result,
+        ResultIs(FailureExecutionResult(
+            privacy_sandbox::pbs_common::SC_DISPATCHER_EXHAUSTED_RETRIES)));
     EXPECT_EQ(context.retry_count, 5);
     condition = true;
   };
@@ -127,9 +130,10 @@ TEST(OperationDispatcherTests, OperationExpiration) {
   context.expiration_time = UINT64_MAX;
 
   context.callback = [&](AsyncContext<string, string>& context) {
-    EXPECT_THAT(context.result,
-                ResultIs(FailureExecutionResult(
-                    core::errors::SC_DISPATCHER_OPERATION_EXPIRED)));
+    EXPECT_THAT(
+        context.result,
+        ResultIs(FailureExecutionResult(
+            privacy_sandbox::pbs_common::SC_DISPATCHER_OPERATION_EXPIRED)));
     EXPECT_EQ(context.retry_count, 4);
     condition = true;
   };
@@ -180,9 +184,10 @@ TEST(OperationDispatcherTests, RetryOnAcceptance) {
   atomic<bool> condition(false);
   AsyncContext<string, string> context;
   context.callback = [&](AsyncContext<string, string>& context) {
-    EXPECT_THAT(context.result,
-                ResultIs(FailureExecutionResult(
-                    core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES)));
+    EXPECT_THAT(
+        context.result,
+        ResultIs(FailureExecutionResult(
+            privacy_sandbox::pbs_common::SC_DISPATCHER_EXHAUSTED_RETRIES)));
     condition = true;
   };
 
@@ -194,5 +199,5 @@ TEST(OperationDispatcherTests, RetryOnAcceptance) {
   dispatcher.Dispatch(context, dispatch_to_component);
   WaitUntil([&]() { return condition.load(); });
 }
-
+}  // namespace
 }  // namespace google::scp::core::common::test

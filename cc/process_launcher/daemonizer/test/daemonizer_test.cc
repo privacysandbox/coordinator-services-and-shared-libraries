@@ -37,7 +37,7 @@ using google::scp::core::common::Uuid;
 using google::scp::core::test::ScpTestBase;
 using json = nlohmann::json;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::errors::DAEMONIZER_INVALID_INPUT;
+using ::privacy_sandbox::pbs_common::DAEMONIZER_INVALID_INPUT;
 using google::scp::core::test::ResultIs;
 using google::scp::process_launcher::ExecutableArgument;
 

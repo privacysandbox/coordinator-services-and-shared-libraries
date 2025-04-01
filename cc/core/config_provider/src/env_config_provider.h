@@ -34,7 +34,8 @@ static constexpr char kCommaDelimiter[] = ",";
 
 /*! @copydoc ConfigProviderInterface
  */
-class EnvConfigProvider : public ConfigProviderInterface {
+class EnvConfigProvider
+    : public privacy_sandbox::pbs_common::ConfigProviderInterface {
  public:
   ExecutionResult Init() noexcept override;
 
@@ -42,35 +43,42 @@ class EnvConfigProvider : public ConfigProviderInterface {
 
   ExecutionResult Stop() noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, std::string& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      std::string& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, int32_t& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      int32_t& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, size_t& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      size_t& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, bool& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      bool& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<std::string>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<int32_t>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<size_t>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<bool>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, double& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      double& out) noexcept override;
 
  private:
   template <typename T>
-  ExecutionResult Get(const ConfigKey& key, T& out) noexcept {
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      T& out) noexcept {
     const char* var_value = std::getenv(key.c_str());
 
     if (var_value == NULL) {
-      return FailureExecutionResult(errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
+      return FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
 
     const std::string var_value_string(var_value);
@@ -97,11 +105,13 @@ class EnvConfigProvider : public ConfigProviderInterface {
    * does not exist.
    */
   template <typename T>
-  ExecutionResult Get(const ConfigKey& key, std::list<T>& out) noexcept {
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      std::list<T>& out) noexcept {
     const char* var_value = std::getenv(key.c_str());
 
     if (var_value == NULL) {
-      return FailureExecutionResult(errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
+      return FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
 
     std::list<std::string> parts;
@@ -151,7 +161,7 @@ class EnvConfigProvider : public ConfigProviderInterface {
 
     if (string_stream.fail()) {
       return FailureExecutionResult(
-          errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
     }
 
     return SuccessExecutionResult();

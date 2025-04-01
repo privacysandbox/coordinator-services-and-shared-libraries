@@ -54,7 +54,10 @@ static constexpr const char* kAuthorizationHeader = "Authorization";
 static constexpr const char* kSigV4Algorithm = "AWS4-HMAC-SHA256";
 static constexpr const char* hex_lookup = "0123456789abcdef";
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 
 static string HexEncode(unsigned char data[], size_t size) {
   string result;
@@ -109,15 +112,14 @@ ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
                                                string& signature,
                                                string& x_amz_date) noexcept {
   if (headers_to_sign.size() == 0) {
-    return FailureExecutionResult(
-        errors::SC_HTTP2_CLIENT_AUTH_NO_HEADER_SPECIFIED);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_NO_HEADER_SPECIFIED);
   }
   if (!http_request.headers) {
-    return FailureExecutionResult(errors::SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
   }
   auto& headers = http_request.headers;
   if (headers->count(kAuthorizationHeader) != 0) {
-    return FailureExecutionResult(errors::SC_HTTP2_CLIENT_AUTH_ALREADY_SIGNED);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_ALREADY_SIGNED);
   }
   // Find the "X-Amz-Date" header, if non found, put one.
   auto date_entry = headers->find(kAmzDateHeader);
@@ -136,7 +138,7 @@ ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
     string host_value;
     size_t start_idx;
     if (path.rfind("http", 0) != 0) {  // if path not starts with http
-      return FailureExecutionResult(errors::SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
+      return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
     }
 
     if (path.rfind("http://", 0) == 0) {
@@ -144,7 +146,7 @@ ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
     } else if (path.rfind("https://", 0) == 0) {
       start_idx = 8;
     } else {
-      return FailureExecutionResult(errors::SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
+      return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
     }
     auto end_itr = find_nth(path, "/", 2);
     if (end_itr.empty()) {
@@ -225,10 +227,10 @@ ExecutionResult AwsV4Signer::CreateCanonicalRequest(
     const vector<string>& headers_to_sign) noexcept {
   stringstream canonical_request_builder;
   if (http_request.method == HttpMethod::UNKNOWN) {
-    return FailureExecutionResult(errors::SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
   }
   if (!http_request.path || !http_request.headers) {
-    return FailureExecutionResult(errors::SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
   }
   if (http_request.method == HttpMethod::GET) {
     canonical_request_builder << "GET\n";
@@ -277,8 +279,7 @@ ExecutionResult AwsV4Signer::CreateCanonicalRequest(
     auto header_entry = headers->equal_range(header);
     if (header_entry.first == header_entry.second) {
       // The required header does not exist in http_request. Return error.
-      return FailureExecutionResult(
-          errors::SC_HTTP2_CLIENT_AUTH_MISSING_HEADER);
+      return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_MISSING_HEADER);
     }
     auto header_lower = to_lower_copy(header);
     auto iter = header_entry.first;
@@ -316,7 +317,7 @@ ExecutionResult AwsV4Signer::SignRequestWithSignature(
               return to_lower_copy(a) < to_lower_copy(b);
             });
   if (!http_request.headers) {
-    return FailureExecutionResult(errors::SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
   }
   // Remove potentially existing X-Amz-Date header, insert designated one.
   http_request.headers->erase(string(kAmzDateHeader));
@@ -363,4 +364,4 @@ string AwsV4Signer::GetSigningTime() {
   return string(formatted_timestamp);
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

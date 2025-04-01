@@ -17,11 +17,11 @@
 
 #include <string>
 
-#include "cc/core/logger/interface/log_provider_interface.h"
+#include "cc/core/interface/logger_interface.h"
 
-namespace google::scp::core::logger {
+namespace privacy_sandbox::pbs_common {
 
-std::string ToString(const LogLevel& level) {
+std::string LogLevelToString(const LogLevel& level) {
   switch (level) {
     case LogLevel::kEmergency:
       return "Emergency";
@@ -43,7 +43,7 @@ std::string ToString(const LogLevel& level) {
   return "Unknown";
 }
 
-LogLevel FromString(const std::string& level) {
+LogLevel LogLevelFromString(const std::string& level) {
   if (level == "Emergency") {
     return LogLevel::kEmergency;
   }
@@ -69,12 +69,4 @@ LogLevel FromString(const std::string& level) {
   return LogLevel::kNone;
 }
 
-std::string operator+(const LogLevel& level, const std::string& text) {
-  return ToString(level) + text;
-}
-
-std::string operator+(const std::string& text, const LogLevel& level) {
-  return text + ToString(level);
-}
-
-}  // namespace google::scp::core::logger
+}  // namespace privacy_sandbox::pbs_common

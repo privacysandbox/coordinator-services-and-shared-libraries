@@ -34,17 +34,6 @@ namespace {
 using ::google::cloud::spanner_admin::DatabaseAdminClient;
 using ::google::cloud::spanner_admin::InstanceAdminClient;
 using ::google::cloud::spanner_admin::MakeDatabaseAdminConnection;
-using ::google::scp::core::AsyncContext;
-using ::google::scp::core::AsyncExecutor;
-using ::google::scp::core::AsyncExecutorInterface;
-using ::google::scp::core::Byte;
-using ::google::scp::core::HttpClient;
-using ::google::scp::core::HttpClientOptions;
-using ::google::scp::core::HttpHeaders;
-using ::google::scp::core::HttpMethod;
-using ::google::scp::core::HttpRequest;
-using ::google::scp::core::HttpResponse;
-using ::google::scp::core::TimeDuration;
 using ::google::scp::core::common::RetryStrategyOptions;
 using ::google::scp::core::common::RetryStrategyType;
 using ::google::scp::core::test::CreateNetwork;
@@ -53,6 +42,18 @@ using ::google::scp::core::test::LoadImage;
 using ::google::scp::core::test::RemoveNetwork;
 using ::google::scp::core::test::StartContainer;
 using ::google::scp::core::test::StopContainer;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::Byte;
+using ::privacy_sandbox::pbs_common::HttpClient;
+using ::privacy_sandbox::pbs_common::HttpClientOptions;
+using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::HttpMethod;
+using ::privacy_sandbox::pbs_common::HttpRequest;
+using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::kDefaultMaxConnectionsPerHost;
+using ::privacy_sandbox::pbs_common::TimeDuration;
 
 constexpr absl::string_view kNetworkName = "testnetwork";
 constexpr absl::string_view kSpannerEmulatorName = "spanner";
@@ -272,6 +273,8 @@ class PBSIntegrationTest : public testing::Test {
         {"google_scp_pbs_partition_lock_table_name", "unused"},
         {"google_scp_pbs_partition_lease_duration_in_seconds", "-1"},
         {"google_scp_pbs_remote_claimed_identity", "unused"},
+        {"google_scp_pbs_value_proto_migration_phase", "phase_2"},
+        {"google_scp_pbs_migration_enable_budget_consumer_migration", "true"},
     };
 
     return_status = StartContainer(
@@ -294,7 +297,7 @@ class PBSIntegrationTest : public testing::Test {
         RetryStrategyOptions(RetryStrategyType::Linear,
                              kHTTPClientBackoffDurationInMs,
                              kHTTPClientMaxRetries),
-        core::kDefaultMaxConnectionsPerHost, kHttp2ReadTimeoutInSeconds);
+        kDefaultMaxConnectionsPerHost, kHttp2ReadTimeoutInSeconds);
     http_client_ =
         std::make_shared<HttpClient>(async_executor_, http_client_options);
     EXPECT_SUCCESS(http_client_->Init());

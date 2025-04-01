@@ -18,9 +18,8 @@
 #define SCP_CORE_INTERFACE_ERRORS_H_
 
 #include <cstdint>
-#include <string>
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Gets the error message.
  *
@@ -28,6 +27,6 @@ namespace google::scp::core {
  * @return std::string the message about the error code.
  */
 const char* GetErrorMessage(uint64_t error_code);
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 
 #endif  // SCP_CORE_INTERFACE_ERRORS_H_

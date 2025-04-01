@@ -17,7 +17,6 @@
 #pragma once
 
 #include <cstring>
-#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -47,22 +46,24 @@ class Serialization {
    * @return ExecutionResult The execution result of the operation.
    */
   template <typename T>
-  static ExecutionResult Serialize(core::BytesBuffer& bytes_buffer,
-                                   const size_t buffer_offset,
-                                   const T& value_to_serialize,
-                                   size_t& bytes_serialized) {
+  static ExecutionResult Serialize(
+      privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+      const size_t buffer_offset, const T& value_to_serialize,
+      size_t& bytes_serialized) {
     if (!std::is_integral_v<T>) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_INVALID_SERIALIZATION_TYPE);
+          privacy_sandbox::pbs_common::
+              SC_SERIALIZATION_INVALID_SERIALIZATION_TYPE);
     }
 
     bytes_serialized = 0;
     size_t size_of_object_in_bytes = sizeof(T);
     if (buffer_offset + size_of_object_in_bytes > bytes_buffer.capacity) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
     }
-    Byte* data_ptr = bytes_buffer.bytes->data() + buffer_offset;
+    privacy_sandbox::pbs_common::Byte* data_ptr =
+        bytes_buffer.bytes->data() + buffer_offset;
     memcpy(data_ptr, &value_to_serialize, size_of_object_in_bytes);
     bytes_serialized = size_of_object_in_bytes;
     return SuccessExecutionResult();
@@ -80,22 +81,24 @@ class Serialization {
    * @return ExecutionResult The execution result of the operation.
    */
   template <typename T>
-  static ExecutionResult Deserialize(const core::BytesBuffer& bytes_buffer,
-                                     const size_t buffer_offset,
-                                     T& value_to_deserialize,
-                                     size_t& bytes_deserialized) {
+  static ExecutionResult Deserialize(
+      const privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+      const size_t buffer_offset, T& value_to_deserialize,
+      size_t& bytes_deserialized) {
     if (!std::is_integral_v<T>) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_INVALID_SERIALIZATION_TYPE);
+          privacy_sandbox::pbs_common::
+              SC_SERIALIZATION_INVALID_SERIALIZATION_TYPE);
     }
 
     bytes_deserialized = 0;
     size_t size_of_object_in_bytes = sizeof(T);
     if (buffer_offset + size_of_object_in_bytes > bytes_buffer.length) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_BUFFER_NOT_READABLE);
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE);
     }
-    Byte* data_ptr = bytes_buffer.bytes->data() + buffer_offset;
+    privacy_sandbox::pbs_common::Byte* data_ptr =
+        bytes_buffer.bytes->data() + buffer_offset;
     memcpy(&value_to_deserialize, data_ptr, size_of_object_in_bytes);
     bytes_deserialized = size_of_object_in_bytes;
     return SuccessExecutionResult();
@@ -122,13 +125,14 @@ class Serialization {
    */
   template <typename TProtoMessage>
   static ExecutionResult SerializeProtoMessage(
-      core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
-      const TProtoMessage& value_to_serialize, size_t& bytes_serialized) {
+      privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+      const size_t buffer_offset, const TProtoMessage& value_to_serialize,
+      size_t& bytes_serialized) {
     bytes_serialized = 0;
     uint64_t size_of_serialized_proto = value_to_serialize.ByteSizeLong();
     if (buffer_offset + size_of_serialized_proto > bytes_buffer.capacity) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
     }
 
     // Serialize the actual proto object.
@@ -136,7 +140,8 @@ class Serialization {
             bytes_buffer.bytes->data() + buffer_offset,
             size_of_serialized_proto)) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_PROTO_SERIALIZATION_FAILED);
+          privacy_sandbox::pbs_common::
+              SC_SERIALIZATION_PROTO_SERIALIZATION_FAILED);
     }
 
     bytes_serialized = size_of_serialized_proto;
@@ -155,21 +160,22 @@ class Serialization {
    */
   template <typename TProtoMessage>
   static ExecutionResult DeserializeProtoMessage(
-      const core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
-      const size_t message_length, TProtoMessage& value_to_deserialize,
-      size_t& bytes_deserialized) {
+      const privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+      const size_t buffer_offset, const size_t message_length,
+      TProtoMessage& value_to_deserialize, size_t& bytes_deserialized) {
     bytes_deserialized = 0;
 
     if (buffer_offset + message_length > bytes_buffer.length) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_BUFFER_NOT_READABLE);
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE);
     }
 
     if (bytes_buffer.length == 0 ||
         !value_to_deserialize.ParseFromArray(
             bytes_buffer.bytes->data() + buffer_offset, message_length)) {
       return FailureExecutionResult(
-          errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED);
+          privacy_sandbox::pbs_common::
+              SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED);
     }
 
     bytes_deserialized = value_to_deserialize.ByteSizeLong();
@@ -196,7 +202,8 @@ class Serialization {
         !value_to_deserialize.ParseFromArray(proto_message.data(),
                                              proto_message.length())) {
       return FailureExecutionResult(
-          core::errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED);
+          privacy_sandbox::pbs_common::
+              SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED);
     }
 
     bytes_deserialized = proto_message.length();
@@ -204,12 +211,13 @@ class Serialization {
   }
 
   template <typename TProtoMessage>
-  static ExecutionResult ValidateVersion(const TProtoMessage& proto_message,
-                                         Version supported_version) {
+  static ExecutionResult ValidateVersion(
+      const TProtoMessage& proto_message,
+      privacy_sandbox::pbs_common::Version supported_version) {
     if (proto_message.version().major() != supported_version.major ||
         proto_message.version().minor() != supported_version.minor) {
       return FailureExecutionResult(
-          core::errors::SC_SERIALIZATION_VERSION_IS_INVALID);
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_VERSION_IS_INVALID);
     }
 
     return SuccessExecutionResult();
@@ -228,12 +236,14 @@ class Serialization {
  */
 template <>
 inline ExecutionResult Serialization::Serialize<common::Uuid>(
-    core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
-    const common::Uuid& value_to_serialize, size_t& bytes_serialized) {
+    privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+    const size_t buffer_offset, const common::Uuid& value_to_serialize,
+    size_t& bytes_serialized) {
   bytes_serialized = 0;
   size_t size_of_object_in_bytes = 2 * sizeof(uint64_t);
   if (buffer_offset + size_of_object_in_bytes > bytes_buffer.capacity) {
-    return FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
   }
 
   // Serialize the high value.
@@ -266,12 +276,14 @@ inline ExecutionResult Serialization::Serialize<common::Uuid>(
  */
 template <>
 inline ExecutionResult Serialization::Deserialize<common::Uuid>(
-    const core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
-    common::Uuid& value_to_deserialize, size_t& bytes_deserialized) {
+    const privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+    const size_t buffer_offset, common::Uuid& value_to_deserialize,
+    size_t& bytes_deserialized) {
   bytes_deserialized = 0;
   size_t size_of_object_in_bytes = 2 * sizeof(uint64_t);
   if (buffer_offset + size_of_object_in_bytes > bytes_buffer.length) {
-    return FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE);
   }
 
   // Deserialize the high value.
@@ -305,13 +317,17 @@ inline ExecutionResult Serialization::Deserialize<common::Uuid>(
  * @return ExecutionResult The execution result of the operation.
  */
 template <>
-inline ExecutionResult Serialization::Serialize<Version>(
-    core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
-    const Version& value_to_serialize, size_t& bytes_serialized) {
+inline ExecutionResult
+Serialization::Serialize<privacy_sandbox::pbs_common::Version>(
+    privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+    const size_t buffer_offset,
+    const privacy_sandbox::pbs_common::Version& value_to_serialize,
+    size_t& bytes_serialized) {
   bytes_serialized = 0;
   size_t size_of_object_in_bytes = 2 * sizeof(uint64_t);
   if (buffer_offset + size_of_object_in_bytes > bytes_buffer.capacity) {
-    return FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
   }
 
   // Serialize the major value.
@@ -343,13 +359,17 @@ inline ExecutionResult Serialization::Serialize<Version>(
  * @return ExecutionResult The execution result of the operation.
  */
 template <>
-inline ExecutionResult Serialization::Deserialize<Version>(
-    const core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
-    Version& value_to_deserialize, size_t& bytes_deserialized) {
+inline ExecutionResult
+Serialization::Deserialize<privacy_sandbox::pbs_common::Version>(
+    const privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+    const size_t buffer_offset,
+    privacy_sandbox::pbs_common::Version& value_to_deserialize,
+    size_t& bytes_deserialized) {
   bytes_deserialized = 0;
   size_t size_of_object_in_bytes = 2 * sizeof(uint64_t);
   if (buffer_offset + size_of_object_in_bytes > bytes_buffer.length) {
-    return FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE);
   }
 
   // Deserialize the major value.
@@ -384,7 +404,8 @@ inline ExecutionResult Serialization::Deserialize<Version>(
  */
 template <>
 inline ExecutionResult Serialization::Serialize<google::protobuf::Message>(
-    core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
+    privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+    const size_t buffer_offset,
     const google::protobuf::Message& value_to_serialize,
     size_t& bytes_serialized) {
   // To store the Any objects, we store the size in the first uint64_t size
@@ -394,7 +415,8 @@ inline ExecutionResult Serialization::Serialize<google::protobuf::Message>(
   uint64_t size_of_serialized_proto = value_to_serialize.ByteSizeLong();
   if (buffer_offset + size_of_object_size_block + size_of_serialized_proto >
       bytes_buffer.capacity) {
-    return FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE);
   }
 
   // Serialize the object size header.
@@ -409,7 +431,8 @@ inline ExecutionResult Serialization::Serialize<google::protobuf::Message>(
           bytes_buffer.bytes->data() + buffer_offset + bytes_serialized,
           size_of_serialized_proto)) {
     return FailureExecutionResult(
-        errors::SC_SERIALIZATION_PROTO_SERIALIZATION_FAILED);
+        privacy_sandbox::pbs_common::
+            SC_SERIALIZATION_PROTO_SERIALIZATION_FAILED);
   }
 
   bytes_serialized = size_of_object_size_block + size_of_serialized_proto;
@@ -428,14 +451,15 @@ inline ExecutionResult Serialization::Serialize<google::protobuf::Message>(
  */
 template <>
 inline ExecutionResult Serialization::Deserialize<google::protobuf::Message>(
-    const core::BytesBuffer& bytes_buffer, const size_t buffer_offset,
-    google::protobuf::Message& value_to_deserialize,
+    const privacy_sandbox::pbs_common::BytesBuffer& bytes_buffer,
+    const size_t buffer_offset, google::protobuf::Message& value_to_deserialize,
     size_t& bytes_deserialized) {
   bytes_deserialized = 0;
   // Read the size block
   size_t size_of_object_size_block = sizeof(uint64_t);
   if (buffer_offset + size_of_object_size_block > bytes_buffer.length) {
-    return FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE);
   }
 
   uint64_t size_of_serialized_proto = 0;
@@ -448,7 +472,8 @@ inline ExecutionResult Serialization::Deserialize<google::protobuf::Message>(
 
   if (buffer_offset + size_of_object_size_block + size_of_serialized_proto >
       bytes_buffer.length) {
-    return FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE);
   }
 
   if (size_of_serialized_proto != 0 &&
@@ -456,7 +481,8 @@ inline ExecutionResult Serialization::Deserialize<google::protobuf::Message>(
           bytes_buffer.bytes->data() + buffer_offset + bytes_deserialized,
           size_of_serialized_proto)) {
     return FailureExecutionResult(
-        errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED);
+        privacy_sandbox::pbs_common::
+            SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED);
   }
 
   bytes_deserialized = size_of_object_size_block + size_of_serialized_proto;

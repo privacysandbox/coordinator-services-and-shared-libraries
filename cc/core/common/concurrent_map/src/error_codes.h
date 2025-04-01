@@ -17,7 +17,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0003 for concurrent map.
 REGISTER_COMPONENT_CODE(SC_CONCURRENT_MAP, 0x0004)
@@ -30,4 +30,4 @@ DEFINE_ERROR_CODE(SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST, SC_CONCURRENT_MAP,
                   0x0002, "The entry does not exist.",
                   HttpStatusCode::NOT_FOUND)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

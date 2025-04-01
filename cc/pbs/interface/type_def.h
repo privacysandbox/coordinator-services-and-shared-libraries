@@ -18,16 +18,15 @@
 
 #include <cstdint>
 #include <string>
-#include <unordered_map>
 
-#include "cc/public/core/interface/execution_result.h"
+#include "cc/core/interface/type_def.h"
 
 namespace google::scp::pbs {
 typedef uint8_t TokenCount;
 typedef std::string BudgetKeyName;
-typedef core::Timestamp TimeGroup;
+typedef ::privacy_sandbox::pbs_common::Timestamp TimeGroup;
 typedef size_t ArrayIndex;
-typedef core::Timestamp TimeBucket;
+typedef ::privacy_sandbox::pbs_common::Timestamp TimeBucket;
 
 static constexpr char kTransactionIdHeader[] = "x-gscp-transaction-id";
 static constexpr char kTransactionOriginHeader[] = "x-gscp-transaction-origin";
@@ -74,7 +73,4 @@ static constexpr char kMetricLabelValueCoordinator[] = "COORDINATOR";
 static constexpr char kMetricLabelKeyReportingOrigin[] = "reporting_origin";
 static constexpr char kMetricLabelTransactionPhase[] = "transaction_phase";
 inline constexpr absl::string_view kErrorReasonLabel = "pbs.error_reason";
-
-// TODO: This must be configurable.
-static constexpr int kMaxToken = 1;
 }  // namespace google::scp::pbs

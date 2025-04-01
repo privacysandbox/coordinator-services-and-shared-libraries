@@ -51,7 +51,8 @@ class MetricRouter {
    * @param exporter Unique pointer to the push metric exporter
    */
   explicit MetricRouter(
-      std::shared_ptr<ConfigProviderInterface> config_provider,
+      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+          config_provider,
       opentelemetry::sdk::resource::Resource resource,
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
@@ -199,7 +200,8 @@ class MetricRouter {
    */
   static std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>
   CreatePeriodicReader(
-      std::shared_ptr<ConfigProviderInterface> config_provider,
+      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+          config_provider,
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
 

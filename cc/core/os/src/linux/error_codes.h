@@ -17,7 +17,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 REGISTER_COMPONENT_CODE(SYSTEM_RESOURCE_INFO_PROVIDER_LINUX, 0x0F00)
 DEFINE_ERROR_CODE(
     SYSTEM_RESOURCE_INFO_PROVIDER_LINUX_COULD_NOT_OPEN_MEMINFO_FILE,
@@ -36,4 +36,4 @@ DEFINE_ERROR_CODE(
     SYSTEM_RESOURCE_INFO_PROVIDER_LINUX, 0x0003,
     "The meminfo file did not contain the expected items.",
     HttpStatusCode::PRECONDITION_FAILED)
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

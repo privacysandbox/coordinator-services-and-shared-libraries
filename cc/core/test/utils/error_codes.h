@@ -17,14 +17,13 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::test::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0115 for test utils.
 REGISTER_COMPONENT_CODE(SC_TEST_UTILS, 0x0115)
 
-DEFINE_ERROR_CODE(
-    SC_TEST_UTILS_TEST_WAIT_TIMEOUT, SC_TEST_UTILS, 0x0001,
-    "Timed out waiting for the test condition.",
-    ::google::scp::core::errors::HttpStatusCode::SERVICE_UNAVAILABLE)
+DEFINE_ERROR_CODE(SC_TEST_UTILS_TEST_WAIT_TIMEOUT, SC_TEST_UTILS, 0x0001,
+                  "Timed out waiting for the test condition.",
+                  HttpStatusCode::SERVICE_UNAVAILABLE)
 
-}  // namespace google::scp::core::test::errors
+}  // namespace privacy_sandbox::pbs_common

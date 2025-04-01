@@ -25,7 +25,10 @@
 #include "absl/strings/str_join.h"
 #include "absl/synchronization/notification.h"
 #include "cc/core/async_executor/src/async_executor.h"
+#include "cc/core/async_executor/src/error_codes.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/pbs/consume_budget/src/budget_consumer.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
@@ -33,6 +36,7 @@
 #include "cc/pbs/proto/storage/budget_value.pb.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "gmock/gmock.h"
 #include "google/cloud/spanner/mocks/mock_spanner_connection.h"
 #include "google/cloud/spanner/mocks/row.h"
 #include "google/protobuf/text_format.h"
@@ -41,19 +45,22 @@ namespace google::scp::pbs {
 namespace {
 
 using ::google::protobuf::TextFormat;
-using ::google::scp::core::AsyncContext;
-using ::google::scp::core::AsyncExecutor;
-using ::google::scp::core::AsyncExecutorInterface;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
-using ::google::scp::core::errors::SC_ASYNC_EXECUTOR_NOT_RUNNING;
 using ::google::scp::core::test::ResultIs;
 using ::google::scp::pbs::kBudgetKeyTableName;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
+using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_INITIALIZATION_ERROR;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::AuthContext;
+using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::SC_ASYNC_EXECUTOR_NOT_RUNNING;
 using ::testing::_;
 using ::testing::AllOf;
 using ::testing::ByMove;
@@ -217,6 +224,21 @@ TEST_F(BudgetConsumptionHelperTest, ExecutorNotYetRunShouldFail) {
               ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
+class MockBudgetConsumer : public BudgetConsumer {
+ public:
+  MOCK_METHOD(core::ExecutionResult, ParseTransactionRequest,
+              (const AuthContext&, const HttpHeaders&, const nlohmann::json&),
+              (override));
+  MOCK_METHOD(spanner::KeySet, GetSpannerKeySet, (), (override));
+  MOCK_METHOD(size_t, GetKeyCount, (), (override));
+  MOCK_METHOD(core::ExecutionResultOr<std::vector<std::string>>, GetReadColumns,
+              (), (override));
+  MOCK_METHOD(std::vector<std::string>, DebugKeyList, (), (override));
+  MOCK_METHOD(SpannerMutationsResult, ConsumeBudget,
+              (spanner::RowStream&, absl::string_view), (override));
+};
+
+template <bool should_enable_budget_consumer>
 class BudgetConsumptionHelperWithLifecycleTest
     : public BudgetConsumptionHelperTest,
       public testing::WithParamInterface<
@@ -224,9 +246,16 @@ class BudgetConsumptionHelperWithLifecycleTest
  protected:
   void SetUp() override {
     BudgetConsumptionHelperTest::SetUp();
+    source_ = CreatePbsMockResultSetSource(GetMigrationPhase());
     mock_config_provider_->Set(kBudgetKeyTableName, std::string(kTableName));
     mock_config_provider_->Set(kValueProtoMigrationPhase, GetMigrationPhase());
+    mock_config_provider_->SetBool(kEnableBudgetConsumerMigration,
+                                   should_enable_budget_consumer);
     ASSERT_SUCCESS(InitAndRunComponents());
+
+    if (should_enable_budget_consumer) {
+      mock_budget_consumer_ = std::make_unique<MockBudgetConsumer>();
+    }
   }
 
   void TearDown() override {
@@ -266,6 +295,19 @@ class BudgetConsumptionHelperWithLifecycleTest
       columns.emplace_back(kValueProtoSpannerColumnName);
     }
 
+    return columns;
+  }
+
+  std::vector<std::string> GetReadColumns() {
+    std::vector<std::string> columns = {
+        std::string(kBudgetKeySpannerColumnName),
+        std::string(kTimeframeSpannerColumnName),
+    };
+    if (ReadFromValueColumn()) {
+      columns.emplace_back(kValueSpannerColumnName);
+    } else {
+      columns.emplace_back(kValueProtoSpannerColumnName);
+    }
     return columns;
   }
 
@@ -340,20 +382,32 @@ class BudgetConsumptionHelperWithLifecycleTest
 
     return zipped_vector;
   }
+
+  std::unique_ptr<spanner_mocks::MockResultSetSource> source_;
+  std::unique_ptr<MockBudgetConsumer> mock_budget_consumer_;
 };
 
-INSTANTIATE_TEST_SUITE_P(BudgetConsumptionHelperWithLifecycleTest,
-                         BudgetConsumptionHelperWithLifecycleTest,
-                         Values(kMigrationPhase1, kMigrationPhase2,
-                                kMigrationPhase3, kMigrationPhase4));
+using BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer =
+    BudgetConsumptionHelperWithLifecycleTest<true>;
+using BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer =
+    BudgetConsumptionHelperWithLifecycleTest<false>;
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+INSTANTIATE_TEST_SUITE_P(
+    BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
+    BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
+    Values(kMigrationPhase1, kMigrationPhase2, kMigrationPhase3,
+           kMigrationPhase4));
+
+INSTANTIATE_TEST_SUITE_P(
+    BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
+    BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
+    Values(kMigrationPhase1, kMigrationPhase2, kMigrationPhase3,
+           kMigrationPhase4));
+
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsOnNonExistingRowShouldSuccess) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
   // No row exist in Spanner
-  EXPECT_CALL(*source, NextRow()).WillRepeatedly(Return(spanner::Row()));
+  EXPECT_CALL(*source_, NextRow()).WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
   expected_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
@@ -362,7 +416,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(spanner::RowStream(std::move(source))));
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
 
   std::vector<int64_t> token_count = {1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                       1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -398,15 +452,12 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsOnExistingRowShouldSuccess) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
   std::vector<int64_t> token_count = {
       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
 
-  EXPECT_CALL(*source, NextRow())
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(
           Return(spanner_mocks::MakeRow(GetRowPairsForNextRow(token_count))))
       .WillRepeatedly(Return(spanner::Row()));
@@ -418,7 +469,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(spanner::RowStream(std::move(source))));
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -453,11 +504,9 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest, ConsumeBudgetsWithoutBudget) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
-  EXPECT_CALL(*source, NextRow())
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
+       ConsumeBudgetsWithoutBudget) {
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
           GetRowPairsForNextRow({1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}))))
@@ -470,7 +519,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest, ConsumeBudgetsWithoutBudget) {
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(ByMove(spanner::RowStream(std::move(source)))));
+      .WillOnce(Return(ByMove(spanner::RowStream(std::move(source_)))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -500,12 +549,9 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest, ConsumeBudgetsWithoutBudget) {
               ElementsAre(0));
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsWithInvalidJsonValueColumn) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
-  EXPECT_CALL(*source, NextRow())
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
           {{std::string(kBudgetKeySpannerColumnName),
             spanner::Value(std::string(kFakeKeyName))},
@@ -522,7 +568,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(ByMove(spanner::RowStream(std::move(source)))));
+      .WillOnce(Return(ByMove(spanner::RowStream(std::move(source_)))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -552,12 +598,9 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsWithoutTokenCountFieldInJson) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
-  EXPECT_CALL(*source, NextRow())
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
           {{std::string(kBudgetKeySpannerColumnName),
             spanner::Value(std::string(kFakeKeyName))},
@@ -574,7 +617,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(ByMove(spanner::RowStream(std::move(source)))));
+      .WillOnce(Return(ByMove(spanner::RowStream(std::move(source_)))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -604,12 +647,9 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsDeserializationFailed) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
-  EXPECT_CALL(*source, NextRow())
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
           {{std::string(kBudgetKeySpannerColumnName),
             spanner::Value(std::string(kFakeKeyName))},
@@ -627,7 +667,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(spanner::RowStream(std::move(source))));
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -657,12 +697,9 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsWithNoLaplaceDp) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
-  EXPECT_CALL(*source, NextRow())
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
           {{std::string(kBudgetKeySpannerColumnName),
             spanner::Value(std::string(kFakeKeyName))},
@@ -681,7 +718,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(spanner::RowStream(std::move(source))));
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -711,12 +748,9 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsWithInvalidLaplaceDpSize) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
-  EXPECT_CALL(*source, NextRow())
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
           {{std::string(kBudgetKeySpannerColumnName),
             spanner::Value(std::string(kFakeKeyName))},
@@ -735,7 +769,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(spanner::RowStream(std::move(source))));
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -765,16 +799,13 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
 }
 
-TEST_P(BudgetConsumptionHelperWithLifecycleTest,
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
        ConsumeBudgetsWithInvalidLaplaceDpTokens) {
-  std::unique_ptr<spanner_mocks::MockResultSetSource> source =
-      CreatePbsMockResultSetSource(GetMigrationPhase());
-
   std::vector<int64_t> token_count(kDefaultTokenCountSize,
                                    kDefaultLaplaceDpBudgetCount);
   token_count[0] -= 1;  // Making an invalid entry
 
-  EXPECT_CALL(*source, NextRow())
+  EXPECT_CALL(*source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
           {{std::string(kBudgetKeySpannerColumnName),
             spanner::Value(std::string(kFakeKeyName))},
@@ -793,7 +824,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       Read(AllOf(
           Field(&spanner::Connection::ReadParams::keys, Eq(expected_key_set)),
           Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
-      .WillOnce(Return(spanner::RowStream(std::move(source))));
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -821,6 +852,193 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTest,
       result_context.result,
       ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
+}
+
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
+       SuccessWithValidSpannerMutations) {
+  std::vector<int64_t> token_count(kDefaultTokenCountSize,
+                                   kDefaultPrivacyBudgetCount);
+
+  EXPECT_CALL(*mock_budget_consumer_, GetReadColumns())
+      .Times(1)
+      .WillOnce(Return(GetReadColumns()));
+
+  spanner::KeySet mock_key_set;
+  mock_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
+
+  EXPECT_CALL(*mock_budget_consumer_, GetSpannerKeySet())
+      .Times(1)
+      .WillOnce(Return(mock_key_set));
+
+  EXPECT_CALL(
+      *mock_connection_,
+      Read(AllOf(
+          Field(&spanner::Connection::ReadParams::keys, Eq(mock_key_set)),
+          Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
+      .Times(1)
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
+
+  token_count[0] = kEmptyBudgetCount;
+  spanner::Mutation mock_mutation =
+      cloud::spanner::UpdateMutationBuilder(std::string(kTableName),
+                                            GetTableColumns())
+          .AddRow(GetTableValues(token_count))
+          .Build();
+
+  spanner::RowStream received_row_stream;
+  EXPECT_CALL(*mock_budget_consumer_, ConsumeBudget(_, Eq(kTableName)))
+      .Times(1)
+      .WillOnce(Return(SpannerMutationsResult{
+          .status = cloud::Status(),
+          .execution_result = SuccessExecutionResult(),
+          .budget_exhausted_indices = std::vector<size_t>(),
+          .mutations = spanner::Mutations{mock_mutation},
+      }));
+
+  EXPECT_CALL(*mock_connection_,
+              Commit(FieldsAre(_, UnorderedElementsAre(mock_mutation), _)))
+      .WillOnce(Return(spanner::CommitResult{}));
+
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
+  context.request = std::make_shared<ConsumeBudgetsRequest>();
+  context.request->budget_consumer = std::move(mock_budget_consumer_);
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
+
+  absl::Notification notification;
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> result_context;
+  context.callback = [&](AsyncContext<ConsumeBudgetsRequest,
+                                      ConsumeBudgetsResponse>& context) {
+    result_context = context;
+    notification.Notify();
+  };
+  EXPECT_SUCCESS(budget_consumption_helper_->ConsumeBudgets(context));
+  notification.WaitForNotification();
+
+  EXPECT_SUCCESS(result_context.result);
+  EXPECT_THAT(result_context.response->budget_exhausted_indices, IsEmpty());
+}
+
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
+       FailureWithBudgetExhaustedIndices) {
+  EXPECT_CALL(*mock_budget_consumer_, GetReadColumns())
+      .Times(1)
+      .WillOnce(Return(GetReadColumns()));
+
+  spanner::KeySet mock_key_set;
+  mock_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
+
+  EXPECT_CALL(*mock_budget_consumer_, GetSpannerKeySet())
+      .Times(1)
+      .WillOnce(Return(mock_key_set));
+
+  EXPECT_CALL(
+      *mock_connection_,
+      Read(AllOf(
+          Field(&spanner::Connection::ReadParams::keys, Eq(mock_key_set)),
+          Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
+      .Times(1)
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
+
+  spanner::RowStream received_row_stream;
+  EXPECT_CALL(*mock_budget_consumer_, ConsumeBudget(_, Eq(kTableName)))
+      .Times(1)
+      .WillOnce(Return(SpannerMutationsResult{
+          .status = cloud::Status(cloud::StatusCode::kInvalidArgument,
+                                  "Not enough budget."),
+          .execution_result =
+              FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED),
+          .budget_exhausted_indices = {1, 3, 7},
+          .mutations = spanner::Mutations{},
+      }));
+
+  EXPECT_CALL(*mock_connection_, Commit(FieldsAre(_, _, _))).Times(0);
+
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
+  context.request = std::make_shared<ConsumeBudgetsRequest>();
+  context.request->budget_consumer = std::move(mock_budget_consumer_);
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
+
+  absl::Notification notification;
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> result_context;
+  context.callback = [&](AsyncContext<ConsumeBudgetsRequest,
+                                      ConsumeBudgetsResponse>& context) {
+    result_context = context;
+    notification.Notify();
+  };
+  EXPECT_SUCCESS(budget_consumption_helper_->ConsumeBudgets(context));
+  notification.WaitForNotification();
+
+  EXPECT_THAT(result_context.result,
+              ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
+  EXPECT_THAT(result_context.response->budget_exhausted_indices,
+              ElementsAre(1, 3, 7));
+}
+
+TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
+       FailedToCommit) {
+  std::vector<int64_t> token_count(kDefaultTokenCountSize,
+                                   kDefaultPrivacyBudgetCount);
+
+  EXPECT_CALL(*mock_budget_consumer_, GetReadColumns())
+      .Times(1)
+      .WillOnce(Return(GetReadColumns()));
+
+  spanner::KeySet mock_key_set;
+  mock_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
+
+  EXPECT_CALL(*mock_budget_consumer_, GetSpannerKeySet())
+      .Times(1)
+      .WillOnce(Return(mock_key_set));
+
+  EXPECT_CALL(
+      *mock_connection_,
+      Read(AllOf(
+          Field(&spanner::Connection::ReadParams::keys, Eq(mock_key_set)),
+          Field(&spanner::Connection::ReadParams::table, Eq(kTableName)))))
+      .Times(1)
+      .WillOnce(Return(spanner::RowStream(std::move(source_))));
+
+  token_count[0] = kEmptyBudgetCount;
+  spanner::Mutation mock_mutation =
+      cloud::spanner::UpdateMutationBuilder(std::string(kTableName),
+                                            GetTableColumns())
+          .AddRow(GetTableValues(token_count))
+          .Build();
+
+  spanner::RowStream received_row_stream;
+  EXPECT_CALL(*mock_budget_consumer_, ConsumeBudget(_, Eq(kTableName)))
+      .Times(1)
+      .WillOnce(Return(SpannerMutationsResult{
+          .status = cloud::Status(),
+          .execution_result = SuccessExecutionResult(),
+          .budget_exhausted_indices = std::vector<size_t>(),
+          .mutations = spanner::Mutations{mock_mutation},
+      }));
+
+  EXPECT_CALL(*mock_connection_,
+              Commit(FieldsAre(_, UnorderedElementsAre(mock_mutation), _)))
+      .WillOnce(Return(cloud::Status(cloud::StatusCode::kPermissionDenied,
+                                     "PermissionDenied")));
+
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
+  context.request = std::make_shared<ConsumeBudgetsRequest>();
+  context.request->budget_consumer = std::move(mock_budget_consumer_);
+  context.response = std::make_shared<ConsumeBudgetsResponse>();
+
+  absl::Notification notification;
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> result_context;
+  context.callback = [&](AsyncContext<ConsumeBudgetsRequest,
+                                      ConsumeBudgetsResponse>& context) {
+    result_context = context;
+    notification.Notify();
+  };
+  EXPECT_SUCCESS(budget_consumption_helper_->ConsumeBudgets(context));
+  notification.WaitForNotification();
+
+  EXPECT_THAT(
+      result_context.result,
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_FAIL_TO_COMMIT)));
+  EXPECT_TRUE(result_context.response->budget_exhausted_indices.empty());
 }
 }  // namespace
 }  // namespace google::scp::pbs

@@ -25,7 +25,7 @@
 #include "cc/core/logger/mock/mock_log_provider.h"
 #include "cc/core/logger/src/logger.h"
 
-namespace google::scp::core::logger::mock {
+namespace privacy_sandbox::pbs_common {
 class MockLogger : public Logger {
  public:
   MockLogger() : Logger(std::make_unique<MockLogProvider>()) {}
@@ -34,4 +34,4 @@ class MockLogger : public Logger {
     return dynamic_cast<MockLogProvider&>(*log_provider_).messages_;
   }
 };
-}  // namespace google::scp::core::logger::mock
+}  // namespace privacy_sandbox::pbs_common

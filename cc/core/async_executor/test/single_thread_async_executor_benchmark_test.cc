@@ -21,6 +21,8 @@
 #include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
+namespace privacy_sandbox::pbs_common {
+namespace {
 using google::scp::core::ExecutionResult;
 using google::scp::core::common::TimeProvider;
 using std::atomic;
@@ -35,7 +37,6 @@ using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::this_thread::sleep_for;
 
-namespace google::scp::core::test {
 class SingleThreadAsyncExecutorBenchmarkTest : public ::testing::Test {
  protected:
   void SetUpExecutor() {
@@ -136,4 +137,6 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTaskMixedPriority) {
     threads[i].join();
   }
 }
-}  // namespace google::scp::core::test
+
+}  // namespace
+}  // namespace privacy_sandbox::pbs_common

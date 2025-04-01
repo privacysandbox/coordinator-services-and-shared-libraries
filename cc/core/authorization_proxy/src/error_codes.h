@@ -19,7 +19,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_AUTHORIZATION_PROXY, 0x0021)
 
@@ -44,4 +44,4 @@ DEFINE_ERROR_CODE(
     0x0005,
     "An existing authentication request for the same is being processed.",
     HttpStatusCode::INTERNAL_SERVER_ERROR)
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

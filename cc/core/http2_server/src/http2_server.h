@@ -38,7 +38,7 @@
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/provider.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 class Http2ServerOptions {
  public:
@@ -46,18 +46,19 @@ class Http2ServerOptions {
       : use_tls(false),
         private_key_file(std::make_shared<std::string>()),
         certificate_chain_file(std::make_shared<std::string>()),
-        retry_strategy_options(
-            common::RetryStrategyOptions(common::RetryStrategyType::Exponential,
-                                         kHttpServerRetryStrategyDelayInMs,
-                                         kDefaultRetryStrategyMaxRetries)) {}
+        retry_strategy_options(google::scp::core::common::RetryStrategyOptions(
+            google::scp::core::common::RetryStrategyType::Exponential,
+            kHttpServerRetryStrategyDelayInMs,
+            kDefaultRetryStrategyMaxRetries)) {}
 
   Http2ServerOptions(
       bool use_tls, std::shared_ptr<std::string> private_key_file,
       std::shared_ptr<std::string> certificate_chain_file,
-      common::RetryStrategyOptions retry_strategy_options =
-          common::RetryStrategyOptions(common::RetryStrategyType::Exponential,
-                                       kHttpServerRetryStrategyDelayInMs,
-                                       kDefaultRetryStrategyMaxRetries))
+      google::scp::core::common::RetryStrategyOptions retry_strategy_options =
+          google::scp::core::common::RetryStrategyOptions(
+              google::scp::core::common::RetryStrategyType::Exponential,
+              kHttpServerRetryStrategyDelayInMs,
+              kDefaultRetryStrategyMaxRetries))
       : use_tls(use_tls),
         private_key_file(std::move(private_key_file)),
         certificate_chain_file(std::move(certificate_chain_file)),
@@ -70,7 +71,7 @@ class Http2ServerOptions {
   /// The path and filename of the server certificate chain file.
   const std::shared_ptr<std::string> certificate_chain_file;
   /// Retry strategy options.
-  const common::RetryStrategyOptions retry_strategy_options;
+  const google::scp::core::common::RetryStrategyOptions retry_strategy_options;
 
  private:
   static constexpr TimeDuration kHttpServerRetryStrategyDelayInMs = 31;
@@ -85,10 +86,9 @@ class Http2Server : public HttpServerInterface {
       std::shared_ptr<AsyncExecutorInterface>& async_executor,
       std::shared_ptr<AuthorizationProxyInterface>& authorization_proxy,
       std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
-      const std::shared_ptr<core::ConfigProviderInterface>& config_provider =
-          nullptr,
+      const std::shared_ptr<ConfigProviderInterface>& config_provider = nullptr,
       Http2ServerOptions options = Http2ServerOptions(),
-      MetricRouter* metric_router = nullptr)
+      google::scp::core::MetricRouter* metric_router = nullptr)
       : host_address_(host_address),
         port_(port),
         thread_pool_size_(thread_pool_size),
@@ -98,9 +98,9 @@ class Http2Server : public HttpServerInterface {
         config_provider_(config_provider),
         otel_server_metrics_enabled_(false),
         async_executor_(async_executor),
-        operation_dispatcher_(
-            async_executor,
-            core::common::RetryStrategy(options.retry_strategy_options)),
+        operation_dispatcher_(async_executor,
+                              google::scp::core::common::RetryStrategy(
+                                  options.retry_strategy_options)),
         use_tls_(options.use_tls),
         private_key_file_(*options.private_key_file),
         certificate_chain_file_(*options.certificate_chain_file),
@@ -109,13 +109,13 @@ class Http2Server : public HttpServerInterface {
 
   ~Http2Server();
 
-  ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
 
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
-  ExecutionResult RegisterResourceHandler(
+  google::scp::core::ExecutionResult RegisterResourceHandler(
       HttpMethod http_method, std::string& path,
       HttpHandler& handler) noexcept override;
 
@@ -222,7 +222,7 @@ class Http2Server : public HttpServerInterface {
   virtual void OnAuthorizationCallback(
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context,
-      common::Uuid& request_id,
+      google::scp::core::common::Uuid& request_id,
       const std::shared_ptr<Http2SynchronizationContext>&
           sync_context) noexcept;
 
@@ -239,8 +239,9 @@ class Http2Server : public HttpServerInterface {
    * @param execution_result The execution result of the callback.
    * @param request_id The request id associated with the operation.
    */
-  virtual void OnHttp2PendingCallback(ExecutionResult execution_result,
-                                      const common::Uuid& request_id) noexcept;
+  virtual void OnHttp2PendingCallback(
+      google::scp::core::ExecutionResult execution_result,
+      const google::scp::core::common::Uuid& request_id) noexcept;
 
   // The host address to run the http server on.
   std::string host_address_;
@@ -255,15 +256,16 @@ class Http2Server : public HttpServerInterface {
   size_t thread_pool_size_;
 
   // Registry of all the paths and handlers.
-  common::ConcurrentMap<
-      std::string,
-      std::shared_ptr<common::ConcurrentMap<HttpMethod, HttpHandler>>>
+  google::scp::core::common::ConcurrentMap<
+      std::string, std::shared_ptr<google::scp::core::common::ConcurrentMap<
+                       HttpMethod, HttpHandler>>>
       resource_handlers_;
 
   // Registry of all the active requests.
-  common::ConcurrentMap<common::Uuid,
-                        std::shared_ptr<Http2SynchronizationContext>,
-                        common::UuidCompare>
+  google::scp::core::common::ConcurrentMap<
+      google::scp::core::common::Uuid,
+      std::shared_ptr<Http2SynchronizationContext>,
+      google::scp::core::common::UuidCompare>
       active_requests_;
 
   // Indicates whether the http server is running.
@@ -275,16 +277,16 @@ class Http2Server : public HttpServerInterface {
   std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy_;
 
   // An instance of the config provider.
-  std::shared_ptr<core::ConfigProviderInterface> config_provider_;
+  std::shared_ptr<ConfigProviderInterface> config_provider_;
 
   // Feature flag for otel server metrics
   bool otel_server_metrics_enabled_;
 
   // An instance of the async executor.
-  std::shared_ptr<core::AsyncExecutorInterface> async_executor_;
+  std::shared_ptr<AsyncExecutorInterface> async_executor_;
 
   // An instance of the operation dispatcher.
-  common::OperationDispatcher operation_dispatcher_;
+  google::scp::core::common::OperationDispatcher operation_dispatcher_;
 
   // Whether to use TLS.
   bool use_tls_;
@@ -299,6 +301,15 @@ class Http2Server : public HttpServerInterface {
   boost::asio::ssl::context tls_context_;
 
  private:
+  // Peer class for testing.
+  friend class Http2ServerPeer;
+
+  /**
+   * @brief Returns the port the server is listening. Use this in tests when the
+   * server was initialized with port "0" and OS finds a free port.
+   */
+  int PortInUse() { return http2_server_.ports()[0]; }
+
   /**
    * Initializes the OpenTelemetry metrics collection system. This function
    * sets up the necessary configurations and resources for capturing and
@@ -309,7 +320,7 @@ class Http2Server : public HttpServerInterface {
    *
    * @noexcept This function guarantees not to throw exceptions.
    */
-  ExecutionResult OtelMetricInit() noexcept;
+  google::scp::core::ExecutionResult OtelMetricInit() noexcept;
 
   /**
    * Records the server latency for a given activity and request. It measures
@@ -367,7 +378,7 @@ class Http2Server : public HttpServerInterface {
       const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
 
   // An instance of metric router which will provide APIs to create metrics.
-  MetricRouter* metric_router_;
+  google::scp::core::MetricRouter* metric_router_;
 
   // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
@@ -389,4 +400,4 @@ class Http2Server : public HttpServerInterface {
       server_response_body_size_;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

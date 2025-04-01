@@ -18,17 +18,12 @@
 
 #include <string>
 
-#include "cc/core/logger/interface/log_provider_interface.h"
+#include "cc/core/interface/logger_interface.h"
 
-namespace google::scp::core::logger {
+namespace privacy_sandbox::pbs_common {
 
-/// Returns a string representation for LogLevel
-std::string ToString(const LogLevel& level);
+std::string LogLevelToString(const LogLevel& level);
 
-LogLevel FromString(const std::string& level);
+LogLevel LogLevelFromString(const std::string& level);
 
-std::string operator+(const LogLevel& level, const std::string& text);
-
-std::string operator+(const std::string& text, const LogLevel& level);
-
-}  // namespace google::scp::core::logger
+}  // namespace privacy_sandbox::pbs_common

@@ -16,15 +16,11 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-
 #include "async_context.h"
 #include "http_types.h"
 #include "service_interface.h"
-#include "type_def.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /// Provides methods for interactions with HTTP servers.
 class HttpClientInterface : public ServiceInterface {
@@ -37,7 +33,7 @@ class HttpClientInterface : public ServiceInterface {
    * @param context the context of HTTP action.
    * @return ExecutionResult the execution result of the action.
    */
-  virtual ExecutionResult PerformRequest(
+  virtual google::scp::core::ExecutionResult PerformRequest(
       AsyncContext<HttpRequest, HttpResponse>& context) noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

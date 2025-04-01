@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.21.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.20.0...v1.21.0) (2025-04-01)
+
+### Important Note
+**[GCP]**
+- [Feature enabling] We have introduced a new BudgetConsumer based design that allows easy integration of new budget consumer variants.
+  - [To Enable] In the `auto.tfvars` for `distributedpbs_application`, add the following variables:
+    ```
+    pbs_application_environment_variables = [
+      ...
+      {
+        name  = "google_scp_pbs_migration_enable_budget_consumer_migration"
+        value = "true"
+      },
+    ]
+    ```
+  - [To Rollback]Set this flag to `false` and re-deploy PBS in the current version.
+
+### Changes
+- BUILD
+  - Update container dependencies
+- MPKGDS
+  - [GCP] Bump version of Spanner emulator image used in tests
+  - [GCP] Detach the temporary ssl certificates from Public Key Service and Private Key Service
+- PBS
+  - Fix http2_server_test flakiness
+  - Format for binary_budget_consumer
+  - Introduce Budget consumer interface and binary budget consumer
+  - Introduce ParseCommonV2TransactionRequestBody which separates out the common v2 PBS HTTP API parsing
+  - Introduce the ConsumePrivacyBudgetRequest and ConsumePrivacyBudgetResponse proto
+  - Move logger to pbs_common namespace
+  - Refractor ConsumeBudget to support modular design
+  - Refractor FrontEndUtils and introducing modular design in FrontEnd service only
+  - Remove usage of deploy_distributedpbs.sh
+
 ## [1.20.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.19.0...v1.20.0) (2025-03-18)
 
 ### Important Note

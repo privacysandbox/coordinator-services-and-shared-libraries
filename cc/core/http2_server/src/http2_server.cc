@@ -26,7 +26,6 @@
 #include <nghttp2/asio_http2_server.h>
 #include <nlohmann/json.hpp>
 
-#include "absl/strings/str_cat.h"
 #include "cc/core/common/concurrent_map/src/error_codes.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/http2_server/src/error_codes.h"
@@ -37,19 +36,25 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 namespace {
 
 using ::boost::asio::ssl::context;
 using ::boost::system::error_code;
 using ::boost::system::errc::success;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::common::ConcurrentMap;
 using ::google::scp::core::common::kZeroUuid;
 using ::google::scp::core::common::Uuid;
-using ::google::scp::core::errors::GetErrorHttpStatusCode;
-using ::google::scp::core::errors::HttpStatusCode;
+using ::google::scp::core::common::UuidCompare;
 using ::google::scp::core::utils::Base64Decode;
+using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
+using ::google::scp::core::utils::GetUserAgentOrUnknownValue;
+using ::google::scp::core::utils::HttpMethodToString;
 using ::google::scp::core::utils::PadBase64Encoding;
 using ::nghttp2::asio_http2::server::configure_tls_context_easy;
 using ::nghttp2::asio_http2::server::request;
@@ -134,9 +139,9 @@ bool UseAwsAuthorizationProxy(
 ExecutionResult SetSyncContext(
     const AsyncContext<NgHttp2Request, NgHttp2Response>& http2_context,
     const HttpHandler& http_handler,
-    common::ConcurrentMap<
-        common::Uuid, std::shared_ptr<Http2Server::Http2SynchronizationContext>,
-        common::UuidCompare>& active_requests,
+    ConcurrentMap<Uuid,
+                  std::shared_ptr<Http2Server::Http2SynchronizationContext>,
+                  UuidCompare>& active_requests,
     std::shared_ptr<Http2Server::Http2SynchronizationContext>& sync_context) {
   ExecutionResult execution_result;
 
@@ -262,7 +267,8 @@ ExecutionResult Http2Server::Init() noexcept {
       configure_tls_context_easy(nghttp2_error_code, tls_context_);
     } catch (...) {
       auto execution_result = FailureExecutionResult(
-          core::errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
+          privacy_sandbox::pbs_common::
+              SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
       SCP_ERROR(kHttp2Server, kZeroUuid, execution_result,
                 "Failed to initialize TLS context.");
       return execution_result;
@@ -270,7 +276,8 @@ ExecutionResult Http2Server::Init() noexcept {
 
     if (nghttp2_error_code.value() != success) {
       auto execution_result = FailureExecutionResult(
-          core::errors::SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
+          privacy_sandbox::pbs_common::
+              SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
       SCP_ERROR(kHttp2Server, kZeroUuid, execution_result,
                 absl::StrFormat(
                     "Failed to initialize TLS context with error code: %d",
@@ -287,7 +294,8 @@ ExecutionResult Http2Server::Init() noexcept {
 
 ExecutionResult Http2Server::Run() noexcept {
   if (is_running_) {
-    return FailureExecutionResult(errors::SC_HTTP2_SERVER_ALREADY_RUNNING);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_ALREADY_RUNNING);
   }
 
   is_running_ = true;
@@ -325,7 +333,7 @@ ExecutionResult Http2Server::Run() noexcept {
 
   if (server_listen_and_serve_error_code) {
     return FailureExecutionResult(
-        core::errors::SC_HTTP2_SERVER_INITIALIZATION_FAILED);
+        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_INITIALIZATION_FAILED);
   }
 
   return SuccessExecutionResult();
@@ -333,7 +341,8 @@ ExecutionResult Http2Server::Run() noexcept {
 
 ExecutionResult Http2Server::Stop() noexcept {
   if (!is_running_) {
-    return FailureExecutionResult(errors::SC_HTTP2_SERVER_ALREADY_STOPPED);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_ALREADY_STOPPED);
   }
 
   is_running_ = false;
@@ -354,7 +363,7 @@ ExecutionResult Http2Server::RegisterResourceHandler(
     HttpMethod http_method, std::string& path, HttpHandler& handler) noexcept {
   if (is_running_) {
     return FailureExecutionResult(
-        errors::SC_HTTP2_SERVER_CANNOT_REGISTER_HANDLER);
+        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_CANNOT_REGISTER_HANDLER);
   }
   auto verb_to_handler_map =
       std::make_shared<ConcurrentMap<HttpMethod, HttpHandler>>();
@@ -364,8 +373,8 @@ ExecutionResult Http2Server::RegisterResourceHandler(
       resource_handlers_.Insert(path_to_map_pair, verb_to_handler_map);
   if (!execution_result.Successful()) {
     if (execution_result !=
-        FailureExecutionResult(
-            errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
+        FailureExecutionResult(privacy_sandbox::pbs_common::
+                                   SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
       return execution_result;
     }
   }
@@ -393,7 +402,7 @@ void Http2Server::OnHttp2Request(const request& request,
       parent_activity_id, http2Request->id);
 
   http2_context.response = std::make_shared<NgHttp2Response>(response);
-  http2_context.response->headers = std::make_shared<core::HttpHeaders>();
+  http2_context.response->headers = std::make_shared<HttpHeaders>();
 
   auto sync_context = std::make_shared<Http2SynchronizationContext>();
   sync_context->entry_time = entry_time;
@@ -679,12 +688,11 @@ Http2Server::GetOtelMetricLabels(
       {kServerAddress, host_address_},
       {kServerPort, port_},
       {kHttpRoute, http_context.request->handler_path},
-      {kHttpRequestMethod,
-       utils::HttpMethodToString(http_context.request->method)},
+      {kHttpRequestMethod, HttpMethodToString(http_context.request->method)},
       {kPbsClaimedIdentityLabel,
-       utils::GetClaimedIdentityOrUnknownValue(http_context)},
+       GetClaimedIdentityOrUnknownValue(http_context)},
       {kScpHttpRequestClientVersionLabel,
-       utils::GetUserAgentOrUnknownValue(http_context)}};
+       GetUserAgentOrUnknownValue(http_context)}};
 
   if (http_context.response != nullptr) {
     labels.try_emplace(
@@ -755,4 +763,4 @@ void Http2Server::ObserveActiveRequestsCallback(
   observer->Observe(self_ptr->active_requests_.Size());
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

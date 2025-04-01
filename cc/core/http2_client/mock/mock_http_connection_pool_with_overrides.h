@@ -21,18 +21,17 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "cc/core/http2_client/src/http_connection_pool.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::core::http2_client::mock {
+namespace privacy_sandbox::pbs_common {
 class MockHttpConnectionPool : public HttpConnectionPool {
  public:
   MockHttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      absl::Nullable<MetricRouter*> metric_router,
+      absl::Nullable<google::scp::core::MetricRouter*> metric_router,
       size_t max_connection_per_host)
       : HttpConnectionPool(async_executor, metric_router,
                            max_connection_per_host) {}
@@ -77,4 +76,4 @@ class MockHttpConnectionPool : public HttpConnectionPool {
   std::function<void(std::shared_ptr<HttpConnection>&)>
       recycle_connection_override_;
 };
-}  // namespace google::scp::core::http2_client::mock
+}  // namespace privacy_sandbox::pbs_common

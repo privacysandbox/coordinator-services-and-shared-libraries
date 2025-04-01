@@ -17,8 +17,6 @@
 #pragma once
 
 #include "cc/core/common/global_logger/src/global_logger.h"
-#include "cc/core/common/uuid/src/uuid.h"
-#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
 

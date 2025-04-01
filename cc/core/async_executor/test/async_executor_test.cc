@@ -33,7 +33,16 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::async_executor::mock::MockAsyncExecutorWithInternals;
+namespace privacy_sandbox::pbs_common {
+namespace {
+
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::test::IsSuccessfulAndHolds;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::WaitUntil;
+using ::privacy_sandbox::pbs_common::MockAsyncExecutorWithInternals;
 using std::atomic;
 using std::make_shared;
 using std::map;
@@ -49,27 +58,25 @@ using std::chrono::nanoseconds;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
-namespace google::scp::core::test {
-
 TEST(AsyncExecutorTests, CannotInitWithZeroThreadCount) {
   AsyncExecutor executor(0, 10);
-  EXPECT_THAT(executor.Init(),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_ASYNC_EXECUTOR_INVALID_THREAD_COUNT)));
+  EXPECT_THAT(
+      executor.Init(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_THREAD_COUNT)));
 }
 
 TEST(AsyncExecutorTests, CannotInitWithTooBigThreadCount) {
   AsyncExecutor executor(10001, 10);
-  EXPECT_THAT(executor.Init(),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_ASYNC_EXECUTOR_INVALID_THREAD_COUNT)));
+  EXPECT_THAT(
+      executor.Init(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_THREAD_COUNT)));
 }
 
 TEST(AsyncExecutorTests, CannotInitWithTooBigQueueCap) {
   AsyncExecutor executor(10, kMaxQueueCap + 1);
-  EXPECT_THAT(executor.Init(),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP)));
+  EXPECT_THAT(
+      executor.Init(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP)));
 }
 
 TEST(AsyncExecutorTests, EmptyWorkQueue) {
@@ -83,8 +90,9 @@ TEST(AsyncExecutorTests, CannotRunTwice) {
   AsyncExecutor executor(1, 10);
   EXPECT_SUCCESS(executor.Init());
   EXPECT_SUCCESS(executor.Run());
-  EXPECT_THAT(executor.Run(), ResultIs(FailureExecutionResult(
-                                  errors::SC_ASYNC_EXECUTOR_ALREADY_RUNNING)));
+  EXPECT_THAT(
+      executor.Run(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_ALREADY_RUNNING)));
   EXPECT_SUCCESS(executor.Stop());
 }
 
@@ -93,44 +101,39 @@ TEST(AsyncExecutorTests, CannotStopTwice) {
   EXPECT_SUCCESS(executor.Init());
   EXPECT_SUCCESS(executor.Run());
   EXPECT_SUCCESS(executor.Stop());
-  EXPECT_THAT(
-      executor.Stop(),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Stop(),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(AsyncExecutorTests, CannotScheduleWorkBeforeInit) {
   AsyncExecutor executor(1, 10);
-  EXPECT_THAT(
-      executor.Schedule([]() {}, AsyncPriority::Normal),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
-  EXPECT_THAT(
-      executor.ScheduleFor([]() {}, 10000),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Schedule([]() {}, AsyncPriority::Normal),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.ScheduleFor([]() {}, 10000),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(AsyncExecutorTests, CannotScheduleWorkBeforeRun) {
   AsyncExecutor executor(1, 10);
   EXPECT_SUCCESS(executor.Init());
-  EXPECT_THAT(
-      executor.Schedule([]() {}, AsyncPriority::Normal),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
-  EXPECT_THAT(
-      executor.ScheduleFor([]() {}, 1000),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Schedule([]() {}, AsyncPriority::Normal),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.ScheduleFor([]() {}, 1000),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(AsyncExecutorTests, CannotRunBeforeInit) {
   AsyncExecutor executor(1, 10);
-  EXPECT_THAT(executor.Run(), ResultIs(FailureExecutionResult(
-                                  errors::SC_ASYNC_EXECUTOR_NOT_INITIALIZED)));
+  EXPECT_THAT(
+      executor.Run(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_INITIALIZED)));
 }
 
 TEST(AsyncExecutorTests, CannotStopBeforeRun) {
   AsyncExecutor executor(1, 10);
   EXPECT_SUCCESS(executor.Init());
-  EXPECT_THAT(
-      executor.Stop(),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Stop(),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(AsyncExecutorTests, ExceedingQueueCapSchedule) {
@@ -149,7 +152,7 @@ TEST(AsyncExecutorTests, ExceedingQueueCapSchedule) {
       auto result = executor.Schedule([&]() {}, AsyncPriority::Normal);
 
       if (result ==
-          RetryExecutionResult(errors::SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP)) {
+          RetryExecutionResult(SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP)) {
         break;
       }
 
@@ -168,8 +171,9 @@ TEST(AsyncExecutorTests, ExceedingQueueCapSchedule) {
     auto schedule_for_timestamp = task.GetExecutionTimestamp() + two_seconds;
     executor.ScheduleFor([&]() {}, schedule_for_timestamp);
     auto result = executor.ScheduleFor([&]() {}, task.GetExecutionTimestamp());
-    EXPECT_THAT(result, ResultIs(RetryExecutionResult(
-                            errors::SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP)));
+    EXPECT_THAT(
+        result,
+        ResultIs(RetryExecutionResult(SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP)));
   }
 
   executor.Stop();
@@ -849,4 +853,6 @@ TEST(AsyncExecutorTests, TestPickUrgentToNonUrgentTaskExecutorWithAffinity) {
   // subsequent work.
   AsyncExecutorAccessor(10).TestPickUrgentToNonUrgentTaskExecutorWithAffinity();
 }
-}  // namespace google::scp::core::test
+
+}  // namespace
+}  // namespace privacy_sandbox::pbs_common

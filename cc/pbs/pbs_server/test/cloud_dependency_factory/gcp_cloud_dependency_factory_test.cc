@@ -29,16 +29,21 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::AsyncExecutorInterface;
+namespace google::scp::pbs::test {
+namespace {
 using google::scp::core::ExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::config_provider::mock::MockConfigProvider;
-using google::scp::core::http2_client::mock::MockHttpClient;
 using google::scp::core::test::ResultIs;
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
+using ::privacy_sandbox::pbs_common::kGcpProjectId;
+using ::privacy_sandbox::pbs_common::kSpannerDatabase;
+using ::privacy_sandbox::pbs_common::kSpannerInstance;
+using ::privacy_sandbox::pbs_common::MockHttpClient;
 using std::make_shared;
 using std::shared_ptr;
-
-namespace google::scp::pbs::test {
 
 static constexpr char kTokenServerPath[] =
     "http://metadata/computeMetadata/v1/instance/service-accounts/default/"
@@ -51,8 +56,8 @@ constexpr char kBase64EncodedAuthToken[] =
 class GcpCloudDependencyFactoryTest : public ::testing::Test {
  protected:
   GcpCloudDependencyFactoryTest()
-      : async_executor1_(make_shared<core::AsyncExecutor>(2, 10000, true)),
-        async_executor2_(make_shared<core::AsyncExecutor>(2, 10000, true)),
+      : async_executor1_(make_shared<AsyncExecutor>(2, 10000, true)),
+        async_executor2_(make_shared<AsyncExecutor>(2, 10000, true)),
         mock_http_client_(make_shared<MockHttpClient>()),
         mock_config_provider_(make_shared<MockConfigProvider>()),
         gcp_factory_(mock_config_provider_) {}
@@ -68,7 +73,7 @@ class GcpCloudDependencyFactoryTest : public ::testing::Test {
     mock_config_provider_->Set(kRemotePrivacyBudgetServiceAssumeRoleArn, "arn");
     mock_config_provider_->Set(kRemotePrivacyBudgetServiceAssumeRoleExternalId,
                                "1234");
-    mock_config_provider_->Set(core::kCloudServiceRegion, "us-east-1");
+    mock_config_provider_->Set(kCloudServiceRegion, "us-east-1");
     mock_config_provider_->Set(kAuthServiceEndpoint, "https://www.auth.com");
     mock_config_provider_->Set(kRemotePrivacyBudgetServiceCloudServiceRegion,
                                "us-east-1");
@@ -81,9 +86,9 @@ class GcpCloudDependencyFactoryTest : public ::testing::Test {
     mock_config_provider_->Set(kBudgetKeyTableName, "budget_key");
     mock_config_provider_->Set(kPBSPartitionLockTableNameConfigName,
                                "partition_lock_table");
-    mock_config_provider_->Set(core::kGcpProjectId, "project");
-    mock_config_provider_->Set(core::kSpannerInstance, "kinstance");
-    mock_config_provider_->Set(core::kSpannerDatabase, "database");
+    mock_config_provider_->Set(kGcpProjectId, "project");
+    mock_config_provider_->Set(kSpannerInstance, "kinstance");
+    mock_config_provider_->Set(kSpannerDatabase, "database");
 
     EXPECT_THAT(gcp_factory_.Init(), ResultIs(SuccessExecutionResult()));
   }
@@ -116,5 +121,5 @@ TEST_F(GcpCloudDependencyFactoryTest, ConstructBudgetConsumptionHelper) {
   EXPECT_THAT(helper->Run(), ResultIs(SuccessExecutionResult()));
   EXPECT_THAT(helper->Stop(), ResultIs(SuccessExecutionResult()));
 }
-
+}  // namespace
 }  // namespace google::scp::pbs::test

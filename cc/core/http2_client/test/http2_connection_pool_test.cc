@@ -26,18 +26,22 @@
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
-using ::google::scp::core::http2_client::mock::MockHttpConnection;
-using ::google::scp::core::http2_client::mock::MockHttpConnectionPool;
+namespace privacy_sandbox::pbs_common {
+namespace {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::GetMetricPointData;
+using ::google::scp::core::InMemoryMetricRouter;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::WaitUntil;
 using ::testing::IsEmpty;
-
-namespace google::scp::core {
 
 class HttpConnectionPoolTest : public testing::Test {
  protected:
   void SetUp() override {
     async_executor_ = std::make_shared<MockAsyncExecutor>();
-    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
+    metric_router_ = std::make_unique<InMemoryMetricRouter>();
     connection_pool_ = std::make_unique<MockHttpConnectionPool>(
         async_executor_, metric_router_.get(), num_connections_per_host_);
 
@@ -56,7 +60,7 @@ class HttpConnectionPoolTest : public testing::Test {
   std::shared_ptr<AsyncExecutorInterface> async_executor_;
   std::shared_ptr<MockHttpConnectionPool> connection_pool_;
   size_t num_connections_per_host_ = 10;
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
+  std::unique_ptr<InMemoryMetricRouter> metric_router_;
 };
 
 TEST_F(HttpConnectionPoolTest, GetConnectionCreatesConnectionsForTheFirstTime) {
@@ -202,7 +206,7 @@ TEST_F(HttpConnectionPoolTest,
 
   EXPECT_EQ(connection2, connections[2]);
 
-  test::WaitUntil([&]() { return recycle_invoked_on_connection.load(); });
+  WaitUntil([&]() { return recycle_invoked_on_connection.load(); });
 }
 
 TEST_F(HttpConnectionPoolTest,
@@ -287,8 +291,8 @@ TEST_F(HttpConnectionPoolTest,
 
   std::shared_ptr<HttpConnection> connection2;
   EXPECT_THAT(connection_pool_->GetConnection(uri, connection2),
-              test::ResultIs(RetryExecutionResult(
-                  errors::SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY)));
+              ResultIs(RetryExecutionResult(
+                  SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY)));
 
   EXPECT_EQ(connection2, connections[1]);
 }
@@ -363,7 +367,7 @@ TEST_F(HttpConnectionPoolTest, TestOpenConnectionsOtelMetric) {
               std::map<std::string, std::string>>(open_connections_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      open_connections_metric_point_data = core::GetMetricPointData(
+      open_connections_metric_point_data = GetMetricPointData(
           "http.client.open_connections", open_connections_dimensions, data);
   ASSERT_TRUE(open_connections_metric_point_data.has_value());
 
@@ -405,7 +409,7 @@ TEST_F(HttpConnectionPoolTest, TestActiveRequestsOtelMetric) {
               std::map<std::string, std::string>>(active_requests_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      active_requests_metric_point_data = core::GetMetricPointData(
+      active_requests_metric_point_data = GetMetricPointData(
           "http.client.active_requests", active_requests_dimensions, data);
   ASSERT_TRUE(active_requests_metric_point_data.has_value());
 
@@ -426,8 +430,7 @@ TEST_F(HttpConnectionPoolTest, TestAddressErrorsOtelMetric) {
 
   ExecutionResult result = connection_pool_->GetConnection(uri, connection);
 
-  EXPECT_EQ(result,
-            FailureExecutionResult(errors::SC_HTTP2_CLIENT_INVALID_URI));
+  EXPECT_EQ(result, FailureExecutionResult(SC_HTTP2_CLIENT_INVALID_URI));
 
   std::map<std::string, std::vector<std::shared_ptr<HttpConnection>>>
       connection_map = connection_pool_->GetConnectionsMap();
@@ -445,8 +448,8 @@ TEST_F(HttpConnectionPoolTest, TestAddressErrorsOtelMetric) {
           std::map<std::string, std::string>>(client_address_errors_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      client_address_errors_metric_point_data = core::GetMetricPointData(
-          "http.client.address_errors", dimensions, data);
+      client_address_errors_metric_point_data =
+          GetMetricPointData("http.client.address_errors", dimensions, data);
 
   ASSERT_TRUE(client_address_errors_metric_point_data.has_value());
 
@@ -460,5 +463,5 @@ TEST_F(HttpConnectionPoolTest, TestAddressErrorsOtelMetric) {
       << "Expected client_address_errors_sum_point_data.value_ to be 1 "
          "(int64_t)";
 }
-
-}  // namespace google::scp::core
+}  // namespace
+}  // namespace privacy_sandbox::pbs_common

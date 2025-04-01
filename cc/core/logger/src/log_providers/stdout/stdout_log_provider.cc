@@ -26,9 +26,12 @@
 #include "absl/strings/str_split.h"
 #include "cc/core/common/uuid/src/uuid.h"
 
-namespace google::scp::core::logger::log_providers {
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::common::ToString;
 using ::google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::LogLevel;
 
 ExecutionResult StdoutLogProvider::Init() noexcept {
   return SuccessExecutionResult();
@@ -112,4 +115,4 @@ void StdoutLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
 
   std::cout << log_entry.dump() << std::endl;
 }
-}  // namespace google::scp::core::logger::log_providers
+}  // namespace privacy_sandbox::pbs_common

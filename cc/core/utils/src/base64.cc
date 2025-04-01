@@ -30,11 +30,13 @@ namespace google::scp::core::utils {
 ExecutionResult Base64Decode(const string& encoded, string& decoded) {
   if ((encoded.length() % 4) != 0) {
     return FailureExecutionResult(
-        errors::SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
+        privacy_sandbox::pbs_common::
+            SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
   }
   size_t required_len = 0;
   if (EVP_DecodedLength(&required_len, encoded.length()) == 0) {
-    return FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
   }
   auto buffer = make_unique<uint8_t[]>(required_len);
 
@@ -43,7 +45,8 @@ ExecutionResult Base64Decode(const string& encoded, string& decoded) {
                              reinterpret_cast<const uint8_t*>(encoded.data()),
                              encoded.length());
   if (ret == 0) {
-    return FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
   }
   decoded = string(reinterpret_cast<char*>(buffer.get()), output_len);
   return SuccessExecutionResult();
@@ -52,7 +55,8 @@ ExecutionResult Base64Decode(const string& encoded, string& decoded) {
 ExecutionResult Base64Encode(const string& decoded, string& encoded) {
   size_t required_len = 0;
   if (EVP_EncodedLength(&required_len, decoded.length()) == 0) {
-    return FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
   }
   auto buffer = make_unique<uint8_t[]>(required_len);
 
@@ -60,7 +64,8 @@ ExecutionResult Base64Encode(const string& decoded, string& encoded) {
                             reinterpret_cast<const uint8_t*>(decoded.data()),
                             decoded.length());
   if (ret == 0) {
-    return FailureExecutionResult(errors::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
   }
   encoded = string(reinterpret_cast<char*>(buffer.get()), ret);
   return SuccessExecutionResult();
@@ -85,7 +90,8 @@ ExecutionResultOr<string> PadBase64Encoding(const string& encoded) {
       // 6-bit and is not enough in size to represent a decoded character of 8
       // bits.
       ret_val = FailureExecutionResult(
-          errors::SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
+          privacy_sandbox::pbs_common::
+              SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
       break;
   }
   return ret_val;

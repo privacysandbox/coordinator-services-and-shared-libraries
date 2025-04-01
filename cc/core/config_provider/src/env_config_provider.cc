@@ -23,6 +23,9 @@ using std::list;
 using std::string;
 
 namespace google::scp::core {
+namespace {
+using ::privacy_sandbox::pbs_common::ConfigKey;
+}
 
 ExecutionResult EnvConfigProvider::Init() noexcept {
   return SuccessExecutionResult();

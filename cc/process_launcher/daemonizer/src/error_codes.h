@@ -19,7 +19,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 REGISTER_COMPONENT_CODE(DAEMONIZER, 0x0302)
 
 DEFINE_ERROR_CODE(DAEMONIZER_INVALID_INPUT, DAEMONIZER, 0x0001,
@@ -36,4 +36,4 @@ DEFINE_ERROR_CODE(DAEMONIZER_FAILED_WAITING_FOR_LAUNCHED_PROCESSES, DAEMONIZER,
 DEFINE_ERROR_CODE(DAEMONIZER_UNKNOWN_ERROR, DAEMONIZER, 0x0004,
                   "The main processing loop exited with an unknown reason.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

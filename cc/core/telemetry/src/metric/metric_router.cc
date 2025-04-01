@@ -34,6 +34,7 @@
 #include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 
 namespace google::scp::core {
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
 
 inline constexpr absl::string_view kMetricRouter = "MetricRouter";
 

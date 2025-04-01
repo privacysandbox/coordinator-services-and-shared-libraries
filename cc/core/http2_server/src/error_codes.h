@@ -19,7 +19,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_HTTP2_SERVER, 0x000E)
 
@@ -65,4 +65,4 @@ DEFINE_ERROR_CODE(SC_HTTP2_SERVER_FAILED_TO_RESOLVE_ROUTE, SC_HTTP2_SERVER,
 DEFINE_ERROR_CODE(SC_HTTP2_SERVER_FAILED_TO_ROUTE, SC_HTTP2_SERVER, 0x000B,
                   "Http2Server failed to route the request.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

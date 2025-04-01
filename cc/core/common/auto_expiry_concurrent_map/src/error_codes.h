@@ -17,7 +17,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0015 for auto expiry concurrent map.
 REGISTER_COMPONENT_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP, 0x0015)
@@ -43,4 +43,4 @@ DEFINE_ERROR_CODE(SC_AUTO_EXPIRY_CONCURRENT_MAP_STOP_INCOMPLETE,
                   "AutoExpiryConcurrentMap properly.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

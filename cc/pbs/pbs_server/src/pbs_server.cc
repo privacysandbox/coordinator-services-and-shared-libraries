@@ -15,7 +15,6 @@
 #include <sys/wait.h>
 
 #include <chrono>
-#include <iostream>
 #include <list>
 #include <memory>
 #include <string>
@@ -25,14 +24,12 @@
 #include "absl/log/check.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/config_provider/src/env_config_provider.h"
-#include "cc/core/interface/errors.h"
 #include "cc/core/logger/src/log_providers/stdout/stdout_log_provider.h"
 #include "cc/core/logger/src/log_providers/syslog/syslog_log_provider.h"
 #include "cc/core/logger/src/log_utils.h"
 #include "cc/core/logger/src/logger.h"
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 #include "cc/pbs/interface/configuration_keys.h"
-#include "cc/pbs/pbs_server/src/error_codes.h"
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_v3.h"
 #include "cc/public/core/interface/execution_result.h"
 
@@ -44,21 +41,21 @@
 
 namespace {
 
-using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::EnvConfigProvider;
 using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::LoggerInterface;
-using ::google::scp::core::LogLevel;
-using ::google::scp::core::ServiceInterface;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::GlobalLogger;
 using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::core::logger::FromString;
-using ::google::scp::core::logger::Logger;
-using ::google::scp::core::logger::log_providers::StdoutLogProvider;
-using ::google::scp::core::logger::log_providers::SyslogLogProvider;
 using ::google::scp::pbs::CloudPlatformDependencyFactoryInterface;
 using ::google::scp::pbs::PBSInstanceV3;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::GlobalLogger;
+using ::privacy_sandbox::pbs_common::Logger;
+using ::privacy_sandbox::pbs_common::LoggerInterface;
+using ::privacy_sandbox::pbs_common::LogLevel;
+using ::privacy_sandbox::pbs_common::LogLevelFromString;
+using ::privacy_sandbox::pbs_common::ServiceInterface;
+using ::privacy_sandbox::pbs_common::StdoutLogProvider;
+using ::privacy_sandbox::pbs_common::SyslogLogProvider;
 
 std::shared_ptr<ConfigProviderInterface> config_provider;
 std::shared_ptr<ServiceInterface> pbs_instance;
@@ -157,7 +154,7 @@ int main(int argc, char** argv) {
           ->Get(google::scp::pbs::kEnabledLogLevels, enabled_log_levels)
           .Successful()) {
     for (auto enabled_log_level : enabled_log_levels) {
-      log_levels.emplace(FromString(enabled_log_level));
+      log_levels.emplace(LogLevelFromString(enabled_log_level));
     }
 
     GlobalLogger::SetGlobalLogLevels(log_levels);

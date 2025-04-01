@@ -18,7 +18,7 @@
 
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief An interface to allow a class/component to be initialized
  */
@@ -32,6 +32,6 @@ class InitializableInterface {
    * @return ExecutionResult the result of the execution with possible error
    * code.
    */
-  virtual ExecutionResult Init() noexcept = 0;
+  virtual google::scp::core::ExecutionResult Init() noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

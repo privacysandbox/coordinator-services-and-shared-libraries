@@ -14,20 +14,22 @@
 
 #include "async_executor.h"
 
-#include <chrono>
-#include <functional>
 #include <memory>
 #include <random>
 #include <thread>
 #include <vector>
 
-#include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 #include "typedef.h"
 
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using std::atomic;
 using std::is_same_v;
 using std::make_shared;
@@ -39,15 +41,13 @@ using std::uniform_int_distribution;
 using std::vector;
 using std::this_thread::get_id;
 
-namespace google::scp::core {
 ExecutionResult AsyncExecutor::Init() noexcept {
   if (thread_count_ <= 0 || thread_count_ > kMaxThreadCount) {
-    return FailureExecutionResult(
-        errors::SC_ASYNC_EXECUTOR_INVALID_THREAD_COUNT);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_THREAD_COUNT);
   }
 
   if (queue_cap_ <= 0 || queue_cap_ > kMaxQueueCap) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP);
   }
 
   for (size_t i = 0; i < thread_count_; ++i) {
@@ -74,12 +74,12 @@ ExecutionResult AsyncExecutor::Init() noexcept {
 
 ExecutionResult AsyncExecutor::Run() noexcept {
   if (running_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_ALREADY_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_ALREADY_RUNNING);
   }
 
   if (urgent_task_executor_pool_.size() < thread_count_ ||
       normal_task_executor_pool_.size() < thread_count_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_INITIALIZED);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_INITIALIZED);
   }
 
   for (size_t i = 0; i < thread_count_; ++i) {
@@ -111,7 +111,7 @@ ExecutionResult AsyncExecutor::Run() noexcept {
 
 ExecutionResult AsyncExecutor::Stop() noexcept {
   if (!running_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
   running_ = false;
@@ -184,8 +184,7 @@ ExecutionResultOr<shared_ptr<TaskExecutorType>> AsyncExecutor::PickTaskExecutor(
                           task_executor_pool.size();
       return task_executor_pool.at(picked_index);
     } else {
-      return FailureExecutionResult(
-          errors::SC_ASYNC_EXECUTOR_INVALID_TASK_POOL_TYPE);
+      return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_TASK_POOL_TYPE);
     }
   }
 
@@ -205,13 +204,11 @@ ExecutionResultOr<shared_ptr<TaskExecutorType>> AsyncExecutor::PickTaskExecutor(
           task_counter_not_urgent.fetch_add(1) % task_executor_pool.size();
       return task_executor_pool.at(picked_index);
     } else {
-      return FailureExecutionResult(
-          errors::SC_ASYNC_EXECUTOR_INVALID_TASK_POOL_TYPE);
+      return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_TASK_POOL_TYPE);
     }
   }
 
-  return FailureExecutionResult(
-      errors::SC_ASYNC_EXECUTOR_INVALID_LOAD_BALANCING_TYPE);
+  return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_LOAD_BALANCING_TYPE);
 }
 
 ExecutionResult AsyncExecutor::Schedule(const AsyncOperation& work,
@@ -223,7 +220,7 @@ ExecutionResult AsyncExecutor::Schedule(
     const AsyncOperation& work, AsyncPriority priority,
     AsyncExecutorAffinitySetting affinity) noexcept {
   if (!running_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
   if (priority == AsyncPriority::Urgent) {
@@ -244,8 +241,7 @@ ExecutionResult AsyncExecutor::Schedule(
     return task_executor->Schedule(work, priority);
   }
 
-  return FailureExecutionResult(
-      errors::SC_ASYNC_EXECUTOR_INVALID_PRIORITY_TYPE);
+  return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_PRIORITY_TYPE);
 }
 
 ExecutionResult AsyncExecutor::ScheduleFor(const AsyncOperation& work,
@@ -273,7 +269,7 @@ ExecutionResult AsyncExecutor::ScheduleFor(
     TaskCancellationLambda& cancellation_callback,
     AsyncExecutorAffinitySetting affinity) noexcept {
   if (!running_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
   ASSIGN_OR_RETURN(auto task_executor,
@@ -293,4 +289,4 @@ AsyncExecutor::SchedulingLatencyPerThreadForTesting() const {
   return result;
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

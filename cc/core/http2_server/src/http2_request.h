@@ -16,18 +16,15 @@
 
 #pragma once
 
-#include <atomic>
 #include <functional>
-#include <memory>
 #include <string>
-#include <thread>
 
 #include <nghttp2/asio_http2_server.h>
 
 #include "cc/core/common/uuid/src/uuid.h"
-#include "cc/core/interface/http_server_interface.h"
+#include "cc/core/interface/http_types.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief Wrapper object of a nghttp2::request object to interface with it.
@@ -36,16 +33,18 @@ class NgHttp2Request : public HttpRequest {
  public:
   explicit NgHttp2Request(
       const nghttp2::asio_http2::server::request& ng2_request)
-      : id(common::Uuid::GenerateUuid()), ng2_request_(ng2_request) {}
+      : id(google::scp::core::common::Uuid::GenerateUuid()),
+        ng2_request_(ng2_request) {}
 
-  using RequestBodyDataReceivedCallback = std::function<void(ExecutionResult)>;
+  using RequestBodyDataReceivedCallback =
+      std::function<void(google::scp::core::ExecutionResult)>;
 
   /**
    * @brief Unwraps the ngHttp2 request and update the current object.
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult UnwrapNgHttp2Request() noexcept;
+  google::scp::core::ExecutionResult UnwrapNgHttp2Request() noexcept;
 
   /// Path of the handler in the URI.
   /// Example: https://www.foo.com/handler/path, '/handler/path' is the
@@ -53,7 +52,7 @@ class NgHttp2Request : public HttpRequest {
   std::string handler_path;
 
   /// The auto-generated id of the request.
-  const common::Uuid id;
+  const google::scp::core::common::Uuid id;
 
   /**
    * @brief Set callback to be invoked when the request body is completely
@@ -71,21 +70,21 @@ class NgHttp2Request : public HttpRequest {
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult ReadUri() noexcept;
+  google::scp::core::ExecutionResult ReadUri() noexcept;
 
   /**
    * @brief Reads the http method from the ngHttp2Request object.
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult ReadMethod() noexcept;
+  google::scp::core::ExecutionResult ReadMethod() noexcept;
 
   /**
    * @brief Reads the http headers from the ngHttp2Request object.
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult ReadHeaders() noexcept;
+  google::scp::core::ExecutionResult ReadHeaders() noexcept;
 
   /**
    * @brief Is called when there is a body on the request.
@@ -104,4 +103,4 @@ class NgHttp2Request : public HttpRequest {
   const nghttp2::asio_http2::server::request& ng2_request_;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

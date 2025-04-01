@@ -16,8 +16,6 @@
 
 #include <gtest/gtest.h>
 
-#include "cc/core/interface/errors.h"
-#include "cc/core/interface/type_def.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;

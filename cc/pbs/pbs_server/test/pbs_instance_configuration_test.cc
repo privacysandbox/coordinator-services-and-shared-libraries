@@ -27,18 +27,20 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::ConfigProviderInterface;
-using google::scp::core::EnvConfigProvider;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::config_provider::mock::MockConfigProvider;
-using google::scp::core::errors::SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH;
-using google::scp::core::errors::
+namespace google::scp::pbs::test {
+
+namespace {
+using ::google::scp::core::EnvConfigProvider;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::google::scp::core::errors::SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH;
+using ::google::scp::core::errors::
     SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH;
-using google::scp::core::test::ResultIs;
+using ::google::scp::core::test::ResultIs;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 using std::make_shared;
 using std::shared_ptr;
-
-namespace google::scp::pbs::test {
 
 static void SetAllConfigs() {
   setenv(kAsyncExecutorQueueSize, "10000", 1);
@@ -59,7 +61,7 @@ static void SetAllConfigs() {
   setenv(kRemotePrivacyBudgetServiceAssumeRoleExternalId, "id", 1);
   setenv(kRemotePrivacyBudgetServiceHostAddress, "https://remote.com", 1);
   setenv(kAuthServiceEndpoint, "https://auth.com", 1);
-  setenv(core::kCloudServiceRegion, "region", 1);
+  setenv(kCloudServiceRegion, "region", 1);
   setenv(kTotalHttp2ServerThreadsCount, "10", 1);
   setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table", 1);
   setenv(kContainerType, "compute_engine", 1);
@@ -84,7 +86,7 @@ static void UnsetAllConfigs() {
   unsetenv(kRemotePrivacyBudgetServiceAssumeRoleExternalId);
   unsetenv(kRemotePrivacyBudgetServiceHostAddress);
   unsetenv(kAuthServiceEndpoint);
-  unsetenv(core::kCloudServiceRegion);
+  unsetenv(kCloudServiceRegion);
   unsetenv(kTotalHttp2ServerThreadsCount);
   unsetenv(kPBSPartitionLockTableNameConfigName);
   unsetenv(kHttp2ServerUseTls);
@@ -300,4 +302,5 @@ TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
   EXPECT_EQ(pbs_config->partition_lease_duration_in_seconds,
             std::chrono::seconds(kDefaultLeaseDurationInSeconds));
 }
+}  // namespace
 }  // namespace google::scp::pbs::test

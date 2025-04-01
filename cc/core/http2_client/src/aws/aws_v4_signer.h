@@ -21,7 +21,7 @@
 #include "cc/core/interface/http_types.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief A simple implementation of AWS SigV4 signer.
  *
@@ -42,7 +42,7 @@ class AwsV4Signer {
    * @return ExecutionResult SuccessExecutionResult if everything required are
    * valid. Otherwise failure.
    */
-  ExecutionResult SignRequest(
+  google::scp::core::ExecutionResult SignRequest(
       HttpRequest& http_request,
       std::vector<std::string>& headers_to_sign) noexcept;
 
@@ -55,8 +55,8 @@ class AwsV4Signer {
    * @return ExecutionResult SuccessExecutionResult if everything required are
    * valid. Otherwise failure.
    */
-  ExecutionResult SignRequest(HttpRequest& http_request,
-                              const std::string& headers_to_sign) noexcept;
+  google::scp::core::ExecutionResult SignRequest(
+      HttpRequest& http_request, const std::string& headers_to_sign) noexcept;
 
   /**
    * @brief Sign the request based on \a header_begin and \a header_end, which
@@ -69,9 +69,9 @@ class AwsV4Signer {
    * valid. Otherwise failure.
    */
   template <class HeadersIter>
-  ExecutionResult SignRequest(HttpRequest& http_request,
-                              HeadersIter header_begin,
-                              HeadersIter header_end) noexcept {
+  google::scp::core::ExecutionResult SignRequest(
+      HttpRequest& http_request, HeadersIter header_begin,
+      HeadersIter header_end) noexcept {
     std::vector<std::string> headers(header_begin, header_end);
     return SignRequest(http_request, headers);
   }
@@ -86,7 +86,7 @@ class AwsV4Signer {
    * @param signature The pre-calculated signature.
    * @return ExecutionResult
    */
-  ExecutionResult SignRequestWithSignature(
+  google::scp::core::ExecutionResult SignRequestWithSignature(
       HttpRequest& http_request, std::vector<std::string>& headers_to_sign,
       const std::string& x_amz_date, const std::string& signature) noexcept;
 
@@ -100,10 +100,9 @@ class AwsV4Signer {
    * @param x_amz_date[out] The date string, i.e. the x-amz-date header value.
    * @return ExecutionResult
    */
-  ExecutionResult GetSignatureParts(HttpRequest& http_request,
-                                    std::vector<std::string>& headers_to_sign,
-                                    std::string& signature,
-                                    std::string& x_amz_date) noexcept;
+  google::scp::core::ExecutionResult GetSignatureParts(
+      HttpRequest& http_request, std::vector<std::string>& headers_to_sign,
+      std::string& signature, std::string& x_amz_date) noexcept;
 
   /**
    * @brief Create Canonical Request from the http_request.
@@ -112,7 +111,7 @@ class AwsV4Signer {
    * @param[in] http_request The HTTP request to create canonical request from.
    * @return ExecutionResult
    */
-  ExecutionResult CreateCanonicalRequest(
+  google::scp::core::ExecutionResult CreateCanonicalRequest(
       std::string& canonical_request, HttpRequest& http_request,
       const std::vector<std::string>& headers_to_sign) noexcept;
 
@@ -164,4 +163,4 @@ class AwsV4Signer {
   /// lower case order.
   std::vector<std::string> headers_to_sign_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

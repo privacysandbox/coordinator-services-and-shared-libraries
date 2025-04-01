@@ -37,17 +37,9 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
-using google::scp::core::AsyncContext;
-using google::scp::core::AsyncExecutor;
-using google::scp::core::AsyncExecutorInterface;
-using google::scp::core::ConfigKey;
-using google::scp::core::ConfigProviderInterface;
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
-using google::scp::core::HttpRequest;
-using google::scp::core::HttpResponse;
-using google::scp::core::HttpServerInterface;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO;
@@ -63,8 +55,16 @@ using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED;
 using google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
-using google::scp::core::http2_server::mock::MockHttp2Server;
-using google::scp::core::test::ResultIs;
+using ::google::scp::core::test::ResultIs;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::ConfigKey;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::HttpRequest;
+using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::HttpServerInterface;
+using ::privacy_sandbox::pbs_common::MockHttp2Server;
 using std::list;
 using std::make_shared;
 using std::shared_ptr;

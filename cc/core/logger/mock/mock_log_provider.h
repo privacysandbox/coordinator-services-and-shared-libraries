@@ -17,24 +17,25 @@
 #pragma once
 
 #include <cstdarg>
-#include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
-#include "cc/core/common/uuid/src/uuid.h"
-#include "cc/core/logger/interface/log_provider_interface.h"
 #include "cc/core/logger/src/log_providers/console_log_provider.h"
-#include "cc/core/logger/src/log_utils.h"
 
-namespace google::scp::core::logger::mock {
+namespace privacy_sandbox::pbs_common {
 class MockLogProvider : public ConsoleLogProvider {
  public:
-  ExecutionResult Init() noexcept { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Init() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult Run() noexcept { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Run() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult Stop() noexcept { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Stop() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
   void Print(const std::string& output) noexcept override {
     messages_.push_back(output);
@@ -42,4 +43,4 @@ class MockLogProvider : public ConsoleLogProvider {
 
   std::vector<std::string> messages_;
 };
-}  // namespace google::scp::core::logger::mock
+}  // namespace privacy_sandbox::pbs_common

@@ -28,7 +28,7 @@
 #include "errors.h"
 #include "type_def.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief AsyncContext is used to control the lifecycle of any async operations.
  * The caller with set the request, response, and the callback on the object and
@@ -46,7 +46,8 @@ struct AsyncContext {
   AsyncContext()
       : AsyncContext(
             nullptr /* request */, [](AsyncContext<TRequest, TResponse>&) {},
-            common::kZeroUuid, common::kZeroUuid) {}
+            google::scp::core::common::kZeroUuid,
+            google::scp::core::common::kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -56,7 +57,8 @@ struct AsyncContext {
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
                const Callback& callback)
-      : AsyncContext(request, callback, common::kZeroUuid, common::kZeroUuid) {}
+      : AsyncContext(request, callback, google::scp::core::common::kZeroUuid,
+                     google::scp::core::common::kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -67,9 +69,10 @@ struct AsyncContext {
    * context.
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
-               const Callback& callback, const common::Uuid& parent_activity_id)
-      : AsyncContext(request, callback, parent_activity_id, common::kZeroUuid) {
-  }
+               const Callback& callback,
+               const google::scp::core::common::Uuid& parent_activity_id)
+      : AsyncContext(request, callback, parent_activity_id,
+                     google::scp::core::common::kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -96,18 +99,20 @@ struct AsyncContext {
    * @param correlation_id The correlation id of the current async context.
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
-               const Callback& callback, const common::Uuid& parent_activity_id,
-               const common::Uuid& correlation_id)
+               const Callback& callback,
+               const google::scp::core::common::Uuid& parent_activity_id,
+               const google::scp::core::common::Uuid& correlation_id)
       : parent_activity_id(parent_activity_id),
-        activity_id(common::Uuid::GenerateUuid()),
+        activity_id(google::scp::core::common::Uuid::GenerateUuid()),
         correlation_id(correlation_id),
         request(request),
         response(nullptr),
-        result(FailureExecutionResult(SC_UNKNOWN)),
+        result(google::scp::core::FailureExecutionResult(SC_UNKNOWN)),
         callback(callback),
         retry_count(0) {
     expiration_time =
-        (common::TimeProvider::GetSteadyTimestampInNanoseconds() +
+        (google::scp::core::common::TimeProvider::
+             GetSteadyTimestampInNanoseconds() +
          std::chrono::seconds(kAsyncContextExpirationDurationInSeconds))
             .count();
   }
@@ -145,7 +150,8 @@ struct AsyncContext {
                   "AsyncContext Finished. Mangled RequestType: '%s', "
                   "Mangled ResponseType: '%s', Message: '%s'",
                   typeid(TRequest).name(), typeid(TResponse).name(),
-                  errors::GetErrorMessage(result.status_code)));
+                  privacy_sandbox::pbs_common::GetErrorMessage(
+                      result.status_code)));
         }
       }
       callback(*this);
@@ -153,15 +159,15 @@ struct AsyncContext {
   }
 
   /// The parent id of the current context.
-  common::Uuid parent_activity_id;
+  google::scp::core::common::Uuid parent_activity_id;
 
   /// The id of the current context.
-  common::Uuid activity_id;
+  google::scp::core::common::Uuid activity_id;
 
   /// The unique id for the operation the current context is relate to.
   /// For example, in CMRTIO, it could be for a request, and in PBS, it could be
   /// for a transaction.
-  common::Uuid correlation_id;
+  google::scp::core::common::Uuid correlation_id;
 
   /// The input request for the operation.
   std::shared_ptr<TRequest> request;
@@ -170,7 +176,7 @@ struct AsyncContext {
   std::shared_ptr<TResponse> response;
 
   /// The execution result of the operation.
-  ExecutionResult result;
+  google::scp::core::ExecutionResult result;
 
   /// Callback function after the execution is done.
   Callback callback;
@@ -195,7 +201,8 @@ struct AsyncContext {
  */
 template <typename TRequest, typename TResponse>
 void FinishContext(
-    const ExecutionResult& result, AsyncContext<TRequest, TResponse>& context,
+    const google::scp::core::ExecutionResult& result,
+    AsyncContext<TRequest, TResponse>& context,
     const std::shared_ptr<AsyncExecutorInterface>& async_executor,
     AsyncPriority priority = AsyncPriority::High) {
   context.result = result;
@@ -217,10 +224,10 @@ void FinishContext(
  * @param context the async context to be completed.
  */
 template <typename TRequest, typename TResponse>
-void FinishContext(const ExecutionResult& result,
+void FinishContext(const google::scp::core::ExecutionResult& result,
                    AsyncContext<TRequest, TResponse>& context) {
   context.result = result;
   context.Finish();
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

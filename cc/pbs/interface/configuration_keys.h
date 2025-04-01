@@ -16,9 +16,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 namespace google::scp::pbs {
 static constexpr char kTotalHttp2ServerThreadsCount[] =
     "google_scp_core_http2server_threads_count";
@@ -150,4 +147,8 @@ static constexpr char kContainerType[] = "google_scp_pbs_container_type";
 // Migration phase for ValueProto column.
 static constexpr char kValueProtoMigrationPhase[] =
     "google_scp_pbs_value_proto_migration_phase";
+
+// Migration of PBS to use budget consumer
+static constexpr char kEnableBudgetConsumerMigration[] =
+    "google_scp_pbs_migration_enable_budget_consumer_migration";
 }  // namespace google::scp::pbs

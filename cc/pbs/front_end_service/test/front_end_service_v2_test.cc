@@ -42,10 +42,12 @@
 
 namespace google::scp::pbs {
 
-using ::google::scp::core::AsyncContext;
+namespace {
 using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::HttpRequest;
-using ::google::scp::core::HttpResponse;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::HttpRequest;
+using ::privacy_sandbox::pbs_common::HttpResponse;
+}  // namespace
 
 class FrontEndServiceV2Peer {
  public:
@@ -96,57 +98,65 @@ class FrontEndServiceV2Peer {
 
 namespace {
 
-using ::google::scp::core::AsyncContext;
-using ::google::scp::core::AsyncExecutorInterface;
-using ::google::scp::core::Byte;
-using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::HttpHandler;
-using ::google::scp::core::HttpHeaders;
-using ::google::scp::core::HttpMethod;
-using ::google::scp::core::HttpServerInterface;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::async_executor::mock::MockAsyncExecutor;
 using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT;
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
+using ::google::scp::core::errors::
+    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
+using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::Byte;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::GetErrorMessage;
+using ::privacy_sandbox::pbs_common::HttpHandler;
+using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::HttpMethod;
+using ::privacy_sandbox::pbs_common::HttpServerInterface;
+using ::privacy_sandbox::pbs_common::MockAsyncExecutor;
 using ::testing::_;
 using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::UnorderedElementsAreArray;
+using ::testing::Values;
 
-static constexpr absl::string_view kTransactionId =
+constexpr absl::string_view kTransactionId =
     "3E2A3D09-48ED-A355-D346-AD7DC6CB0909";
-static constexpr absl::string_view kTransactionSecret = "secret";
-static constexpr absl::string_view kReportingOrigin = "https://fake.com";
-static constexpr absl::string_view kClaimedIdentity = "https://origin.site.com";
-static constexpr absl::string_view kUserAgent = "aggregation-service/2.8.7";
-static constexpr absl::string_view kRequestBody = R"({
+constexpr absl::string_view kTransactionSecret = "secret";
+constexpr absl::string_view kReportingOrigin = "https://fake.com";
+constexpr absl::string_view kClaimedIdentity = "https://origin.site.com";
+constexpr absl::string_view kClaimedIdentityInvalid = "123";
+constexpr absl::string_view kUserAgent = "aggregation-service/2.8.7";
+constexpr size_t k20191212DaysFromEpoch = 18242;
+constexpr size_t k20191012DaysFromEpoch = 18181;
+constexpr absl::string_view kRequestBody = R"({
         "v": "1.0",
         "t": [
             {
                 "key": "test_key",
-                "token": 10,
+                "token": 1,
                 "reporting_time": "2019-10-12T07:20:50.52Z"
             },
             {
                 "key": "test_key_2",
-                "token": 23,
+                "token": 1,
                 "reporting_time": "2019-12-12T07:20:50.52Z"
             }
         ]
     })";
-static constexpr absl::string_view kBudgetExhaustedResponseBody =
+constexpr absl::string_view kBudgetExhaustedResponseBody =
     R"({"f":[0],"v":"1.0"})";
 
 class MockBudgetConsumptionHelper : public BudgetConsumptionHelperInterface {
  public:
   MOCK_METHOD(ExecutionResult, ConsumeBudgets,
-              ((google::scp::core::AsyncContext<ConsumeBudgetsRequest,
-                                                ConsumeBudgetsResponse>
+              ((AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
                     consume_budgets_context)),
               (noexcept, override));
   MOCK_METHOD(ExecutionResult, Init, (), (noexcept, override));
@@ -166,42 +176,76 @@ class MockHttpServerInterface : public NiceMock<HttpServerInterface> {
 };
 
 struct FrontEndServiceV2PeerOptions {
-  std::optional<std::shared_ptr<MockHttpServerInterface>> http_server =
-      std::nullopt;
-  std::optional<std::shared_ptr<AsyncExecutorInterface>> async_executor =
-      std::nullopt;
-  std::optional<std::shared_ptr<ConfigProviderInterface>> config_provider =
-      std::nullopt;
   BudgetConsumptionHelperInterface* budget_consumption_helper = nullptr;
-
-  // for testing otel metrics
-  std::shared_ptr<core::config_provider::mock::MockConfigProvider>
-      mock_config_provider;
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router;
+  core::InMemoryMetricRouter* metric_router = nullptr;
+  std::shared_ptr<MockConfigProvider> mock_config_provider = nullptr;
+  std::shared_ptr<MockHttpServerInterface> http2_server = nullptr;
 };
 
-FrontEndServiceV2Peer MakeFrontEndServiceV2Peer(
+std::unique_ptr<FrontEndServiceV2Peer> MakeFrontEndServiceV2Peer(
     FrontEndServiceV2PeerOptions& options) {
-  if (!options.config_provider.has_value()) {
-    std::shared_ptr<MockConfigProvider> mock_config_provider =
-        std::make_shared<MockConfigProvider>();
-    static constexpr char kClaimedIdentity[] = "123";
-    mock_config_provider->Set(kRemotePrivacyBudgetServiceClaimedIdentity,
-                              kClaimedIdentity);
-    options.config_provider = mock_config_provider;
+  if (options.mock_config_provider == nullptr) {
+    options.mock_config_provider = std::make_shared<MockConfigProvider>();
+    options.mock_config_provider->Set(
+        kRemotePrivacyBudgetServiceClaimedIdentity,
+        std::string(kClaimedIdentityInvalid));
   }
-  options.metric_router = std::make_unique<core::InMemoryMetricRouter>();
+
+  if (options.http2_server == nullptr) {
+    options.http2_server = std::make_shared<MockHttpServerInterface>();
+  }
 
   std::unique_ptr<FrontEndServiceV2> front_end_service_v2 =
       std::make_unique<FrontEndServiceV2>(
-          options.http_server.value_or(
-              std::make_shared<MockHttpServerInterface>()),
-          options.async_executor.value_or(
-              std::make_shared<MockAsyncExecutor>()),
-          options.config_provider.value(), options.budget_consumption_helper,
-          options.metric_router.get());
-  return FrontEndServiceV2Peer(std::move(front_end_service_v2));
+          options.http2_server, std::make_shared<MockAsyncExecutor>(),
+          options.mock_config_provider, options.budget_consumption_helper,
+          options.metric_router);
+  return std::make_unique<FrontEndServiceV2Peer>(
+      std::move(front_end_service_v2));
 }
+
+// Some tests does test the Init() functionality success or
+// failure based on different scenarios. Since the SetUp() performs Init(),
+// those tests cannout use this test fixture.
+
+class FrontEndServiceV2LifecycleTest
+    : public testing::Test,
+      public testing::WithParamInterface<
+          /*enable_budget_consumer_migration=*/bool> {
+ protected:
+  void SetUp() override {
+    mock_config_provider_ = std::make_shared<MockConfigProvider>();
+    mock_config_provider_->SetBool(kEnableBudgetConsumerMigration,
+                                   IsWithBudgetConsumer());
+    mock_config_provider_->Set(kRemotePrivacyBudgetServiceClaimedIdentity,
+                               std::string(kClaimedIdentityInvalid));
+    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
+    budget_consumption_helper_ =
+        std::make_unique<MockBudgetConsumptionHelper>();
+
+    FrontEndServiceV2PeerOptions options;
+    options.budget_consumption_helper = budget_consumption_helper_.get();
+    options.metric_router = metric_router_.get();
+    options.mock_config_provider = mock_config_provider_;
+    options.http2_server = http2_server_;
+    front_end_service_v2_peer_ = MakeFrontEndServiceV2Peer(options);
+
+    auto execution_result = front_end_service_v2_peer_->Init();
+    EXPECT_TRUE(execution_result)
+        << GetErrorMessage(execution_result.status_code);
+  }
+
+  bool IsWithBudgetConsumer() { return GetParam(); }
+
+  std::shared_ptr<MockHttpServerInterface> http2_server_;
+  std::shared_ptr<MockConfigProvider> mock_config_provider_;
+  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
+  std::unique_ptr<MockBudgetConsumptionHelper> budget_consumption_helper_;
+  std::unique_ptr<FrontEndServiceV2Peer> front_end_service_v2_peer_;
+};
+
+INSTANTIATE_TEST_SUITE_P(FrontEndServiceV2LifecycleTest,
+                         FrontEndServiceV2LifecycleTest, Values(true, false));
 
 void InsertCommonHeaders(
     absl::string_view transaction_id, absl::string_view secret,
@@ -227,11 +271,10 @@ std::shared_ptr<HttpResponse> CreateEmptyResponse() {
 
 TEST(FrontEndServiceV2Test, TestInitFailed) {
   FrontEndServiceV2PeerOptions options;
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-  auto execution_result = front_end_service_v2_peer.Init();
+  auto front_end_service_v2_peer = MakeFrontEndServiceV2Peer(options);
+  auto execution_result = front_end_service_v2_peer->Init();
   EXPECT_FALSE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
 }
 
 TEST(FrontEndServiceV2Test, TestInitSuccess) {
@@ -239,59 +282,45 @@ TEST(FrontEndServiceV2Test, TestInitSuccess) {
       std::make_unique<MockBudgetConsumptionHelper>();
   FrontEndServiceV2PeerOptions options;
   options.budget_consumption_helper = budget_consumption_helper.get();
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-  auto execution_result = front_end_service_v2_peer.Init();
+  auto front_end_service_v2_peer = MakeFrontEndServiceV2Peer(options);
+  auto execution_result = front_end_service_v2_peer->Init();
   EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
 }
 
-TEST(FrontEndServiceV2Test, TestBeginTransaction) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
-
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-
-  auto execution_result = front_end_service_v2_peer.Init();
-  EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
-
+TEST_P(FrontEndServiceV2LifecycleTest, TestBeginTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
                       kClaimedIdentity, kUserAgent, http_context);
   http_context.response = CreateEmptyResponse();
 
-  execution_result = front_end_service_v2_peer.BeginTransaction(http_context);
+  auto execution_result =
+      front_end_service_v2_peer_->BeginTransaction(http_context);
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  // test metric counters
+  const std::map<std::string, std::string> begin_transaction_label_kv = {
+      {"transaction_phase", "BEGIN"},
+      {"reporting_origin", "OPERATOR"},
+  };
 
   EXPECT_TRUE(execution_result.Successful())
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
 }
 
-TEST(FrontEndServiceV2Test, TestBeginTransactionWithEmptyHeader) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
-
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-
+TEST_P(FrontEndServiceV2LifecycleTest, TestBeginTransactionWithEmptyHeader) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.response = CreateEmptyResponse();
 
-  auto execution_result = front_end_service_v2_peer.Init();
-  EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
-
-  execution_result = front_end_service_v2_peer.BeginTransaction(http_context);
+  auto execution_result =
+      front_end_service_v2_peer_->BeginTransaction(http_context);
 
   EXPECT_FALSE(execution_result.Successful())
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
 }
 
 TEST(FrontEndServiceV2Test, TestBeginTransactionWithConstructorWithLessParams) {
@@ -321,29 +350,23 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithConstructorWithLessParams) {
 
   auto execution_result = front_end_service_v2_peer.Init();
   EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
   EXPECT_TRUE(
       front_end_service_v2_peer.BeginTransaction(http_context).Successful());
 }
 
 TEST(FrontEndServiceV2Test, TestBeginTransactionWithoutInit) {
   FrontEndServiceV2PeerOptions options;
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
+  auto front_end_service_v2_peer = MakeFrontEndServiceV2Peer(options);
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.response = CreateEmptyResponse();
   EXPECT_THAT(
-      front_end_service_v2_peer.BeginTransaction(http_context).status_code,
+      front_end_service_v2_peer->BeginTransaction(http_context).status_code,
       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
 }
 
-TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
-
+TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
@@ -362,26 +385,23 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
     has_captured = true;
   };
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-  ASSERT_TRUE(front_end_service_v2_peer.Init());
-
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
       captured_consume_budgets_context;
-  EXPECT_CALL(*budget_consumption_helper, ConsumeBudgets)
+  EXPECT_CALL(*budget_consumption_helper_, ConsumeBudgets)
       .WillOnce([&](AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
                         context) {
         context.result = SuccessExecutionResult();
+        context.response->budget_exhausted_indices.push_back(0);
         context.Finish();
         captured_consume_budgets_context = context;
         return SuccessExecutionResult();
       });
 
   auto execution_result =
-      front_end_service_v2_peer.PrepareTransaction(http_context);
+      front_end_service_v2_peer_->PrepareTransaction(http_context);
 
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
+      metric_router_->GetExportedData();
 
   const std::map<std::string, std::string> prepare_transaction_label_kv = {
       {"transaction_phase", "PREPARE"},
@@ -464,35 +484,49 @@ TEST(FrontEndServiceV2Test, TestPrepareTransaction) {
   }
 
   EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
   ASSERT_TRUE(has_captured);
   EXPECT_TRUE(captured_http_context.result)
-      << core::GetErrorMessage(captured_http_context.result.status_code);
+      << GetErrorMessage(captured_http_context.result.status_code);
 
-  ASSERT_EQ(captured_consume_budgets_context.request->budgets.size(), 2);
-  EXPECT_EQ(
-      *captured_consume_budgets_context.request->budgets[0].budget_key_name,
-      "https://fake.com/test_key");
-  EXPECT_EQ(captured_consume_budgets_context.request->budgets[0].token_count,
-            10);
-  EXPECT_EQ(captured_consume_budgets_context.request->budgets[0].time_bucket,
-            1570864850000000000);
+  if (IsWithBudgetConsumer()) {
+    ASSERT_EQ(captured_consume_budgets_context.request->budget_consumer
+                  ->GetKeyCount(),
+              2);
+    std::vector<std::string> expected_keys_list{
+        absl::StrCat("Budget Key: https://fake.com/test_key", " Day ",
+                     std::to_string(k20191012DaysFromEpoch), " Hour 7"),
+        absl::StrCat("Budget Key: https://fake.com/test_key_2", " Day ",
+                     std::to_string(k20191212DaysFromEpoch), " Hour 7")};
+    EXPECT_THAT(captured_consume_budgets_context.request->budget_consumer
+                    ->DebugKeyList(),
+                UnorderedElementsAreArray(expected_keys_list));
+    // With budget consumer, we serialize budget exhausted indices even for
+    // success
+    EXPECT_EQ(captured_http_context.response->body.ToString(),
+              kBudgetExhaustedResponseBody);
+  } else {
+    ASSERT_EQ(captured_consume_budgets_context.request->budgets.size(), 2);
+    EXPECT_EQ(
+        *captured_consume_budgets_context.request->budgets[0].budget_key_name,
+        "https://fake.com/test_key");
+    EXPECT_EQ(captured_consume_budgets_context.request->budgets[0].token_count,
+              1);
+    EXPECT_EQ(captured_consume_budgets_context.request->budgets[0].time_bucket,
+              1570864850000000000);
 
-  EXPECT_EQ(
-      *captured_consume_budgets_context.request->budgets[1].budget_key_name,
-      "https://fake.com/test_key_2");
-  EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].token_count,
-            23);
-  EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].time_bucket,
-            1576135250000000000);
+    EXPECT_EQ(
+        *captured_consume_budgets_context.request->budgets[1].budget_key_name,
+        "https://fake.com/test_key_2");
+    EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].token_count,
+              1);
+    EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].time_bucket,
+              1576135250000000000);
+    EXPECT_EQ(captured_http_context.response->body.Size(), 0);
+  }
 }
 
-TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
-
+TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransactionBudgetExhausted) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
@@ -510,13 +544,9 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
     has_captured = true;
   };
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-  ASSERT_TRUE(front_end_service_v2_peer.Init());
-
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
       captured_consume_budgets_context;
-  EXPECT_CALL(*budget_consumption_helper, ConsumeBudgets)
+  EXPECT_CALL(*budget_consumption_helper_, ConsumeBudgets)
       .WillOnce([&](AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
                         context) {
         context.result = FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED);
@@ -527,10 +557,10 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
       });
 
   auto execution_result =
-      front_end_service_v2_peer.PrepareTransaction(http_context);
+      front_end_service_v2_peer_->PrepareTransaction(http_context);
 
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
+      metric_router_->GetExportedData();
 
   const std::map<std::string, std::string> prepare_transaction_label_kv = {
       {"transaction_phase", "PREPARE"},
@@ -592,7 +622,7 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
   }
 
   EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
   ASSERT_TRUE(has_captured);
   EXPECT_FALSE(captured_http_context.result);
   EXPECT_EQ(captured_http_context.result.status_code,
@@ -601,12 +631,8 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetExhausted) {
             kBudgetExhaustedResponseBody);
 }
 
-TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
-
+TEST_P(FrontEndServiceV2LifecycleTest,
+       TestPrepareTransactionBudgetsNotConsumed) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
@@ -624,13 +650,9 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
     has_captured = true;
   };
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-  ASSERT_TRUE(front_end_service_v2_peer.Init());
-
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
       captured_consume_budgets_context;
-  EXPECT_CALL(*budget_consumption_helper, ConsumeBudgets)
+  EXPECT_CALL(*budget_consumption_helper_, ConsumeBudgets)
       .WillOnce([&](AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
                         context) {
         context.result =
@@ -642,10 +664,10 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
       });
 
   auto execution_result =
-      front_end_service_v2_peer.PrepareTransaction(http_context);
+      front_end_service_v2_peer_->PrepareTransaction(http_context);
 
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
+      metric_router_->GetExportedData();
 
   const std::map<std::string, std::string> prepare_transaction_label_kv = {
       {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
@@ -678,117 +700,296 @@ TEST(FrontEndServiceV2Test, TestPrepareTransactionBudgetsNotConsumed) {
           keys_per_transaction_metric_point_data.value());
 
   EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
   ASSERT_TRUE(has_captured);
   EXPECT_FALSE(captured_http_context.result);
   EXPECT_EQ(captured_http_context.result.status_code,
             errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
 }
 
-TEST(FrontEndServiceV2Test, TestCommitTransaction) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
+TEST_P(FrontEndServiceV2LifecycleTest,
+       TestPrepareTransactionBudgetConsumerInvalidJson) {
+  if (!IsWithBudgetConsumer()) {
+    return;
+  }
 
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
+  http_context.request->body.bytes = std::make_shared<std::vector<Byte>>();
+  http_context.request->body.capacity = 0;
+  http_context.request->body.length = 0;
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
                       kClaimedIdentity, kUserAgent, http_context);
   http_context.response = CreateEmptyResponse();
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
+  bool has_captured = false;
+  http_context.callback = [&](AsyncContext<HttpRequest, HttpResponse> context) {
+    has_captured = true;
+  };
 
-  auto execution_result = front_end_service_v2_peer.Init();
-  EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
+      captured_consume_budgets_context;
+  EXPECT_CALL(*budget_consumption_helper_, ConsumeBudgets).Times(0);
 
-  execution_result = front_end_service_v2_peer.CommitTransaction(http_context);
+  auto execution_result =
+      front_end_service_v2_peer_->PrepareTransaction(http_context);
+
+  EXPECT_EQ(execution_result.status_code,
+            SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+  EXPECT_FALSE(has_captured);
+}
+
+TEST_P(FrontEndServiceV2LifecycleTest,
+       TestPrepareTransactionBudgetConsumerWithEmptyData) {
+  if (!IsWithBudgetConsumer()) {
+    return;
+  }
+
+  constexpr absl::string_view empty_data_json = R"({ "v": "2.0", "data": [] })";
+
+  AsyncContext<HttpRequest, HttpResponse> http_context;
+  http_context.request = std::make_shared<HttpRequest>();
+  http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
+      empty_data_json.begin(), empty_data_json.end());
+  http_context.request->body.capacity = empty_data_json.size();
+  http_context.request->body.length = empty_data_json.size();
+  InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
+                      kClaimedIdentity, kUserAgent, http_context);
+  http_context.response = CreateEmptyResponse();
+
+  bool has_captured = false;
+  http_context.callback = [&](AsyncContext<HttpRequest, HttpResponse> context) {
+    has_captured = true;
+  };
+
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
+      captured_consume_budgets_context;
+  EXPECT_CALL(*budget_consumption_helper_, ConsumeBudgets).Times(0);
+
+  auto execution_result =
+      front_end_service_v2_peer_->PrepareTransaction(http_context);
 
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
+      metric_router_->GetExportedData();
 
-  EXPECT_TRUE(execution_result.Successful())
-      << core::GetErrorMessage(execution_result.status_code);
+  const std::map<std::string, std::string> prepare_transaction_label_kv = {
+      {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
+      {kMetricLabelKeyReportingOrigin, kMetricLabelValueOperator},
+  };
+
+  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
+      (opentelemetry::common::KeyValueIterableView<
+          std::map<std::string, std::string>>(prepare_transaction_label_kv)));
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+          "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+          "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
+          data);
+
+  EXPECT_TRUE(keys_per_transaction_metric_point_data.has_value());
+  EXPECT_FALSE(successful_budget_consumed_metric_point_data.has_value());
+
+  EXPECT_EQ(execution_result.status_code,
+            SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE);
+  EXPECT_FALSE(has_captured);
 }
 
-TEST(FrontEndServiceV2Test, TestNotifyTransaction) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
+TEST_P(FrontEndServiceV2LifecycleTest,
+       TestPrepareTransactionBudgetConsumerWithEmptyKey) {
+  if (!IsWithBudgetConsumer()) {
+    return;
+  }
+
+  constexpr absl::string_view empty_key_json = R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "https://fake.com",
+      "keys": []
+    }
+  ]
+})";
 
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
+  http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
+      empty_key_json.begin(), empty_key_json.end());
+  http_context.request->body.capacity = empty_key_json.size();
+  http_context.request->body.length = empty_key_json.size();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
                       kClaimedIdentity, kUserAgent, http_context);
   http_context.response = CreateEmptyResponse();
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
+  bool has_captured = false;
+  http_context.callback = [&](AsyncContext<HttpRequest, HttpResponse> context) {
+    has_captured = true;
+  };
 
-  auto execution_result = front_end_service_v2_peer.Init();
-  EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
+      captured_consume_budgets_context;
+  EXPECT_CALL(*budget_consumption_helper_, ConsumeBudgets).Times(0);
 
-  execution_result = front_end_service_v2_peer.NotifyTransaction(http_context);
+  auto execution_result =
+      front_end_service_v2_peer_->PrepareTransaction(http_context);
 
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
-      options.metric_router->GetExportedData();
+      metric_router_->GetExportedData();
 
-  EXPECT_TRUE(execution_result.Successful())
-      << core::GetErrorMessage(execution_result.status_code);
+  const std::map<std::string, std::string> prepare_transaction_label_kv = {
+      {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
+      {kMetricLabelKeyReportingOrigin, kMetricLabelValueOperator},
+  };
+
+  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
+      (opentelemetry::common::KeyValueIterableView<
+          std::map<std::string, std::string>>(prepare_transaction_label_kv)));
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+          "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+          "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
+          data);
+
+  EXPECT_TRUE(keys_per_transaction_metric_point_data.has_value());
+  EXPECT_FALSE(successful_budget_consumed_metric_point_data.has_value());
+
+  EXPECT_EQ(execution_result.status_code,
+            SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE);
+  EXPECT_FALSE(has_captured);
 }
 
-TEST(FrontEndServiceV2Test, TestAbortTransaction) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
+TEST_P(FrontEndServiceV2LifecycleTest,
+       TestPrepareTransactionBudgetConsumerUnsupportedBudgetType) {
+  if (!IsWithBudgetConsumer()) {
+    return;
+  }
 
+  constexpr absl::string_view json_body = R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "https://fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": "iamnotsupported"
+        }
+      ]
+    }
+  ]
+})";
+
+  AsyncContext<HttpRequest, HttpResponse> http_context;
+  http_context.request = std::make_shared<HttpRequest>();
+  http_context.request->body.bytes =
+      std::make_shared<std::vector<Byte>>(json_body.begin(), json_body.end());
+  http_context.request->body.capacity = json_body.size();
+  http_context.request->body.length = json_body.size();
+  InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
+                      kClaimedIdentity, kUserAgent, http_context);
+  http_context.response = CreateEmptyResponse();
+
+  bool has_captured = false;
+  http_context.callback = [&](AsyncContext<HttpRequest, HttpResponse> context) {
+    has_captured = true;
+  };
+
+  AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
+      captured_consume_budgets_context;
+  EXPECT_CALL(*budget_consumption_helper_, ConsumeBudgets).Times(0);
+
+  auto execution_result =
+      front_end_service_v2_peer_->PrepareTransaction(http_context);
+
+  std::vector<opentelemetry::sdk::metrics::ResourceMetrics> data =
+      metric_router_->GetExportedData();
+
+  const std::map<std::string, std::string> prepare_transaction_label_kv = {
+      {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
+      {kMetricLabelKeyReportingOrigin, kMetricLabelValueOperator},
+  };
+
+  const opentelemetry::sdk::common::OrderedAttributeMap dimensions(
+      (opentelemetry::common::KeyValueIterableView<
+          std::map<std::string, std::string>>(prepare_transaction_label_kv)));
+
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+          "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
+  std::optional<opentelemetry::sdk::metrics::PointType>
+      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+          "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
+          data);
+
+  EXPECT_FALSE(keys_per_transaction_metric_point_data.has_value());
+  EXPECT_FALSE(successful_budget_consumed_metric_point_data.has_value());
+
+  EXPECT_EQ(execution_result.status_code,
+            SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+  EXPECT_FALSE(has_captured);
+}
+
+TEST_P(FrontEndServiceV2LifecycleTest, TestCommitTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
                       kClaimedIdentity, kUserAgent, http_context);
   http_context.response = CreateEmptyResponse();
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-
-  auto execution_result = front_end_service_v2_peer.Init();
-  EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
-
-  execution_result = front_end_service_v2_peer.AbortTransaction(http_context);
+  auto execution_result =
+      front_end_service_v2_peer_->CommitTransaction(http_context);
 
   EXPECT_TRUE(execution_result.Successful())
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
 }
 
-TEST(FrontEndServiceV2Test, TestEndTransaction) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
-
+TEST_P(FrontEndServiceV2LifecycleTest, TestNotifyTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
                       kClaimedIdentity, kUserAgent, http_context);
   http_context.response = CreateEmptyResponse();
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-
-  auto execution_result = front_end_service_v2_peer.Init();
-  EXPECT_TRUE(execution_result)
-      << core::GetErrorMessage(execution_result.status_code);
-
-  execution_result = front_end_service_v2_peer.EndTransaction(http_context);
+  auto execution_result =
+      front_end_service_v2_peer_->NotifyTransaction(http_context);
 
   EXPECT_TRUE(execution_result.Successful())
-      << core::GetErrorMessage(execution_result.status_code);
+      << GetErrorMessage(execution_result.status_code);
+}
+
+TEST_P(FrontEndServiceV2LifecycleTest, TestAbortTransaction) {
+  AsyncContext<HttpRequest, HttpResponse> http_context;
+  http_context.request = std::make_shared<HttpRequest>();
+  InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
+                      kClaimedIdentity, kUserAgent, http_context);
+  http_context.response = CreateEmptyResponse();
+
+  auto execution_result =
+      front_end_service_v2_peer_->AbortTransaction(http_context);
+
+  EXPECT_TRUE(execution_result.Successful())
+      << GetErrorMessage(execution_result.status_code);
+}
+
+TEST_P(FrontEndServiceV2LifecycleTest, TestEndTransaction) {
+  AsyncContext<HttpRequest, HttpResponse> http_context;
+  http_context.request = std::make_shared<HttpRequest>();
+  InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
+                      kClaimedIdentity, kUserAgent, http_context);
+  http_context.response = CreateEmptyResponse();
+
+  auto execution_result =
+      front_end_service_v2_peer_->EndTransaction(http_context);
+
+  EXPECT_TRUE(execution_result.Successful())
+      << GetErrorMessage(execution_result.status_code);
 }
 
 TEST(FrontEndServiceV2Test, TestRegisterResourceHandlerIsCalled) {
@@ -805,30 +1006,21 @@ TEST(FrontEndServiceV2Test, TestRegisterResourceHandlerIsCalled) {
   EXPECT_CALL(*http2_server, RegisterResourceHandler(HttpMethod::GET, _, _))
       .Times(1)
       .WillRepeatedly(Return(SuccessExecutionResult()));
-  options.http_server = http2_server;
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-  EXPECT_TRUE(front_end_service_v2_peer.Init());
+  options.http2_server = http2_server;
+  auto front_end_service_v2_peer = MakeFrontEndServiceV2Peer(options);
+  EXPECT_TRUE(front_end_service_v2_peer->Init());
 }
 
-TEST(FrontEndServiceV2Test, TestGetTransactionStatusReturns404) {
-  auto budget_consumption_helper =
-      std::make_unique<MockBudgetConsumptionHelper>();
-  FrontEndServiceV2PeerOptions options;
-  options.budget_consumption_helper = budget_consumption_helper.get();
-
+TEST_P(FrontEndServiceV2LifecycleTest, TestGetTransactionStatusReturns404) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
                       kClaimedIdentity, kUserAgent, http_context);
   http_context.response = CreateEmptyResponse();
 
-  FrontEndServiceV2Peer front_end_service_v2_peer =
-      MakeFrontEndServiceV2Peer(options);
-  ASSERT_TRUE(front_end_service_v2_peer.Init());
-
   EXPECT_THAT(
-      front_end_service_v2_peer.GetTransactionStatus(http_context).status_code,
+      front_end_service_v2_peer_->GetTransactionStatus(http_context)
+          .status_code,
       SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT);
 }
 

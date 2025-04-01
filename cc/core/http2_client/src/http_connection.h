@@ -25,15 +25,12 @@
 #include "cc/core/common/concurrent_map/src/concurrent_map.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
-#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/http_types.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/metrics/meter.h"
-#include "opentelemetry/metrics/provider.h"
 
-#include "error_codes.h"
-
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief HttpConnection uses nghttp2 to establish http2 connections with the
  * remote hosts.
@@ -54,13 +51,14 @@ class HttpConnection : public ServiceInterface {
    */
   HttpConnection(const std::shared_ptr<AsyncExecutorInterface>& async_executor,
                  const std::string& host, const std::string& service,
-                 bool is_https, absl::Nullable<MetricRouter*> metric_router,
+                 bool is_https,
+                 absl::Nullable<google::scp::core::MetricRouter*> metric_router,
                  TimeDuration http2_read_timeout_in_sec =
                      kDefaultHttp2ReadTimeoutInSeconds);
 
-  ExecutionResult Init() noexcept override;
-  ExecutionResult Run() noexcept override;
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
   /**
    * @brief Executes the http request and processes the response.
@@ -68,7 +66,7 @@ class HttpConnection : public ServiceInterface {
    * @param http_context The context of the http operation.
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult Execute(
+  google::scp::core::ExecutionResult Execute(
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept;
 
   /**
@@ -106,7 +104,7 @@ class HttpConnection : public ServiceInterface {
    * @param http_context The http context of the operation.
    */
   void SendHttpRequest(
-      common::Uuid& request_id,
+      google::scp::core::common::Uuid& request_id,
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept;
 
   /**
@@ -119,7 +117,7 @@ class HttpConnection : public ServiceInterface {
    * @param error_code The error code of the stream closure operation.
    */
   void OnRequestResponseClosed(
-      common::Uuid& request_id,
+      google::scp::core::common::Uuid& request_id,
       AsyncContext<HttpRequest, HttpResponse>& http_context,
       uint32_t error_code,
       std::chrono::time_point<std::chrono::steady_clock>
@@ -170,8 +168,8 @@ class HttpConnection : public ServiceInterface {
    * @param http_status_code The http status code.
    * @return ExecutionResult The execution result.
    */
-  ExecutionResult ConvertHttpStatusCodeToExecutionResult(
-      const errors::HttpStatusCode http_status_code) noexcept;
+  google::scp::core::ExecutionResult ConvertHttpStatusCodeToExecutionResult(
+      const HttpStatusCode http_status_code) noexcept;
 
   /**
    * Increments the counter tracking the number of client connection failures.
@@ -280,8 +278,9 @@ class HttpConnection : public ServiceInterface {
 
   // Indicates if the connection is dropped.
   std::atomic<bool> is_dropped_;
-  common::ConcurrentMap<common::Uuid, AsyncContext<HttpRequest, HttpResponse>,
-                        common::UuidCompare>
+  google::scp::core::common::ConcurrentMap<
+      google::scp::core::common::Uuid, AsyncContext<HttpRequest, HttpResponse>,
+      google::scp::core::common::UuidCompare>
       pending_network_calls_;
 
  private:
@@ -289,9 +288,9 @@ class HttpConnection : public ServiceInterface {
    * Initializes the metrics.
    * @return ExecutionResult The execution result.
    */
-  ExecutionResult MetricInit() noexcept;
+  google::scp::core::ExecutionResult MetricInit() noexcept;
   // An instance of metric router which will provide APIs to create metrics.
-  MetricRouter* metric_router_;
+  google::scp::core::MetricRouter* metric_router_;
 
   // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
@@ -328,4 +327,4 @@ class HttpConnection : public ServiceInterface {
   // Time at creating the connection.
   std::chrono::time_point<std::chrono::steady_clock> connection_creation_time_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

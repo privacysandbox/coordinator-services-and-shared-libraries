@@ -37,11 +37,11 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-using google::scp::core::errors::
+using ::privacy_sandbox::pbs_common::
     SYSTEM_RESOURCE_INFO_PROVIDER_LINUX_COULD_NOT_FIND_MEMORY_INFO;
-using google::scp::core::errors::
+using ::privacy_sandbox::pbs_common::
     SYSTEM_RESOURCE_INFO_PROVIDER_LINUX_COULD_NOT_OPEN_MEMINFO_FILE;
-using google::scp::core::errors::
+using ::privacy_sandbox::pbs_common::
     SYSTEM_RESOURCE_INFO_PROVIDER_LINUX_COULD_NOT_PARSE_MEMINFO_LINE;
 
 static constexpr char kMemInfoFileName[] = "/proc/meminfo";

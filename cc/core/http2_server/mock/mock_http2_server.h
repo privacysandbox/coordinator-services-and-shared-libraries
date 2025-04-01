@@ -16,27 +16,32 @@
 
 #pragma once
 
-#include <memory>
 #include <string>
 
 #include "cc/core/interface/http_server_interface.h"
 
-namespace google::scp::core::http2_server::mock {
+namespace privacy_sandbox::pbs_common {
 
-class MockHttp2Server : public core::HttpServerInterface {
+class MockHttp2Server : public HttpServerInterface {
  public:
   MockHttp2Server() {}
 
-  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Init() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Run() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Stop() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult RegisterResourceHandler(
+  google::scp::core::ExecutionResult RegisterResourceHandler(
       HttpMethod http_method, std::string& resource_path,
       HttpHandler& handler) noexcept override {
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 };
-}  // namespace google::scp::core::http2_server::mock
+}  // namespace privacy_sandbox::pbs_common

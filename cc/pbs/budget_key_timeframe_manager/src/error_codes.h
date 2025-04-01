@@ -15,51 +15,52 @@
 #pragma once
 
 #include "cc/core/interface/errors.h"
-#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::errors {
 
 REGISTER_COMPONENT_CODE(SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0104)
 
-DEFINE_ERROR_CODE(SC_BUDGET_KEY_TIMEFRAME_MANAGER_ENTRY_IS_LOADING,
-                  SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0001,
-                  "The entry is being loaded.",
-                  HttpStatusCode::SERVICE_UNAVAILABLE)
+DEFINE_ERROR_CODE(
+    SC_BUDGET_KEY_TIMEFRAME_MANAGER_ENTRY_IS_LOADING,
+    SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0001, "The entry is being loaded.",
+    ::privacy_sandbox::pbs_common::HttpStatusCode::SERVICE_UNAVAILABLE)
 
 DEFINE_ERROR_CODE(SC_BUDGET_KEY_TIMEFRAME_MANAGER_INVALID_LOG,
                   SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0002,
-                  "The entry metadata is invalid.", HttpStatusCode::BAD_REQUEST)
+                  "The entry metadata is invalid.",
+                  ::privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
 DEFINE_ERROR_CODE(SC_BUDGET_KEY_TIMEFRAME_MANAGER_ENTRY_DOES_NOT_MATCH_LOG,
                   SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0003,
                   "The entry metadata does not match.",
-                  HttpStatusCode::BAD_REQUEST)
+                  ::privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
 DEFINE_ERROR_CODE(SC_BUDGET_KEY_TIMEFRAME_MANAGER_CANNOT_BE_UNLOADED,
                   SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0004,
                   "The budget key timeframe manager cannot be unloaded.",
-                  HttpStatusCode::BAD_REQUEST)
+                  ::privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
-DEFINE_ERROR_CODE(SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA,
-                  SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0005,
-                  "The budget key timeframe data is corrupted.",
-                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(
+    SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA,
+    SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0005,
+    "The budget key timeframe data is corrupted.",
+    ::privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(SC_BUDGET_KEY_TIMEFRAME_MANAGER_EMPTY_REQUEST,
                   SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0006,
                   "The budget key timeframe manager request is empty.",
-                  HttpStatusCode::BAD_REQUEST)
+                  ::privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
 DEFINE_ERROR_CODE(
     SC_BUDGET_KEY_TIMEFRAME_MANAGER_MULTIPLE_TIMEFRAME_GROUPS,
     SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0007,
     "The budget key timeframe manager request has more than one time group.",
-    HttpStatusCode::BAD_REQUEST)
+    ::privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
 DEFINE_ERROR_CODE(
     SC_BUDGET_KEY_TIMEFRAME_MANAGER_REPEATED_TIMEBUCKETS,
     SC_BUDGET_KEY_TIMEFRAME_MANAGER, 0x0008,
     "The budget key timeframe manager request does not have unique time "
     "buckets",
-    HttpStatusCode::BAD_REQUEST)
+    ::privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 }  // namespace google::scp::core::errors

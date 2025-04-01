@@ -16,9 +16,8 @@
 #pragma once
 
 #include "cc/core/interface/errors.h"
-#include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0006 for async executor.
 REGISTER_COMPONENT_CODE(SC_ASYNC_EXECUTOR, 0x0006)
@@ -61,4 +60,4 @@ DEFINE_ERROR_CODE(SC_ASYNC_EXECUTOR_INVALID_TASK_POOL_TYPE, SC_ASYNC_EXECUTOR,
 DEFINE_ERROR_CODE(SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY, SC_ASYNC_EXECUTOR,
                   0x000A, "Setting CPU affinity failed",
                   HttpStatusCode::BAD_REQUEST)
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

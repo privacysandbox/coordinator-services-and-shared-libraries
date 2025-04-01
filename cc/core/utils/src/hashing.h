@@ -29,14 +29,16 @@ namespace google::scp::core::utils {
  * @param buffer The buffer to calculate the hash.
  * @return ExecutionResultOr<string> The checksum value.
  */
-ExecutionResultOr<std::string> CalculateMd5Hash(const BytesBuffer& buffer);
+ExecutionResultOr<std::string> CalculateMd5Hash(
+    const privacy_sandbox::pbs_common::BytesBuffer& buffer);
 
 // Same as above but accepts a string.
 ExecutionResultOr<std::string> CalculateMd5Hash(const std::string& buffer);
 
 // DEPRECATED, please use the above options.
-ExecutionResult CalculateMd5Hash(const BytesBuffer& buffer,
-                                 std::string& checksum);
+ExecutionResult CalculateMd5Hash(
+    const privacy_sandbox::pbs_common::BytesBuffer& buffer,
+    std::string& checksum);
 
 // DEPRECATED, please use the above options.
 ExecutionResult CalculateMd5Hash(const std::string& buffer,

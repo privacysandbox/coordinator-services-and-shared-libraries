@@ -16,7 +16,7 @@
 
 #pragma once
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 // AWS/GCP cloud region name
 static constexpr char kCloudServiceRegion[] = "google_scp_core_cloud_region";
 // AWS cloud region name for cross cloud PBS (hence alternate in the name).
@@ -53,4 +53,4 @@ static constexpr char kTransactionManagerSkipDuplicateTransactionInRecovery[] =
 static constexpr char kSpannerEndpointOverride[] =
     "google_scp_core_spanner_endpoint_override";
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

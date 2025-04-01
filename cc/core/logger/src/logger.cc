@@ -20,14 +20,15 @@
 #include <memory>
 #include <sstream>
 #include <string_view>
-#include <utility>
 
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/logger_interface.h"
 #include "cc/core/logger/interface/log_provider_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
-using google::scp::core::common::Uuid;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::LogLevel;
 using std::string;
 using std::string_view;
 using std::stringstream;
@@ -36,7 +37,7 @@ using std::stringstream;
 static constexpr char kDefaultMachineName[] = "";
 static constexpr char kDefaultClusterName[] = "";
 
-namespace google::scp::core::logger {
+namespace privacy_sandbox::pbs_common {
 
 ExecutionResult Logger::Init() noexcept {
   return log_provider_->Init();
@@ -135,5 +136,4 @@ void Logger::Emergency(const string_view& component_name,
                      kDefaultClusterName, location, message, args);
   va_end(args);
 }
-
-}  // namespace google::scp::core::logger
+}  // namespace privacy_sandbox::pbs_common

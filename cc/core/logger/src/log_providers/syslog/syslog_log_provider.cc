@@ -32,13 +32,16 @@
 
 #include "error_codes.h"
 
-namespace google::scp::core::logger::log_providers {
+namespace privacy_sandbox::pbs_common {
 
 using ::absl::StrCat;
-using ::google::scp::core::common::ToString;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::common::Uuid;
-using ::google::scp::core::errors::SC_SYSLOG_CLOSE_CONNECTION_ERROR;
-using ::google::scp::core::errors::SC_SYSLOG_OPEN_CONNECTION_ERROR;
+using ::privacy_sandbox::pbs_common::LogLevel;
+using ::privacy_sandbox::pbs_common::SC_SYSLOG_CLOSE_CONNECTION_ERROR;
+using ::privacy_sandbox::pbs_common::SC_SYSLOG_OPEN_CONNECTION_ERROR;
 using ::std::cerr;
 using ::std::string;
 using ::std::string_view;
@@ -74,8 +77,7 @@ void SyslogLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
                             const string_view& cluster_name,
                             const string_view& location,
                             const string_view& message, va_list args) noexcept {
-  std::string severity =
-      absl::AsciiStrToUpper(google::scp::core::logger::ToString(level));
+  std::string severity = absl::AsciiStrToUpper(LogLevelToString(level));
 
   auto formatted_message = StrCat(
       severity, "|", cluster_name, "|", machine_name, "|", component_name, "|",
@@ -114,4 +116,4 @@ void SyslogLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
     cerr << "Exception thrown while writing to syslog";
   }
 }
-}  // namespace google::scp::core::logger::log_providers
+}  // namespace privacy_sandbox::pbs_common

@@ -16,16 +16,13 @@
 
 #pragma once
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "cc/core/common/uuid/src/uuid.h"
-#include "cc/core/interface/async_context.h"
 #include "cc/core/interface/service_interface.h"
 #include "cc/pbs/interface/type_def.h"
-#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
 
@@ -37,6 +34,12 @@ struct ConsumeBudgetMetadata {
   TokenCount token_count = 0;
   /// The time bucket to consume the token.
   TimeBucket time_bucket = 0;
+
+  std::string DebugString() const {
+    return absl::StrFormat(
+        "Budget Key: %s Reporting Time Bucket: %llu Token Count: %d",
+        *budget_key_name, time_bucket, token_count);
+  }
 };
 
 /// Represents consume budget transaction request object.
@@ -54,7 +57,7 @@ struct ConsumeBudgetTransactionRequest {
 struct ConsumeBudgetTransactionResponse {
   /// The last execution time stamp of any phases of a transaction. This will
   /// provide optimistic concurrency behavior for the transaction execution.
-  core::Timestamp last_execution_timestamp;
+  privacy_sandbox::pbs_common::Timestamp last_execution_timestamp;
 };
 
 /**
@@ -62,22 +65,10 @@ struct ConsumeBudgetTransactionResponse {
  * Front end layer is responsible to accept the traffic, validate the requests,
  * and then execute operations on behalf of the caller.
  */
-class FrontEndServiceInterface : public core::ServiceInterface {
+class FrontEndServiceInterface
+    : public privacy_sandbox::pbs_common::ServiceInterface {
  public:
   virtual ~FrontEndServiceInterface() = default;
-
-  /**
-   * @brief Validates, constructs, and executes a consume budget transaction
-   * request.
-   *
-   * @param consume_budget_transaction_context The consume budget transaction
-   * context of the operation.
-   * @return core::ExecutionResult The execution result of the operation.
-   */
-  virtual core::ExecutionResult ExecuteConsumeBudgetTransaction(
-      core::AsyncContext<ConsumeBudgetTransactionRequest,
-                         ConsumeBudgetTransactionResponse>&
-          consume_budget_transaction_context) noexcept = 0;
 };
 
 }  // namespace google::scp::pbs

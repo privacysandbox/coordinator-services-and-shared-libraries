@@ -30,7 +30,8 @@ class GrpcAuthConfig {
   GrpcAuthConfig(std::string service_account, std::string audience,
                  std::string cred_config = "");
 
-  explicit GrpcAuthConfig(ConfigProviderInterface& config_provider);
+  explicit GrpcAuthConfig(
+      privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider);
 
   // Common for both GCP and AWS
   absl::string_view service_account() const;

@@ -166,7 +166,6 @@ resource "google_compute_target_https_proxy" "public_key_service_cloud_run" {
 
   ssl_certificates = [
     google_compute_managed_ssl_certificate.get_public_key_loadbalancer[0].id,
-    google_compute_managed_ssl_certificate.public_key_cloud_run_loadbalancer[0].id
   ]
 }
 

@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "absl/base/nullability.h"
 #include "cc/core/interface/authorization_proxy_interface.h"
 #include "cc/core/interface/http_client_interface.h"
 #include "cc/core/interface/initializable_interface.h"
@@ -29,14 +28,15 @@ namespace google::scp::pbs {
 
 /// @brief Callbacks originating from the providers should have a higher
 /// priority than the regular tasks because they are time-sensitive.
-static constexpr core::AsyncPriority kDefaultAsyncPriorityForCallbackExecution =
-    core::AsyncPriority::High;
+static constexpr privacy_sandbox::pbs_common::AsyncPriority
+    kDefaultAsyncPriorityForCallbackExecution =
+        privacy_sandbox::pbs_common::AsyncPriority::High;
 
 /// @brief Blocking tasks are scheduled with a normal priority are can be
 /// starved by a higher/urgent priority tasks.
-static constexpr core::AsyncPriority
+static constexpr privacy_sandbox::pbs_common::AsyncPriority
     kDefaultAsyncPriorityForBlockingIOTaskExecution =
-        core::AsyncPriority::Normal;
+        privacy_sandbox::pbs_common::AsyncPriority::Normal;
 
 /**
  * @brief Platform specific factory interface to provide platform specific
@@ -44,7 +44,7 @@ static constexpr core::AsyncPriority
  *
  */
 class CloudPlatformDependencyFactoryInterface
-    : public core::InitializableInterface {
+    : public privacy_sandbox::pbs_common::InitializableInterface {
  public:
   virtual ~CloudPlatformDependencyFactoryInterface() = default;
 
@@ -56,23 +56,29 @@ class CloudPlatformDependencyFactoryInterface
    * @param http_client
    * @return std::unique_ptr<core::AuthorizationProxyInterface>
    */
-  virtual std::unique_ptr<core::AuthorizationProxyInterface>
+  virtual std::unique_ptr<
+      privacy_sandbox::pbs_common::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept = 0;
+      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+          async_executor,
+      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+          http_client) noexcept = 0;
 
   // Constructs an AWS Client to talk to the authentication endpoint. This is
   // only used on GCP to authenticate requests that come from AWS PBS to GCP PBS
   // via DNS.
-  virtual std::unique_ptr<core::AuthorizationProxyInterface>
+  virtual std::unique_ptr<
+      privacy_sandbox::pbs_common::AuthorizationProxyInterface>
   ConstructAwsAuthorizationProxyClient(
-      std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-      std::shared_ptr<core::HttpClientInterface> http_client) noexcept = 0;
+      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+          async_executor,
+      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+          http_client) noexcept = 0;
 
   virtual std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
-      google::scp::core::AsyncExecutorInterface* async_executor,
-      google::scp::core::AsyncExecutorInterface*
+      privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor,
+      privacy_sandbox::pbs_common::AsyncExecutorInterface*
           io_async_executor) noexcept = 0;
 
   /**

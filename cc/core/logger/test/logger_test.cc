@@ -12,31 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// #include "cc/core/logger/src/logger.h"
-
-#include "cc/core/logger/src/logger.h"
-
 #include <gtest/gtest.h>
 
-#include <memory>
 #include <string_view>
 #include <vector>
 
 #include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/interface/logger_interface.h"
 #include "cc/core/logger/mock/mock_logger.h"
 #include "cc/core/logger/src/log_utils.h"
 #include "cc/core/test/scp_test_base.h"
 
+namespace privacy_sandbox::pbs_common {
+
 using google::scp::core::common::ToString;
 using google::scp::core::common::Uuid;
-using google::scp::core::logger::FromString;
-using google::scp::core::logger::ToString;
-using google::scp::core::logger::mock::MockLogger;
+using ::privacy_sandbox::pbs_common::LogLevel;
+using ::privacy_sandbox::pbs_common::MockLogger;
 using std::string;
 using std::vector;
 
-namespace google::scp::core::test {
-class LoggerTests : public ScpTestBase {
+class LoggerTests : public google::scp::core::test::ScpTestBase {
  protected:
   void SetUp() override {
     uuid = Uuid::GenerateUuid();
@@ -160,7 +156,8 @@ TEST_F(LoggerTests, LogLevelToAndFromString) {
                                  LogLevel::kNone,  LogLevel::kWarning};
 
   for (auto log_level : log_levels) {
-    EXPECT_EQ(FromString(ToString(log_level)), log_level);
+    EXPECT_EQ(LogLevelFromString(LogLevelToString(log_level)), log_level);
   }
 }
-};  // namespace google::scp::core::test
+
+}  // namespace privacy_sandbox::pbs_common

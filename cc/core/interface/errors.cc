@@ -16,9 +16,7 @@
 
 #include "errors.h"
 
-#include "cc/public/core/interface/execution_result.h"
-
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 std::map<uint64_t, std::map<uint64_t, SCPError>>& GetGlobalErrorCodes() {
   /// Defines global_error_codes to store all error codes.
   static std::map<uint64_t, std::map<uint64_t, SCPError>> global_error_codes;
@@ -117,4 +115,4 @@ std::string HttpStatusCodeToString(HttpStatusCode status) {
       return "Unknown";
   }
 }
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

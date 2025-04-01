@@ -17,9 +17,8 @@
 #pragma once
 
 #include "cc/core/interface/errors.h"
-#include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0024 for SysLogProvider.
 REGISTER_COMPONENT_CODE(SC_SYSLOG_PROVIDER, 0x0024)
@@ -36,4 +35,4 @@ DEFINE_ERROR_CODE(SC_SYSLOG_CLOSE_CONNECTION_ERROR, SC_SYSLOG_PROVIDER, 0x0002,
                   "Error closing connection to syslog",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

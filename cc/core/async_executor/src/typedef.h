@@ -17,8 +17,9 @@
 #pragma once
 
 #include <chrono>
+#include <climits>
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 // TODO: Make the following configurable.
 // The maximum thread count could be set.
 static constexpr size_t kMaxThreadCount = 10000;
@@ -30,4 +31,4 @@ static const size_t kSleepDurationMs = 10;
 static constexpr std::chrono::nanoseconds kInfiniteWaitDurationNs =
     std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::hours(87600));  // 10 years
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

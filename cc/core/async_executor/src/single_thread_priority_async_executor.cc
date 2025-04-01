@@ -28,7 +28,13 @@
 #include "error_codes.h"
 #include "typedef.h"
 
-using google::scp::core::common::TimeProvider;
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::common::TimeProvider;
 using std::function;
 using std::make_shared;
 using std::make_unique;
@@ -41,10 +47,9 @@ using std::vector;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
-namespace google::scp::core {
 ExecutionResult SingleThreadPriorityAsyncExecutor::Init() noexcept {
   if (queue_cap_ <= 0 || queue_cap_ > kMaxQueueCap) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP);
   }
 
   queue_ = make_shared<
@@ -55,11 +60,11 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::Init() noexcept {
 
 ExecutionResult SingleThreadPriorityAsyncExecutor::Run() noexcept {
   if (is_running_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_ALREADY_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_ALREADY_RUNNING);
   }
 
   if (!queue_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_INITIALIZED);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_INITIALIZED);
   }
 
   is_running_ = true;
@@ -133,7 +138,7 @@ void SingleThreadPriorityAsyncExecutor::StartWorker() noexcept {
 
 ExecutionResult SingleThreadPriorityAsyncExecutor::Stop() noexcept {
   if (!is_running_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
   unique_lock<mutex> thread_lock(mutex_);
@@ -169,13 +174,13 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::ScheduleFor(
     const AsyncOperation& work, Timestamp timestamp,
     function<bool()>& cancellation_callback) noexcept {
   if (!is_running_) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
   unique_lock<mutex> thread_lock(mutex_);
 
   if (queue_->size() >= queue_cap_) {
-    return RetryExecutionResult(errors::SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP);
+    return RetryExecutionResult(SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP);
   }
 
   auto task = make_shared<AsyncTask>(work, timestamp);
@@ -194,9 +199,9 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::ScheduleFor(
 ExecutionResultOr<thread::id> SingleThreadPriorityAsyncExecutor::GetThreadId()
     const {
   if (!is_running_.load()) {
-    return FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING);
+    return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
   return working_thread_id_;
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

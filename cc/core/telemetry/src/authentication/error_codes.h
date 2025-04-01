@@ -23,6 +23,6 @@ REGISTER_COMPONENT_CODE(SC_PBS_TELEMETRY_AUTHENTICATION, 0x0235)
 DEFINE_ERROR_CODE(
     SC_TELEMETRY_AUTHENTICATION_ID_TOKEN_FETCH_FAILED,
     SC_PBS_TELEMETRY_AUTHENTICATION, 0x0001, "Id token fetch failed",
-    errors::HttpStatusCode::INTERNAL_SERVER_ERROR)
+    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 }  // namespace google::scp::core

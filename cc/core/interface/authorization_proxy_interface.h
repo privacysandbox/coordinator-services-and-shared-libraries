@@ -20,10 +20,9 @@
 #include <string>
 
 #include "async_context.h"
-#include "http_types.h"
 #include "service_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 typedef std::string AuthorizationToken;
 typedef std::string AuthorizedDomain;
 typedef std::string ClaimedIdentity;
@@ -99,8 +98,8 @@ class AuthorizationProxyInterface : public ServiceInterface {
    *
    * @return ExecutionResult
    */
-  virtual ExecutionResult Authorize(
+  virtual google::scp::core::ExecutionResult Authorize(
       AsyncContext<AuthorizationProxyRequest,
                    AuthorizationProxyResponse>&) noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

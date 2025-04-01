@@ -18,7 +18,8 @@
 
 #include <string>
 
-#include "cc/core/interface/http_client_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/http_types.h"
 #include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::utils {
@@ -30,7 +31,7 @@ namespace google::scp::core::utils {
  * @return ExecutionResultOr<std::string>
  */
 ExecutionResultOr<std::string> GetEscapedUriWithQuery(
-    const HttpRequest& request);
+    const privacy_sandbox::pbs_common::HttpRequest& request);
 
 /**
  * Extracts the claimed identity from the HTTP
@@ -45,7 +46,7 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
  * it doesn't throw exceptions.
  */
 ExecutionResultOr<std::string> ExtractRequestClaimedIdentity(
-    const core::HttpHeaders& request_headers) noexcept;
+    const privacy_sandbox::pbs_common::HttpHeaders& request_headers) noexcept;
 
 /**
  * Retrieves the claimed identity from the HTTP request headers, if available.
@@ -70,7 +71,8 @@ ExecutionResultOr<std::string> ExtractRequestClaimedIdentity(
  */
 template <typename RequestType, typename ResponseType>
 std::string GetClaimedIdentityOrUnknownValue(
-    const AsyncContext<RequestType, ResponseType>& http_context) {
+    const privacy_sandbox::pbs_common::AsyncContext<
+        RequestType, ResponseType>& http_context) {
   if (http_context.request && http_context.request->headers) {
     ExecutionResultOr<std::string> claimed_identity_extraction_result =
         utils::ExtractRequestClaimedIdentity(*http_context.request->headers);
@@ -81,7 +83,7 @@ std::string GetClaimedIdentityOrUnknownValue(
   }
 
   // Return the "unknown" value if headers are missing or extraction fails.
-  return std::string(kUnknownValue);
+  return std::string(privacy_sandbox::pbs_common::kUnknownValue);
 }
 
 /**
@@ -96,7 +98,7 @@ std::string GetClaimedIdentityOrUnknownValue(
  * it doesn't throw exceptions.
  */
 ExecutionResultOr<std::string> ExtractUserAgent(
-    const HttpHeaders& request_headers) noexcept;
+    const privacy_sandbox::pbs_common::HttpHeaders& request_headers) noexcept;
 
 /**
  * Extracts the client version from the User-Agent header in the
@@ -123,7 +125,8 @@ ExecutionResultOr<std::string> ExtractUserAgent(
  */
 template <typename RequestType, typename ResponseType>
 std::string GetUserAgentOrUnknownValue(
-    const AsyncContext<RequestType, ResponseType>& http_context) {
+    const privacy_sandbox::pbs_common::AsyncContext<
+        RequestType, ResponseType>& http_context) {
   if (http_context.request && http_context.request->headers) {
     ExecutionResultOr<std::string> trusted_client_version_extraction_result =
         utils::ExtractUserAgent(*http_context.request->headers);
@@ -135,9 +138,10 @@ std::string GetUserAgentOrUnknownValue(
 
   // Return the default "unknown" value if extraction fails or headers are
   // missing.
-  return std::string(kUnknownValue);
+  return std::string(privacy_sandbox::pbs_common::kUnknownValue);
 }
 
 // Function to convert HttpMethod enum to a string representation
-std::string HttpMethodToString(HttpMethod method);
+std::string HttpMethodToString(
+    privacy_sandbox::pbs_common::HttpMethod method);
 }  // namespace google::scp::core::utils

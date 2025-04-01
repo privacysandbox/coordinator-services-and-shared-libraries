@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2022 google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 #include "service_interface.h"
 #include "type_def.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /// Defines operation type.
 #if defined(PBS_ENABLE_BENCHMARKING)
 class AsyncOperation {
@@ -119,14 +119,14 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @param priority the priority of the task.
    * @return ExecutionResult result of the execution with possible error code.
    */
-  virtual ExecutionResult Schedule(const AsyncOperation& work,
-                                   AsyncPriority priority) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Schedule(
+      const AsyncOperation& work, AsyncPriority priority) noexcept = 0;
 
   /**
    * @brief Same as above but with the given affinity setting.
    * @param affinity the affinity with which to schedule the work.
    */
-  virtual ExecutionResult Schedule(
+  virtual google::scp::core::ExecutionResult Schedule(
       const AsyncOperation& work, AsyncPriority priority,
       AsyncExecutorAffinitySetting affinity) noexcept = 0;
 
@@ -139,14 +139,14 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @param timestamp the timestamp to the task to be executed.
    * @return ExecutionResult result of the execution with possible error code.
    */
-  virtual ExecutionResult ScheduleFor(const AsyncOperation& work,
-                                      Timestamp timestamp) noexcept = 0;
+  virtual google::scp::core::ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp) noexcept = 0;
 
   /**
    * @brief Same as above but with the given affinity setting.
    * @param affinity the affinity with which to schedule the work.
    */
-  virtual ExecutionResult ScheduleFor(
+  virtual google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       AsyncExecutorAffinitySetting affinity) noexcept = 0;
 
@@ -160,7 +160,7 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @param cancellation_callback the cancellation callback to cancel the work.
    * @return ExecutionResult result of the execution with possible error code.
    */
-  virtual ExecutionResult ScheduleFor(
+  virtual google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback) noexcept = 0;
 
@@ -168,9 +168,9 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @brief Same as above but with the given affinity setting.
    * @param affinity the affinity with which to schedule the work.
    */
-  virtual ExecutionResult ScheduleFor(
+  virtual google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback,
       AsyncExecutorAffinitySetting affinity) noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -26,7 +26,10 @@
 
 #include "http2_utils.h"
 
-using google::scp::core::http2_server::Http2Utils;
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using std::bind;
 using std::copy;
 using std::make_shared;
@@ -36,8 +39,6 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 static constexpr size_t kMaxRequestBodySize = 1 * 1024 * 1024 * 1024;  // 100MB
-
-namespace google::scp::core {
 
 ExecutionResult NgHttp2Request::ReadUri() noexcept {
   handler_path = ng2_request_.uri().path;
@@ -56,7 +57,7 @@ ExecutionResult NgHttp2Request::ReadMethod() noexcept {
   }
 
   method = HttpMethod::UNKNOWN;
-  return FailureExecutionResult(errors::SC_HTTP2_SERVER_INVALID_METHOD);
+  return FailureExecutionResult(SC_HTTP2_SERVER_INVALID_METHOD);
 }
 
 ExecutionResult NgHttp2Request::ReadHeaders() noexcept {
@@ -74,7 +75,7 @@ void NgHttp2Request::OnRequestBodyDataChunkReceived(
     auto execution_result = SuccessExecutionResult();
     if (body.length < body.capacity) {
       execution_result =
-          FailureExecutionResult(errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY);
+          FailureExecutionResult(SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY);
     }
     callback(execution_result);
     return;
@@ -82,7 +83,7 @@ void NgHttp2Request::OnRequestBodyDataChunkReceived(
   // Check if we are out of capacity. Avoiding overflow here.
   if (length > body.capacity || body.length > body.capacity - length) {
     auto execution_result =
-        FailureExecutionResult(errors::SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY);
+        FailureExecutionResult(SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY);
     callback(execution_result);
     return;
   }
@@ -115,8 +116,7 @@ ExecutionResult NgHttp2Request::UnwrapNgHttp2Request() noexcept {
     }
 
     if (content_length > kMaxRequestBodySize) {
-      return FailureExecutionResult(
-          core::errors::SC_HTTP2_SERVER_INVALID_HEADER);
+      return FailureExecutionResult(SC_HTTP2_SERVER_INVALID_HEADER);
     }
   }
   body.bytes = make_shared<vector<Byte>>(content_length);
@@ -131,4 +131,4 @@ void NgHttp2Request::SetOnRequestBodyDataReceivedCallback(
                             this, _1, _2, callback));
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

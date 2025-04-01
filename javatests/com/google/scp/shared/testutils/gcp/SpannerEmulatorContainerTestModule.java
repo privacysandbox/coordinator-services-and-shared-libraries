@@ -56,7 +56,7 @@ public class SpannerEmulatorContainerTestModule extends AbstractModule {
   @Singleton
   public SpannerEmulatorContainer getSpannerContainer() {
     return new SpannerEmulatorContainer(
-        DockerImageName.parse("gcr.io/cloud-spanner-emulator/emulator:1.4.0"));
+        DockerImageName.parse("gcr.io/cloud-spanner-emulator/emulator:1.5.29"));
   }
 
   @Provides

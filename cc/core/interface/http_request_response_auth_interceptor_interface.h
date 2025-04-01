@@ -24,7 +24,7 @@
 #include "http_types.h"
 #include "service_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Helper class to build http headers and parse http response body
  */
@@ -38,16 +38,16 @@ class HttpRequestResponseAuthInterceptorInterface {
    *
    * @return ExecutionResult
    */
-  virtual ExecutionResult PrepareRequest(const AuthorizationMetadata&,
-                                         HttpRequest&) = 0;
+  virtual google::scp::core::ExecutionResult PrepareRequest(
+      const AuthorizationMetadata&, HttpRequest&) = 0;
 
   /**
    * @brief Parse response to obtain authorization related data
    *
    * @return ExecutionResultOr<AuthorizedMetadata>
    */
-  virtual ExecutionResultOr<AuthorizedMetadata>
+  virtual google::scp::core::ExecutionResultOr<AuthorizedMetadata>
   ObtainAuthorizedMetadataFromResponse(const AuthorizationMetadata&,
                                        const HttpResponse&) = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

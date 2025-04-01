@@ -21,10 +21,8 @@
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/authorization_proxy/src/pass_thru_authorization_proxy.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
-#include "cc/core/config_provider/src/config_provider.h"
 #include "cc/core/http2_client/src/http2_client.h"
 #include "cc/core/http2_server/src/http2_server.h"
-#include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "cc/pbs/front_end_service/src/front_end_service_v2.h"
 #include "cc/pbs/health_service/src/health_service.h"
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
@@ -34,22 +32,24 @@
 #include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::pbs {
-
-using ::google::scp::core::AsyncExecutor;
-using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::Http2Server;
-using ::google::scp::core::HttpClient;
 using ::google::scp::core::PassThruAuthorizationProxy;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::common::kZeroUuid;
 using ::google::scp::core::errors::SC_PBS_SERVICE_INITIALIZATION_ERROR;
 using ::google::scp::pbs::FrontEndServiceV2;
 using ::google::scp::pbs::HealthService;
+using ::privacy_sandbox::pbs_common::AsyncExecutor;
+using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::Http2Server;
+using ::privacy_sandbox::pbs_common::Http2ServerOptions;
+using ::privacy_sandbox::pbs_common::HttpClient;
+using ::privacy_sandbox::pbs_common::HttpClientOptions;
 
 PBSInstanceV3::PBSInstanceV3(
-    std::shared_ptr<core::ConfigProviderInterface> config_provider,
+    std::shared_ptr<ConfigProviderInterface> config_provider,
     std::unique_ptr<CloudPlatformDependencyFactoryInterface>
         cloud_platform_dependency_factory)
     : config_provider_(std::move(config_provider)),
@@ -96,7 +96,7 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
       pbs_instance_config_.io_async_executor_thread_pool_size,
       pbs_instance_config_.io_async_executor_queue_size);
   http2_client_ = std::make_shared<HttpClient>(
-      async_executor_, core::HttpClientOptions(), metric_router_.get());
+      async_executor_, HttpClientOptions(), metric_router_.get());
 
   authorization_proxy_ =
       cloud_platform_dependency_factory_->ConstructAuthorizationProxyClient(
@@ -105,12 +105,12 @@ ExecutionResult PBSInstanceV3::CreateComponents() noexcept {
   pass_thru_authorization_proxy_ =
       std::make_shared<PassThruAuthorizationProxy>();
 
-  core::Http2ServerOptions http2_server_options(
+  Http2ServerOptions http2_server_options(
       pbs_instance_config_.http2_server_use_tls,
       pbs_instance_config_.http2_server_private_key_file_path,
       pbs_instance_config_.http2_server_certificate_file_path);
 
-  std::shared_ptr<core::AuthorizationProxyInterface> aws_authorization_proxy =
+  std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy =
       cloud_platform_dependency_factory_->ConstructAwsAuthorizationProxyClient(
           async_executor_, http2_client_);
   http_server_ = std::make_shared<Http2Server>(

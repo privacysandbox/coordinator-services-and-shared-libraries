@@ -18,12 +18,12 @@
 
 #include <memory>
 #include <string>
-#include <utility>
 
 #include "absl/strings/str_format.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/type_def.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -83,7 +83,8 @@ struct PBSInstanceConfig {
  */
 [[maybe_unused]] static core::ExecutionResultOr<PBSInstanceConfig>
 GetPBSInstanceConfigFromConfigProvider(
-    std::shared_ptr<core::ConfigProviderInterface> config_provider) noexcept {
+    std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+        config_provider) noexcept {
   PBSInstanceConfig pbs_instance_config;
   auto execution_result = config_provider->Get(
       kAsyncExecutorQueueSize, pbs_instance_config.async_executor_queue_size);
@@ -240,8 +241,9 @@ GetPBSInstanceConfigFromConfigProvider(
   pbs_instance_config.partition_lease_table_name =
       std::make_shared<std::string>(partition_lease_table_name);
 
-  core::TimeDuration configured_partition_lease_duration_in_seconds =
-      pbs_instance_config.partition_lease_duration_in_seconds.count();
+  privacy_sandbox::pbs_common::TimeDuration
+      configured_partition_lease_duration_in_seconds =
+          pbs_instance_config.partition_lease_duration_in_seconds.count();
   execution_result =
       config_provider->Get(pbs::kPBSPartitionLeaseDurationInSeconds,
                            configured_partition_lease_duration_in_seconds);

@@ -20,9 +20,8 @@
 #include <string>
 
 #include "service_interface.h"
-#include "type_def.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /// Configuration key for value retrieval.
 typedef std::string ConfigKey;
@@ -42,8 +41,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key,
-                              std::string& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(const ConfigKey& key,
+                                                 std::string& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with int32_t output type. If any error
@@ -52,7 +51,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key, int32_t& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(const ConfigKey& key,
+                                                 int32_t& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with size_t output type. If any error
@@ -61,7 +61,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key, size_t& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(const ConfigKey& key,
+                                                 size_t& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with bool output type. If any error
@@ -70,7 +71,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key, bool& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(const ConfigKey& key,
+                                                 bool& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with list of string output type. If any
@@ -79,8 +81,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key,
-                              std::list<std::string>& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(
+      const ConfigKey& key, std::list<std::string>& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with list of int32_t output type. If any
@@ -89,8 +91,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key,
-                              std::list<int32_t>& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(
+      const ConfigKey& key, std::list<int32_t>& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with list of size_t output type. If any
@@ -99,8 +101,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key,
-                              std::list<size_t>& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(
+      const ConfigKey& key, std::list<size_t>& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with list of bool output type. If any
@@ -109,8 +111,8 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key,
-                              std::list<bool>& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(
+      const ConfigKey& key, std::list<bool>& out) noexcept = 0;
 
   /**
    * @brief Looks up configuration key with double output type. If any error
@@ -119,6 +121,7 @@ class ConfigProviderInterface : public ServiceInterface {
    * @param out configuration value;
    * @return ExecutionResult
    */
-  virtual ExecutionResult Get(const ConfigKey& key, double& out) noexcept = 0;
+  virtual google::scp::core::ExecutionResult Get(const ConfigKey& key,
+                                                 double& out) noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

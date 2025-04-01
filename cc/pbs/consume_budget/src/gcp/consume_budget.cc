@@ -24,10 +24,12 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_format.h"
+#include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/configuration_keys.h"
 #include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_serialization.h"
 #include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
+#include "cc/pbs/consume_budget/src/budget_consumer.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
@@ -41,23 +43,24 @@
 namespace google::scp::pbs {
 namespace {
 
-using ::google::scp::core::AsyncContext;
-using ::google::scp::core::AsyncExecutorInterface;
-using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::GetErrorMessage;
-using ::google::scp::core::kGcpProjectId;
-using ::google::scp::core::kSpannerDatabase;
-using ::google::scp::core::kSpannerEndpointOverride;
-using ::google::scp::core::kSpannerInstance;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::pbs::budget_key_timeframe_manager::Serialization;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_INITIALIZATION_ERROR;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::AsyncPriority;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::GetErrorMessage;
+using ::privacy_sandbox::pbs_common::kGcpProjectId;
+using ::privacy_sandbox::pbs_common::kSpannerDatabase;
+using ::privacy_sandbox::pbs_common::kSpannerEndpointOverride;
+using ::privacy_sandbox::pbs_common::kSpannerInstance;
 namespace spanner = ::google::cloud::spanner;
 
 constexpr absl::string_view kComponentName = "BudgetConsumptionHelper";
@@ -450,7 +453,8 @@ BudgetConsumptionHelper::BudgetConsumptionHelper(
     : config_provider_(config_provider),
       async_executor_(async_executor),
       io_async_executor_(io_async_executor),
-      spanner_connection_(std::move(spanner_connection)) {}
+      spanner_connection_(std::move(spanner_connection)),
+      should_enable_budget_consumer_(false) {}
 
 ExecutionResultOr<std::shared_ptr<cloud::spanner::Connection>>
 BudgetConsumptionHelper::MakeSpannerConnectionForProd(
@@ -518,6 +522,9 @@ ExecutionResult BudgetConsumptionHelper::Init() noexcept {
       pbs_value_column_migration_phase == kMigrationPhase1 ||
       pbs_value_column_migration_phase == kMigrationPhase2;
 
+  config_provider_->Get(kEnableBudgetConsumerMigration,
+                        should_enable_budget_consumer_);
+
   return SuccessExecutionResult();
 }
 
@@ -538,7 +545,7 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgets(
           [this, consume_budgets_context]() {
             ConsumeBudgetsSyncAndFinishContext(consume_budgets_context);
           },
-          google::scp::core::AsyncPriority::Normal);
+          AsyncPriority::Normal);
       !schedule_result.Successful()) {
     // Returns the execution result to the caller without calling FinishContext,
     // since the async task is not scheduled successfully
@@ -550,17 +557,25 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgets(
 void BudgetConsumptionHelper::ConsumeBudgetsSyncAndFinishContext(
     AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
         consume_budgets_context) {
-  consume_budgets_context.result = ConsumeBudgetsSync(consume_budgets_context);
+  if (should_enable_budget_consumer_) {
+    consume_budgets_context.result =
+        ConsumeBudgetsSyncWithBudgetConsumer(consume_budgets_context);
+  } else {
+    consume_budgets_context.result =
+        ConsumeBudgetsSyncWithoutBudgetConsumer(consume_budgets_context);
+  }
+
   if (!async_executor_->Schedule(
           [consume_budgets_context]() mutable {
             consume_budgets_context.Finish();
           },
-          google::scp::core::AsyncPriority::Normal)) {
+          AsyncPriority::Normal)) {
     consume_budgets_context.Finish();
   }
 }
 
-ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSync(
+ExecutionResult
+BudgetConsumptionHelper::ConsumeBudgetsSyncWithoutBudgetConsumer(
     const AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
         consume_budgets_context) {
   spanner::Client client(spanner_connection_);
@@ -633,7 +648,72 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSync(
                           "final_execution_result: %s",
                           commit_result.status().code(),
                           commit_result.status().message(),
-                          google::scp::core::errors::GetErrorMessage(
+                          privacy_sandbox::pbs_common::GetErrorMessage(
+                              final_execution_result.status_code)));
+    } else {
+      SCP_ERROR_CONTEXT(
+          kComponentName, consume_budgets_context, final_execution_result,
+          absl::StrFormat("ConsumeBudgets failed. Error code %d, message: %s",
+                          commit_result.status().code(),
+                          commit_result.status().message()));
+    }
+    return final_execution_result;
+  }
+  return SuccessExecutionResult();
+}
+
+ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSyncWithBudgetConsumer(
+    const AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
+        consume_budgets_context) {
+  spanner::Client client(spanner_connection_);
+  ExecutionResult captured_execution_result = SuccessExecutionResult();
+
+  auto commit_result = client.Commit(
+      [&](spanner::Transaction txn) -> cloud::StatusOr<spanner::Mutations> {
+        BudgetConsumer& budget_consumer =
+            *consume_budgets_context.request->budget_consumer;
+        spanner::KeySet spanner_key_set = budget_consumer.GetSpannerKeySet();
+
+        auto columns = budget_consumer.GetReadColumns();
+        if (!columns.Successful()) {
+          captured_execution_result =
+              FailureExecutionResult(SC_CONSUME_BUDGET_INITIALIZATION_ERROR);
+          return cloud::Status(cloud::StatusCode::kInvalidArgument,
+                               "Cannot fetch the columns to read");
+        }
+
+        spanner::RowStream row_stream =
+            client.Read(txn, table_name_, std::move(spanner_key_set), *columns);
+        SpannerMutationsResult spanner_mutations_result =
+            budget_consumer.ConsumeBudget(row_stream, table_name_);
+
+        consume_budgets_context.response->budget_exhausted_indices =
+            spanner_mutations_result.budget_exhausted_indices;
+        captured_execution_result = spanner_mutations_result.execution_result;
+        if (spanner_mutations_result.status.ok()) {
+          return spanner_mutations_result.mutations;
+        }
+        return spanner_mutations_result.status;
+      });
+
+  if (!commit_result) {
+    // If the error status is coming from PBS's application logics, the
+    // captured_execution_result should contain failure result. Otherwise, the
+    // error status is considered to be coming from Spanner. In this case, the
+    // spanner error codes will be transformed to a failed ExecutionResult with
+    // INTERNAL SERVER ERROR.
+    auto final_execution_result =
+        !captured_execution_result.Successful()
+            ? captured_execution_result
+            : FailureExecutionResult(SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
+    if (captured_execution_result.status_code == SC_CONSUME_BUDGET_EXHAUSTED) {
+      SCP_WARNING_CONTEXT(
+          kComponentName, consume_budgets_context,
+          absl::StrFormat("ConsumeBudgets failed. Error code %d, message: %s, "
+                          "final_execution_result: %s",
+                          commit_result.status().code(),
+                          commit_result.status().message(),
+                          privacy_sandbox::pbs_common::GetErrorMessage(
                               final_execution_result.status_code)));
     } else {
       SCP_ERROR_CONTEXT(

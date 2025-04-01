@@ -17,7 +17,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0009 for dispatcher.
 REGISTER_COMPONENT_CODE(SC_DISPATCHER, 0x0009)
@@ -35,4 +35,4 @@ DEFINE_ERROR_CODE(SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION,
                   "Not enough time remaining to continue the operation.",
                   HttpStatusCode::REQUEST_TIMEOUT)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

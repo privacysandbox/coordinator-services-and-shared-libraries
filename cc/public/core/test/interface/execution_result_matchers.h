@@ -77,7 +77,7 @@ MATCHER_P(ResultIs, expected_result, "") {
         "StatusCode: %d\n\t"
         "ErrorMessage: \"%s\"\n",
         internal::ToString(result.status), result.status_code,
-        GetErrorMessage(result.status_code));
+        privacy_sandbox::pbs_common::GetErrorMessage(result.status_code));
   };
   constexpr bool is_proto = std::is_base_of_v<
       google::scp::core::common::proto::ExecutionResult,

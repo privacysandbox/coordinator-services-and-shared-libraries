@@ -22,22 +22,23 @@
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/logger/interface/log_provider_interface.h"
 
-namespace google::scp::core::logger {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Logs messages to the console.
  *
  */
 class ConsoleLogProvider : public LogProviderInterface {
  public:
-  ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
 
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
-  void Log(const LogLevel& level, const common::Uuid& correlation_id,
-           const common::Uuid& parent_activity_id,
-           const common::Uuid& activity_id,
+  void Log(const LogLevel& level,
+           const google::scp::core::common::Uuid& correlation_id,
+           const google::scp::core::common::Uuid& parent_activity_id,
+           const google::scp::core::common::Uuid& activity_id,
            const std::string_view& component_name,
            const std::string_view& machine_name,
            const std::string_view& cluster_name,
@@ -47,4 +48,4 @@ class ConsoleLogProvider : public LogProviderInterface {
  protected:
   virtual void Print(const std::string& output) noexcept;
 };
-}  // namespace google::scp::core::logger
+}  // namespace privacy_sandbox::pbs_common

@@ -16,12 +16,10 @@
 
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <chrono>
 #include <string>
 #include <thread>
 
-#include "cc/core/async_executor/mock/mock_async_executor_with_internals.h"
 #include "cc/core/async_executor/src/error_codes.h"
 #include "cc/core/async_executor/src/typedef.h"
 #include "cc/core/common/time_provider/src/time_provider.h"
@@ -32,7 +30,14 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::common::TimeProvider;
+namespace privacy_sandbox::pbs_common {
+namespace {
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::common::TimeProvider;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::WaitUntil;
 using std::atomic;
 using std::make_shared;
 using std::string;
@@ -42,12 +47,11 @@ using std::chrono::nanoseconds;
 using std::chrono::seconds;
 using testing::Values;
 
-namespace google::scp::core::test {
 TEST(SingleThreadAsyncExecutorTests, CannotInitWithTooBigQueueCap) {
   SingleThreadAsyncExecutor executor(kMaxQueueCap + 1);
-  EXPECT_THAT(executor.Init(),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP)));
+  EXPECT_THAT(
+      executor.Init(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP)));
 }
 
 TEST(SingleThreadAsyncExecutorTests, EmptyWorkQueue) {
@@ -61,8 +65,9 @@ TEST(SingleThreadAsyncExecutorTests, CannotRunTwice) {
   SingleThreadAsyncExecutor executor(10);
   EXPECT_SUCCESS(executor.Init());
   EXPECT_SUCCESS(executor.Run());
-  EXPECT_THAT(executor.Run(), ResultIs(FailureExecutionResult(
-                                  errors::SC_ASYNC_EXECUTOR_ALREADY_RUNNING)));
+  EXPECT_THAT(
+      executor.Run(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_ALREADY_RUNNING)));
   EXPECT_SUCCESS(executor.Stop());
 }
 
@@ -71,38 +76,35 @@ TEST(SingleThreadAsyncExecutorTests, CannotStopTwice) {
   EXPECT_SUCCESS(executor.Init());
   EXPECT_SUCCESS(executor.Run());
   EXPECT_SUCCESS(executor.Stop());
-  EXPECT_THAT(
-      executor.Stop(),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Stop(),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(SingleThreadAsyncExecutorTests, CannotScheduleWorkBeforeInit) {
   SingleThreadAsyncExecutor executor(10);
-  EXPECT_THAT(
-      executor.Schedule([]() {}, AsyncPriority::Normal),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Schedule([]() {}, AsyncPriority::Normal),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(SingleThreadAsyncExecutorTests, CannotScheduleWorkBeforeRun) {
   SingleThreadAsyncExecutor executor(10);
   EXPECT_SUCCESS(executor.Init());
-  EXPECT_THAT(
-      executor.Schedule([]() {}, AsyncPriority::Normal),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Schedule([]() {}, AsyncPriority::Normal),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(SingleThreadAsyncExecutorTests, CannotRunBeforeInit) {
   SingleThreadAsyncExecutor executor(10);
-  EXPECT_THAT(executor.Run(), ResultIs(FailureExecutionResult(
-                                  errors::SC_ASYNC_EXECUTOR_NOT_INITIALIZED)));
+  EXPECT_THAT(
+      executor.Run(),
+      ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_INITIALIZED)));
 }
 
 TEST(SingleThreadAsyncExecutorTests, CannotStopBeforeRun) {
   SingleThreadAsyncExecutor executor(10);
   EXPECT_SUCCESS(executor.Init());
-  EXPECT_THAT(
-      executor.Stop(),
-      ResultIs(FailureExecutionResult(errors::SC_ASYNC_EXECUTOR_NOT_RUNNING)));
+  EXPECT_THAT(executor.Stop(),
+              ResultIs(FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING)));
 }
 
 TEST(SingleThreadAsyncExecutorTests, ExceedingQueueCapSchedule) {
@@ -122,7 +124,7 @@ TEST(SingleThreadAsyncExecutorTests, ExceedingQueueCapSchedule) {
       auto result = executor.Schedule([&]() {}, AsyncPriority::Normal);
 
       if (result ==
-          RetryExecutionResult(errors::SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP)) {
+          RetryExecutionResult(SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP)) {
         break;
       }
 
@@ -201,7 +203,7 @@ TEST(SingleThreadAsyncExecutorTests, CannotScheduleHiPri) {
 
   EXPECT_THAT(executor.Schedule([&]() {}, AsyncPriority::Urgent),
               ResultIs(FailureExecutionResult(
-                  errors::SC_ASYNC_EXECUTOR_INVALID_PRIORITY_TYPE)));
+                  SC_ASYNC_EXECUTOR_INVALID_PRIORITY_TYPE)));
   executor.Stop();
 }
 
@@ -298,4 +300,5 @@ TEST(SingleThreadAsyncExecutorTests, FinishWorkWhenStopInMiddle) {
 
   EXPECT_EQ(medium_count + normal_count, queue_cap);
 }
-}  // namespace google::scp::core::test
+}  // namespace
+}  // namespace privacy_sandbox::pbs_common

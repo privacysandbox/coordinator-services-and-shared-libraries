@@ -32,7 +32,7 @@ ExecutionResultOr<std::string> GcpTokenFetcher::FetchIdToken(
     SCP_ERROR(kGcpTokenFetcher, google::scp::core::common::kZeroUuid,
               execution_result.result(),
               "FetchIdToken() ID Token fetch failed: %s",
-              ::google::scp::core::errors::GetErrorMessage(
+              privacy_sandbox::pbs_common::GetErrorMessage(
                   execution_result.result().status_code));
   }
   return execution_result;

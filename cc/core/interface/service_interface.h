@@ -18,7 +18,7 @@
 
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Any top level component in the core library must inherit this
  * interface and override the Init, Run, and Stop functionalities.
@@ -33,7 +33,7 @@ class ServiceInterface {
    * @return ExecutionResult the result of the execution with possible error
    * code.
    */
-  virtual ExecutionResult Init() noexcept = 0;
+  virtual google::scp::core::ExecutionResult Init() noexcept = 0;
 
   /**
    * @brief Think about Run as the first step after all the components in the
@@ -43,7 +43,7 @@ class ServiceInterface {
    * @return ExecutionResult the result of the execution with possible error
    * code.
    */
-  virtual ExecutionResult Run() noexcept = 0;
+  virtual google::scp::core::ExecutionResult Run() noexcept = 0;
 
   /**
    * @brief To cleanly exit a process, we need to ensure that all the components
@@ -52,6 +52,6 @@ class ServiceInterface {
    * @return ExecutionResult the result of the execution with possible error
    * code.
    */
-  virtual ExecutionResult Stop() noexcept = 0;
+  virtual google::scp::core::ExecutionResult Stop() noexcept = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

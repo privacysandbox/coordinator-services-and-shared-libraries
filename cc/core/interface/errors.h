@@ -16,14 +16,13 @@
 
 #pragma once
 
-#include <functional>
 #include <map>
 #include <string>
 
 #include "absl/strings/string_view.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 inline constexpr absl::string_view kInvalidErrorCodeStr = "InvalidErrorCode";
 inline constexpr absl::string_view kUnknownErrorCodeStr = "Unknown Error";
@@ -142,13 +141,13 @@ inline uint64_t MakeErrorCode(uint64_t component, uint64_t error) {
                 "Error code is too large! Valid range is [0x0001, 0xFFFF]."); \
   static constexpr const char* error_name##_str = #error_name;                \
   static uint64_t error_name =                                                \
-      ::google::scp::core::errors::MakeErrorCode(component, error);           \
+      privacy_sandbox::pbs_common::MakeErrorCode(component, error);         \
   static bool initialized_##component##error = []() {                         \
-    ::google::scp::core::errors::SCPError scp_error;                          \
+    privacy_sandbox::pbs_common::SCPError scp_error;                        \
     scp_error.name = std::string_view(error_name##_str);                      \
     scp_error.error_message = message;                                        \
     scp_error.error_http_status_code = http_status_code;                      \
-    ::google::scp::core::errors::GetGlobalErrorCodes()[component].emplace(    \
+    privacy_sandbox::pbs_common::GetGlobalErrorCodes()[component].emplace(  \
         error_name, scp_error);                                               \
     return true;                                                              \
   }();
@@ -159,11 +158,11 @@ inline uint64_t MakeErrorCode(uint64_t component, uint64_t error) {
  * @param error_code The global error code.
  * @param public_error_code public error code associated with this error.
  */
-#define MAP_TO_PUBLIC_ERROR_CODE(error_code, public_error_code)    \
-  static bool mapped_##error_code = []() {                         \
-    ::google::scp::core::errors::GetPublicErrorCodesMap().emplace( \
-        error_code, public_error_code);                            \
-    return true;                                                   \
+#define MAP_TO_PUBLIC_ERROR_CODE(error_code, public_error_code)      \
+  static bool mapped_##error_code = []() {                           \
+    privacy_sandbox::pbs_common::GetPublicErrorCodesMap().emplace( \
+        error_code, public_error_code);                              \
+    return true;                                                     \
   }();
 
 /**
@@ -251,4 +250,4 @@ inline uint64_t GetPublicErrorCode(uint64_t error_code) {
   return it->second;
 }
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

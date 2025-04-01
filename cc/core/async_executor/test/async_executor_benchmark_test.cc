@@ -22,8 +22,10 @@
 #include "absl/synchronization/blocking_counter.h"
 #include "cc/core/async_executor/src/async_executor.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
+
+using ::google::scp::core::ExecutionResult;
 
 absl::Duration ComputePercentile(absl::Span<const absl::Duration> duration_list,
                                  float percentile) {
@@ -91,7 +93,7 @@ BENCHMARK_DEFINE_F(ExecutorFixture, Schedule)(benchmark::State& state) {
 BENCHMARK_REGISTER_F(ExecutorFixture, Schedule)->Range(1, 1 << 19);
 
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 
 // Run the benchmark.
 BENCHMARK_MAIN();

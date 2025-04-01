@@ -15,7 +15,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <atomic>
 #include <csignal>
 #include <memory>
 #include <vector>
@@ -23,9 +22,9 @@
 #include <nghttp2/asio_http2_server.h>
 
 #include "absl/synchronization/blocking_counter.h"
-#include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/http2_client/mock/mock_http_connection.h"
+#include "cc/core/http2_client/src/error_codes.h"
 #include "cc/core/http2_client/src/http_client_def.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/telemetry/mock/in_memory_metric_router.h"
@@ -35,15 +34,18 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
-using ::google::scp::core::AsyncExecutor;
+namespace privacy_sandbox::pbs_common {
+namespace {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionStatus;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::GetMetricPointData;
+using ::google::scp::core::InMemoryMetricRouter;
 using ::google::scp::core::common::Uuid;
-using ::google::scp::core::http2_client::mock::MockHttpConnection;
 using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::WaitUntilOrReturn;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
 using ::testing::IsEmpty;
-
-namespace google::scp::core {
-namespace {
 
 class HttpConnectionTest : public testing::Test {
  protected:
@@ -56,7 +58,7 @@ class HttpConnectionTest : public testing::Test {
                              /*port=*/"0", /*asynchronous=*/true);
     ASSERT_FALSE(ec) << "Failed to start the server: " << ec.message();
 
-    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
+    metric_router_ = std::make_unique<InMemoryMetricRouter>();
   }
 
   void TearDown() override {
@@ -65,7 +67,7 @@ class HttpConnectionTest : public testing::Test {
   }
 
   nghttp2::asio_http2::server::http2 server_;
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
+  std::unique_ptr<InMemoryMetricRouter> metric_router_;
 };
 
 TEST_F(HttpConnectionTest, CancelCallbacks) {
@@ -98,14 +100,15 @@ TEST_F(HttpConnectionTest, CancelCallbacks) {
         if (!is_called) {
           EXPECT_THAT(context.result,
                       ResultIs(FailureExecutionResult(
-                          errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
+                          ::privacy_sandbox::pbs_common::
+                              SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
           is_called = true;
           counter.DecrementCount();
         }
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -157,14 +160,15 @@ TEST_F(HttpConnectionTest, StopRemovesCallback) {
         if (!is_called) {
           EXPECT_THAT(context.result,
                       ResultIs(FailureExecutionResult(
-                          errors::SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
+                          ::privacy_sandbox::pbs_common::
+                              SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
           is_called = true;
           counter.DecrementCount();
         }
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -216,7 +220,7 @@ TEST_F(HttpConnectionTest, SuccessfulImmediateResponse) {
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -255,12 +259,13 @@ TEST_F(HttpConnectionTest, UnsupportedHttpMethod) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_EQ(context.result.status, ExecutionStatus::Failure);
         EXPECT_EQ(context.result.status_code,
-                  errors::SC_HTTP2_CLIENT_HTTP_METHOD_NOT_SUPPORTED);
+                  ::privacy_sandbox::pbs_common::
+                      SC_HTTP2_CLIENT_HTTP_METHOD_NOT_SUPPORTED);
         counter.DecrementCount();
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -309,7 +314,7 @@ TEST_F(HttpConnectionTest, MissingHeadersShouldStillSuccess) {
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -356,12 +361,13 @@ TEST_F(HttpConnectionTest, RequestSubmissionFailure) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_EQ(context.result.status, ExecutionStatus::Retry);
         EXPECT_EQ(context.result.status_code,
-                  errors::SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
+                  ::privacy_sandbox::pbs_common::
+                      SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
         counter.DecrementCount();
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -370,8 +376,7 @@ TEST_F(HttpConnectionTest, RequestSubmissionFailure) {
   release_response.DecrementCount();
 
   counter.Wait();
-  execution_result =
-      test::WaitUntilOrReturn([&]() { return !connection.IsReady(); });
+  execution_result = WaitUntilOrReturn([&]() { return !connection.IsReady(); });
   ASSERT_SUCCESS(execution_result) << "Connection has not be dropped.";
   connection.Stop();
   connection.GetPendingNetworkCallbacks().Keys(keys);
@@ -414,7 +419,7 @@ TEST_F(HttpConnectionTest, ClientServerLatencyMeasurement) {
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -442,7 +447,7 @@ TEST_F(HttpConnectionTest, ClientServerLatencyMeasurement) {
               client_server_latency_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      client_server_latency_metric_point_data = core::GetMetricPointData(
+      client_server_latency_metric_point_data = GetMetricPointData(
           "http.client.server_latency", client_server_latency_dimensions, data);
 
   ASSERT_TRUE(client_server_latency_metric_point_data.has_value());
@@ -507,7 +512,7 @@ TEST_F(HttpConnectionTest, ClientRequestDurationMeasurement) {
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -536,8 +541,8 @@ TEST_F(HttpConnectionTest, ClientRequestDurationMeasurement) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       client_request_duration_metric_point_data =
-          core::GetMetricPointData("http.client.request.duration",
-                                   client_request_duration_dimensions, data);
+          GetMetricPointData("http.client.request.duration",
+                             client_request_duration_dimensions, data);
 
   ASSERT_TRUE(client_request_duration_metric_point_data.has_value());
 
@@ -601,7 +606,7 @@ TEST_F(HttpConnectionTest, ClientConnectionDurationMeasurement) {
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -630,8 +635,8 @@ TEST_F(HttpConnectionTest, ClientConnectionDurationMeasurement) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       client_connection_duration_metric_point_data =
-          core::GetMetricPointData("http.client.connection.duration",
-                                   client_connection_duration_dimensions, data);
+          GetMetricPointData("http.client.connection.duration",
+                             client_connection_duration_dimensions, data);
 
   ASSERT_TRUE(client_connection_duration_metric_point_data.has_value());
 
@@ -691,12 +696,13 @@ TEST_F(HttpConnectionTest, ClientConnectionError) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_EQ(context.result.status, ExecutionStatus::Retry);
         EXPECT_EQ(context.result.status_code,
-                  errors::SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
+                  ::privacy_sandbox::pbs_common::
+                      SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
         counter.DecrementCount();
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -705,8 +711,7 @@ TEST_F(HttpConnectionTest, ClientConnectionError) {
   release_response.DecrementCount();
   counter.Wait();
 
-  execution_result =
-      test::WaitUntilOrReturn([&]() { return !connection.IsReady(); });
+  execution_result = WaitUntilOrReturn([&]() { return !connection.IsReady(); });
   ASSERT_SUCCESS(execution_result) << "Connection has not be dropped.";
 
   // Test otel metrics.
@@ -725,8 +730,8 @@ TEST_F(HttpConnectionTest, ClientConnectionError) {
 
   std::optional<opentelemetry::sdk::metrics::PointType>
       client_connection_duration_metric_point_data =
-          core::GetMetricPointData("http.client.connection.duration",
-                                   client_connection_duration_dimensions, data);
+          GetMetricPointData("http.client.connection.duration",
+                             client_connection_duration_dimensions, data);
 
   ASSERT_TRUE(client_connection_duration_metric_point_data.has_value());
 
@@ -745,7 +750,7 @@ TEST_F(HttpConnectionTest, ClientConnectionError) {
               client_connect_error_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      client_connect_error_metric_point_data = core::GetMetricPointData(
+      client_connect_error_metric_point_data = GetMetricPointData(
           kClientConnectErrorsMetric, client_connect_error_dimensions, data);
 
   ASSERT_TRUE(client_connect_error_metric_point_data.has_value());
@@ -803,7 +808,7 @@ TEST_F(HttpConnectionTest, RequestResponseBodySizeMeasurement) {
       };
 
   ExecutionResult execution_result =
-      test::WaitUntilOrReturn([&]() { return connection.IsReady(); });
+      WaitUntilOrReturn([&]() { return connection.IsReady(); });
   ASSERT_SUCCESS(execution_result)
       << "Connection is not ready within the expected time.";
   execution_result = connection.Execute(http_context);
@@ -830,7 +835,7 @@ TEST_F(HttpConnectionTest, RequestResponseBodySizeMeasurement) {
           std::map<std::string, std::string>>(request_body_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      request_body_metric_point_data = core::GetMetricPointData(
+      request_body_metric_point_data = GetMetricPointData(
           kClientRequestBodySizeMetric, request_body_dimensions, data);
 
   ASSERT_TRUE(request_body_metric_point_data.has_value());
@@ -857,7 +862,7 @@ TEST_F(HttpConnectionTest, RequestResponseBodySizeMeasurement) {
               std::map<std::string, std::string>>(response_body_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      response_body_metric_point_data = core::GetMetricPointData(
+      response_body_metric_point_data = GetMetricPointData(
           kClientResponseBodySizeMetric, response_body_dimensions, data);
 
   ASSERT_TRUE(response_body_metric_point_data.has_value());
@@ -875,4 +880,4 @@ TEST_F(HttpConnectionTest, RequestResponseBodySizeMeasurement) {
   EXPECT_EQ(*response_body_histogram_data_max, 0);
 }
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

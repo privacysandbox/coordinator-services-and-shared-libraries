@@ -15,9 +15,8 @@
 #pragma once
 
 #include "cc/core/interface/errors.h"
-#include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0001 for concurrent queue.
 REGISTER_COMPONENT_CODE(SC_CONCURRENT_QUEUE, 0x0001)
@@ -32,4 +31,4 @@ DEFINE_ERROR_CODE(SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE, SC_CONCURRENT_QUEUE,
                   0x0002, "Concurrent queue cannot dequeue",
                   HttpStatusCode::SERVICE_UNAVAILABLE)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

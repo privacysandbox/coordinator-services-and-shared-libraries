@@ -18,7 +18,7 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_AUTHORIZATION_SERVICE, 0x0020)
 
@@ -48,4 +48,4 @@ DEFINE_ERROR_CODE(SC_AUTHORIZATION_SERVICE_AUTH_TOKEN_IS_REFRESHING,
                   SC_AUTHORIZATION_SERVICE, 0x0006,
                   "The authentication token is being refreshed.",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

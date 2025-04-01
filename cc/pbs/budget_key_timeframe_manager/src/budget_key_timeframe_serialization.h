@@ -30,7 +30,6 @@
 
 namespace google::scp::pbs::budget_key_timeframe_manager {
 static constexpr TimeBucket kHoursPerDay = 24;
-static constexpr core::Version kCurrentVersion = {.major = 1, .minor = 0};
 
 class Serialization {
  public:

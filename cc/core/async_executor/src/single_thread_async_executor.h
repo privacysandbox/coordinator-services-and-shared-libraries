@@ -27,7 +27,7 @@
 #include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
 #include "cc/core/interface/async_executor_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief A single threaded async executor. This executor will have one thread
  * working with one queue.
@@ -48,27 +48,28 @@ class SingleThreadAsyncExecutor : ServiceInterface {
 #endif
   }
 
-  ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
 
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
   /**
    * @brief Schedules a task with certain priority to be execute immediately or
    * deferred.
    * @param work the task that needs to be scheduled.
    * @param priority the priority of the task. Either normal or medium.
-   * @return ExecutionResult result of the execution with possible error code.
+   * @return google::scp::core::ExecutionResult result of the execution with
+   * possible error code.
    */
-  ExecutionResult Schedule(const AsyncOperation& work,
-                           AsyncPriority priority) noexcept;
+  google::scp::core::ExecutionResult Schedule(
+      const AsyncOperation& work, AsyncPriority priority) noexcept;
 
   /**
    * @brief Returns the ID of the spawned thread object to enable looking it up
    * via thread IDs later. Will only be populated after Run() is called.
    */
-  ExecutionResultOr<std::thread::id> GetThreadId() const;
+  google::scp::core::ExecutionResultOr<std::thread::id> GetThreadId() const;
 
   /**
    * @brief Returns the scheduling latencies for all AsyncOperation scheduled by
@@ -105,10 +106,12 @@ class SingleThreadAsyncExecutor : ServiceInterface {
   /// An optional CPU to have an affinity for.
   std::optional<size_t> affinity_cpu_number_;
   /// Queue for accepting the incoming normal priority tasks.
-  std::shared_ptr<common::ConcurrentQueue<std::shared_ptr<AsyncTask>>>
+  std::shared_ptr<
+      google::scp::core::common::ConcurrentQueue<std::shared_ptr<AsyncTask>>>
       normal_pri_queue_;
   /// Queue for accepting the incoming high priority tasks.
-  std::shared_ptr<common::ConcurrentQueue<std::shared_ptr<AsyncTask>>>
+  std::shared_ptr<
+      google::scp::core::common::ConcurrentQueue<std::shared_ptr<AsyncTask>>>
       high_pri_queue_;
   /// A unique pointer to the working thread.
   std::unique_ptr<std::thread> working_thread_;
@@ -129,4 +132,4 @@ class SingleThreadAsyncExecutor : ServiceInterface {
   std::vector<absl::Duration> scheduling_latency_for_testing_;
 #endif
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -20,7 +20,7 @@
 
 using google::scp::core::common::TimeProvider;
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 TEST(AsyncTaskTests, BasicTests) {
   auto func = []() {};
   auto current_time =
@@ -31,4 +31,4 @@ TEST(AsyncTaskTests, BasicTests) {
   AsyncTask async_task1(func, 1234);
   EXPECT_EQ(async_task1.GetExecutionTimestamp(), 1234);
 }
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

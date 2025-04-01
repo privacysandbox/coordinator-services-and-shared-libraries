@@ -135,9 +135,10 @@ TEST(EnvConfigProviderTest, WhenSetToEmptyValueGetNonStringValueShouldFail) {
   putenv(empty_set_val);
 
   int32_t out_int32;
-  EXPECT_THAT(config.Get("another-var-thats-empty", out_int32),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      config.Get("another-var-thats-empty", out_int32),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(EnvConfigProviderTest, GetStringFailsWhenKeyDoesNotExist) {
@@ -145,9 +146,10 @@ TEST(EnvConfigProviderTest, GetStringFailsWhenKeyDoesNotExist) {
   config.Init();
 
   std::string out_string;
-  EXPECT_THAT(config.Get("non-existing-key", out_string),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
+  EXPECT_THAT(
+      config.Get("non-existing-key", out_string),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
 }
 
 TEST(EnvConfigProviderTest, GetInt32TFailsWhenValueIsNotInt32) {
@@ -158,9 +160,10 @@ TEST(EnvConfigProviderTest, GetInt32TFailsWhenValueIsNotInt32) {
   putenv(env_var);
 
   int32_t out_val;
-  EXPECT_THAT(config.Get("non-int32-val", out_val),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      config.Get("non-int32-val", out_val),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(EnvConfigProviderTest, GetSizeTFailsWhenValueIsNotSizeT) {
@@ -171,9 +174,10 @@ TEST(EnvConfigProviderTest, GetSizeTFailsWhenValueIsNotSizeT) {
   putenv(env_var);
 
   size_t out_val;
-  EXPECT_THAT(config.Get("non-size-t-val", out_val),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      config.Get("non-size-t-val", out_val),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(EnvConfigProviderTest, GetBoolFailsWhenValueIsNotBool) {
@@ -184,9 +188,10 @@ TEST(EnvConfigProviderTest, GetBoolFailsWhenValueIsNotBool) {
   putenv(env_var);
 
   bool out_val;
-  EXPECT_THAT(config.Get("non-bool-val", out_val),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      config.Get("non-bool-val", out_val),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(EnvConfigProviderTest, GetStringListFailsWhenDoesNotExist) {
@@ -194,9 +199,10 @@ TEST(EnvConfigProviderTest, GetStringListFailsWhenDoesNotExist) {
   config.Init();
 
   list<string> out_val;
-  EXPECT_THAT(config.Get("non-existing-val", out_val),
-              ResultIs(FailureExecutionResult(
-                  errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
+  EXPECT_THAT(
+      config.Get("non-existing-val", out_val),
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
 }
 
 TEST(EnvConfigProviderTest, GetStringListShouldHandleSingleItem) {
@@ -224,8 +230,10 @@ TEST(EnvConfigProviderTest, GetInt32TListShouldFailWhenNotInt32TList) {
   list<int32_t> out_val;
   auto ret = config.Get("not-int32t-list", out_val);
 
-  EXPECT_THAT(ret, ResultIs(FailureExecutionResult(
-                       errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      ret,
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(EnvConfigProviderTest, GetSizeTListShouldFailWhenNotSizeTList) {
@@ -238,8 +246,10 @@ TEST(EnvConfigProviderTest, GetSizeTListShouldFailWhenNotSizeTList) {
   list<size_t> out_val;
   auto ret = config.Get("not-sizet-list", out_val);
 
-  EXPECT_THAT(ret, ResultIs(FailureExecutionResult(
-                       errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      ret,
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(EnvConfigProviderTest, GetBoolListShouldFailWhenNotBoolList) {
@@ -252,7 +262,9 @@ TEST(EnvConfigProviderTest, GetBoolListShouldFailWhenNotBoolList) {
   list<bool> out_val;
   auto ret = config.Get("not-bool-list", out_val);
 
-  EXPECT_THAT(ret, ResultIs(FailureExecutionResult(
-                       errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+  EXPECT_THAT(
+      ret,
+      ResultIs(FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 }  // namespace google::scp::core::test

@@ -15,10 +15,12 @@
 #ifndef CC_PBS_INTERFACE_CONSUME_BUDGET_INTERFACE_H_
 #define CC_PBS_INTERFACE_CONSUME_BUDGET_INTERFACE_H_
 
+#include <memory>
 #include <vector>
 
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/service_interface.h"
+#include "cc/pbs/consume_budget/src/budget_consumer.h"
 #include "cc/pbs/interface/front_end_service_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
@@ -26,6 +28,7 @@ namespace google::scp::pbs {
 
 struct ConsumeBudgetsRequest {
   std::vector<ConsumeBudgetMetadata> budgets;
+  std::unique_ptr<BudgetConsumer> budget_consumer;
 };
 
 struct ConsumeBudgetsResponse {
@@ -34,13 +37,13 @@ struct ConsumeBudgetsResponse {
 
 // A helper class to consume a given list of budgets.
 class BudgetConsumptionHelperInterface
-    : public google::scp::core::ServiceInterface {
+    : public privacy_sandbox::pbs_common::ServiceInterface {
  public:
   virtual ~BudgetConsumptionHelperInterface() = default;
 
   virtual google::scp::core::ExecutionResult ConsumeBudgets(
-      google::scp::core::AsyncContext<ConsumeBudgetsRequest,
-                                      ConsumeBudgetsResponse>
+      privacy_sandbox::pbs_common::AsyncContext<ConsumeBudgetsRequest,
+                                                  ConsumeBudgetsResponse>
           consume_budgets_context) = 0;
 };
 }  // namespace google::scp::pbs

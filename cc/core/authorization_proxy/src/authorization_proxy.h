@@ -26,17 +26,22 @@
 
 namespace google::scp::core {
 
-class AuthorizationProxy : public AuthorizationProxyInterface {
+class AuthorizationProxy
+    : public privacy_sandbox::pbs_common::AuthorizationProxyInterface {
  public:
-  struct CacheEntry : public LoadableObject {
-    AuthorizedMetadata authorized_metadata;
+  struct CacheEntry : public privacy_sandbox::pbs_common::LoadableObject {
+    privacy_sandbox::pbs_common::AuthorizedMetadata authorized_metadata;
   };
 
   AuthorizationProxy(
       const std::string& server_endpoint,
-      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      const std::shared_ptr<HttpClientInterface>& http_client,
-      std::unique_ptr<HttpRequestResponseAuthInterceptorInterface> http_helper);
+      const std::shared_ptr<
+          privacy_sandbox::pbs_common::AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>&
+          http_client,
+      std::unique_ptr<privacy_sandbox::pbs_common::
+                          HttpRequestResponseAuthInterceptorInterface>
+          http_helper);
 
   ExecutionResult Init() noexcept override;
 
@@ -45,8 +50,10 @@ class AuthorizationProxy : public AuthorizationProxyInterface {
   ExecutionResult Stop() noexcept override;
 
   ExecutionResult Authorize(
-      AsyncContext<AuthorizationProxyRequest,
-                   AuthorizationProxyResponse>&) noexcept override;
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::AuthorizationProxyRequest,
+          privacy_sandbox::pbs_common::AuthorizationProxyResponse>&) noexcept
+      override;
 
  protected:
   /**
@@ -58,10 +65,14 @@ class AuthorizationProxy : public AuthorizationProxyInterface {
    * @param http_context
    */
   void HandleAuthorizeResponse(
-      AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::AuthorizationProxyRequest,
+          privacy_sandbox::pbs_common::AuthorizationProxyResponse>&
           authorization_context,
       std::string& cache_entry_key,
-      AsyncContext<HttpRequest, HttpResponse>& http_context);
+      privacy_sandbox::pbs_common::AsyncContext<
+          privacy_sandbox::pbs_common::HttpRequest,
+          privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   /// The authorization token cache.
   common::AutoExpiryConcurrentMap<std::string, std::shared_ptr<CacheEntry>>
@@ -75,9 +86,12 @@ class AuthorizationProxy : public AuthorizationProxyInterface {
   std::string host_;
 
   /// The http client to send request to the remote authorizer.
-  const std::shared_ptr<HttpClientInterface> http_client_;
+  const std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+      http_client_;
 
   /// Request Response helper for HTTP
-  std::unique_ptr<HttpRequestResponseAuthInterceptorInterface> http_helper_;
+  std::unique_ptr<
+      privacy_sandbox::pbs_common::HttpRequestResponseAuthInterceptorInterface>
+      http_helper_;
 };
 }  // namespace google::scp::core

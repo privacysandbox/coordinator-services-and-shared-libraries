@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <memory>
 
 #include "oneapi/tbb/concurrent_queue.h"
@@ -49,7 +48,8 @@ class ConcurrentQueue {
    */
   ExecutionResult TryEnqueue(const T& element) noexcept {
     if (!queue_->try_push(element)) {
-      return FailureExecutionResult(errors::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE);
+      return FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE);
     }
     return SuccessExecutionResult();
   }
@@ -62,7 +62,8 @@ class ConcurrentQueue {
    */
   ExecutionResult TryDequeue(T& element) noexcept {
     if (!queue_->try_pop(element)) {
-      return FailureExecutionResult(errors::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE);
+      return FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE);
     }
     return SuccessExecutionResult();
   }

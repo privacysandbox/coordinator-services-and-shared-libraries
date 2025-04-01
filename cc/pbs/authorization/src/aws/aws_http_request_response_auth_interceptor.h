@@ -21,7 +21,6 @@
 
 #include "cc/core/interface/authorization_proxy_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
-#include "cc/core/interface/configuration_keys.h"
 #include "cc/core/interface/http_request_response_auth_interceptor_interface.h"
 #include "cc/core/interface/http_types.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -29,24 +28,29 @@
 namespace google::scp::pbs {
 
 class AwsHttpRequestResponseAuthInterceptor
-    : public core::HttpRequestResponseAuthInterceptorInterface {
+    : public privacy_sandbox::pbs_common::
+          HttpRequestResponseAuthInterceptorInterface {
  public:
   explicit AwsHttpRequestResponseAuthInterceptor(const std::string& aws_region)
       : aws_region_(aws_region) {}
 
   AwsHttpRequestResponseAuthInterceptor(
       const std::string& aws_region,
-      std::shared_ptr<core::ConfigProviderInterface> config_provider)
+      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
+          config_provider)
       : aws_region_(aws_region) {}
 
   core::ExecutionResult PrepareRequest(
-      const core::AuthorizationMetadata& authorization_metadata,
-      core::HttpRequest& http_request) override;
+      const privacy_sandbox::pbs_common::AuthorizationMetadata&
+          authorization_metadata,
+      privacy_sandbox::pbs_common::HttpRequest& http_request) override;
 
-  core::ExecutionResultOr<core::AuthorizedMetadata>
+  core::ExecutionResultOr<privacy_sandbox::pbs_common::AuthorizedMetadata>
   ObtainAuthorizedMetadataFromResponse(
-      const core::AuthorizationMetadata& authorization_metadata,
-      const core::HttpResponse& http_response) override;
+      const privacy_sandbox::pbs_common::AuthorizationMetadata&
+          authorization_metadata,
+      const privacy_sandbox::pbs_common::HttpResponse& http_response)
+      override;
 
  private:
   std::string aws_region_;

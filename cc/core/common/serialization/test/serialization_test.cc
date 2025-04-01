@@ -27,14 +27,16 @@
 #include "cc/core/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
 
+namespace google::scp::core::common::test {
 using google::protobuf::Message;
 using google::scp::core::common::Uuid;
 using google::scp::core::common::test::serialization::TestStringRequest;
+using ::privacy_sandbox::pbs_common::Byte;
+using ::privacy_sandbox::pbs_common::BytesBuffer;
+using ::privacy_sandbox::pbs_common::Version;
 using std::make_shared;
 using std::string;
 using std::vector;
-
-namespace google::scp::core::common::test {
 
 template <typename T>
 Byte GetNthByte(T& value, int n) {
@@ -70,12 +72,14 @@ void SerializeAndVerify(T value) {
   EXPECT_EQ(
       Serialization::Serialize(bytes_buffer, buffer_offset, value,
                                bytes_serialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
   bytes_buffer.length = 0;
   EXPECT_EQ(
       Serialization::Deserialize(bytes_buffer, buffer_offset, value,
                                  bytes_deserialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE));
 }
 
 TEST(SerializationTests, SerializeChar) {
@@ -166,12 +170,14 @@ TEST(SerializationTests, SerializeUuid) {
   EXPECT_EQ(
       Serialization::Serialize(bytes_buffer, buffer_offset, uuid,
                                bytes_serialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
   bytes_buffer.length = 0;
   EXPECT_EQ(
       Serialization::Deserialize(bytes_buffer, buffer_offset, uuid,
                                  bytes_deserialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE));
 }
 
 TEST(SerializationTests, SerializeProto) {
@@ -209,13 +215,15 @@ TEST(SerializationTests, SerializeProto) {
   EXPECT_EQ(
       Serialization::Serialize<Message>(bytes_buffer, buffer_offset,
                                         test_string_request1, bytes_serialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
   bytes_buffer.length = 0;
   EXPECT_EQ(
       Serialization::Deserialize<Message>(bytes_buffer, buffer_offset,
                                           test_string_request1,
                                           bytes_deserialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE));
 }
 
 TEST(SerializationTests, SerializeProtoMessage) {
@@ -229,7 +237,8 @@ TEST(SerializationTests, SerializeProtoMessage) {
     EXPECT_EQ(
         Serialization::SerializeProtoMessage<TestStringRequest>(
             bytes_buffer, offset, test_string_request, bytes_serialized),
-        FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
+        FailureExecutionResult(
+            privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
   }
 
   {
@@ -276,7 +285,8 @@ TEST(SerializationTests, DeserializeProtoMessage) {
     EXPECT_EQ(
         Serialization::DeserializeProtoMessage<TestStringRequest>(
             bytes_buffer, offset, 123, test_string_request, bytes_deserialized),
-        FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE));
+        FailureExecutionResult(
+            privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE));
   }
 
   {
@@ -288,7 +298,8 @@ TEST(SerializationTests, DeserializeProtoMessage) {
         Serialization::DeserializeProtoMessage<TestStringRequest>(
             bytes_buffer, offset, 123, test_string_request, bytes_deserialized),
         FailureExecutionResult(
-            errors::SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
+            privacy_sandbox::pbs_common::
+                SC_SERIALIZATION_PROTO_DESERIALIZATION_FAILED));
   }
 }
 
@@ -324,12 +335,14 @@ TEST(SerializationTests, SerializeVersion) {
   EXPECT_EQ(
       Serialization::Serialize(bytes_buffer, buffer_offset, version,
                                bytes_serialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_WRITABLE));
   bytes_buffer.length = 0;
   EXPECT_EQ(
       Serialization::Deserialize(bytes_buffer, buffer_offset, version,
                                  bytes_deserialized),
-      FailureExecutionResult(errors::SC_SERIALIZATION_BUFFER_NOT_READABLE));
+      FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_SERIALIZATION_BUFFER_NOT_READABLE));
 }
 
 }  // namespace google::scp::core::common::test

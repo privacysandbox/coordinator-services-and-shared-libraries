@@ -16,12 +16,9 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-
 #include "cc/core/http2_client/src/http_connection.h"
 
-namespace google::scp::core::http2_client::mock {
+namespace privacy_sandbox::pbs_common {
 class MockHttpConnection : public HttpConnection {
  public:
   using HttpConnection::HttpConnection;
@@ -40,4 +37,4 @@ class MockHttpConnection : public HttpConnection {
 
   auto& GetPendingNetworkCallbacks() { return pending_network_calls_; }
 };
-}  // namespace google::scp::core::http2_client::mock
+}  // namespace privacy_sandbox::pbs_common

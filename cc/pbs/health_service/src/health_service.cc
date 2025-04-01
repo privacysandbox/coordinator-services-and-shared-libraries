@@ -19,17 +19,13 @@
 #include <fstream>
 #include <functional>
 #include <sstream>
-#include <utility>
 
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_split.h"
-#include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/pbs/interface/configuration_keys.h"
-#include "cc/pbs/interface/metrics_def.h"
 #include "cc/pbs/interface/type_def.h"
 #include "opentelemetry/metrics/provider.h"
-#include "opentelemetry/sdk/metrics/meter_provider.h"
 
 #include "error_codes.h"
 
@@ -37,30 +33,30 @@ using absl::SimpleAtoi;
 using absl::SkipEmpty;
 using absl::StrContains;
 using absl::StrSplit;
-using google::scp::core::AsyncContext;
-using google::scp::core::ExecutionResult;
-using google::scp::core::ExecutionResultOr;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::HttpHandler;
-using google::scp::core::HttpMethod;
-using google::scp::core::HttpRequest;
-using google::scp::core::HttpResponse;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::common::kZeroUuid;
-using google::scp::core::errors::
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::ExecutionResultOr;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO;
-using google::scp::core::errors::
+using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_OPEN_MEMINFO_FILE;
-using google::scp::core::errors::
+using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_PARSE_MEMINFO_LINE;
-using google::scp::core::errors::
+using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO;
-using google::scp::core::errors::
+using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_HEALTHY_MEMORY_USAGE_THRESHOLD_EXCEEDED;
-using google::scp::core::errors::
+using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED;
-using google::scp::core::errors::
+using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::HttpHandler;
+using ::privacy_sandbox::pbs_common::HttpMethod;
+using ::privacy_sandbox::pbs_common::HttpRequest;
+using ::privacy_sandbox::pbs_common::HttpResponse;
 using std::bind;
 using std::error_code;
 using std::getline;

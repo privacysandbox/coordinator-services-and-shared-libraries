@@ -22,11 +22,9 @@
 #include <string>
 #include <vector>
 
-#include "absl/base/attributes.h"
 #include "absl/strings/string_view.h"
-#include "cc/core/common/proto/common.pb.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 typedef uint64_t Timestamp;
 typedef uint64_t TimeDuration;
 typedef char Byte;
@@ -170,4 +168,4 @@ inline constexpr absl::string_view kSecondUnit = "s";
 inline constexpr absl::string_view kMilliSecondUnit = "ms";
 inline constexpr absl::string_view kByteUnit = "By";
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

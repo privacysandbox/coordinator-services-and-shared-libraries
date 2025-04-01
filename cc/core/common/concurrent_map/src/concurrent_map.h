@@ -63,7 +63,7 @@ class ConcurrentMap {
 
     if (!concurrent_map_.insert(map_accessor, key_value)) {
       execution_result = FailureExecutionResult(
-          errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS);
+          privacy_sandbox::pbs_common::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS);
     }
 
     out_value = map_accessor->second;
@@ -88,7 +88,7 @@ class ConcurrentMap {
 
     if (!concurrent_map_.find(map_accessor, key)) {
       execution_result = FailureExecutionResult(
-          errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
+          privacy_sandbox::pbs_common::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
     } else {
       out_value = map_accessor->second;
     }
@@ -111,7 +111,7 @@ class ConcurrentMap {
 
     if (!concurrent_map_.erase(key)) {
       execution_result = FailureExecutionResult(
-          errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
+          privacy_sandbox::pbs_common::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
     }
 
     return execution_result;

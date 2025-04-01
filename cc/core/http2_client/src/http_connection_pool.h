@@ -20,22 +20,17 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
-#include <utility>
 #include <vector>
 
 #include <nghttp2/asio_http2_client.h>
 
 #include "cc/core/common/concurrent_map/src/concurrent_map.h"
-#include "cc/core/http2_client/src/error_codes.h"
 #include "cc/core/http2_client/src/http_connection.h"
-#include "cc/core/interface/async_context.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/metrics/meter.h"
-#include "opentelemetry/metrics/provider.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief Provides connection pool functionality. Once the object is created,
@@ -88,7 +83,7 @@ class HttpConnectionPool : public ServiceInterface {
    */
   explicit HttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      absl::Nullable<MetricRouter*> metric_router,
+      absl::Nullable<google::scp::core::MetricRouter*> metric_router,
       size_t max_connections_per_host = kDefaultMaxConnectionsPerHost,
       TimeDuration http2_read_timeout_in_sec =
           kDefaultHttp2ReadTimeoutInSeconds)
@@ -100,9 +95,9 @@ class HttpConnectionPool : public ServiceInterface {
 
   ~HttpConnectionPool();
 
-  ExecutionResult Init() noexcept;
-  ExecutionResult Run() noexcept;
-  ExecutionResult Stop() noexcept;
+  google::scp::core::ExecutionResult Init() noexcept;
+  google::scp::core::ExecutionResult Run() noexcept;
+  google::scp::core::ExecutionResult Stop() noexcept;
 
   /**
    * @brief Gets a connection for the provided uri.
@@ -111,7 +106,7 @@ class HttpConnectionPool : public ServiceInterface {
    * @param connection The created/cached connection.
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult GetConnection(
+  google::scp::core::ExecutionResult GetConnection(
       const std::shared_ptr<Uri>& uri,
       std::shared_ptr<HttpConnection>& connection) noexcept;
 
@@ -147,8 +142,8 @@ class HttpConnectionPool : public ServiceInterface {
   TimeDuration http2_read_timeout_in_sec_;
 
   /// The pool of all the connections.
-  core::common::ConcurrentMap<std::string,
-                              std::shared_ptr<HttpConnectionPoolEntry>>
+  google::scp::core::common::ConcurrentMap<
+      std::string, std::shared_ptr<HttpConnectionPoolEntry>>
       connections_;
 
   /// Indicates whether the connection pool is running.
@@ -157,7 +152,7 @@ class HttpConnectionPool : public ServiceInterface {
   std::mutex connection_lock_;
 
   /// An instance of metric router which will provide APIs to create metrics.
-  MetricRouter* metric_router_;
+  google::scp::core::MetricRouter* metric_router_;
 
   /// OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
@@ -175,4 +170,4 @@ class HttpConnectionPool : public ServiceInterface {
       client_address_errors_counter_;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

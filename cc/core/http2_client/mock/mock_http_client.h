@@ -20,17 +20,23 @@
 
 #include "cc/core/interface/http_client_interface.h"
 
-namespace google::scp::core::http2_client::mock {
+namespace privacy_sandbox::pbs_common {
 class MockHttpClient : public HttpClientInterface {
  public:
-  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); };
+  google::scp::core::ExecutionResult Init() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  };
 
-  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); };
+  google::scp::core::ExecutionResult Run() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  };
 
-  ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); };
+  google::scp::core::ExecutionResult Stop() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  };
 
-  ExecutionResult PerformRequest(
-      AsyncContext<HttpRequest, HttpResponse>& context) noexcept {
+  google::scp::core::ExecutionResult PerformRequest(
+      AsyncContext<HttpRequest, HttpResponse>& context) noexcept override {
     if (perform_request_mock) {
       return perform_request_mock(context);
     }
@@ -38,22 +44,24 @@ class MockHttpClient : public HttpClientInterface {
     if (!http_get_result_mock.Successful()) {
       context.result = http_get_result_mock;
       context.Finish();
-      return SuccessExecutionResult();
+      return google::scp::core::SuccessExecutionResult();
     }
 
     if (*request_mock.path == *context.request->path) {
       context.response = std::make_shared<HttpResponse>(response_mock);
-      context.result = SuccessExecutionResult();
+      context.result = google::scp::core::SuccessExecutionResult();
     }
 
     context.Finish();
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
   HttpRequest request_mock;
   HttpResponse response_mock;
-  ExecutionResult http_get_result_mock = SuccessExecutionResult();
-  std::function<ExecutionResult(AsyncContext<HttpRequest, HttpResponse>&)>
+  google::scp::core::ExecutionResult http_get_result_mock =
+      google::scp::core::SuccessExecutionResult();
+  std::function<google::scp::core::ExecutionResult(
+      AsyncContext<HttpRequest, HttpResponse>&)>
       perform_request_mock;
 };
-}  // namespace google::scp::core::http2_client::mock
+}  // namespace privacy_sandbox::pbs_common

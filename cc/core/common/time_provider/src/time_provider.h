@@ -18,7 +18,6 @@
 #include <chrono>
 
 #include "cc/core/interface/type_def.h"
-#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::common {
 class TimeProvider {
@@ -37,7 +36,8 @@ class TimeProvider {
    *
    * @return Timestamp The timestamp in nanoseconds in ticks format
    */
-  static Timestamp GetWallTimestampInNanosecondsAsClockTicks() {
+  static privacy_sandbox::pbs_common::Timestamp
+  GetWallTimestampInNanosecondsAsClockTicks() {
     return GetWallTimestampInNanoseconds().count();
   }
 
@@ -57,7 +57,8 @@ class TimeProvider {
    *
    * @return Timestamp The timestamp in nanoseconds in ticks format
    */
-  static Timestamp GetSteadyTimestampInNanosecondsAsClockTicks() {
+  static privacy_sandbox::pbs_common::Timestamp
+  GetSteadyTimestampInNanosecondsAsClockTicks() {
     return GetSteadyTimestampInNanoseconds().count();
   }
 

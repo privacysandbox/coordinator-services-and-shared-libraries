@@ -26,7 +26,8 @@ GrpcAuthConfig::GrpcAuthConfig(std::string service_account,
       audience_(std::move(audience)),
       cred_config_(std::move(cred_config)) {}
 
-GrpcAuthConfig::GrpcAuthConfig(ConfigProviderInterface& config_provider) {
+GrpcAuthConfig::GrpcAuthConfig(
+    privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider) {
   service_account_ =
       GetConfigValue(std::string(kOtelServiceAccountKey),
                      std::string(kOtelServiceAccountValue), config_provider);

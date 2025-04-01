@@ -18,8 +18,6 @@
 
 #include <gtest/gtest.h>
 
-#include "cc/core/interface/type_def.h"
-
 namespace google::scp::core::common::test {
 TEST(RetryStrategyTests, ExponentialRetryStrategyTest) {
   RetryStrategy retry_strategy(RetryStrategyType::Exponential, 1000, 5);

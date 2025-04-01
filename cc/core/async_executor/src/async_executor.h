@@ -15,29 +15,22 @@
 #pragma once
 
 #include <atomic>
-#include <condition_variable>
-#include <functional>
 #include <map>
 #include <memory>
-#include <mutex>
-#include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/span.h"
-#include "cc/core/async_executor/src/async_task.h"
-#include "cc/core/async_executor/src/error_codes.h"
 #include "cc/core/async_executor/src/single_thread_async_executor.h"
 #include "cc/core/async_executor/src/single_thread_priority_async_executor.h"
-#include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
 static constexpr char kAsyncExecutor[] = "AsyncExecutor";
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief Scheme to spread incoming tasks on to executor pool workers
@@ -90,31 +83,31 @@ class AsyncExecutor : public AsyncExecutorInterface {
         drop_tasks_on_stop_(drop_tasks_on_stop),
         task_load_balancing_scheme_(task_load_balancing_scheme) {}
 
-  ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
 
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
-  ExecutionResult Schedule(const AsyncOperation& work,
-                           AsyncPriority priority) noexcept override;
+  google::scp::core::ExecutionResult Schedule(
+      const AsyncOperation& work, AsyncPriority priority) noexcept override;
 
-  ExecutionResult Schedule(
+  google::scp::core::ExecutionResult Schedule(
       const AsyncOperation& work, AsyncPriority priority,
       AsyncExecutorAffinitySetting affinity) noexcept override;
 
-  ExecutionResult ScheduleFor(const AsyncOperation& work,
-                              Timestamp timestamp) noexcept override;
+  google::scp::core::ExecutionResult ScheduleFor(
+      const AsyncOperation& work, Timestamp timestamp) noexcept override;
 
-  ExecutionResult ScheduleFor(
+  google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       AsyncExecutorAffinitySetting affinity) noexcept override;
 
-  ExecutionResult ScheduleFor(
+  google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback) noexcept override;
 
-  ExecutionResult ScheduleFor(
+  google::scp::core::ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback,
       AsyncExecutorAffinitySetting affinity) noexcept override;
@@ -130,7 +123,8 @@ class AsyncExecutor : public AsyncExecutorInterface {
   using NormalTaskExecutor = SingleThreadAsyncExecutor;
 
   template <class TaskExecutorType>
-  ExecutionResultOr<std::shared_ptr<TaskExecutorType>> PickTaskExecutor(
+  google::scp::core::ExecutionResultOr<std::shared_ptr<TaskExecutorType>>
+  PickTaskExecutor(
       AsyncExecutorAffinitySetting affinity,
       const std::vector<std::shared_ptr<TaskExecutorType>>& task_executor_pool,
       TaskExecutorPoolType task_executor_pool_type,
@@ -162,4 +156,4 @@ class AsyncExecutor : public AsyncExecutorInterface {
   /// threads.
   TaskLoadBalancingScheme task_load_balancing_scheme_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

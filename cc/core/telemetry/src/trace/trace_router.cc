@@ -24,14 +24,13 @@
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/trace/batch_span_processor_factory.h"
 #include "opentelemetry/sdk/trace/batch_span_processor_options.h"
-#include "opentelemetry/sdk/trace/samplers/trace_id_ratio.h"
 #include "opentelemetry/sdk/trace/tracer_provider.h"
 #include "opentelemetry/sdk/trace/tracer_provider_factory.h"
 #include "opentelemetry/trace/provider.h"
 
 namespace google::scp::core {
 namespace {
-inline constexpr absl::string_view kTraceRouter = "TraceRouter";
+using privacy_sandbox::pbs_common::ConfigProviderInterface;
 
 /**
  * @brief Creates a SpanProcessor based on configuration and SpanExporter.

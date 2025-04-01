@@ -17,8 +17,6 @@
 #pragma once
 
 #include <memory>
-#include <sstream>
-#include <string>
 #include <string_view>
 #include <utility>
 
@@ -27,7 +25,7 @@
 #include "cc/core/logger/interface/log_provider_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::logger {
+namespace privacy_sandbox::pbs_common {
 
 /*! @copydoc LoggerInterface
  */
@@ -37,59 +35,63 @@ class Logger : public LoggerInterface {
   explicit Logger(std::unique_ptr<LogProviderInterface> log_provider)
       : log_provider_(std::move(log_provider)) {}
 
-  ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
 
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
   void Info(const std::string_view& component_name,
-            const common::Uuid& correlation_id,
-            const common::Uuid& parent_activity_id,
-            const common::Uuid& activity_id, const std::string_view& location,
-            const std::string_view& message, ...) noexcept override;
+            const google::scp::core::common::Uuid& correlation_id,
+            const google::scp::core::common::Uuid& parent_activity_id,
+            const google::scp::core::common::Uuid& activity_id,
+            const std::string_view& location, const std::string_view& message,
+            ...) noexcept override;
 
   void Debug(const std::string_view& component_name,
-             const common::Uuid& correlation_id,
-             const common::Uuid& parent_activity_id,
-             const common::Uuid& activity_id, const std::string_view& location,
-             const std::string_view& message, ...) noexcept override;
+             const google::scp::core::common::Uuid& correlation_id,
+             const google::scp::core::common::Uuid& parent_activity_id,
+             const google::scp::core::common::Uuid& activity_id,
+             const std::string_view& location, const std::string_view& message,
+             ...) noexcept override;
 
   void Warning(const std::string_view& component_name,
-               const common::Uuid& correlation_id,
-               const common::Uuid& parent_activity_id,
-               const common::Uuid& activity_id,
+               const google::scp::core::common::Uuid& correlation_id,
+               const google::scp::core::common::Uuid& parent_activity_id,
+               const google::scp::core::common::Uuid& activity_id,
                const std::string_view& location,
                const std::string_view& message, ...) noexcept override;
 
   void Error(const std::string_view& component_name,
-             const common::Uuid& correlation_id,
-             const common::Uuid& parent_activity_id,
-             const common::Uuid& activity_id, const std::string_view& location,
-             const std::string_view& message, ...) noexcept override;
+             const google::scp::core::common::Uuid& correlation_id,
+             const google::scp::core::common::Uuid& parent_activity_id,
+             const google::scp::core::common::Uuid& activity_id,
+             const std::string_view& location, const std::string_view& message,
+             ...) noexcept override;
 
   void Alert(const std::string_view& component_name,
-             const common::Uuid& correlation_id,
-             const common::Uuid& parent_activity_id,
-             const common::Uuid& activity_id, const std::string_view& location,
-             const std::string_view& message, ...) noexcept override;
+             const google::scp::core::common::Uuid& correlation_id,
+             const google::scp::core::common::Uuid& parent_activity_id,
+             const google::scp::core::common::Uuid& activity_id,
+             const std::string_view& location, const std::string_view& message,
+             ...) noexcept override;
 
   void Critical(const std::string_view& component_name,
-                const common::Uuid& correlation_id,
-                const common::Uuid& parent_activity_id,
-                const common::Uuid& activity_id,
+                const google::scp::core::common::Uuid& correlation_id,
+                const google::scp::core::common::Uuid& parent_activity_id,
+                const google::scp::core::common::Uuid& activity_id,
                 const std::string_view& location,
                 const std::string_view& message, ...) noexcept override;
 
   void Emergency(const std::string_view& component_name,
-                 const common::Uuid& correlation_id,
-                 const common::Uuid& parent_activity_id,
-                 const common::Uuid& activity_id,
+                 const google::scp::core::common::Uuid& correlation_id,
+                 const google::scp::core::common::Uuid& parent_activity_id,
+                 const google::scp::core::common::Uuid& activity_id,
                  const std::string_view& location,
                  const std::string_view& message, ...) noexcept override;
 
  protected:
   /// A unique pointer to the log provider instance.
-  std::unique_ptr<logger::LogProviderInterface> log_provider_;
+  std::unique_ptr<LogProviderInterface> log_provider_;
 };
-}  // namespace google::scp::core::logger
+}  // namespace privacy_sandbox::pbs_common

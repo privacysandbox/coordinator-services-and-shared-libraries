@@ -14,23 +14,24 @@
 #pragma once
 
 #include "cc/core/interface/errors.h"
-#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::errors {
 
 /// Registers component code as 0x010A for the PBS server.
 REGISTER_COMPONENT_CODE(SC_PBS_SERVER, 0x010A)
 
-DEFINE_ERROR_CODE(SC_PBS_SERVER_CRASHED, SC_PBS_SERVER, 0x0001,
-                  "PBS server crashed.", HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(
+    SC_PBS_SERVER_CRASHED, SC_PBS_SERVER, 0x0001, "PBS server crashed.",
+    ::privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(SC_PBS_SERVER_CHILD_SIGNALLED, SC_PBS_SERVER, 0x0002,
-                  "PBS server's child signalled.",
-                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(
+    SC_PBS_SERVER_CHILD_SIGNALLED, SC_PBS_SERVER, 0x0002,
+    "PBS server's child signalled.",
+    ::privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(
     INVALID_ENVIROMENT, SC_PBS_SERVER, 0x0003,
     "A specific environment is being depended on that isn't present.",
-    HttpStatusCode::INTERNAL_SERVER_ERROR)
+    ::privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 }  // namespace google::scp::core::errors

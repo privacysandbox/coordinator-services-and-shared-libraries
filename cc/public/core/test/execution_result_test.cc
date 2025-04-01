@@ -22,28 +22,31 @@
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/proto/common.pb.h"
 #include "cc/core/interface/async_context.h"
+#include "cc/core/interface/logger_interface.h"
 #include "cc/core/logger/mock/mock_logger.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::common::GlobalLogger;
-using google::scp::core::logger::mock::MockLogger;
+namespace google::scp::core::test {
+using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::GlobalLogger;
+using ::privacy_sandbox::pbs_common::LoggerInterface;
+using ::privacy_sandbox::pbs_common::MockLogger;
 using std::function;
 using std::make_unique;
 using std::pair;
 using std::string;
 using std::unique_ptr;
 using std::vector;
-using testing::_;
-using testing::ElementsAre;
-using testing::Eq;
-using testing::FieldsAre;
-using testing::HasSubstr;
-using testing::IsEmpty;
-using testing::Not;
-using testing::Pointee;
-using testing::UnorderedPointwise;
+using ::testing::_;
+using ::testing::ElementsAre;
+using ::testing::Eq;
+using ::testing::FieldsAre;
+using ::testing::HasSubstr;
+using ::testing::IsEmpty;
+using ::testing::Not;
+using ::testing::Pointee;
+using ::testing::UnorderedPointwise;
 
-namespace google::scp::core::test {
 TEST(ExecutionResultTest, ToProto) {
   auto success = SuccessExecutionResult();
   auto actual_result = success.ToProto();

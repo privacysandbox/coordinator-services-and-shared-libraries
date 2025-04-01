@@ -15,7 +15,6 @@
 #pragma once
 
 #include "cc/core/interface/errors.h"
-#include "cc/public/core/interface/execution_result.h"
 
 namespace google::scp::core::errors {
 
@@ -24,36 +23,39 @@ REGISTER_COMPONENT_CODE(SC_PBS_SERVICE, 0x0108)
 
 DEFINE_ERROR_CODE(SC_PBS_SERVICE_ALREADY_RUNNING, SC_PBS_SERVICE, 0x0001,
                   "The PBS service is already running.",
-                  HttpStatusCode::BAD_REQUEST)
+                  privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
-DEFINE_ERROR_CODE(SC_PBS_SERVICE_NOT_RUNNING, SC_PBS_SERVICE, 0x0002,
-                  "The PBS service is not currently running.",
-                  HttpStatusCode::SERVICE_UNAVAILABLE)
+DEFINE_ERROR_CODE(
+    SC_PBS_SERVICE_NOT_RUNNING, SC_PBS_SERVICE, 0x0002,
+    "The PBS service is not currently running.",
+    privacy_sandbox::pbs_common::HttpStatusCode::SERVICE_UNAVAILABLE)
 
 DEFINE_ERROR_CODE(SC_PBS_SERVICE_RECOVERY_FAILED, SC_PBS_SERVICE, 0x0003,
                   "The PBS service recovery failed.",
-                  HttpStatusCode::BAD_REQUEST)
+                  privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
 DEFINE_ERROR_CODE(SC_PBS_LEASE_LOST, SC_PBS_SERVICE, 0x0004,
                   "The PBS service least has been lost.",
-                  HttpStatusCode::BAD_REQUEST)
+                  privacy_sandbox::pbs_common::HttpStatusCode::BAD_REQUEST)
 
 DEFINE_ERROR_CODE(
     SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH, SC_PBS_SERVICE, 0x0005,
     "The file path provided for the HTTP2 server private key is invalid.",
-    HttpStatusCode::INTERNAL_SERVER_ERROR)
+    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(
     SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH, SC_PBS_SERVICE, 0x0006,
     "The file path provided for the HTTP2 server certificate is invalid.",
-    HttpStatusCode::INTERNAL_SERVER_ERROR)
+    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(SC_PBS_SERVICE_UNRECOVERABLE_ERROR, SC_PBS_SERVICE, 0x0007,
-                  "The PBS service encountered an unrecoverable error.",
-                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(
+    SC_PBS_SERVICE_UNRECOVERABLE_ERROR, SC_PBS_SERVICE, 0x0007,
+    "The PBS service encountered an unrecoverable error.",
+    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(SC_PBS_SERVICE_INITIALIZATION_ERROR, SC_PBS_SERVICE, 0x0008,
-                  "The PBS service cannot be initialized.",
-                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(
+    SC_PBS_SERVICE_INITIALIZATION_ERROR, SC_PBS_SERVICE, 0x0008,
+    "The PBS service cannot be initialized.",
+    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 }  // namespace google::scp::core::errors

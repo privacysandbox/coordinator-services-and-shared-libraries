@@ -19,7 +19,7 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs_common {
 
 /// Registers component code as 0x0111 for syslog reader.
 REGISTER_COMPONENT_CODE(SC_SYSLOG_READER, 0x0111)
@@ -36,4 +36,4 @@ DEFINE_ERROR_CODE(SC_SYSLOG_READER_ERROR_SEEKING_LOG_FILE, SC_SYSLOG_READER,
                   "There was an error seeking to the offset in the log file",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs_common

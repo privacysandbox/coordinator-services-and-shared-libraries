@@ -45,7 +45,8 @@ class OperationDispatcher {
    * Retry status code.
    */
   OperationDispatcher(
-      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      const std::shared_ptr<
+          privacy_sandbox::pbs_common::AsyncExecutorInterface>& async_executor,
       RetryStrategy retry_strategy)
       : async_executor_(async_executor), retry_strategy_(retry_strategy) {}
 
@@ -107,8 +108,8 @@ class OperationDispatcher {
           kOperationDispatcher, async_context, async_context.result,
           absl::StrFormat("Max retries exceeded. Total retries: %lld",
                           async_context.retry_count));
-      async_context.result =
-          FailureExecutionResult(core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES);
+      async_context.result = FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_DISPATCHER_EXHAUSTED_RETRIES);
       async_context.Finish();
       return;
     }
@@ -123,8 +124,8 @@ class OperationDispatcher {
                                         "%lld, Expiration time: %lld",
                                         async_context.retry_count,
                                         async_context.expiration_time));
-      async_context.result =
-          FailureExecutionResult(core::errors::SC_DISPATCHER_OPERATION_EXPIRED);
+      async_context.result = FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_DISPATCHER_OPERATION_EXPIRED);
       async_context.Finish();
       return;
     }
@@ -142,7 +143,8 @@ class OperationDispatcher {
               "Total retries: %lld, Expiration time: %lld",
               async_context.retry_count, async_context.expiration_time));
       async_context.result = FailureExecutionResult(
-          core::errors::SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION);
+          privacy_sandbox::pbs_common::
+              SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION);
       async_context.Finish();
       return;
     }
@@ -156,7 +158,8 @@ class OperationDispatcher {
   }
 
   /// An instance of the async executor.
-  const std::shared_ptr<AsyncExecutorInterface> async_executor_;
+  const std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
+      async_executor_;
   /// The retry strategy for the dispatcher.
   RetryStrategy retry_strategy_;
 };

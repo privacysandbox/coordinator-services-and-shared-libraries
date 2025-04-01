@@ -29,6 +29,7 @@
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/core/telemetry/src/metric/otlp_grpc_authed_metric_exporter.h"
+#include "cc/pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
 #include "cc/pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
 #include "cc/pbs/consume_budget/src/gcp/consume_budget.h"
 #include "cc/pbs/interface/configuration_keys.h"
@@ -44,20 +45,23 @@
 
 namespace google::scp::pbs {
 
-using ::google::scp::core::AsyncExecutorInterface;
-using ::google::scp::core::AuthorizationProxyInterface;
-using ::google::scp::core::ConfigProviderInterface;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::GcpTokenFetcher;
+using ::google::scp::core::GetConfigValue;
 using ::google::scp::core::GrpcAuthConfig;
 using ::google::scp::core::GrpcIdTokenAuthenticator;
-using ::google::scp::core::kAlternateCloudServiceRegion;
-using ::google::scp::core::kHttpServerDnsRoutingEnabled;
 using ::google::scp::core::MetricRouter;
 using ::google::scp::core::OtlpGrpcAuthedMetricExporter;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::TimeDuration;
 using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::pbs::AwsHttpRequestResponseAuthInterceptor;
+using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::HttpClientInterface;
+using ::privacy_sandbox::pbs_common::kAlternateCloudServiceRegion;
+using ::privacy_sandbox::pbs_common::kHttpServerDnsRoutingEnabled;
+using ::privacy_sandbox::pbs_common::TimeDuration;
 
 static constexpr char kGcpDependencyProvider[] = "kGCPDependencyProvider";
 
@@ -160,8 +164,8 @@ ExecutionResult GcpDependencyFactory::ReadConfigurations() {
 
 std::unique_ptr<AuthorizationProxyInterface>
 GcpDependencyFactory::ConstructAuthorizationProxyClient(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
+    std::shared_ptr<AsyncExecutorInterface> async_executor,
+    std::shared_ptr<HttpClientInterface> http_client) noexcept {
   return std::make_unique<core::AuthorizationProxy>(
       auth_service_endpoint_, async_executor, http_client,
       std::make_unique<GcpHttpRequestResponseAuthInterceptor>(
@@ -170,8 +174,8 @@ GcpDependencyFactory::ConstructAuthorizationProxyClient(
 
 std::unique_ptr<AuthorizationProxyInterface>
 GcpDependencyFactory::ConstructAwsAuthorizationProxyClient(
-    std::shared_ptr<core::AsyncExecutorInterface> async_executor,
-    std::shared_ptr<core::HttpClientInterface> http_client) noexcept {
+    std::shared_ptr<AsyncExecutorInterface> async_executor,
+    std::shared_ptr<HttpClientInterface> http_client) noexcept {
   return std::make_unique<core::AuthorizationProxy>(
       alternate_auth_service_endpoint_, async_executor, http_client,
       std::make_unique<AwsHttpRequestResponseAuthInterceptor>(
@@ -180,8 +184,8 @@ GcpDependencyFactory::ConstructAwsAuthorizationProxyClient(
 
 std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
 GcpDependencyFactory::ConstructBudgetConsumptionHelper(
-    google::scp::core::AsyncExecutorInterface* async_executor,
-    google::scp::core::AsyncExecutorInterface* io_async_executor) noexcept {
+    AsyncExecutorInterface* async_executor,
+    AsyncExecutorInterface* io_async_executor) noexcept {
   google::scp::core::ExecutionResultOr<
       std::shared_ptr<cloud::spanner::Connection>>
       spanner_connection =

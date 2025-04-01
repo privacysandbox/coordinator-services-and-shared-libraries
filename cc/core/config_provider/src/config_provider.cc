@@ -26,6 +26,9 @@ using json = nlohmann::json;
 using std::list;
 
 namespace google::scp::core {
+namespace {
+using ::privacy_sandbox::pbs_common::ConfigKey;
+}
 
 ExecutionResult ConfigProvider::Init() noexcept {
   try {
@@ -33,7 +36,8 @@ ExecutionResult ConfigProvider::Init() noexcept {
     config_json_ = json::parse(jsonFile);
   } catch (json::parse_error& e) {
     return FailureExecutionResult(
-        errors::SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE);
+        privacy_sandbox::pbs_common::
+            SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE);
   }
   return SuccessExecutionResult();
 };

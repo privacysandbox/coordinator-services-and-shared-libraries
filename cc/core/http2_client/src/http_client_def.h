@@ -17,7 +17,7 @@
 
 #include "absl/strings/string_view.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 // Meter
 inline constexpr absl::string_view kHttpConnectionPoolMeter =
     "Http Connection Pool";
@@ -51,5 +51,5 @@ inline constexpr absl::string_view kUriLabel = "server.uri";
 inline constexpr absl::string_view kClientReturnCodeLabel =
     "client.return_code";
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_HTTP2_CLIENT_SRC_HTTP_CLIENT_DEF

@@ -17,7 +17,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -32,36 +31,47 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::pbs::test {
+namespace google::scp::pbs {
+namespace {
 
-using ::google::scp::core::Byte;
-using ::google::scp::core::BytesBuffer;
+using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::HttpHeaders;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::common::Uuid;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::pbs::FrontEndUtils;
+using ::privacy_sandbox::pbs_common::Byte;
+using ::privacy_sandbox::pbs_common::BytesBuffer;
+using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
+using ::testing::_;
+using ::testing::AnyOf;
+using ::testing::Eq;
+using ::testing::Return;
 
-static constexpr char kAuthorizedDomain[] = "https://fake.com";
-static constexpr char kTransactionOriginWithSubdomain[] =
+constexpr absl::string_view kAuthorizedDomain = "https://fake.com";
+constexpr absl::string_view kTransactionOriginWithSubdomain =
     "https://subdomain.fake.com";
-static constexpr char kTransactionOriginWithoutSubdomain[] = "https://fake.com";
+constexpr absl::string_view kTransactionOriginWithoutSubdomain =
+    "https://fake.com";
+constexpr absl::string_view kBudgetTypeBinaryBudget =
+    "BUDGET_TYPE_BINARY_BUDGET";
 
-struct ParseBeginTransactionTestCase {
-  std::string test_name;
+// Mock class with mock method to test ParseCommonV2TransactionRequestBody
+class MockKeyBodyProcessor {
+ public:
+  MOCK_METHOD(ExecutionResult, ProcessKeyBody,
+              (const nlohmann::json&, size_t, absl::string_view,
+               absl::string_view));
 };
-
-class ParseBeginTransactionTest
-    : public testing::TestWithParam<ParseBeginTransactionTestCase> {};
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSuccess) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
@@ -71,29 +81,32 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSuccess) {
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
         }
-        ]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-        "keys": [{
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
           "key": "456",
-          "token": 2,
+          "token": 1,
           "reporting_time": "2019-12-12T07:20:50.52Z"
         },
         {
           "key": "456",
-          "token": 2,
+          "token": 1,
           "reporting_time": "2019-12-12T08:20:50.52Z"
-        }]
-      }
-    ]
-  })";
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
   EXPECT_SUCCESS(execution_result);
   EXPECT_EQ(consume_budget_metadata_list.size(), 4);
@@ -108,351 +121,395 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSuccess) {
   EXPECT_EQ(it->time_bucket, 1576048850000000000);
   ++it;
   EXPECT_EQ(*it->budget_key_name, "http://b.fake.com/456");
-  EXPECT_EQ(it->token_count, 2);
+  EXPECT_EQ(it->token_count, 1);
   EXPECT_EQ(it->time_bucket, 1576135250000000000);
 }
 
 TEST(ParseBeginTransactionTest, V2RequestWithUnauthorizedReportingOrigin) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "reporting_origin": "http://b.shoe.com",
-        "keys": [{
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.shoe.com",
+      "keys": [
+        {
           "key": "456",
-          "token": 2,
+          "token": 1,
           "reporting_time": "2019-12-12T07:20:50.52Z"
-        }]
-      }
-    ]
-  })";
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
-          core::errors::
+          google::scp::core::errors::
               SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
   EXPECT_EQ(consume_budget_metadata_list.size(), 0);
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutData) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-  })";
+     "v": "2.0",
+   })";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(
-      execution_result,
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
   std::string begin_transaction_body = R"({
-    "invalid"
-  })";
+     "invalid"
+   })";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(
-      execution_result,
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
      ParseBeginTransactionV2RequestWithoutReportingOrigin) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "keys": [{
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
           "key": "456",
-          "token": 2,
+          "token": 1,
           "reporting_time": "2019-12-12T07:20:50.52Z"
-        }]
-      }
-    ]
-  })";
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(
-      execution_result,
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-      }
-    ]
-  })";
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(
-      execution_result,
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
      ParseBeginTransactionV2RequestWithTwoEqualsReportingOrigin) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "456",
-          "token": 2,
+          "token": 1,
           "reporting_time": "2019-12-12T07:20:50.52Z"
-        }]
-      }
-    ]
-  })";
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-        "keys": [{
-          "token": 2,
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "token": 1,
           "reporting_time": "2019-12-12T07:20:50.52Z"
-        }]
-      }
-    ]
-  })";
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(
-      execution_result,
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-        "keys": [{
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
           "key": "456",
           "reporting_time": "2019-12-12T07:20:50.52Z"
-        }]
-      }
-    ]
-  })";
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(
-      execution_result,
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
      ParseBeginTransactionV2RequestWithoutReportingTime) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-        "keys": [{
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
           "key": "456",
-          "token": 2,
-        }]
-      }
-    ]
-  })";
+          "token": 1,
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(
-      execution_result,
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
      ParseBeginTransactionV2RequestWithInvalidReportingTime) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [{
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z"
-        }]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-        "keys": [{
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
           "key": "456",
-          "token": 2,
+          "token": 1,
           "reporting_time": "invalid"
-        }]
-      }
-    ]
-  })";
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(ParseBeginTransactionTest,
      ParseBeginTransactionV2RequestWithEqualsBudgetKey) {
   std::string begin_transaction_body = R"({
-    "v": "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [
-          {
-            "key": "123",
-            "token": 1,
-            "reporting_time": "2019-12-11T07:20:50.52Z"
-          },
-          {
-            "key": "123",
-            "token": 1,
-            "reporting_time": "2019-12-11T07:20:51.53Z"
-          }
-        ]
-      }
-    ]
-  })";
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        },
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:51.53Z"
+        }
+      ]
+    }
+  ]
+})";
 
   BytesBuffer bytes_buffer(begin_transaction_body);
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
   auto execution_result = ParseBeginTransactionRequestBody(
-      kAuthorizedDomain, kTransactionOriginWithoutSubdomain, bytes_buffer,
+      std::string(kAuthorizedDomain),
+      std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
@@ -460,10 +517,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer1) {
@@ -471,10 +530,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer1) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
@@ -488,10 +549,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
@@ -505,10 +568,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
@@ -522,10 +587,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
@@ -539,10 +606,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
@@ -556,10 +625,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
@@ -573,8 +644,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             SuccessExecutionResult());
 }
 
@@ -590,10 +662,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer8) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
@@ -609,10 +683,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
@@ -628,10 +704,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
@@ -649,8 +727,9 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             SuccessExecutionResult());
 
   EXPECT_EQ(consume_budget_metadata_list.size(), 2);
@@ -682,8 +761,9 @@ TEST(ParseBeginTransactionTest,
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
   EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
             SuccessExecutionResult());
 
   EXPECT_EQ(consume_budget_metadata_list.size(), 2);
@@ -714,11 +794,13 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
-            FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(
+          google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
 TEST(ParseBeginTransactionTest,
@@ -736,92 +818,81 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                kAuthorizedDomain, kTransactionOriginWithSubdomain,
-                bytes_buffer, consume_budget_metadata_list),
-            FailureExecutionResult(
-                core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(
+          google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
 TEST(FrontEndUtilsTest, ExtractTransactionId) {
   auto headers = std::make_shared<HttpHeaders>();
   Uuid transaction_id;
-  EXPECT_EQ(
-      FrontEndUtils::ExtractTransactionId(headers, transaction_id),
-      FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+  EXPECT_EQ(ExtractTransactionIdFromHTTPHeaders(headers, transaction_id),
+            FailureExecutionResult(
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
 
   headers->insert(
       {std::string(kTransactionIdHeader), std::string("Asdasdasd")});
-  EXPECT_EQ(FrontEndUtils::ExtractTransactionId(headers, transaction_id),
-            FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING));
+  EXPECT_EQ(ExtractTransactionIdFromHTTPHeaders(headers, transaction_id),
+            FailureExecutionResult(
+                ::privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING));
 
   headers->clear();
   headers->insert({std::string(kTransactionIdHeader),
                    std::string("3E2A3D09-48ED-A355-D346-AD7DC6CB0909")});
-  EXPECT_EQ(FrontEndUtils::ExtractTransactionId(headers, transaction_id),
+  EXPECT_EQ(ExtractTransactionIdFromHTTPHeaders(headers, transaction_id),
             SuccessExecutionResult());
 }
 
 TEST(FrontEndUtilsTest, ExtractTransactionOrigin) {
-  auto headers = std::make_shared<HttpHeaders>();
-  std::string transaction_origin;
-  EXPECT_EQ(
-      FrontEndUtils::ExtractTransactionOrigin(headers, transaction_origin),
-      FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+  HttpHeaders headers{};
+  auto transaction_origin = ExtractTransactionOrigin(headers);
+  EXPECT_EQ(transaction_origin.result(),
+            FailureExecutionResult(
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
 
   std::string extracted_transaction_origin;
-  headers->insert({std::string(kTransactionOriginHeader),
-                   std::string("This is the origin")});
-  EXPECT_EQ(FrontEndUtils::ExtractTransactionOrigin(
-                headers, extracted_transaction_origin),
-            SuccessExecutionResult());
+  headers.insert({std::string(kTransactionOriginHeader),
+                  std::string("This is the origin")});
+  transaction_origin = ExtractTransactionOrigin(headers);
+  EXPECT_SUCCESS(transaction_origin.result());
 
-  EXPECT_EQ(extracted_transaction_origin, std::string("This is the origin"));
+  EXPECT_EQ(*transaction_origin, std::string("This is the origin"));
 }
 
 TEST(FrontEndUtilsTest, ExtractRequestClaimedIdentity) {
-  std::shared_ptr<core::HttpHeaders> headers = nullptr;
+  std::shared_ptr<HttpHeaders> headers = nullptr;
   std::string claimed_identity;
-  EXPECT_EQ(
-      FrontEndUtils::ExtractRequestClaimedIdentity(headers, claimed_identity),
-      FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+  EXPECT_EQ(ExtractRequestClaimedIdentity(headers, claimed_identity),
+            FailureExecutionResult(
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
   headers = std::make_shared<HttpHeaders>();
-  EXPECT_EQ(
-      FrontEndUtils::ExtractRequestClaimedIdentity(headers, claimed_identity),
-      FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+  EXPECT_EQ(ExtractRequestClaimedIdentity(headers, claimed_identity),
+            FailureExecutionResult(
+                google::scp::core::errors::
+                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
 
   std::string extracted_claimed_identity;
-  headers->insert({std::string(core::kClaimedIdentityHeader),
-                   std::string("other-coordinator")});
-  EXPECT_EQ(FrontEndUtils::ExtractRequestClaimedIdentity(
-                headers, extracted_claimed_identity),
+  headers->insert(
+      {std::string(kClaimedIdentityHeader), std::string("other-coordinator")});
+  EXPECT_EQ(ExtractRequestClaimedIdentity(headers, extracted_claimed_identity),
             SuccessExecutionResult());
 
   EXPECT_EQ(extracted_claimed_identity, std::string("other-coordinator"));
 }
 
-TEST(FrontEndUtilsTest, IsCoordinatorRequest) {
-  auto headers = std::make_shared<HttpHeaders>();
-  std::string coordinator_claimed_identity = "other-coordinator";
-  EXPECT_FALSE(FrontEndUtils::IsCoordinatorRequest(
-      headers, coordinator_claimed_identity));
-
-  headers->insert({std::string(core::kClaimedIdentityHeader),
-                   std::string("other-coordinator")});
-  EXPECT_TRUE(FrontEndUtils::IsCoordinatorRequest(
-      headers, coordinator_claimed_identity));
-}
-
 TEST(FrontEndUtilsTest, SerializeTransactionEmptyFailedCommandIndicesResponse) {
-  std::list<size_t> failed_indices;
+  std::vector<size_t> failed_indices;
   BytesBuffer bytes_buffer;
 
-  EXPECT_EQ(FrontEndUtils::SerializeTransactionFailedCommandIndicesResponse(
-                failed_indices, bytes_buffer),
+  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(failed_indices,
+                                                             bytes_buffer),
             SuccessExecutionResult());
 
   std::string serialized_failed_response(bytes_buffer.bytes->begin(),
@@ -833,11 +904,11 @@ TEST(FrontEndUtilsTest, SerializeTransactionEmptyFailedCommandIndicesResponse) {
 }
 
 TEST(FrontEndUtilsTest, SerializeTransactionFailedCommandIndicesResponse) {
-  std::list<size_t> failed_indices = {1, 2, 3, 4, 5};
+  std::vector<size_t> failed_indices = {1, 2, 3, 4, 5};
   BytesBuffer bytes_buffer;
 
-  EXPECT_EQ(FrontEndUtils::SerializeTransactionFailedCommandIndicesResponse(
-                failed_indices, bytes_buffer),
+  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(failed_indices,
+                                                             bytes_buffer),
             SuccessExecutionResult());
 
   std::string serialized_failed_response(bytes_buffer.bytes->begin(),
@@ -955,10 +1026,876 @@ TEST(TransformReportingOriginToSite, HttpSiteWithPortAndSlashToSiteSuccess) {
 
 TEST(TransformReportingOriginToSite, InvalidSite) {
   auto site = TransformReportingOriginToSite("******");
-  EXPECT_THAT(
-      site.result(),
-      ResultIs(FailureExecutionResult(
-          core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN)));
+  EXPECT_THAT(site.result(),
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN)));
 }
 
-}  // namespace google::scp::pbs::test
+TEST(ParseCommonV2TransactionRequestBodyTest, ValidRequestSuccess) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        },
+        {
+          "key": "234",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "234",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+
+  // Expected arguments for the first call.
+  nlohmann::json expected_key_body1 = nlohmann::json::parse(R"({
+           "key": "123",
+           "token": 1,
+           "reporting_time": "2019-12-11T07:20:50.52Z"
+         })");
+  size_t expected_key_index1 = 0;
+  std::string expected_reporting_origin1 = "http://a.fake.com";
+
+  // Expected arguments for the second call.
+  nlohmann::json expected_key_body2 = nlohmann::json::parse(R"({
+           "key": "234",
+           "token": 1,
+           "reporting_time": "2019-12-11T07:20:50.52Z"
+         })");
+  size_t expected_key_index2 = 1;
+  std::string expected_reporting_origin2 = "http://a.fake.com";
+
+  // Expected arguments for the third call.
+  nlohmann::json expected_key_body3 = nlohmann::json::parse(R"({
+           "key": "234",
+           "token": 1,
+           "reporting_time": "2019-12-12T07:20:50.52Z"
+         })");
+  size_t expected_key_index3 = 2;
+  std::string expected_reporting_origin3 = "http://b.fake.com";
+
+  // Set up the expectations.
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body1), Eq(expected_key_index1),
+                             Eq(expected_reporting_origin1),
+                             Eq(kBudgetTypeBinaryBudget)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body2), Eq(expected_key_index2),
+                             Eq(expected_reporting_origin2),
+                             Eq(kBudgetTypeBinaryBudget)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body3), Eq(expected_key_index3),
+                             Eq(expected_reporting_origin3),
+                             Eq(kBudgetTypeBinaryBudget)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  // Act
+  ExecutionResult result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_SUCCESS(result);
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutVersion) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+     "data": []
+   })");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestEmptyJson) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({})");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidVersion) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+     "v": "5.0"
+   })");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutData) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+     "v": "2.0"
+   })");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidData) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+     "v": "2.0",
+     "data": ""
+   })");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutReportingOrigin) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+
+  // Expected arguments for the first call.
+  nlohmann::json expected_key_body1 = nlohmann::json::parse(R"({
+           "key": "123",
+           "token": 1,
+           "reporting_time": "2019-12-11T07:20:50.52Z"
+         })");
+  size_t expected_key_index1 = 0;
+  std::string expected_reporting_origin1 = "http://a.fake.com";
+
+  // Set up the expectations.
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body1), Eq(expected_key_index1),
+                             Eq(expected_reporting_origin1),
+                             Eq(kBudgetTypeBinaryBudget)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutKeys) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [{
+        "key": "123",
+        "token": 1,
+        "reporting_time": "2019-12-11T07:20:50.52Z"
+      }]
+    },
+    {
+      "reporting_origin": "http://a.fake.com"
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+
+  // Expected arguments for the first call.
+  nlohmann::json expected_key_body1 = nlohmann::json::parse(R"({
+           "key": "123",
+           "token": 1,
+           "reporting_time": "2019-12-11T07:20:50.52Z"
+         })");
+  size_t expected_key_index1 = 0;
+  std::string expected_reporting_origin1 = "http://a.fake.com";
+
+  // Set up the expectations.
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body1), Eq(expected_key_index1),
+                             Eq(expected_reporting_origin1),
+                             Eq(kBudgetTypeBinaryBudget)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithEmptyReportingOrigin) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest,
+     RequestWithInvalidReportingOrigin) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest,
+     RequestWithUnauthorizedReportingOrigin) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.shoe.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+
+  // Expected arguments for the first call.
+  nlohmann::json expected_key_body1 = nlohmann::json::parse(R"({
+           "key": "123",
+           "token": 1,
+           "reporting_time": "2019-12-11T07:20:50.52Z"
+         })");
+  size_t expected_key_index1 = 0;
+  std::string expected_reporting_origin1 = "http://a.fake.com";
+
+  // Set up the expectations.
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body1), Eq(expected_key_index1),
+                             Eq(expected_reporting_origin1),
+                             Eq(kBudgetTypeBinaryBudget)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(
+      execution_result,
+      ResultIs(FailureExecutionResult(
+          google::scp::core::errors::
+              SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest,
+     RequestWithRepeatedReportingOrigin) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+
+  // Expected arguments for the first call.
+  nlohmann::json expected_key_body1 = nlohmann::json::parse(R"({
+     "key": "123",
+     "token": 1,
+     "reporting_time": "2019-12-11T07:20:50.52Z"
+   })");
+  size_t expected_key_index1 = 0;
+  std::string expected_reporting_origin1 = "http://a.fake.com";
+
+  // Set up the expectations.
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body1), Eq(expected_key_index1),
+                             Eq(expected_reporting_origin1),
+                             Eq(kBudgetTypeBinaryBudget)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithBudgetTypeSpecified) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": "local_pbs"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z",
+          "budget_type": "local_pbs"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+
+  // Expected arguments for the first call.
+  nlohmann::json expected_key_body1 = nlohmann::json::parse(R"({
+     "key": "123",
+     "token": 1,
+     "reporting_time": "2019-12-11T07:20:50.52Z",
+     "budget_type": "local_pbs"
+   })");
+  size_t expected_key_index1 = 0;
+  std::string expected_reporting_origin1 = "http://a.fake.com";
+
+  // Expected arguments for the second call.
+  nlohmann::json expected_key_body2 = nlohmann::json::parse(R"({
+       "key": "456",
+       "token": 1,
+       "reporting_time": "2019-12-12T07:20:50.52Z",
+       "budget_type": "local_pbs"
+   })");
+  size_t expected_key_index2 = 1;
+  std::string expected_reporting_origin2 = "http://b.fake.com";
+
+  // Set up the expectations.
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body1), Eq(expected_key_index1),
+                             Eq(expected_reporting_origin1), Eq("local_pbs")))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(Eq(expected_key_body2), Eq(expected_key_index2),
+                             Eq(expected_reporting_origin2), Eq("local_pbs")))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_SUCCESS(execution_result);
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest,
+     RequestWithDifferentBudgetTypeSpecified) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": "type1"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z",
+          "budget_type": "type2"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+  // Set up the expectations.
+  EXPECT_CALL(mock_processor,
+              ProcessKeyBody(_, _, _, AnyOf(Eq("type1"), Eq("type2"))))
+      .Times(2)
+      .WillRepeatedly(Return(SuccessExecutionResult()));
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+  EXPECT_SUCCESS(execution_result);
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest,
+     RequestWithBudgetTypeNotSpecifiedInSecondKey) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": "type1"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+  // Set up the expectations.
+  EXPECT_CALL(
+      mock_processor,
+      ProcessKeyBody(_, _, _, AnyOf(Eq("type1"), Eq(kBudgetTypeBinaryBudget))))
+      .Times(2)
+      .WillRepeatedly(Return(SuccessExecutionResult()));
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+  EXPECT_SUCCESS(execution_result);
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithEmptyBudgetType) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": ""
+        }
+      ]
+    }
+  ]
+})");
+
+  MockKeyBodyProcessor mock_processor;
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+}
+
+TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithNoData) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+     "v": "2.0",
+     "data": []
+   })");
+
+  MockKeyBodyProcessor mock_processor;
+
+  EXPECT_CALL(mock_processor, ProcessKeyBody(_, _, _, _)).Times(0);
+
+  ExecutionResult execution_result = ParseCommonV2TransactionRequestBody(
+      kAuthorizedDomain, request_body,
+      [&](const nlohmann::json& key_body, size_t key_index,
+          absl::string_view reporting_origin, absl::string_view budget_type) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin, budget_type);
+      });
+
+  EXPECT_SUCCESS(execution_result);
+}
+
+TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
+     RequestWithNoBudgetTypeSpecified) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  auto execution_result = ValidateAndGetBudgetType(request_body);
+  EXPECT_SUCCESS(execution_result);
+  EXPECT_EQ(*execution_result, kBudgetTypeBinaryBudget);
+}
+
+TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
+     RequestWithSameBudgetTypeSpecified) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": "type1"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z",
+          "budget_type": "type1"
+        }
+      ]
+    }
+  ]
+})");
+
+  auto execution_result = ValidateAndGetBudgetType(request_body);
+  EXPECT_SUCCESS(execution_result);
+  EXPECT_EQ(*execution_result, "type1");
+}
+
+TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest, V1Request) {
+  nlohmann::json request_body =
+      nlohmann::json::parse(R"({ "v": "1.0", "t": [] })");
+
+  auto execution_result = ValidateAndGetBudgetType(request_body);
+  EXPECT_SUCCESS(execution_result);
+  EXPECT_EQ(*execution_result, kBudgetTypeBinaryBudget);
+}
+
+TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
+     RequestWithDifferentBudgetTypeSpecified) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": "type1"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z",
+          "budget_type": "type2"
+        }
+      ]
+    }
+  ]
+})");
+
+  auto execution_result = ValidateAndGetBudgetType(request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+}
+
+TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
+     RequestWithBudgetTypeNotSpecifiedInSecondKey) {
+  nlohmann::json request_body = nlohmann::json::parse(R"({
+  "v": "2.0",
+  "data": [
+    {
+      "reporting_origin": "http://a.fake.com",
+      "keys": [
+        {
+          "key": "123",
+          "token": 1,
+          "reporting_time": "2019-12-11T07:20:50.52Z",
+          "budget_type": "type1"
+        }
+      ]
+    },
+    {
+      "reporting_origin": "http://b.fake.com",
+      "keys": [
+        {
+          "key": "456",
+          "token": 1,
+          "reporting_time": "2019-12-12T07:20:50.52Z"
+        }
+      ]
+    }
+  ]
+})");
+
+  auto execution_result = ValidateAndGetBudgetType(request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+}
+
+}  // namespace
+}  // namespace google::scp::pbs

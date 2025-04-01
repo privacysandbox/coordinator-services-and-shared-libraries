@@ -29,7 +29,8 @@
 namespace google::scp::core {
 /*! @copydoc ConfigProviderInterface
  */
-class ConfigProvider : public ConfigProviderInterface {
+class ConfigProvider
+    : public privacy_sandbox::pbs_common::ConfigProviderInterface {
  public:
   /**
    * @brief Constructs a new Config Provider object
@@ -45,48 +46,57 @@ class ConfigProvider : public ConfigProviderInterface {
 
   ExecutionResult Stop() noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, std::string& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      std::string& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, int32_t& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      int32_t& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, size_t& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      size_t& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, bool& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      bool& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<std::string>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<int32_t>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<size_t>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key,
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
                       std::list<bool>& out) noexcept override;
 
-  ExecutionResult Get(const ConfigKey& key, double& out) noexcept override;
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      double& out) noexcept override;
 
  private:
   template <typename T>
-  ExecutionResult Get(const ConfigKey& key, T& out) noexcept {
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      T& out) noexcept {
     if (!config_json_.contains(key)) {
-      return FailureExecutionResult(errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
+      return FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
     try {
       out = config_json_[key].get<T>();
     } catch (nlohmann::json::exception& e) {
       return FailureExecutionResult(
-          errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
     }
     return SuccessExecutionResult();
   }
 
   template <typename T>
-  ExecutionResult Get(const ConfigKey& key, std::list<T>& out) noexcept {
+  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
+                      std::list<T>& out) noexcept {
     auto it = config_json_.find(key);
     if (it == config_json_.end()) {
-      return FailureExecutionResult(errors::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
+      return FailureExecutionResult(
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
 
     try {
@@ -95,7 +105,7 @@ class ConfigProvider : public ConfigProviderInterface {
       }
     } catch (nlohmann::json::exception& e) {
       return FailureExecutionResult(
-          errors::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
+          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
     }
 
     return SuccessExecutionResult();

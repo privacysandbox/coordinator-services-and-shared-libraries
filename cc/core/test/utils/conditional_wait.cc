@@ -25,12 +25,12 @@
 
 #include "error_codes.h"
 
-using google::scp::core::common::TimeProvider;
-using google::scp::core::test::errors::SC_TEST_UTILS_TEST_WAIT_TIMEOUT;
+namespace google::scp::core::test {
+using ::google::scp::core::common::TimeProvider;
+using ::privacy_sandbox::pbs_common::SC_TEST_UTILS_TEST_WAIT_TIMEOUT;
 using std::function;
 using std::this_thread::yield;
 
-namespace google::scp::core::test {
 void WaitUntil(function<bool()> condition, DurationMs timeout) {
   auto start_time = TimeProvider::GetSteadyTimestampInNanoseconds();
   while (!condition()) {

@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/config_provider/src/env_config_provider.h"
 #include "cc/core/interface/configuration_keys.h"
 #include "cc/pbs/interface/configuration_keys.h"
@@ -29,6 +28,7 @@ namespace {
 
 using ::google::scp::core::EnvConfigProvider;
 using ::google::scp::pbs::LocalDependencyFactory;
+using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 
 TEST(PBSInstanceV3Test, TestInitRunAndStopWithLocalDependencyFactory) {
   const bool should_overwrite = true;
@@ -57,7 +57,7 @@ TEST(PBSInstanceV3Test, TestInitRunAndStopWithLocalDependencyFactory) {
   setenv(kRemotePrivacyBudgetServiceHostAddress, "https://remote.com",
          should_overwrite);
   setenv(kAuthServiceEndpoint, "https://auth.com", should_overwrite);
-  setenv(core::kCloudServiceRegion, "region", should_overwrite);
+  setenv(kCloudServiceRegion, "region", should_overwrite);
   setenv(kTotalHttp2ServerThreadsCount, "10", should_overwrite);
   setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table",
          should_overwrite);

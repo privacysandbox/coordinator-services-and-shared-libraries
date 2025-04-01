@@ -31,18 +31,20 @@
 #include "cc/core/http2_client/src/http_client_def.h"
 #include "cc/core/http2_client/src/http_connection.h"
 #include "cc/public/core/interface/execution_result.h"
-#include "opentelemetry/metrics/provider.h"
 
+namespace privacy_sandbox::pbs_common {
 using boost::algorithm::to_lower;
 using boost::system::error_code;
-using google::scp::core::common::kZeroUuid;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::common::kZeroUuid;
 using nghttp2::asio_http2::host_service_from_uri;
 
 static constexpr char kHttpsTag[] = "https";
 static constexpr char kHttpTag[] = "http";
 static constexpr char kHttpConnection[] = "HttpConnection";
-
-namespace google::scp::core {
 
 HttpConnectionPool::~HttpConnectionPool() {
   if (client_active_requests_instrument_) {
@@ -149,7 +151,8 @@ ExecutionResult HttpConnectionPool::GetConnection(
     std::shared_ptr<HttpConnection>& connection) noexcept {
   if (!is_running_) {
     return FailureExecutionResult(
-        errors::SC_HTTP2_CLIENT_CONNECTION_POOL_IS_NOT_AVAILABLE);
+        privacy_sandbox::pbs_common::
+            SC_HTTP2_CLIENT_CONNECTION_POOL_IS_NOT_AVAILABLE);
   }
 
   error_code ec;
@@ -158,7 +161,8 @@ ExecutionResult HttpConnectionPool::GetConnection(
   std::string service;
   if (host_service_from_uri(ec, scheme, host, service, *uri)) {
     IncrementClientAddressError(uri->c_str());
-    return FailureExecutionResult(errors::SC_HTTP2_CLIENT_INVALID_URI);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_HTTP2_CLIENT_INVALID_URI);
   }
 
   to_lower(scheme);
@@ -169,7 +173,8 @@ ExecutionResult HttpConnectionPool::GetConnection(
   } else if (scheme == kHttpTag) {
     is_https = false;
   } else {
-    return FailureExecutionResult(errors::SC_HTTP2_CLIENT_INVALID_URI);
+    return FailureExecutionResult(
+        privacy_sandbox::pbs_common::SC_HTTP2_CLIENT_INVALID_URI);
   }
 
   auto http_connection_entry = std::make_shared<HttpConnectionPoolEntry>();
@@ -211,7 +216,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
 
   if (!http_connection_entry->is_initialized.load()) {
     return RetryExecutionResult(
-        errors::SC_HTTP2_CLIENT_NO_CONNECTION_ESTABLISHED);
+        privacy_sandbox::pbs_common::SC_HTTP2_CLIENT_NO_CONNECTION_ESTABLISHED);
   }
 
   auto value = http_connection_entry->order_counter.fetch_add(1);
@@ -237,7 +242,8 @@ ExecutionResult HttpConnectionPool::GetConnection(
       // Return a retry if we are not able to pick a ready connection.
       if (!connection->IsReady()) {
         return RetryExecutionResult(
-            errors::SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY);
+            privacy_sandbox::pbs_common::
+                SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY);
       }
     }
   }
@@ -259,7 +265,7 @@ void HttpConnectionPool::RecycleConnection(
   connection->Run();
 
   SCP_DEBUG(
-      kHttpConnection, common::kZeroUuid,
+      kHttpConnection, kZeroUuid,
       absl::StrFormat("Successfully recycled connection %p", connection.get()));
 }
 
@@ -273,7 +279,7 @@ void HttpConnectionPool::ObserveClientActiveRequestsCallback(
   std::vector<std::string> keys;
   auto execution_result = self_ptr->connections_.Keys(keys);
   if (!execution_result.Successful()) {
-    SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+    SCP_DEBUG(kHttpConnection, kZeroUuid,
               "Could not fetch the keys for connections in connection pool");
     return;
   }
@@ -283,7 +289,7 @@ void HttpConnectionPool::ObserveClientActiveRequestsCallback(
     std::shared_ptr<HttpConnectionPoolEntry> entry;
     execution_result = self_ptr->connections_.Find(key, entry);
     if (!execution_result.Successful()) {
-      SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+      SCP_DEBUG(kHttpConnection, kZeroUuid,
                 absl::StrFormat(
                     "Could not fetch the connection pool entry for key %s",
                     key.c_str()));
@@ -309,7 +315,7 @@ void HttpConnectionPool::ObserveClientOpenConnectionsCallback(
   std::vector<std::string> keys;
   auto execution_result = self_ptr->connections_.Keys(keys);
   if (!execution_result.Successful()) {
-    SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+    SCP_DEBUG(kHttpConnection, kZeroUuid,
               "Could not fetch the keys for connections in connection pool");
     return;
   }
@@ -319,7 +325,7 @@ void HttpConnectionPool::ObserveClientOpenConnectionsCallback(
     std::shared_ptr<HttpConnectionPoolEntry> entry;
     execution_result = self_ptr->connections_.Find(key, entry);
     if (!execution_result.Successful()) {
-      SCP_DEBUG(kHttpConnection, common::kZeroUuid,
+      SCP_DEBUG(kHttpConnection, kZeroUuid,
                 "Could not fetch the connection pool entry for key %s",
                 key.c_str());
       return;
@@ -345,4 +351,4 @@ void HttpConnectionPool::IncrementClientAddressError(absl::string_view uri) {
   client_address_errors_counter_->Add(1, client_address_errors_label_kv);
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

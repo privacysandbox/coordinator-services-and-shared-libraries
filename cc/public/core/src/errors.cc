@@ -20,6 +20,6 @@
 
 namespace google::scp::core {
 const char* GetErrorMessage(uint64_t error_code) {
-  return errors::GetErrorMessage(error_code);
+  return ::privacy_sandbox::pbs_common::GetErrorMessage(error_code);
 }
 }  // namespace google::scp::core

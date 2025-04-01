@@ -46,23 +46,23 @@ TEST(UuidTests, UuidToString) {
 TEST(UuidTests, InvalidUuidString) {
   string uuid_string = "123";
   Uuid parsed_uuid;
-  EXPECT_THAT(
-      FromString(uuid_string, parsed_uuid),
-      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
+  EXPECT_THAT(FromString(uuid_string, parsed_uuid),
+              ResultIs(FailureExecutionResult(
+                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09r48EDrA355rD346rAD7DC6CB0909";
-  EXPECT_THAT(
-      FromString(uuid_string, parsed_uuid),
-      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
+  EXPECT_THAT(FromString(uuid_string, parsed_uuid),
+              ResultIs(FailureExecutionResult(
+                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09-48RD-A355-D346-AD7DC6CB0909";
-  EXPECT_THAT(
-      FromString(uuid_string, parsed_uuid),
-      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
+  EXPECT_THAT(FromString(uuid_string, parsed_uuid),
+              ResultIs(FailureExecutionResult(
+                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09-48Ed-A355-D346-AD7DC6CB0909";
-  EXPECT_THAT(
-      FromString(uuid_string, parsed_uuid),
-      ResultIs(FailureExecutionResult(core::errors::SC_UUID_INVALID_STRING)));
+  EXPECT_THAT(FromString(uuid_string, parsed_uuid),
+              ResultIs(FailureExecutionResult(
+                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
 }
 }  // namespace google::scp::core::common::test
