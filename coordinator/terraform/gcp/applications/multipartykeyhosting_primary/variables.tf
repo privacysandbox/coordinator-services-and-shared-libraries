@@ -41,11 +41,6 @@ variable "secondary_region" {
   type        = string
 }
 
-variable "mpkhs_package_bucket_location" {
-  description = "Location for multiparty keyhosting packages. Example: 'US'."
-  type        = string
-}
-
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -335,24 +330,6 @@ variable "cloudfunction_timeout_seconds" {
   default     = 60
 }
 
-variable "get_public_key_service_zip" {
-  description = <<-EOT
-    Get Public key service cloud function path.
-    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
-  EOT
-  type        = string
-  default     = null
-}
-
-variable "encryption_key_service_zip" {
-  description = <<-EOT
-    Encryption key service cloud function path.
-    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
-  EOT
-  type        = string
-  default     = null
-}
-
 variable "get_public_key_cloudfunction_memory_mb" {
   description = "Memory size in MB for public key cloud function."
   type        = number
@@ -421,12 +398,6 @@ variable "application_name" {
 # Cloud Run Variables.
 ################################################################################
 
-variable "use_cloud_run" {
-  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
-  type        = bool
-  default     = false
-}
-
 variable "cloud_run_revision_force_replace" {
   description = "Whether to create a new Cloud Run revision for every deployment."
   type        = bool
@@ -474,98 +445,6 @@ variable "get_public_key_cloud_cdn_max_ttl_seconds" {
 }
 
 ################################################################################
-# Public Key Alarm Variables.
-################################################################################
-
-variable "get_public_key_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation."
-  type        = string
-  default     = "360"
-}
-
-variable "get_public_key_alarm_duration_sec" {
-  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = number
-  default     = 60
-}
-
-variable "get_public_key_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "get_public_key_cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm."
-  type        = number
-  default     = 10000
-}
-
-variable "get_public_key_cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "get_public_key_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = number
-  default     = 10000
-}
-
-variable "get_public_key_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-################################################################################
-# Encryption Key Service Alarm Variables.
-################################################################################
-
-variable "encryptionkeyservice_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation."
-  type        = string
-  default     = 360
-}
-
-variable "encryptionkeyservice_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm."
-  type        = number
-  default     = 10000
-}
-
-variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "encryptionkeyservice_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = number
-  default     = 10000
-}
-
-variable "encryptionkeyservice_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "encryptionkeyservice_alarm_duration_sec" {
-  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = number
-  default     = 60
-}
-
-################################################################################
 # OpenTelemetry Variables
 ################################################################################
 
@@ -607,4 +486,60 @@ variable "aws_key_sync_keydb_table_name" {
   description = "Table name of the Dynamodb KeyDB for key sync writes."
   type        = string
   default     = ""
+}
+
+################################################################################
+# Cloud Armor Variables
+################################################################################
+
+variable "enable_security_policy" {
+  description = "Whether to enable the security policy on the backend service(s)"
+  type        = bool
+  default     = false
+}
+
+variable "use_adaptive_protection" {
+  description = "Whether Cloud Armor Adaptive Protection is being used or not."
+  type        = bool
+  default     = false
+}
+
+variable "encryption_key_security_policy_rules" {
+  description = "Set of objects to define as security policy rules for Encryption Key Service."
+  type = set(object({
+    description = string
+    action      = string
+    priority    = number
+    preview     = bool
+    match = object({
+      versioned_expr = string
+      config = object({
+        src_ip_ranges = list(string)
+      })
+      expr = object({
+        expression = string
+      })
+    })
+  }))
+  default = []
+}
+
+variable "public_key_security_policy_rules" {
+  description = "Set of objects to define as security policy rules for Public Key Service."
+  type = set(object({
+    description = string
+    action      = string
+    priority    = number
+    preview     = bool
+    match = object({
+      versioned_expr = string
+      config = object({
+        src_ip_ranges = list(string)
+      })
+      expr = object({
+        expression = string
+      })
+    })
+  }))
+  default = []
 }

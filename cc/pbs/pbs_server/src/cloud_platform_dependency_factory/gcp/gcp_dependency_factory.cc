@@ -82,45 +82,12 @@ ExecutionResult GcpDependencyFactory::ReadConfigurations() {
               "Failed to read budget key table name.");
     return execution_result;
   }
-  execution_result = config_provider_->Get(kPBSPartitionLockTableNameConfigName,
-                                           partition_lock_table_name_);
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kGcpDependencyProvider, kZeroUuid, execution_result,
-              "Failed to read partition key table name.");
-    return execution_result;
-  }
 
   execution_result =
       config_provider_->Get(kAuthServiceEndpoint, auth_service_endpoint_);
   if (!execution_result.Successful()) {
     SCP_CRITICAL(kGcpDependencyProvider, kZeroUuid, execution_result,
                  "Failed to read auth service endpoint.");
-    return execution_result;
-  }
-
-  execution_result =
-      config_provider_->Get(kRemotePrivacyBudgetServiceClaimedIdentity,
-                            reporting_origin_for_remote_coordinator_);
-  if (!execution_result.Successful()) {
-    SCP_CRITICAL(kGcpDependencyProvider, kZeroUuid, execution_result,
-                 "Failed to read remote claimed identity.");
-    return execution_result;
-  }
-
-  execution_result = config_provider_->Get(
-      kRemotePrivacyBudgetServiceHostAddress, remote_coordinator_endpoint_);
-  if (!execution_result.Successful()) {
-    SCP_CRITICAL(kGcpDependencyProvider, kZeroUuid, execution_result,
-                 "Failed to read remote host address.");
-    return execution_result;
-  }
-
-  execution_result =
-      config_provider_->Get(kRemotePrivacyBudgetServiceAuthServiceEndpoint,
-                            remote_coordinator_auth_gateway_endpoint_);
-  if (!execution_result.Successful()) {
-    SCP_CRITICAL(kGcpDependencyProvider, kZeroUuid, execution_result,
-                 "Failed to read remote auth endpoint.");
     return execution_result;
   }
 

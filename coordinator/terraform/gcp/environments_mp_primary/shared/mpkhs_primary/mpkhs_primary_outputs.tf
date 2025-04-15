@@ -12,28 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "get_public_key_loadbalancer_ip" {
-  value = module.multipartykeyhosting_primary.get_public_key_loadbalancer_ip
-}
-
-output "public_key_cloud_run_loadbalancer_ip" {
-  value = module.multipartykeyhosting_primary.public_key_cloud_run_loadbalancer_ip
+output "public_key_service_loadbalancer_ip" {
+  value = module.multipartykeyhosting_primary.public_key_service_loadbalancer_ip
 }
 
 output "public_key_base_url" {
   value = module.multipartykeyhosting_primary.public_key_base_url
 }
 
-output "encryption_key_service_cloudfunction_url" {
-  value = module.multipartykeyhosting_primary.encryption_key_service_cloudfunction_url
-}
-
 output "encryption_key_service_loadbalancer_ip" {
   value = module.multipartykeyhosting_primary.encryption_key_service_loadbalancer_ip
-}
-
-output "encryption_key_service_cloud_run_loadbalancer_ip" {
-  value = module.multipartykeyhosting_primary.encryption_key_service_cloud_run_loadbalancer_ip
 }
 
 output "encryption_key_base_url" {

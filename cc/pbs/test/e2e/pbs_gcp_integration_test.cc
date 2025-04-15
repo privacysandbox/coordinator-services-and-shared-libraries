@@ -266,13 +266,6 @@ class PBSIntegrationTest : public testing::Test {
          absl::StrCat(emulator_ip_address, ":", kSpannerGrpcPort)},
         {"SPANNER_EMULATOR_HOST",
          absl::StrCat(emulator_ip_address, ":", kSpannerGrpcPort)},
-        // Unused, but required environment variables
-        {"google_scp_pbs_transaction_manager_capacity", "-1"},
-        {"google_scp_pbs_journal_service_bucket_name", "unused"},
-        {"google_scp_pbs_journal_service_partition_name", "unused"},
-        {"google_scp_pbs_partition_lock_table_name", "unused"},
-        {"google_scp_pbs_partition_lease_duration_in_seconds", "-1"},
-        {"google_scp_pbs_remote_claimed_identity", "unused"},
         {"google_scp_pbs_value_proto_migration_phase", "phase_2"},
         {"google_scp_pbs_migration_enable_budget_consumer_migration", "true"},
     };

@@ -22,22 +22,11 @@ terraform {
 }
 
 locals {
-  cloudfunction_name_suffix = "get-public-key-cloudfunction"
-  cloudfunction_package_zip = var.get_public_key_service_zip
-  use_cloud_function        = local.cloudfunction_package_zip != null
-  cloud_run_name            = "public-key-service"
+  cloud_run_name = "public-key-service"
 }
 
 module "version" {
   source = "../version"
-}
-
-resource "google_storage_bucket_object" "get_public_key_package_bucket_object" {
-  # Need hash in name so cloudfunction knows to redeploy when code changes
-  count  = local.use_cloud_function ? 1 : 0
-  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${filesha256(local.cloudfunction_package_zip)}"
-  bucket = var.package_bucket_name
-  source = local.cloudfunction_package_zip
 }
 
 # One service account for multiple public key service locations
@@ -55,68 +44,6 @@ resource "google_spanner_database_iam_member" "get_public_key_spannerdb_iam_poli
   database = var.spanner_database_name
   role     = "roles/spanner.databaseReader"
   member   = "serviceAccount:${google_service_account.public_key_service_account.email}"
-}
-
-resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
-  for_each = local.use_cloud_function ? var.regions : []
-
-  project  = var.project_id
-  name     = "${var.environment}-${each.key}-${local.cloudfunction_name_suffix}"
-  location = each.key
-
-  build_config {
-    runtime     = "java17"
-    entry_point = "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PublicKeyServiceHttpFunction"
-    source {
-      storage_source {
-        bucket = var.package_bucket_name
-        object = google_storage_bucket_object.get_public_key_package_bucket_object[0].name
-      }
-    }
-  }
-
-  service_config {
-    min_instance_count               = var.get_public_key_cloudfunction_min_instances
-    max_instance_count               = var.get_public_key_cloudfunction_max_instances
-    max_instance_request_concurrency = var.get_public_key_request_concurrency
-    available_cpu                    = var.get_public_key_cpus
-    timeout_seconds                  = var.cloudfunction_timeout_seconds
-    available_memory                 = "${var.get_public_key_cloudfunction_memory_mb}M"
-    service_account_email            = google_service_account.public_key_service_account.email
-    ingress_settings                 = "ALLOW_INTERNAL_AND_GCLB"
-    environment_variables = {
-      PROJECT_ID          = var.project_id
-      SPANNER_INSTANCE    = var.spanner_instance_name
-      SPANNER_DATABASE    = var.spanner_database_name
-      APPLICATION_NAME    = var.application_name
-      VERSION             = module.version.version
-      LOG_EXECUTION_ID    = "true"
-      EXPORT_OTEL_METRICS = var.export_otel_metrics
-    }
-  }
-
-  labels = {
-    environment = var.environment
-  }
-
-  lifecycle {
-    ignore_changes = [
-      build_config[0].docker_repository
-    ]
-  }
-}
-
-# IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
-resource "google_cloud_run_service_iam_member" "get_public_key_iam_policy" {
-  for_each = local.use_cloud_function ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
-
-  project  = var.project_id
-  location = each.value.location
-  service  = each.value.name
-
-  role = "roles/run.invoker"
-  #TODO: Update so that only load balancer can invoke
-  member = "allUsers"
 }
 
 # IAM entry to allow public key cloud function to write metrics.

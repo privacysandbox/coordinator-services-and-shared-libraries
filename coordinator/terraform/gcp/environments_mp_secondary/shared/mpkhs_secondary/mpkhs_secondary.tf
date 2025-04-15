@@ -31,9 +31,6 @@ module "multipartykeyhosting_secondary" {
   allowed_operator_user_group                     = var.allowed_operator_user_group
   enable_audit_log                                = var.enable_audit_log
 
-  alarms_enabled            = var.alarms_enabled
-  alarms_notification_email = var.alarms_notification_email
-
   enable_domain_management         = var.enable_domain_management
   parent_domain_name               = var.parent_domain_name
   parent_domain_name_project       = var.parent_domain_name_project
@@ -45,9 +42,6 @@ module "multipartykeyhosting_secondary" {
   aws_kms_key_encryption_key_arn      = var.aws_kms_key_encryption_key_arn
   aws_kms_key_encryption_key_role_arn = var.aws_kms_key_encryption_key_role_arn
 
-  key_storage_service_zip    = var.key_storage_service_zip
-  encryption_key_service_zip = var.encryption_key_service_zip
-
   cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
@@ -58,10 +52,9 @@ module "multipartykeyhosting_secondary" {
   key_storage_service_cloudfunction_min_instances    = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances    = var.key_storage_service_cloudfunction_max_instances
 
-  mpkhs_package_bucket_location = var.mpkhs_package_bucket_location
-  spanner_instance_config       = var.spanner_instance_config
-  spanner_processing_units      = var.spanner_processing_units
-  key_db_retention_period       = var.key_db_retention_period
+  spanner_instance_config  = var.spanner_instance_config
+  spanner_processing_units = var.spanner_processing_units
+  key_db_retention_period  = var.key_db_retention_period
 
   allowed_wip_iam_principals                   = var.allowed_wip_iam_principals
   allowed_wip_user_group                       = var.allowed_wip_user_group
@@ -71,25 +64,8 @@ module "multipartykeyhosting_secondary" {
   assertion_tee_container_image_reference_list = var.assertion_tee_container_image_reference_list
   assertion_tee_container_image_hash_list      = var.assertion_tee_container_image_hash_list
 
-  keystorageservice_alarm_eval_period_sec                = var.keystorageservice_alarm_eval_period_sec
-  keystorageservice_alarm_duration_sec                   = var.keystorageservice_alarm_duration_sec
-  keystorageservice_cloudfunction_5xx_threshold          = var.keystorageservice_cloudfunction_5xx_threshold
-  keystorageservice_cloudfunction_error_threshold        = var.keystorageservice_cloudfunction_error_threshold
-  keystorageservice_cloudfunction_max_execution_time_max = var.keystorageservice_cloudfunction_max_execution_time_max
-  keystorageservice_lb_5xx_threshold                     = var.keystorageservice_lb_5xx_threshold
-  keystorageservice_lb_max_latency_ms                    = var.keystorageservice_lb_max_latency_ms
-
-  encryptionkeyservice_alarm_eval_period_sec                = var.encryptionkeyservice_alarm_eval_period_sec
-  encryptionkeyservice_alarm_duration_sec                   = var.encryptionkeyservice_alarm_duration_sec
-  encryptionkeyservice_cloudfunction_5xx_threshold          = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  encryptionkeyservice_cloudfunction_error_threshold        = var.encryptionkeyservice_cloudfunction_error_threshold
-  encryptionkeyservice_cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  encryptionkeyservice_lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
-  encryptionkeyservice_lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
-
   export_otel_metrics = var.export_otel_metrics
 
-  use_cloud_run                        = var.use_cloud_run
   cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
   private_key_service_image            = var.private_key_service_image
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
@@ -101,4 +77,9 @@ module "multipartykeyhosting_secondary" {
   aws_key_sync_kms_key_uri      = var.aws_key_sync_kms_key_uri
   aws_key_sync_keydb_region     = var.aws_key_sync_keydb_region
   aws_key_sync_keydb_table_name = var.aws_key_sync_keydb_table_name
+
+  enable_security_policy               = var.enable_security_policy
+  use_adaptive_protection              = var.use_adaptive_protection
+  encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
+  key_storage_security_policy_rules    = var.key_storage_security_policy_rules
 }

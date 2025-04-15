@@ -27,12 +27,6 @@ locals {
   public_key_domain        = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.public_key_service_subdomain}.${local.parent_domain_name}"
   encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
   notification_channel_id  = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
-  package_bucket_prefix    = "${var.project_id}_${var.environment}"
-  package_bucket_name      = length("${local.package_bucket_prefix}_mpkhs_primary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_primary_package_jars" : "${local.package_bucket_prefix}_mpkhs_a_pkg"
-
-  # Domain names for Cloud Run endpoints
-  public_key_cloud_run_domain     = var.environment != "prod" ? "${var.public_key_service_subdomain}-cr${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.public_key_service_subdomain}-cr.${local.parent_domain_name}"
-  encryption_key_cloud_run_domain = var.environment != "prod" ? "${var.encryption_key_service_subdomain}-cr${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}-cr.${local.parent_domain_name}"
 }
 
 module "vpc" {
@@ -41,16 +35,6 @@ module "vpc" {
   environment = var.environment
   project_id  = var.project_id
   regions     = toset([var.primary_region, var.secondary_region])
-}
-
-# Storage bucket containing cloudfunction JARs
-resource "google_storage_bucket" "mpkhs_primary_package_bucket" {
-  project = var.project_id
-  # GCS names are globally unique
-  name                        = local.package_bucket_name
-  location                    = var.mpkhs_package_bucket_location
-  uniform_bucket_level_access = true
-  public_access_prevention    = "enforced"
 }
 
 resource "google_monitoring_notification_channel" "alarm_email" {
@@ -126,11 +110,9 @@ module "publickeyhostingservice" {
   regions     = [var.primary_region, var.secondary_region]
 
   # Function vars
-  package_bucket_name                        = google_storage_bucket.mpkhs_primary_package_bucket.name
   spanner_database_name                      = module.keydb.keydb_name
   spanner_instance_name                      = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds              = var.cloudfunction_timeout_seconds
-  get_public_key_service_zip                 = var.get_public_key_service_zip
   get_public_key_cloudfunction_memory_mb     = var.get_public_key_cloudfunction_memory_mb
   get_public_key_cloudfunction_min_instances = var.get_public_key_cloudfunction_min_instances
   get_public_key_cloudfunction_max_instances = var.get_public_key_cloudfunction_max_instances
@@ -139,7 +121,6 @@ module "publickeyhostingservice" {
   application_name                           = var.application_name
 
   # Cloud Run vars
-  use_cloud_run                    = var.use_cloud_run
   cloud_run_revision_force_replace = var.cloud_run_revision_force_replace
   public_key_service_image         = var.public_key_service_image
 
@@ -152,22 +133,15 @@ module "publickeyhostingservice" {
   # Domain Management
   enable_domain_management                  = var.enable_domain_management
   public_key_domain                         = local.public_key_domain
-  public_key_cloud_run_domain               = local.public_key_cloud_run_domain
   public_key_service_alternate_domain_names = var.public_key_service_alternate_domain_names
-
-  # Alarms
-  alarms_enabled                                      = var.alarms_enabled
-  alarm_eval_period_sec                               = var.get_public_key_alarm_eval_period_sec
-  alarm_duration_sec                                  = var.get_public_key_alarm_duration_sec
-  notification_channel_id                             = local.notification_channel_id
-  get_public_key_cloudfunction_5xx_threshold          = var.get_public_key_cloudfunction_5xx_threshold
-  get_public_key_cloudfunction_error_threshold        = var.get_public_key_cloudfunction_error_threshold
-  get_public_key_cloudfunction_max_execution_time_max = var.get_public_key_cloudfunction_max_execution_time_max
-  get_public_key_lb_5xx_threshold                     = var.get_public_key_lb_5xx_threshold
-  get_public_key_lb_max_latency_ms                    = var.get_public_key_lb_max_latency_ms
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
+
+  # Cloud Armor vars
+  enable_security_policy           = var.enable_security_policy
+  use_adaptive_protection          = var.use_adaptive_protection
+  public_key_security_policy_rules = var.public_key_security_policy_rules
 }
 
 module "encryptionkeyservice" {
@@ -179,11 +153,9 @@ module "encryptionkeyservice" {
   allowed_operator_user_group = var.allowed_operator_user_group
 
   # Function vars
-  package_bucket_name                                = google_storage_bucket.mpkhs_primary_package_bucket.name
   spanner_database_name                              = module.keydb.keydb_name
   spanner_instance_name                              = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
-  encryption_key_service_zip                         = var.encryption_key_service_zip
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
@@ -191,29 +163,21 @@ module "encryptionkeyservice" {
   encryption_key_service_cpus                        = var.encryption_key_service_cpus
 
   # Cloud Run vars
-  use_cloud_run                        = var.use_cloud_run
   cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
   private_key_service_image            = var.private_key_service_image
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
 
   # Domain Management
-  enable_domain_management        = var.enable_domain_management
-  encryption_key_domain           = local.encryption_key_domain
-  encryption_key_cloud_run_domain = local.encryption_key_cloud_run_domain
-
-  # Alarms
-  alarms_enabled                       = var.alarms_enabled
-  alarm_eval_period_sec                = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec                   = var.encryptionkeyservice_alarm_duration_sec
-  notification_channel_id              = local.notification_channel_id
-  cloudfunction_5xx_threshold          = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloudfunction_error_threshold        = var.encryptionkeyservice_cloudfunction_error_threshold
-  cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
-  lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+  enable_domain_management = var.enable_domain_management
+  encryption_key_domain    = local.encryption_key_domain
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
+
+  # Cloud Armor vars
+  enable_security_policy               = var.enable_security_policy
+  use_adaptive_protection              = var.use_adaptive_protection
+  encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
 }
 
 module "domain_a_records" {
@@ -225,13 +189,8 @@ module "domain_a_records" {
   parent_domain_name_project = var.parent_domain_name_project
 
   service_domain_to_address_map = var.enable_domain_management ? {
-    # If use_cloud_run = True, point A record to the IP Address of Cloud Run LB otherise point to Cloud Function LB
-    (local.public_key_domain) : var.use_cloud_run ? module.publickeyhostingservice.public_key_cloud_run_loadbalancer_ip : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
-    (local.encryption_key_domain) : var.use_cloud_run ? module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
-
-    # A records for Cloud Run domain. Will be removed once Cloud Run migration is complete
-    (local.public_key_cloud_run_domain) : module.publickeyhostingservice.public_key_cloud_run_loadbalancer_ip,
-    (local.encryption_key_cloud_run_domain) : module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip
+    (local.public_key_domain) : module.publickeyhostingservice.public_key_service_cloud_run_loadbalancer_ip,
+    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip,
   } : {}
 }
 

@@ -15,13 +15,29 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
+    name = "clock",
+    srcs = ["clock.h"],
+    copts = [
+        "-Wthread-safety",
+    ],
+    deps = [
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+    ],
+)
+
+cc_library(
     name = "periodic_closure",
     srcs = [
         "periodic_closure.cc",
     ],
     hdrs = ["periodic_closure.h"],
+    copts = [
+        "-Wthread-safety",
+    ],
     visibility = ["//cc:pbs_visibility"],
     deps = [
+        ":clock",
         "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",

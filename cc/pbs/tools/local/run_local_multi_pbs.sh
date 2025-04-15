@@ -25,7 +25,6 @@ IO_ASYNC_EXEC_QUEUE_SIZE="${IO_ASYNC_EXEC_QUEUE_SIZE:-10000}"
 IO_ASYNC_EXEC_THREADS="${IO_ASYNC_EXEC_THREADS:-10}"
 ASYNC_EXEC_QUEUE_SIZE="${ASYNC_EXEC_QUEUE_SIZE:-10000}"
 ASYNC_EXEC_THREADS="${ASYNC_EXEC_THREADS:-10}"
-TX_MANAGER_CAPACITY="${TX_MANAGER_CAPACITY:-20000}"
 HTTP2_SERVER_THREADS="${HTTP2_SERVER_THREADS:-10}"
 
 
@@ -55,28 +54,16 @@ function run_server() {
     -v "$PWD:$PWD" \
     --env google_scp_core_cloud_region=us-east \
     --env google_scp_aggregated_metric_interval_ms=5000 \
-    --env google_scp_pbs_journal_service_bucket_name=$bucket_path \
     --env google_scp_pbs_budget_key_table_name=budget \
-    --env google_scp_pbs_partition_lock_table_name=lock \
     --env google_scp_pbs_host_port="$host_port" \
     --env google_scp_pbs_health_port="$health_port" \
     --env google_scp_pbs_http2_server_use_tls=false \
-    --env google_scp_pbs_partition_lease_duration_in_seconds=5 \
     --env google_scp_pbs_io_async_executor_queue_size=$IO_ASYNC_EXEC_QUEUE_SIZE \
     --env google_scp_pbs_io_async_executor_threads_count=$IO_ASYNC_EXEC_THREADS \
     --env google_scp_core_http2server_threads_count=$HTTP2_SERVER_THREADS \
-    --env google_scp_pbs_transaction_manager_capacity=$TX_MANAGER_CAPACITY \
     --env google_scp_pbs_async_executor_threads_count=$ASYNC_EXEC_THREADS \
     --env google_scp_pbs_async_executor_queue_size=$ASYNC_EXEC_QUEUE_SIZE \
-    --env google_scp_pbs_journal_service_partition_name=00000000-0000-0000-0000-000000000000 \
     --env google_scp_pbs_host_address=0.0.0.0 \
-    --env google_scp_pbs_remote_claimed_identity=remote \
-    --env google_scp_pbs_multi_instance_mode_disabled=true \
-    --env google_scp_pbs_remote_host_address=http://127.0.0.1:$remote_host_port \
-    --env google_scp_pbs_remote_cloud_region=us-east \
-    --env google_scp_pbs_remote_claimed_identity=remote-id \
-    --env google_scp_pbs_remote_assume_role_arn=remote-arn \
-    --env google_scp_pbs_remote_assume_role_external_id=ext-id \
     --env google_scp_otel_enabled=true \
     "$container_image_name"
 }

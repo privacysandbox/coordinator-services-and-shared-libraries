@@ -27,11 +27,6 @@ variable "region" {
   type        = string
 }
 
-variable "package_bucket_name" {
-  description = "Name of bucket containing cloudfunction jar."
-  type        = string
-}
-
 variable "enable_domain_management" {
   description = "Manage domain SSL cert creation and routing for this service."
   type        = bool
@@ -39,16 +34,6 @@ variable "enable_domain_management" {
 
 variable "encryption_key_domain" {
   description = "Domain to use to create a managed SSL cert for this service."
-  type        = string
-}
-
-variable "encryption_key_cloud_run_domain" {
-  description = "Domain to use to create a managed SSL cert for the cloud run service."
-  type        = string
-}
-
-variable "encryption_key_service_zip" {
-  description = "Path to the jar file for cloudfunction."
   type        = string
 }
 
@@ -97,11 +82,6 @@ variable "allowed_operator_user_group" {
   type        = string
 }
 
-variable "use_cloud_run" {
-  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
-  type        = bool
-}
-
 variable "cloud_run_revision_force_replace" {
   description = "Whether to create a new Cloud Run revision for every deployment."
   type        = bool
@@ -118,59 +98,43 @@ variable "private_key_service_custom_audiences" {
 }
 
 ################################################################################
-# Alarm Variables.
-################################################################################
-
-variable "alarms_enabled" {
-  description = "Enable alarms for this service."
-  type        = bool
-}
-
-variable "notification_channel_id" {
-  description = "Notification channel to which to send alarms."
-  type        = string
-}
-
-variable "alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
-}
-
-variable "alarm_duration_sec" {
-  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = string
-}
-
-variable "cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
-  type        = string
-}
-
-variable "cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm. Example: 9999."
-  type        = string
-}
-
-variable "cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
-}
-
-variable "lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = string
-}
-
-variable "lb_5xx_threshold" {
-  description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
-}
-
-################################################################################
 # OpenTelemetry Variables
 ################################################################################
 
 variable "export_otel_metrics" {
   description = "Use OpenTelemetry to export metrics from Encryption Key Service."
   type        = bool
+}
+
+################################################################################
+# Cloud Armor Variables
+################################################################################
+
+variable "enable_security_policy" {
+  description = "Whether to enable the security policy on the backend service(s)."
+  type        = bool
+}
+
+variable "use_adaptive_protection" {
+  description = "Whether Cloud Armor Adaptive Protection is being used or not."
+  type        = bool
+}
+
+variable "encryption_key_security_policy_rules" {
+  description = "Set of objects to define as security policy rules for Encryption Key Service."
+  type = set(object({
+    description = string
+    action      = string
+    priority    = number
+    preview     = bool
+    match = object({
+      versioned_expr = string
+      config = object({
+        src_ip_ranges = list(string)
+      })
+      expr = object({
+        expression = string
+      })
+    })
+  }))
 }

@@ -74,24 +74,6 @@ variable "aws_kms_key_encryption_key_role_arn" {
 # Function Variables
 ################################################################################
 
-variable "key_storage_cloudfunction_name" {
-  type        = string
-  description = "Name of cloud function."
-}
-
-variable "package_bucket_name" {
-  description = "Name of bucket containing cloudfunction jar."
-  type        = string
-}
-
-variable "key_storage_service_zip" {
-  description = <<-EOT
-          Key storage service cloud function path. If not provided defaults to locally built jar file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
-      EOT
-  type        = string
-}
-
 variable "key_storage_cloudfunction_memory" {
   type        = number
   description = "Memory size in MB for cloud function."
@@ -132,11 +114,6 @@ variable "key_encryption_key_id" {
   type        = string
 }
 
-variable "use_cloud_run" {
-  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
-  type        = bool
-}
-
 variable "cloud_run_revision_force_replace" {
   description = "Whether to create a new Cloud Run revision for every deployment."
   type        = bool
@@ -150,55 +127,6 @@ variable "key_storage_service_image" {
 variable "key_storage_service_custom_audiences" {
   description = "List of custom audiences for Key Storage Service on Cloud Run."
   type        = list(string)
-}
-
-################################################################################
-# Alarm Variables.
-################################################################################
-
-variable "alarms_enabled" {
-  description = "Enable alarms for this service."
-  type        = bool
-}
-
-variable "notification_channel_id" {
-  description = "Notification channel to which to send alarms."
-  type        = string
-}
-
-variable "alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
-}
-
-variable "alarm_duration_sec" {
-  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = string
-}
-
-variable "cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
-  type        = string
-}
-
-variable "cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm. Example: 9999."
-  type        = string
-}
-
-variable "cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
-}
-
-variable "lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = string
-}
-
-variable "lb_5xx_threshold" {
-  description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
 }
 
 ################################################################################
@@ -243,4 +171,37 @@ variable "aws_key_sync_keydb_table_name" {
   description = "Table name of the Dynamodb KeyDB for key sync writes."
   type        = string
   default     = ""
+}
+
+################################################################################
+# Cloud Armor Variables
+################################################################################
+
+variable "enable_security_policy" {
+  description = "Whether to enable the security policy on the backend service(s)."
+  type        = bool
+}
+
+variable "use_adaptive_protection" {
+  description = "Whether Cloud Armor Adaptive Protection is being used or not."
+  type        = bool
+}
+
+variable "key_storage_security_policy_rules" {
+  description = "Set of objects to define as security policy rules for Key Storage Service."
+  type = set(object({
+    description = string
+    action      = string
+    priority    = number
+    preview     = bool
+    match = object({
+      versioned_expr = string
+      config = object({
+        src_ip_ranges = list(string)
+      })
+      expr = object({
+        expression = string
+      })
+    })
+  }))
 }

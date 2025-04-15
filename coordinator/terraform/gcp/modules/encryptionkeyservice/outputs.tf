@@ -12,18 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "encryption_key_service_cloudfunction_url" {
-  description = "The audience claim URL used by clients."
-  value       = local.use_cloud_function ? google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].url : null
-}
-
 output "encryption_key_service_cloudrun_url" {
   description = "The audience claim URL used by clients."
   value       = google_cloud_run_v2_service.private_key_service.uri
-}
-
-output "encryption_key_service_loadbalancer_ip" {
-  value = local.use_cloud_function ? google_compute_global_address.encryption_key_service_ip_address[0].address : null
 }
 
 output "encryption_key_service_cloud_run_loadbalancer_ip" {

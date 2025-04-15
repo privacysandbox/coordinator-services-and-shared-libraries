@@ -12,19 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Network Endpoint Group to route to Cloud Functions in each region
-resource "google_compute_region_network_endpoint_group" "get_public_key_network_endpoint_group" {
-  for_each = local.use_cloud_function ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
-
-  project               = var.project_id
-  name                  = "${var.environment}-${each.value.location}-get-public-key-endpoint-group"
-  network_endpoint_type = "SERVERLESS"
-  region                = each.value.location
-  cloud_run {
-    service = each.value.name
-  }
-}
-
 # Network Endpoint Group to route to Cloud Run in each region
 resource "google_compute_region_network_endpoint_group" "public_key_service_cloud_run" {
   for_each = google_cloud_run_v2_service.public_key_service
@@ -38,39 +25,62 @@ resource "google_compute_region_network_endpoint_group" "public_key_service_clou
   }
 }
 
-# Backend service that groups network endpoint groups to Cloud Functions for
-# Load Balancer to use.
-resource "google_compute_backend_service" "get_public_key_loadbalancer_backend" {
-  count       = local.use_cloud_function ? 1 : 0
-  name        = "${var.environment}-get-public-key-backend"
+# Security policy for external load balancer
+resource "google_compute_security_policy" "public_key_service_security_policy" {
   project     = var.project_id
-  description = "Backend service to point Public Key Cloud Functions."
+  name        = "${var.environment}-public-key-service-security-policy"
+  description = "Security policy with for Public Key Service LB"
+  type        = "CLOUD_ARMOR"
 
-  enable_cdn = var.enable_get_public_key_cdn
-
-  cdn_policy {
-    cache_mode  = var.enable_get_public_key_cdn ? "CACHE_ALL_STATIC" : null
-    default_ttl = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_default_ttl_seconds : null
-    client_ttl  = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_default_ttl_seconds : null
-    max_ttl     = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_max_ttl_seconds : null
-
-    cache_key_policy {
-      include_host         = false
-      include_protocol     = false
-      include_query_string = false
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = var.use_adaptive_protection
     }
   }
 
-  dynamic "backend" {
-    for_each = google_compute_region_network_endpoint_group.get_public_key_network_endpoint_group
+  rule {
+    description = "Default allow all rule"
+    action      = "allow"
+    priority    = "2147483647"
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.public_key_security_policy_rules
     content {
-      description = var.environment
-      group       = backend.value.id
-    }
-  }
+      description = rule.value.description
+      action      = rule.value.action
+      priority    = rule.value.priority
+      preview     = rule.value.preview
 
-  log_config {
-    enable = var.public_key_load_balancer_logs_enabled
+      match {
+        # Basic rules handle IP addresses/ranges only and require both
+        # versioned_expr and config be defined.
+        versioned_expr = rule.value.match.versioned_expr
+
+        dynamic "config" {
+          for_each = rule.value.match.expr == null ? [1] : []
+          content {
+            src_ip_ranges = rule.value.match.config.src_ip_ranges
+          }
+        }
+
+        # Advanced rules handle CEL expressions and require expr to be defined.
+        dynamic "expr" {
+          for_each = rule.value.match.expr != null ? [1] : []
+          content {
+            expression = rule.value.match.expr.expression
+          }
+        }
+      }
+    }
   }
 }
 
@@ -108,14 +118,8 @@ resource "google_compute_backend_service" "public_key_service_cloud_run" {
   log_config {
     enable = var.public_key_load_balancer_logs_enabled
   }
-}
 
-# URL Map creates Load balancer to Cloud Functions
-resource "google_compute_url_map" "get_public_key_loadbalancer" {
-  count           = local.use_cloud_function ? 1 : 0
-  project         = var.project_id
-  name            = "${var.environment}-get-public-key-loadbalancer"
-  default_service = google_compute_backend_service.get_public_key_loadbalancer_backend[0].id
+  security_policy = var.enable_security_policy ? google_compute_security_policy.public_key_service_security_policy.id : null
 }
 
 # URL Map creates Load balancer to Cloud Run
@@ -123,28 +127,6 @@ resource "google_compute_url_map" "public_key_service_cloud_run" {
   project         = var.project_id
   name            = "${var.environment}-public-key-service-cloud-run"
   default_service = google_compute_backend_service.public_key_service_cloud_run.id
-}
-
-# Proxy to loadbalancer for Cloud Functions. HTTP without custom domain
-resource "google_compute_target_http_proxy" "get_public_key_loadbalancer_proxy" {
-  count = !var.enable_domain_management && local.use_cloud_function ? 1 : 0
-
-  project = var.project_id
-  name    = "${var.environment}-get-public-key-proxy"
-  url_map = google_compute_url_map.get_public_key_loadbalancer[0].id
-}
-
-# Proxy to loadbalancer for Cloud Functions. HTTPS with custom domain
-resource "google_compute_target_https_proxy" "get_public_key_loadbalancer_proxy" {
-  count = var.enable_domain_management && local.use_cloud_function ? 1 : 0
-
-  project = var.project_id
-  name    = "${var.environment}-get-public-key-proxy"
-  url_map = google_compute_url_map.get_public_key_loadbalancer[0].id
-
-  ssl_certificates = [
-    google_compute_managed_ssl_certificate.get_public_key_loadbalancer[0].id
-  ]
 }
 
 # Proxy to loadbalancer for Cloud Run. HTTP without custom domain
@@ -170,31 +152,9 @@ resource "google_compute_target_https_proxy" "public_key_service_cloud_run" {
 }
 
 # Reserve IP address.
-resource "google_compute_global_address" "get_public_key_ip_address" {
-  count   = local.use_cloud_function ? 1 : 0
-  project = var.project_id
-  name    = "${var.environment}-get-public-key-ip-address"
-}
-
-# Reserve IP address.
 resource "google_compute_global_address" "public_key_cloud_run" {
   project = var.project_id
   name    = "${var.environment}-public-key-cloud-run"
-}
-
-# Map IP address and loadbalancer proxy to Cloud Functions
-resource "google_compute_global_forwarding_rule" "get_public_key_loadbalancer_config" {
-  count      = local.use_cloud_function ? 1 : 0
-  project    = var.project_id
-  name       = "${var.environment}-get-public-key-frontend-configuration"
-  ip_address = google_compute_global_address.get_public_key_ip_address[0].address
-  port_range = var.enable_domain_management ? "443" : "80"
-
-  target = (
-    var.enable_domain_management ?
-    google_compute_target_https_proxy.get_public_key_loadbalancer_proxy[0].id :
-    google_compute_target_http_proxy.get_public_key_loadbalancer_proxy[0].id
-  )
 }
 
 # Map IP address and loadbalancer proxy to Cloud Run
@@ -223,15 +183,5 @@ resource "google_compute_managed_ssl_certificate" "get_public_key_loadbalancer" 
 
   managed {
     domains = concat([var.public_key_domain], var.public_key_service_alternate_domain_names)
-  }
-}
-
-resource "google_compute_managed_ssl_certificate" "public_key_cloud_run_loadbalancer" {
-  count   = var.enable_domain_management ? 1 : 0
-  project = var.project_id
-  name    = "${var.environment}-public-key-cloud-run-cert"
-
-  managed {
-    domains = [var.public_key_cloud_run_domain]
   }
 }

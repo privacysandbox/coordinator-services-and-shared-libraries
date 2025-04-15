@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "load_balancer_ip_cloud_run" {
-  value = google_compute_global_address.key_storage_service_cloud_run.address
-}
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_pkg//:mappings.bzl", "pkg_files")
 
-output "key_storage_service_cloud_run_audience_url" {
-  description = "The audience claim URL used by the key generation service."
-  value       = google_cloud_run_v2_service.key_storage_service.uri
-}
+package(default_visibility = ["//visibility:private"])
 
-output "key_storage_service_account_unique_id" {
-  description = "Unique Id of key storage service account"
-  value       = google_service_account.key_storage_service_account.unique_id
-}
+proto_library(
+    name = "api_proto",
+    srcs = [
+        "api.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "api_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":api_proto"],
+)

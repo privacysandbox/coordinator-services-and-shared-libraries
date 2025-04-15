@@ -22,9 +22,7 @@ terraform {
 }
 
 locals {
-  key_storage_package_zip = var.key_storage_service_zip
-  cloud_run_name          = "key-storage-service"
-  use_cloud_function      = local.key_storage_package_zip != null
+  cloud_run_name = "key-storage-service"
 }
 
 module "version" {
@@ -38,69 +36,6 @@ resource "google_service_account" "key_storage_service_account" {
   display_name = "KeyStorage Service Account"
 }
 
-resource "google_storage_bucket_object" "key_storage_archive" {
-  # Need hash in name so cloudfunction knows to redeploy when code changes
-  count  = local.use_cloud_function ? 1 : 0
-  name   = "${var.environment}_key_storage_${filesha256(local.key_storage_package_zip)}"
-  bucket = var.package_bucket_name
-  source = local.key_storage_package_zip
-}
-
-resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
-  count       = local.use_cloud_function ? 1 : 0
-  project     = var.project_id
-  name        = "${var.environment}-${var.region}-${var.key_storage_cloudfunction_name}"
-  location    = var.region
-  description = "Cloud Function for key storage service"
-
-  build_config {
-    runtime     = "java17"
-    entry_point = "com.google.scp.coordinator.keymanagement.keystorage.service.gcp.KeyStorageServiceHttpFunction"
-    source {
-      storage_source {
-        bucket = var.package_bucket_name
-        object = google_storage_bucket_object.key_storage_archive[0].name
-      }
-    }
-  }
-
-  service_config {
-    min_instance_count    = var.key_storage_service_cloudfunction_min_instances
-    max_instance_count    = var.key_storage_service_cloudfunction_max_instances
-    timeout_seconds       = var.cloudfunction_timeout_seconds
-    available_memory      = "${var.key_storage_cloudfunction_memory}M"
-    service_account_email = google_service_account.key_storage_service_account.email
-    ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
-    environment_variables = {
-      PROJECT_ID                    = var.project_id
-      GCP_KMS_URI                   = "gcp-kms://${var.key_encryption_key_id}"
-      SPANNER_INSTANCE              = var.spanner_instance_name
-      SPANNER_DATABASE              = var.spanner_database_name
-      VERSION                       = module.version.version
-      LOG_EXECUTION_ID              = "true"
-      EXPORT_OTEL_METRICS           = var.export_otel_metrics
-      AWS_XC_ENABLED                = var.aws_xc_enabled ? "true" : null
-      AWS_KMS_URI                   = var.aws_xc_enabled ? "aws-kms://${var.aws_kms_key_encryption_key_arn}" : null
-      AWS_KMS_ROLE_ARN              = var.aws_xc_enabled ? var.aws_kms_key_encryption_key_role_arn : null
-      AWS_KEY_SYNC_ENABLED          = var.aws_key_sync_enabled ? "true" : null
-      AWS_KEY_SYNC_ROLE_ARN         = var.aws_key_sync_enabled ? var.aws_key_sync_role_arn : null
-      AWS_KEY_SYNC_KMS_KEY_URI      = var.aws_key_sync_enabled ? "aws-kms://${var.aws_key_sync_kms_key_uri}" : null
-      AWS_KEY_SYNC_KEYDB_REGION     = var.aws_key_sync_enabled ? var.aws_key_sync_keydb_region : null
-      AWS_KEY_SYNC_KEYDB_TABLE_NAME = var.aws_key_sync_enabled ? var.aws_key_sync_keydb_table_name : null
-    }
-  }
-
-  labels = {
-    environment = var.environment
-  }
-
-  lifecycle {
-    ignore_changes = [
-      build_config[0].docker_repository
-    ]
-  }
-}
-
 # IAM entry for key storage service account to use the database
 resource "google_spanner_database_iam_member" "keydb_iam_policy" {
   project  = var.project_id
@@ -108,18 +43,6 @@ resource "google_spanner_database_iam_member" "keydb_iam_policy" {
   database = var.spanner_database_name
   role     = "roles/spanner.databaseUser"
   member   = "serviceAccount:${google_service_account.key_storage_service_account.email}"
-}
-
-# IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
-resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
-  for_each = local.use_cloud_function ? setunion(var.allowed_wip_iam_principals, var.allowed_wip_user_group != null ? ["group:${var.allowed_wip_user_group}"] : []) : []
-
-  project  = var.project_id
-  location = google_cloudfunctions2_function.key_storage_cloudfunction[0].location
-  service  = google_cloudfunctions2_function.key_storage_cloudfunction[0].name
-
-  role   = "roles/run.invoker"
-  member = each.key
 }
 
 # Cloud Run Service for Key Storage Service.

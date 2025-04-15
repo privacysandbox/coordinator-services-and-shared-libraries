@@ -233,12 +233,6 @@ void FrontEndServiceV2::MetricInit() {
 }
 
 ExecutionResult FrontEndServiceV2::Init() noexcept {
-  ExecutionResult execution_result =
-      config_provider_->Get(kRemotePrivacyBudgetServiceClaimedIdentity,
-                            remote_coordinator_claimed_identity_);
-
-  RETURN_IF_FAILURE(execution_result);
-
   std::string health_check_path(kStatusHealthCheckPath);
   HttpHandler health_check_handler =
       std::bind_front(&FrontEndServiceV2::BeginTransaction, this);
@@ -417,8 +411,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
   SCP_DEBUG_CONTEXT(kFrontEndService, http_context,
                     "Start PrepareTransaction.");
   const std::string reporting_origin_metric_label =
-      GetReportingOriginMetricLabel(http_context.request,
-                                    remote_coordinator_claimed_identity_);
+      GetReportingOriginMetricLabel();
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},
@@ -517,8 +510,7 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
     AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
         consume_budget_context) {
   const std::string reporting_origin_metric_label =
-      GetReportingOriginMetricLabel(http_context.request,
-                                    remote_coordinator_claimed_identity_);
+      GetReportingOriginMetricLabel();
 
   absl::flat_hash_map<absl::string_view, std::string> labels = {
       {kMetricLabelTransactionPhase, kMetricLabelPrepareTransaction},

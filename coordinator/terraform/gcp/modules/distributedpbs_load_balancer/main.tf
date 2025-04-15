@@ -101,6 +101,65 @@ resource "google_compute_region_network_endpoint_group" "pbs_auth_network_endpoi
   }
 }
 
+# Security policy for external load balancer
+resource "google_compute_security_policy" "pbs_security_policy" {
+  project     = var.project_id
+  name        = "${var.environment}-pbs-security-policy"
+  description = "Security policy with for PBS LB"
+  type        = "CLOUD_ARMOR"
+
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = var.use_adaptive_protection
+    }
+  }
+
+  rule {
+    description = "Default allow all rule"
+    action      = "allow"
+    priority    = "2147483647"
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.pbs_security_policy_rules
+    content {
+      description = rule.value.description
+      action      = rule.value.action
+      priority    = rule.value.priority
+      preview     = rule.value.preview
+
+      match {
+        # Basic rules handle IP addresses/ranges only and require both
+        # versioned_expr and config be defined.
+        versioned_expr = rule.value.match.versioned_expr
+
+        dynamic "config" {
+          for_each = rule.value.match.expr == null ? [1] : []
+          content {
+            src_ip_ranges = rule.value.match.config.src_ip_ranges
+          }
+        }
+
+        # Advanced rules handle CEL expressions and require expr to be defined.
+        dynamic "expr" {
+          for_each = rule.value.match.expr != null ? [1] : []
+          content {
+            expression = rule.value.match.expr.expression
+          }
+        }
+      }
+    }
+  }
+}
+
 # Backend service that maps to the auth cloud function for the load balancer to use
 resource "google_compute_backend_service" "pbs_auth_loadbalancer_backend" {
   count                           = var.enable_domain_management ? 1 : 0
@@ -144,6 +203,8 @@ resource "google_compute_backend_service" "pbs_backend_service" {
   log_config {
     enable = true
   }
+
+  security_policy = var.enable_security_policy ? google_compute_security_policy.pbs_security_policy.id : null
 }
 
 # Network Endpoint Group to route to Cloud Run PBS
@@ -184,6 +245,8 @@ resource "google_compute_backend_service" "pbs_cloud_run_backend_service" {
   log_config {
     enable = true
   }
+
+  security_policy = var.enable_security_policy ? google_compute_security_policy.pbs_security_policy.id : null
 }
 
 resource "google_compute_health_check" "pbs_health_check" {

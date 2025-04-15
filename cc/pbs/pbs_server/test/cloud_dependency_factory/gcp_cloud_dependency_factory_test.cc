@@ -70,22 +70,9 @@ class GcpCloudDependencyFactoryTest : public ::testing::Test {
     EXPECT_THAT(async_executor2_->Run(), ResultIs(SuccessExecutionResult()));
 
     // Set up configurations.
-    mock_config_provider_->Set(kRemotePrivacyBudgetServiceAssumeRoleArn, "arn");
-    mock_config_provider_->Set(kRemotePrivacyBudgetServiceAssumeRoleExternalId,
-                               "1234");
     mock_config_provider_->Set(kCloudServiceRegion, "us-east-1");
     mock_config_provider_->Set(kAuthServiceEndpoint, "https://www.auth.com");
-    mock_config_provider_->Set(kRemotePrivacyBudgetServiceCloudServiceRegion,
-                               "us-east-1");
-    mock_config_provider_->Set(kRemotePrivacyBudgetServiceAuthServiceEndpoint,
-                               "https://www.authremote.com");
-    mock_config_provider_->Set(kRemotePrivacyBudgetServiceClaimedIdentity,
-                               "identity.com");
-    mock_config_provider_->Set(kRemotePrivacyBudgetServiceHostAddress,
-                               "https://www.pbs.com");
     mock_config_provider_->Set(kBudgetKeyTableName, "budget_key");
-    mock_config_provider_->Set(kPBSPartitionLockTableNameConfigName,
-                               "partition_lock_table");
     mock_config_provider_->Set(kGcpProjectId, "project");
     mock_config_provider_->Set(kSpannerInstance, "kinstance");
     mock_config_provider_->Set(kSpannerDatabase, "database");

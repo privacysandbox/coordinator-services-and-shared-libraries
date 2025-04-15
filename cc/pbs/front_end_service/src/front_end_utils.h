@@ -50,9 +50,7 @@ core::ExecutionResult ExtractRequestClaimedIdentity(
         request_headers,
     std::string& claimed_identity);
 
-std::string GetReportingOriginMetricLabel(
-    const std::shared_ptr<privacy_sandbox::pbs_common::HttpRequest>& request,
-    const std::string& remote_coordinator_claimed_identity);
+std::string GetReportingOriginMetricLabel();
 
 core::ExecutionResultOr<std::string> ExtractTransactionOrigin(
     const privacy_sandbox::pbs_common::HttpHeaders& request_headers);

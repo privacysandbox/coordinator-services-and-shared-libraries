@@ -45,9 +45,6 @@ module "multipartykeyhosting_primary" {
   aws_kms_key_encryption_key_arn      = var.aws_kms_key_encryption_key_arn
   aws_kms_key_encryption_key_role_arn = var.aws_kms_key_encryption_key_role_arn
 
-  get_public_key_service_zip = var.get_public_key_service_zip
-  encryption_key_service_zip = var.encryption_key_service_zip
-
   enable_key_generation                         = var.enable_key_generation
   key_generation_image                          = var.key_generation_image
   key_generation_count                          = var.key_generation_count
@@ -83,34 +80,16 @@ module "multipartykeyhosting_primary" {
   encryption_key_service_request_concurrency         = var.encryption_key_service_request_concurrency
   encryption_key_service_cpus                        = var.encryption_key_service_cpus
 
-  mpkhs_package_bucket_location = var.mpkhs_package_bucket_location
-  spanner_instance_config       = var.spanner_instance_config
-  spanner_processing_units      = var.spanner_processing_units
-  key_db_retention_period       = var.key_db_retention_period
+  spanner_instance_config  = var.spanner_instance_config
+  spanner_processing_units = var.spanner_processing_units
+  key_db_retention_period  = var.key_db_retention_period
 
   enable_get_public_key_cdn                    = var.enable_get_public_key_cdn
   get_public_key_cloud_cdn_default_ttl_seconds = var.get_public_key_cloud_cdn_default_ttl_seconds
   get_public_key_cloud_cdn_max_ttl_seconds     = var.get_public_key_cloud_cdn_max_ttl_seconds
 
-  get_public_key_alarm_eval_period_sec                = var.get_public_key_alarm_eval_period_sec
-  get_public_key_alarm_duration_sec                   = var.get_public_key_alarm_duration_sec
-  get_public_key_cloudfunction_5xx_threshold          = var.get_public_key_cloudfunction_5xx_threshold
-  get_public_key_cloudfunction_error_threshold        = var.get_public_key_cloudfunction_error_threshold
-  get_public_key_cloudfunction_max_execution_time_max = var.get_public_key_cloudfunction_max_execution_time_max
-  get_public_key_lb_5xx_threshold                     = var.get_public_key_lb_5xx_threshold
-  get_public_key_lb_max_latency_ms                    = var.get_public_key_lb_max_latency_ms
-
-  encryptionkeyservice_alarm_eval_period_sec                = var.encryptionkeyservice_alarm_eval_period_sec
-  encryptionkeyservice_alarm_duration_sec                   = var.encryptionkeyservice_alarm_duration_sec
-  encryptionkeyservice_cloudfunction_5xx_threshold          = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  encryptionkeyservice_cloudfunction_error_threshold        = var.encryptionkeyservice_cloudfunction_error_threshold
-  encryptionkeyservice_cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  encryptionkeyservice_lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
-  encryptionkeyservice_lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
-
   export_otel_metrics = var.export_otel_metrics
 
-  use_cloud_run                        = var.use_cloud_run
   cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
   public_key_service_image             = var.public_key_service_image
   private_key_service_image            = var.private_key_service_image
@@ -121,4 +100,9 @@ module "multipartykeyhosting_primary" {
   aws_key_sync_kms_key_uri      = var.aws_key_sync_kms_key_uri
   aws_key_sync_keydb_region     = var.aws_key_sync_keydb_region
   aws_key_sync_keydb_table_name = var.aws_key_sync_keydb_table_name
+
+  enable_security_policy               = var.enable_security_policy
+  use_adaptive_protection              = var.use_adaptive_protection
+  encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
+  public_key_security_policy_rules     = var.public_key_security_policy_rules
 }

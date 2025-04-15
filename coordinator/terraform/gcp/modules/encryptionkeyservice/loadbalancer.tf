@@ -12,18 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Network Endpoint Group to route to Cloud Functions
-resource "google_compute_region_network_endpoint_group" "encryption_key_service_network_endpoint_group" {
-  count                 = local.use_cloud_function ? 1 : 0
-  project               = var.project_id
-  name                  = "${var.environment}-${var.region}-encryption-key-service-endpoint-group"
-  network_endpoint_type = "SERVERLESS"
-  region                = var.region
-  cloud_run {
-    service = google_cloudfunctions2_function.encryption_key_service_cloudfunction[0].name
-  }
-}
-
 # Network Endpoint Group to route to Cloud Run
 resource "google_compute_region_network_endpoint_group" "encryption_key_service_cloud_run" {
   project               = var.project_id
@@ -35,23 +23,62 @@ resource "google_compute_region_network_endpoint_group" "encryption_key_service_
   }
 }
 
-# Backend service that groups network endpoint groups to Cloud Functions for
-# Load Balancer to use.
-resource "google_compute_backend_service" "encryption_key_service_loadbalancer_backend" {
-  count       = local.use_cloud_function ? 1 : 0
+# Security policy for external load balancer
+resource "google_compute_security_policy" "encryption_key_service_security_policy" {
   project     = var.project_id
-  name        = "${var.environment}-encryption-key-service-backend"
-  description = "Backend service to point Encryption Key Cloud Function."
+  name        = "${var.environment}-encryption-key-service-security-policy"
+  description = "Security policy with for Encryption Key Service LB"
+  type        = "CLOUD_ARMOR"
 
-  enable_cdn = false
-
-  backend {
-    description = var.environment
-    group       = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group[0].id
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = var.use_adaptive_protection
+    }
   }
 
-  log_config {
-    enable = true
+  rule {
+    description = "Default allow all rule"
+    action      = "allow"
+    priority    = "2147483647"
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.encryption_key_security_policy_rules
+    content {
+      description = rule.value.description
+      action      = rule.value.action
+      priority    = rule.value.priority
+      preview     = rule.value.preview
+
+      match {
+        # Basic rules handle IP addresses/ranges only and require both
+        # versioned_expr and config be defined.
+        versioned_expr = rule.value.match.versioned_expr
+
+        dynamic "config" {
+          for_each = rule.value.match.expr == null ? [1] : []
+          content {
+            src_ip_ranges = rule.value.match.config.src_ip_ranges
+          }
+        }
+
+        # Advanced rules handle CEL expressions and require expr to be defined.
+        dynamic "expr" {
+          for_each = rule.value.match.expr != null ? [1] : []
+          content {
+            expression = rule.value.match.expr.expression
+          }
+        }
+      }
+    }
   }
 }
 
@@ -73,14 +100,8 @@ resource "google_compute_backend_service" "encryption_key_service_cloud_run" {
   log_config {
     enable = true
   }
-}
 
-# URL Map creates Load balancer to Cloud Functions
-resource "google_compute_url_map" "encryption_key_service_loadbalancer" {
-  count           = local.use_cloud_function ? 1 : 0
-  project         = var.project_id
-  name            = "${var.environment}-encryption-key-service-loadbalancer"
-  default_service = google_compute_backend_service.encryption_key_service_loadbalancer_backend[0].id
+  security_policy = var.enable_security_policy ? google_compute_security_policy.encryption_key_service_security_policy.id : null
 }
 
 # URL Map creates Load balancer to Cloud Run
@@ -88,29 +109,6 @@ resource "google_compute_url_map" "encryption_key_service_cloud_run" {
   project         = var.project_id
   name            = "${var.environment}-encryption-key-service-cloud-run"
   default_service = google_compute_backend_service.encryption_key_service_cloud_run.id
-}
-
-# Proxy to loadbalancer for Cloud Functions. HTTP without custom domain
-resource "google_compute_target_http_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count = !var.enable_domain_management && local.use_cloud_function ? 1 : 0
-
-  project = var.project_id
-  name    = "${var.environment}-encryption-key-service-proxy"
-  url_map = google_compute_url_map.encryption_key_service_loadbalancer[0].id
-}
-
-
-# Proxy to loadbalancer for Cloud Functions. HTTPS with custom domain
-resource "google_compute_target_https_proxy" "encryption_key_service_loadbalancer_proxy" {
-  count = var.enable_domain_management && local.use_cloud_function ? 1 : 0
-
-  project = var.project_id
-  name    = "${var.environment}-encryption-key-service-proxy"
-  url_map = google_compute_url_map.encryption_key_service_loadbalancer[0].id
-
-  ssl_certificates = [
-    google_compute_managed_ssl_certificate.encryption_key_service_loadbalancer[0].id
-  ]
 }
 
 # Proxy to loadbalancer for Cloud Run. HTTP without custom domain
@@ -136,31 +134,9 @@ resource "google_compute_target_https_proxy" "encryption_key_service_cloud_run" 
 }
 
 # Reserve IP address.
-resource "google_compute_global_address" "encryption_key_service_ip_address" {
-  count   = local.use_cloud_function ? 1 : 0
-  project = var.project_id
-  name    = "${var.environment}-encryption-key-service-ip-address"
-}
-
-# Reserve IP address.
 resource "google_compute_global_address" "encryption_key_service_cloud_run" {
   project = var.project_id
   name    = "${var.environment}-encryption-key-service-cloud-run"
-}
-
-# Map IP address and loadbalancer proxy to Cloud Functions
-resource "google_compute_global_forwarding_rule" "encryption_key_service_loadbalancer_config" {
-  count      = local.use_cloud_function ? 1 : 0
-  project    = var.project_id
-  name       = "${var.environment}-encryption-key-service-frontend-configuration"
-  ip_address = google_compute_global_address.encryption_key_service_ip_address[0].address
-  port_range = var.enable_domain_management ? "443" : "80"
-
-  target = (
-    var.enable_domain_management ?
-    google_compute_target_https_proxy.encryption_key_service_loadbalancer_proxy[0].id :
-    google_compute_target_http_proxy.encryption_key_service_loadbalancer_proxy[0].id
-  )
 }
 
 # Map IP address and loadbalancer proxy to Cloud Run
@@ -189,15 +165,5 @@ resource "google_compute_managed_ssl_certificate" "encryption_key_service_loadba
 
   managed {
     domains = [var.encryption_key_domain]
-  }
-}
-
-resource "google_compute_managed_ssl_certificate" "encryption_key_service_cloud_run_loadbalancer" {
-  count   = var.enable_domain_management ? 1 : 0
-  project = var.project_id
-  name    = "${var.environment}-encryption-key-cloud-run-cert"
-
-  managed {
-    domains = [var.encryption_key_cloud_run_domain]
   }
 }

@@ -41,7 +41,7 @@ pkg_files(
 pkg_files(
     name = "pbs_dist_scripts",
     srcs = [
-        "//coordinator/privacybudget/gcp/deploy:deploy_distributedpbs",
+        "//coordinator/privacybudget/gcp/deploy:initialize_pbs",
     ],
     # These scripts are executable
     attributes = pkg_attributes(

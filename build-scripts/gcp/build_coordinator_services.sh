@@ -97,11 +97,38 @@ public_key_service_image  = "${IMAGE_REPO_PATH}/${PUBKEYSVC_IMAGE_NAME}:${IMAGE_
 EOT
 ln -s ../../shared/mpkhs_secondary/image_params.auto.tfvars environments_mp_secondary/demo/mpkhs_secondary/image_params.auto.tfvars
 
+# Generate the image_params.auto.tfvars file with service container images for distributedpbs_application primary
+mkdir -p environments_mp_primary/shared/distributedpbs_application/ && mkdir -p environments_mp_primary/demo/distributedpbs_application/
+cat <<EOT >> environments_mp_primary/shared/distributedpbs_application/image_params.auto.tfvars
+########################################################################
+# Prefiled values for container image lookup based on released version #
+########################################################################
+
+pbs_image_override = "${IMAGE_REPO_PATH}/${PBS_IMAGE_NAME}:${IMAGE_TAG}"
+EOT
+ln -s ../../shared/distributedpbs_application/image_params.auto.tfvars environments_mp_primary/demo/distributedpbs_application/image_params.auto.tfvars
+
+# Generate the image_params.auto.tfvars file with service container images for distributedpbs_application secondary
+mkdir -p environments_mp_secondary/shared/distributedpbs_application/ && mkdir -p environments_mp_secondary/demo/distributedpbs_application/
+cat <<EOT >> environments_mp_secondary/shared/distributedpbs_application/image_params.auto.tfvars
+########################################################################
+# Prefiled values for container image lookup based on released version #
+########################################################################
+
+pbs_image_override = "${IMAGE_REPO_PATH}/${PBS_IMAGE_NAME}:${IMAGE_TAG}"
+EOT
+ln -s ../../shared/distributedpbs_application/image_params.auto.tfvars environments_mp_secondary/demo/distributedpbs_application/image_params.auto.tfvars
+
+
 tar --append --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar \
   ./environments_mp_primary/shared/mpkhs_primary/image_params.auto.tfvars \
   ./environments_mp_primary/demo/mpkhs_primary/image_params.auto.tfvars \
   ./environments_mp_secondary/shared/mpkhs_secondary/image_params.auto.tfvars \
-  ./environments_mp_secondary/demo/mpkhs_secondary/image_params.auto.tfvars
+  ./environments_mp_secondary/demo/mpkhs_secondary/image_params.auto.tfvars \
+  ./environments_mp_primary/shared/distributedpbs_application/image_params.auto.tfvars \
+  ./environments_mp_primary/demo/distributedpbs_application/image_params.auto.tfvars \
+  ./environments_mp_secondary/shared/distributedpbs_application/image_params.auto.tfvars \
+  ./environments_mp_secondary/demo/distributedpbs_application/image_params.auto.tfvars
 tar --list --file=scp-multiparty-coordinator-${COORDINATOR_VERSION}.tar
 
 popd

@@ -312,25 +312,6 @@ ExecutionResult ParseBeginTransactionRequestBodyV2(
   return core::SuccessExecutionResult();
 }
 
-bool IsCoordinatorRequest(
-    const std::shared_ptr<HttpHeaders>& request_headers,
-    const std::string& remote_coordinator_claimed_identity) {
-  std::string claimed_identity;
-  auto result =
-      ExtractRequestClaimedIdentity(request_headers, claimed_identity);
-  if (!result.Successful()) {
-    SCP_ERROR(
-        kFrontEndUtils, core::common::kZeroUuid, result,
-        "This could theoretically cause requests with no claimed identity "
-        "to be marked as adtech requests. However, this should not be "
-        "possible in real-world as all requests hitting the "
-        "FrontEndService should have a claimed identity. Without it, they "
-        "should not cross the auth barrier.");
-    return false;
-  }
-  return claimed_identity == remote_coordinator_claimed_identity;
-}
-
 }  // namespace
 
 ExecutionResult SerializeTransactionFailedCommandIndicesResponse(
@@ -384,13 +365,8 @@ ExecutionResult ExtractRequestClaimedIdentity(
   return core::SuccessExecutionResult();
 }
 
-std::string GetReportingOriginMetricLabel(
-    const std::shared_ptr<HttpRequest>& request,
-    const std::string& remote_coordinator_claimed_identity) {
-  bool is_coordinator_request = IsCoordinatorRequest(
-      request->headers, remote_coordinator_claimed_identity);
-  return is_coordinator_request ? kMetricLabelValueCoordinator
-                                : kMetricLabelValueOperator;
+std::string GetReportingOriginMetricLabel() {
+  return kMetricLabelValueOperator;
 }
 
 ExecutionResultOr<std::string> ExtractTransactionOrigin(

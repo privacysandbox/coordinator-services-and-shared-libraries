@@ -15,12 +15,8 @@
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
-    name = "deploy_distributedpbs",
+    name = "initialize_pbs",
     srcs = [
-        "create_tfplan_distributedpbs.sh",
-        "deploy_distributedpbs.sh",
         "initialize_distributedpbs.sh",
-        "insert_auth_entry.sh",
-        "push_distributedpbs_container_image.sh",
     ],
 )

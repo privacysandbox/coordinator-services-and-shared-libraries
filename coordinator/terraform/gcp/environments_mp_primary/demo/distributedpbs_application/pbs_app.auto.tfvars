@@ -24,6 +24,10 @@ environment = "demo-a"
 # If the service account does not yet exist, only the null value (default) will be accepted.
 # pbs_remote_coordinator_service_account_email = null
 
+# This must be updated to the output `pbs_service_account_email` of the current coordinator, after deploying distributedpbs_base
+pbs_service_account_email = "<output from distributedpbs_base>"
+pbs_image_override        = "<url_to_privacy_budget_service_image>"
+
 ## Uncomment one of the configuration blocks below depending on your type of deployment.
 
 ## BEGIN - development default configuration values.
@@ -127,21 +131,6 @@ pbs_application_environment_variables = [
   #   name  = "google_scp_core_http2server_threads_count"
   #   value = "80"
   # },
-  # {
-  #   name = "google_scp_pbs_remote_host_address"
-  #   # This must be updated to the output `pbs_environment_url` of the remote coordinator, known after its initial deployment.
-  #   value = "<remote-coordinator-environment-url>"
-  # },
-  # {
-  #   name = "google_scp_pbs_remote_auth_endpoint"
-  #   # This must be updated to the output `pbs_auth_audience_url` of the remote coordinator, known after its initial deployment.
-  #   value = "<remote-coordinator-auth-audience-url>"
-  # },
-  # {
-  #   name = "google_scp_pbs_remote_cloud_region"
-  #   # This must be updated to the region where the remote coordinator is deployed.
-  #   value = "<remote-coordinator-region>"
-  # },
   ## END - development default configuration values.
 
   ## BEGIN - production default configuration values.
@@ -157,21 +146,6 @@ pbs_application_environment_variables = [
   #   name  = "google_scp_core_http2server_threads_count"
   #   value = "640"
   # },
-  # {
-  #   name = "google_scp_pbs_remote_host_address"
-  #   # This must be updated to the output `pbs_environment_url` of the remote coordinator, known after its initial deployment.
-  #   value = "<remote-coordinator-environment-url>"
-  # },
-  # {
-  #   name = "google_scp_pbs_remote_auth_endpoint"
-  #   # This must be updated to the output `pbs_auth_audience_url` of the remote coordinator, known after its initial deployment.
-  #   value = "<remote-coordinator-auth-audience-url>"
-  # },
-  # {
-  #   name = "google_scp_pbs_remote_cloud_region"
-  #   # This must be updated to the region where the remote coordinator is deployed.
-  #   value = "<remote-coordinator-region>"
-  # }
   ## END - production default configuration values.
 ]
 

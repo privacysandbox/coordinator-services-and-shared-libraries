@@ -74,16 +74,6 @@ availability_zone_replicas = 3
 application_environment_variables = {
   ##### Secondary deployment information
 
-  #### These values must be updated. If they are known at deployment time, then they
-  #### can be provided, otherwise, they can be added in a subsequent terraform apply
-
-  # Auth endpoint for secondary environment
-  google_scp_pbs_remote_auth_endpoint = "<secondary-auth-url>"
-  # Endpoint for secondary environment
-  google_scp_pbs_remote_host_address = "<secondary-url>"
-  # AWS Region of the secondary environment
-  google_scp_pbs_remote_cloud_region = "<secondary-deployment-region>"
-
   ## Uncomment one of the configuration blocks below depending on your type of deployment
 
   ## BEGIN - development default configuration values

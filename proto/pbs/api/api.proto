@@ -1,0 +1,101 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Defines the API messages for the Privacy Budget Service (PBS).
+// These messages are used to communicate between clients and the PBS server,
+// including budget consumption requests and responses.
+
+syntax = "proto3";
+
+package privacy_sandbox.pbs;
+
+// Request message for consuming privacy budget from the PBS server.
+message ConsumePrivacyBudgetRequest {
+  // Version identifier for the API, e.g., "2.0".
+  // Used to ensure correct parsing logic for different protocol versions.
+  string version = 1 [json_name = "v"];
+
+  // Represents a privacy token used in budget consumption and management.
+  // A privacy token represents the amount of budget that gets consumed when
+  // performing privacy-sensitive operations depending on the budget consumption
+  // logic. For example, a token value of 1 for BUDGET_TYPE_BINARY_BUDGET will
+  // consume all the privacy budget.
+  message Token {
+    double token_double = 1;
+    int32 token_int32 = 2;
+  }
+
+  // Represents a privacy budget key for privacy budget tracking and
+  // consumption. Each key is associated with specific privacy parameters and
+  // tokens.
+  message PrivacyBudgetKey {
+    // Types of privacy budgeting mechanisms supported by the service.
+    enum BudgetType {
+      // Default value. This should not be used.
+      BUDGET_TYPE_UNSPECIFIED = 0;
+
+      // Binary budget consumption mechanism that operates in an all-or-nothing
+      // manner. This is used when privacy guarantees require complete budget
+      // consumption rather than gradual depletion.
+      BUDGET_TYPE_BINARY_BUDGET = 1;
+    }
+
+    // Unique identifier for this privacy budget allocation.
+    string key = 1;
+
+    // Scheduled report time for encrypted report.
+    string reporting_time = 2;
+
+    // The type of privacy budgeting mechanism to be used for this allocation.
+    // Determines how the privacy budget is calculated and consumed.
+    BudgetType budget_type = 3;
+
+    // Privacy tokens associated with this budget key.
+    // These tokens specify the amount of privacy budget to be consumed.
+    repeated Token tokens = 4;
+
+    // Used by Binary budget consumption only, for backward compatibility.
+    int32 token = 5;
+  }
+
+  // Contains the data for a single budget consumption request, including the
+  // API type and associated privacy budget keys.
+  message BudgetRequestData {
+    // Reporting origin refers to the the fully qualified domain name for an
+    // adtech hosted endpoint that receives privacy-protected reports. Example:
+    // "https://example.com"
+    string reporting_origin = 1;
+
+    // List of privacy budget keys to be consumed.
+    // Each key represents a distinct privacy budget allocation request.
+    repeated PrivacyBudgetKey keys = 2;
+  }
+
+  // List of budget consumption requests.
+  // Each element represents a separate budget request that can be processed
+  // independently.
+  repeated BudgetRequestData data = 2;
+}
+
+// Response message indicating the result of privacy budget consumption
+// requests.
+message ConsumePrivacyBudgetResponse {
+  // Version identifier matching the request version for protocol compatibility.
+  string version = 1 [json_name = "v"];
+
+  // Indices of budget keys that were exhausted.
+  // Empty list means all budgets were successfully consumed.
+  // Non-empty list indicates which budget requests failed due to exhaustion.
+  repeated uint32 exhausted_budget_indices = 2 [json_name = "f"];
+}

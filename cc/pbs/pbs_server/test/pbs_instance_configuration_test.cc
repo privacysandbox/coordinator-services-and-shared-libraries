@@ -47,23 +47,12 @@ static void SetAllConfigs() {
   setenv(kAsyncExecutorThreadsCount, "10", 1);
   setenv(kIOAsyncExecutorQueueSize, "10000", 1);
   setenv(kIOAsyncExecutorThreadsCount, "10", 1);
-  setenv(kTransactionManagerCapacity, "10000", 1);
-  setenv(kJournalServiceBucketName, "bucket", 1);
-  setenv(kJournalServicePartitionName, "00000000-0000-0000-0000-000000000000",
-         1);
   setenv(kPrivacyBudgetServiceHostAddress, "0.0.0.0", 1);
   setenv(kPrivacyBudgetServiceHostPort, "8000", 1);
   setenv(kPrivacyBudgetServiceHealthPort, "8001", 1);
-  setenv(kRemotePrivacyBudgetServiceCloudServiceRegion, "region", 1);
-  setenv(kRemotePrivacyBudgetServiceAuthServiceEndpoint, "https://auth.com", 1);
-  setenv(kRemotePrivacyBudgetServiceClaimedIdentity, "remote-id", 1);
-  setenv(kRemotePrivacyBudgetServiceAssumeRoleArn, "arn", 1);
-  setenv(kRemotePrivacyBudgetServiceAssumeRoleExternalId, "id", 1);
-  setenv(kRemotePrivacyBudgetServiceHostAddress, "https://remote.com", 1);
   setenv(kAuthServiceEndpoint, "https://auth.com", 1);
   setenv(kCloudServiceRegion, "region", 1);
   setenv(kTotalHttp2ServerThreadsCount, "10", 1);
-  setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table", 1);
   setenv(kContainerType, "compute_engine", 1);
   // NOTE: Any sets here should accompany the Unsets at UnsetAllConfigs.
 }
@@ -73,22 +62,12 @@ static void UnsetAllConfigs() {
   unsetenv(kAsyncExecutorThreadsCount);
   unsetenv(kIOAsyncExecutorQueueSize);
   unsetenv(kIOAsyncExecutorThreadsCount);
-  unsetenv(kTransactionManagerCapacity);
-  unsetenv(kJournalServiceBucketName);
-  unsetenv(kJournalServicePartitionName);
   unsetenv(kPrivacyBudgetServiceHostAddress);
   unsetenv(kPrivacyBudgetServiceHostPort);
   unsetenv(kPrivacyBudgetServiceHealthPort);
-  unsetenv(kRemotePrivacyBudgetServiceCloudServiceRegion);
-  unsetenv(kRemotePrivacyBudgetServiceAuthServiceEndpoint);
-  unsetenv(kRemotePrivacyBudgetServiceClaimedIdentity);
-  unsetenv(kRemotePrivacyBudgetServiceAssumeRoleArn);
-  unsetenv(kRemotePrivacyBudgetServiceAssumeRoleExternalId);
-  unsetenv(kRemotePrivacyBudgetServiceHostAddress);
   unsetenv(kAuthServiceEndpoint);
   unsetenv(kCloudServiceRegion);
   unsetenv(kTotalHttp2ServerThreadsCount);
-  unsetenv(kPBSPartitionLockTableNameConfigName);
   unsetenv(kHttp2ServerUseTls);
   unsetenv(kHttp2ServerPrivateKeyFilePath);
   unsetenv(kHttp2ServerCertificateFilePath);
@@ -232,20 +211,13 @@ TEST_F(PBSInstanceConfiguration, ReadConfigurationReadsAllConfigs) {
   config_provider->SetInt(kAsyncExecutorThreadsCount, 2);
   config_provider->SetInt(kIOAsyncExecutorQueueSize, 3);
   config_provider->SetInt(kIOAsyncExecutorThreadsCount, 4);
-  config_provider->SetInt(kTransactionManagerCapacity, 5);
-  config_provider->Set(kJournalServiceBucketName, "bucket");
-  config_provider->Set(kJournalServicePartitionName,
-                       "00000000-0000-0000-0000-000000000000");
   config_provider->Set(kPrivacyBudgetServiceHostAddress, "0.0.0.0");
   config_provider->Set(kPrivacyBudgetServiceHostPort, "8000");
   config_provider->Set(kPrivacyBudgetServiceHealthPort, "8001");
-  config_provider->Set(kPrivacyBudgetServiceExternalExposedHostPort, "80");
   config_provider->SetInt(kTotalHttp2ServerThreadsCount, 10);
   config_provider->SetBool(kHttp2ServerUseTls, true);
   config_provider->Set(kHttp2ServerPrivateKeyFilePath, "/key/path");
   config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
-  config_provider->Set(kPBSPartitionLockTableNameConfigName, "partition_lock");
-  config_provider->SetInt(kPBSPartitionLeaseDurationInSeconds, 20);
   config_provider->Set(kContainerType, kComputeEngine);
 
   core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
@@ -256,22 +228,14 @@ TEST_F(PBSInstanceConfiguration, ReadConfigurationReadsAllConfigs) {
   EXPECT_EQ(pbs_config->async_executor_thread_pool_size, 2);
   EXPECT_EQ(pbs_config->io_async_executor_queue_size, 3);
   EXPECT_EQ(pbs_config->io_async_executor_thread_pool_size, 4);
-  EXPECT_EQ(pbs_config->transaction_manager_capacity, 5);
   EXPECT_EQ(pbs_config->http2server_thread_pool_size, 10);
   EXPECT_EQ(pbs_config->http2server_thread_pool_size, 10);
-  EXPECT_EQ(*pbs_config->journal_bucket_name, "bucket");
-  EXPECT_EQ(*pbs_config->journal_partition_name,
-            "00000000-0000-0000-0000-000000000000");
   EXPECT_EQ(*pbs_config->host_address, "0.0.0.0");
   EXPECT_EQ(*pbs_config->host_port, "8000");
-  EXPECT_EQ(*pbs_config->external_exposed_host_port, "80");
   EXPECT_EQ(*pbs_config->health_port, "8001");
   EXPECT_EQ(*pbs_config->http2_server_private_key_file_path, "/key/path");
   EXPECT_EQ(*pbs_config->http2_server_certificate_file_path, "/cert/path");
-  EXPECT_EQ(*pbs_config->partition_lease_table_name, "partition_lock");
   EXPECT_EQ(pbs_config->http2_server_use_tls, true);
-  EXPECT_EQ(pbs_config->partition_lease_duration_in_seconds,
-            std::chrono::seconds(20));
 }
 
 TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
@@ -280,27 +244,18 @@ TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
   config_provider->SetInt(kAsyncExecutorThreadsCount, 2);
   config_provider->SetInt(kIOAsyncExecutorQueueSize, 3);
   config_provider->SetInt(kIOAsyncExecutorThreadsCount, 4);
-  config_provider->SetInt(kTransactionManagerCapacity, 5);
-  config_provider->Set(kJournalServiceBucketName, "bucket");
-  config_provider->Set(kJournalServicePartitionName,
-                       "00000000-0000-0000-0000-000000000000");
   config_provider->Set(kPrivacyBudgetServiceHostAddress, "0.0.0.0");
   config_provider->Set(kPrivacyBudgetServiceHostPort, "8000");
   config_provider->Set(kPrivacyBudgetServiceHealthPort, "8001");
-  config_provider->Set(kPrivacyBudgetServiceExternalExposedHostPort, "80");
   config_provider->SetInt(kTotalHttp2ServerThreadsCount, 10);
   config_provider->SetBool(kHttp2ServerUseTls, true);
   config_provider->Set(kHttp2ServerPrivateKeyFilePath, "/key/path");
   config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
-  config_provider->Set(kPBSPartitionLockTableNameConfigName, "partition_lock");
   config_provider->Set(kContainerType, kComputeEngine);
 
   core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
       GetPBSInstanceConfigFromConfigProvider(config_provider);
   EXPECT_SUCCESS(pbs_config);
-
-  EXPECT_EQ(pbs_config->partition_lease_duration_in_seconds,
-            std::chrono::seconds(kDefaultLeaseDurationInSeconds));
 }
 }  // namespace
 }  // namespace google::scp::pbs::test

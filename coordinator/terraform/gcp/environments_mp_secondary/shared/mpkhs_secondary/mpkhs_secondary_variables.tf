@@ -48,11 +48,6 @@ variable "secondary_region" {
   type        = string
 }
 
-variable "mpkhs_package_bucket_location" {
-  description = "Location for multiparty keyhosting packages. Example: 'US'."
-  type        = string
-}
-
 variable "enable_audit_log" {
   description = "Enable Data Access Audit Logging for projects containing the WIP and Service Accounts."
   type        = bool
@@ -77,22 +72,6 @@ variable "aws_kms_key_encryption_key_arn" {
 
 variable "aws_kms_key_encryption_key_role_arn" {
   description = "ARN of AWS IAM role used for encrypting with AWS KMS key encryption key"
-  type        = string
-  default     = null
-}
-
-################################################################################
-# Global Alarm Variables.
-################################################################################
-
-variable "alarms_enabled" {
-  description = "Enable alarms for mpkhs services."
-  type        = bool
-  default     = false
-}
-
-variable "alarms_notification_email" {
-  description = "Email to receive alarms for mpkhs services. Default to null so it is not required when alarms_enabled = false."
   type        = string
   default     = null
 }
@@ -177,15 +156,6 @@ variable "cloudfunction_timeout_seconds" {
   default     = 60
 }
 
-variable "encryption_key_service_zip" {
-  description = <<-EOT
-    Encryption key service cloud function path.
-    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
-  EOT
-  type        = string
-  default     = null
-}
-
 variable "encryption_key_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for encryption key cloud function."
   type        = number
@@ -215,15 +185,6 @@ variable "encryption_key_service_cpus" {
   default     = 1
 }
 
-variable "key_storage_service_zip" {
-  description = <<-EOT
-    Key storage service cloud function path.
-    Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
-  EOT
-  type        = string
-  default     = null
-}
-
 variable "key_storage_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for key storage cloud function."
   type        = number
@@ -244,12 +205,6 @@ variable "key_storage_service_cloudfunction_max_instances" {
 ################################################################################
 # Cloud Run Variables.
 ################################################################################
-
-variable "use_cloud_run" {
-  description = "Whether to use Cloud Run or Cloud Functions. Defaults to Cloud Functions."
-  type        = bool
-  default     = false
-}
 
 variable "cloud_run_revision_force_replace" {
   description = "Whether to create a new Cloud Run revision for every deployment."
@@ -333,98 +288,6 @@ variable "assertion_tee_container_image_hash_list" {
 }
 
 ################################################################################
-# Key Storage Alarm Variables.
-################################################################################
-
-variable "keystorageservice_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation."
-  type        = number
-  default     = 360
-}
-
-variable "keystorageservice_cloudfunction_error_threshold" {
-  description = "Error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "keystorageservice_cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm."
-  type        = number
-  default     = 10000
-}
-
-variable "keystorageservice_cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "keystorageservice_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = number
-  default     = 10000
-}
-
-variable "keystorageservice_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "keystorageservice_alarm_duration_sec" {
-  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = number
-  default     = 60
-}
-
-################################################################################
-# Encryption Key Service Alarm Variables.
-################################################################################
-
-variable "encryptionkeyservice_alarm_eval_period_sec" {
-  description = "Amount of time (in seconds) for alarm evaluation."
-  type        = number
-  default     = 360
-}
-
-variable "encryptionkeyservice_cloudfunction_error_threshold" {
-  description = "Error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
-  description = "Max execution time in ms to send alarm."
-  type        = number
-  default     = 10000
-}
-
-variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
-  description = "Cloud Function 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "encryptionkeyservice_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds."
-  type        = number
-  default     = 10000
-}
-
-variable "encryptionkeyservice_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error rate greater than this to send alarm."
-  type        = number
-  default     = 10
-}
-
-variable "encryptionkeyservice_alarm_duration_sec" {
-  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = number
-  default     = 60
-}
-
-################################################################################
 # OpenTelemetry Variables
 ################################################################################
 
@@ -466,4 +329,60 @@ variable "aws_key_sync_keydb_table_name" {
   description = "Table name of the Dynamodb KeyDB for key sync writes."
   type        = string
   default     = ""
+}
+
+################################################################################
+# Cloud Armor Variables
+################################################################################
+
+variable "enable_security_policy" {
+  description = "Whether to enable the security policy on the backend service(s)."
+  type        = bool
+  default     = false
+}
+
+variable "use_adaptive_protection" {
+  description = "Whether Cloud Armor Adaptive Protection is being used or not."
+  type        = bool
+  default     = false
+}
+
+variable "encryption_key_security_policy_rules" {
+  description = "Set of objects to define as security policy rules for Encryption Key Service."
+  type = set(object({
+    description = string
+    action      = string
+    priority    = number
+    preview     = bool
+    match = object({
+      versioned_expr = string
+      config = object({
+        src_ip_ranges = list(string)
+      })
+      expr = object({
+        expression = string
+      })
+    })
+  }))
+  default = []
+}
+
+variable "key_storage_security_policy_rules" {
+  description = "Set of objects to define as security policy rules for Key Storage Service."
+  type = set(object({
+    description = string
+    action      = string
+    priority    = number
+    preview     = bool
+    match = object({
+      versioned_expr = string
+      config = object({
+        src_ip_ranges = list(string)
+      })
+      expr = object({
+        expression = string
+      })
+    })
+  }))
+  default = []
 }

@@ -75,4 +75,7 @@ module "distributedpbs_application" {
   pbs_image_override                             = var.pbs_image_override
   pbs_auth_package_bucket                        = var.pbs_auth_package_bucket
   pbs_auth_package_path                          = var.pbs_auth_package_path
+  enable_security_policy                         = var.enable_security_policy
+  use_adaptive_protection                        = var.use_adaptive_protection
+  pbs_security_policy_rules                      = var.pbs_security_policy_rules
 }

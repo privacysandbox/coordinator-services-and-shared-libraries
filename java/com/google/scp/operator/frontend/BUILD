@@ -19,9 +19,6 @@ package(default_visibility = ["//visibility:public"])
 
 java_binary(
     name = "AwsApigatewayFrontend",
-    resources = [
-        "//licenses/THIRD_PARTY_NOTICES/frontend_AwsApiGatewayFrontendDeploy:licenses",
-    ],
     runtime_deps = [
         "//java/com/google/scp/operator/frontend/injection/modules:frontend_module",
         "//java/com/google/scp/operator/frontend/service/aws",

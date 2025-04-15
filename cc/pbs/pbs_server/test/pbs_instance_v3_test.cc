@@ -36,31 +36,12 @@ TEST(PBSInstanceV3Test, TestInitRunAndStopWithLocalDependencyFactory) {
   setenv(kAsyncExecutorThreadsCount, "10", should_overwrite);
   setenv(kIOAsyncExecutorQueueSize, "10000", should_overwrite);
   setenv(kIOAsyncExecutorThreadsCount, "10", should_overwrite);
-  setenv(kTransactionManagerCapacity, "10000", should_overwrite);
-  setenv(kJournalServiceBucketName, "bucket", should_overwrite);
-  setenv(kJournalServicePartitionName, "00000000-0000-0000-0000-000000000000",
-         should_overwrite);
   setenv(kPrivacyBudgetServiceHostAddress, "localhost", should_overwrite);
   setenv(kPrivacyBudgetServiceHostPort, "8000", should_overwrite);
   setenv(kPrivacyBudgetServiceHealthPort, "8001", should_overwrite);
-  setenv(kPrivacyBudgetServiceExternalExposedHostPort, "8000",
-         should_overwrite);
-  setenv(kRemotePrivacyBudgetServiceCloudServiceRegion, "region",
-         should_overwrite);
-  setenv(kRemotePrivacyBudgetServiceAuthServiceEndpoint, "https://auth.com",
-         should_overwrite);
-  setenv(kRemotePrivacyBudgetServiceClaimedIdentity, "remote-id",
-         should_overwrite);
-  setenv(kRemotePrivacyBudgetServiceAssumeRoleArn, "arn", should_overwrite);
-  setenv(kRemotePrivacyBudgetServiceAssumeRoleExternalId, "id",
-         should_overwrite);
-  setenv(kRemotePrivacyBudgetServiceHostAddress, "https://remote.com",
-         should_overwrite);
   setenv(kAuthServiceEndpoint, "https://auth.com", should_overwrite);
   setenv(kCloudServiceRegion, "region", should_overwrite);
   setenv(kTotalHttp2ServerThreadsCount, "10", should_overwrite);
-  setenv(kPBSPartitionLockTableNameConfigName, "partition_lock_table",
-         should_overwrite);
   setenv(kOtelEnabled, "true", should_overwrite);
   std::shared_ptr<EnvConfigProvider> config_provider =
       std::make_shared<EnvConfigProvider>();

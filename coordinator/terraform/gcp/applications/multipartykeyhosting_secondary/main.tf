@@ -27,10 +27,6 @@ locals {
   key_storage_domain              = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.key_storage_service_subdomain}.${local.parent_domain_name}"
   encryption_key_domain           = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
   encryption_key_cloud_run_domain = var.environment != "prod" ? "${var.encryption_key_service_subdomain}-cr${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}-cr.${local.parent_domain_name}"
-
-  notification_channel_id = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
-  package_bucket_prefix   = "${var.project_id}_${var.environment}"
-  package_bucket_name     = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
 }
 
 module "vpc" {
@@ -39,16 +35,6 @@ module "vpc" {
   environment = var.environment
   project_id  = var.project_id
   regions     = toset([var.primary_region, var.secondary_region])
-}
-
-# Storage bucket containing cloudfunction JARs
-resource "google_storage_bucket" "mpkhs_secondary_package_bucket" {
-  project = var.project_id
-  # GCS names are globally unique
-  name                        = local.package_bucket_name
-  location                    = var.mpkhs_package_bucket_location
-  uniform_bucket_level_access = true
-  public_access_prevention    = "enforced"
 }
 
 # Cloud KMS encryption ring and key encryption key (KEK)
@@ -67,26 +53,6 @@ resource "google_kms_crypto_key" "key_encryption_key" {
 
   lifecycle {
     prevent_destroy = true
-  }
-}
-
-resource "google_monitoring_notification_channel" "alarm_email" {
-  count = var.alarms_enabled ? 1 : 0
-
-  project      = var.project_id
-  display_name = "${var.environment} Coordinator B Key Hosting Alarms Notification Email"
-  type         = "email"
-  labels = {
-    email_address = var.alarms_notification_email
-  }
-  force_delete = true
-
-  lifecycle {
-    # Email should not be empty
-    precondition {
-      condition     = var.alarms_notification_email != null
-      error_message = "var.alarms_enabled is true but var.alarms_notification_email is not set."
-    }
   }
 }
 
@@ -111,13 +77,10 @@ module "keystorageservice" {
 
   # Function vars
   key_encryption_key_id                           = google_kms_crypto_key.key_encryption_key.id
-  package_bucket_name                             = google_storage_bucket.mpkhs_secondary_package_bucket.name
   load_balancer_name                              = "keystoragelb"
   spanner_database_name                           = module.keydb.keydb_name
   spanner_instance_name                           = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds                   = var.cloudfunction_timeout_seconds
-  key_storage_cloudfunction_name                  = "key-storage-cloudfunction"
-  key_storage_service_zip                         = var.key_storage_service_zip
   key_storage_cloudfunction_memory                = var.key_storage_service_cloudfunction_memory_mb
   key_storage_service_cloudfunction_min_instances = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances = var.key_storage_service_cloudfunction_max_instances
@@ -128,7 +91,6 @@ module "keystorageservice" {
   aws_kms_key_encryption_key_role_arn = var.aws_kms_key_encryption_key_role_arn
 
   # Cloud Run vars
-  use_cloud_run                        = var.use_cloud_run
   cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
   key_storage_service_image            = var.key_storage_service_image
   key_storage_service_custom_audiences = var.key_storage_service_custom_audiences
@@ -136,17 +98,6 @@ module "keystorageservice" {
   # Domain Management
   enable_domain_management = var.enable_domain_management
   key_storage_domain       = local.key_storage_domain
-
-  # Alarms
-  alarms_enabled                       = var.alarms_enabled
-  alarm_eval_period_sec                = var.keystorageservice_alarm_eval_period_sec
-  alarm_duration_sec                   = var.keystorageservice_alarm_duration_sec
-  notification_channel_id              = local.notification_channel_id
-  cloudfunction_5xx_threshold          = var.keystorageservice_cloudfunction_5xx_threshold
-  cloudfunction_error_threshold        = var.keystorageservice_cloudfunction_error_threshold
-  cloudfunction_max_execution_time_max = var.keystorageservice_cloudfunction_max_execution_time_max
-  lb_5xx_threshold                     = var.keystorageservice_lb_5xx_threshold
-  lb_max_latency_ms                    = var.keystorageservice_lb_max_latency_ms
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
@@ -157,6 +108,11 @@ module "keystorageservice" {
   aws_key_sync_kms_key_uri      = var.aws_key_sync_kms_key_uri
   aws_key_sync_keydb_region     = var.aws_key_sync_keydb_region
   aws_key_sync_keydb_table_name = var.aws_key_sync_keydb_table_name
+
+  # Cloud Armor vars
+  enable_security_policy            = var.enable_security_policy
+  use_adaptive_protection           = var.use_adaptive_protection
+  key_storage_security_policy_rules = var.key_storage_security_policy_rules
 }
 
 module "encryptionkeyservice" {
@@ -168,11 +124,9 @@ module "encryptionkeyservice" {
   allowed_operator_user_group = var.allowed_operator_user_group
 
   # Function vars
-  package_bucket_name                                = google_storage_bucket.mpkhs_secondary_package_bucket.name
   spanner_database_name                              = module.keydb.keydb_name
   spanner_instance_name                              = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
-  encryption_key_service_zip                         = var.encryption_key_service_zip
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
@@ -180,29 +134,21 @@ module "encryptionkeyservice" {
   encryption_key_service_cpus                        = var.encryption_key_service_cpus
 
   # Cloud Run vars
-  use_cloud_run                        = var.use_cloud_run
   cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
   private_key_service_image            = var.private_key_service_image
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
 
   # Domain Management
-  enable_domain_management        = var.enable_domain_management
-  encryption_key_domain           = local.encryption_key_domain
-  encryption_key_cloud_run_domain = local.encryption_key_cloud_run_domain
-
-  # Alarms
-  alarms_enabled                       = var.alarms_enabled
-  alarm_eval_period_sec                = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec                   = var.encryptionkeyservice_alarm_duration_sec
-  notification_channel_id              = local.notification_channel_id
-  cloudfunction_5xx_threshold          = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloudfunction_error_threshold        = var.encryptionkeyservice_cloudfunction_error_threshold
-  cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
-  lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+  enable_domain_management = var.enable_domain_management
+  encryption_key_domain    = local.encryption_key_domain
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
+
+  # Cloud Armor vars
+  enable_security_policy               = var.enable_security_policy
+  use_adaptive_protection              = var.use_adaptive_protection
+  encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
 }
 
 module "domain_a_records" {
@@ -214,12 +160,8 @@ module "domain_a_records" {
   parent_domain_name_project = var.parent_domain_name_project
 
   service_domain_to_address_map = var.enable_domain_management ? {
-    # If use_cloud_run = True, point A record to the IP Address of Cloud Run LB otherise point to Cloud Function LB
-    (local.key_storage_domain) : var.use_cloud_run ? module.keystorageservice.load_balancer_ip_cloud_run : module.keystorageservice.load_balancer_ip,
-    (local.encryption_key_domain) : var.use_cloud_run ? module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip,
-
-    # A records for Cloud Run domain. Will be removed once Cloud Run migration is complete
-    (local.encryption_key_cloud_run_domain) : module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip
+    (local.key_storage_domain) : module.keystorageservice.load_balancer_ip_cloud_run,
+    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip,
   } : {}
 }
 

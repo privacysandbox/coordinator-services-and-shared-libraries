@@ -1,5 +1,49 @@
 # Changelog
 
+## [1.22.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.21.0...v1.22.0) (2025-04-15)
+### Important Note
+**[GCP]**
+- [Cleanup] Cleanup the terraform file as Cloud Function to Cloud Run migration is done
+  - [To Cleanup] Coordinators must be on version 1.22 to perform this action. Remove the following variables from `.tfvars` for MPKHS if they are present to decommission Cloud Functions:
+    - Primary Coordinator:
+      - `use_cloud_run`
+      - `get_public_key_service_zip`
+      - `encryption_key_service_zip`
+      - `mpkhs_package_bucket_location`
+    - Secondary Coordinator:
+      - `use_cloud_run`
+      - `encryption_key_service_zip`
+      - `key_storage_service_zip`
+      - `mpkhs_package_bucket_location`
+      - `alarms_enabled`
+      - `alarms_notification_email`
+  - [To Rollback] Revert the changes in terraform files and deploy
+
+- [Breaking change] Remove PBS deployment scripts
+  - In the `auto.tfvars` for `distributedpbs_application` please add:
+  ```
+    pbs_image_override = <url_to_privacy_budget_service_image>
+    pbs_service_account_email = "<output from distributedpbs_base>"
+  ```
+  - [To Rollback] Revert the flags and rollback to the previous version
+
+### Changes
+- BUILD
+  - Update container dependencies
+- MPKGDS
+  - [GCP] Add security policies for KMS external load balancers
+  - [GCP] Cleanup terraform output with the completion of Cloud Function to Cloud Run migration
+- PBS
+  - [GCP] Add security policy for PBS external load balancer
+  - [GCP] Remove decommissioned PBS deployment scripts
+  - [GCP] Remove unused PBS environment variables from PBS binary, but not from terraform configs
+  - [GCP] Update PBS journal bucket lifecycle rule to delete all data in the bucket
+  - Add `Wthread-safety` to `periodic_closure`
+  - Add startup delay to `periodic_closure`
+  - Simulated clock in `periodic_closure`
+
+
+
 ## [1.21.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.20.0...v1.21.0) (2025-04-01)
 
 ### Important Note

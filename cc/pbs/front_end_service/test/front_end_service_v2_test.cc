@@ -186,9 +186,6 @@ std::unique_ptr<FrontEndServiceV2Peer> MakeFrontEndServiceV2Peer(
     FrontEndServiceV2PeerOptions& options) {
   if (options.mock_config_provider == nullptr) {
     options.mock_config_provider = std::make_shared<MockConfigProvider>();
-    options.mock_config_provider->Set(
-        kRemotePrivacyBudgetServiceClaimedIdentity,
-        std::string(kClaimedIdentityInvalid));
   }
 
   if (options.http2_server == nullptr) {
@@ -217,8 +214,6 @@ class FrontEndServiceV2LifecycleTest
     mock_config_provider_ = std::make_shared<MockConfigProvider>();
     mock_config_provider_->SetBool(kEnableBudgetConsumerMigration,
                                    IsWithBudgetConsumer());
-    mock_config_provider_->Set(kRemotePrivacyBudgetServiceClaimedIdentity,
-                               std::string(kClaimedIdentityInvalid));
     metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
     budget_consumption_helper_ =
         std::make_unique<MockBudgetConsumptionHelper>();
@@ -337,8 +332,6 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithConstructorWithLessParams) {
 
   auto mock_config_provider = std::make_shared<MockConfigProvider>();
   static constexpr char kClaimedIdentity[] = "123";
-  mock_config_provider->Set(kRemotePrivacyBudgetServiceClaimedIdentity,
-                            kClaimedIdentity);
 
   std::unique_ptr<FrontEndServiceV2> front_end_service_v2 =
       std::make_unique<FrontEndServiceV2>(

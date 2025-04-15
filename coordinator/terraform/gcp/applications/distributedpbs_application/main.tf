@@ -180,6 +180,9 @@ module "pbs_lb" {
   pbs_cloud_run_traffic_percentage = var.pbs_cloud_run_traffic_percentage
   deploy_pbs_cloud_run             = var.deploy_pbs_cloud_run
   enable_pbs_cloud_run             = var.enable_pbs_cloud_run
+  enable_security_policy           = var.enable_security_policy
+  use_adaptive_protection          = var.use_adaptive_protection
+  pbs_security_policy_rules        = var.pbs_security_policy_rules
 
   depends_on = [
     module.pbs_a_record,

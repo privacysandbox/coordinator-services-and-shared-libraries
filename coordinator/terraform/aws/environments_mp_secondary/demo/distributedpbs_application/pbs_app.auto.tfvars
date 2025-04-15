@@ -81,8 +81,7 @@ application_environment_variables = {
 
   # Auth endpoint for primary environment
   google_scp_pbs_remote_auth_endpoint = "<primary-auth-url>"
-  # Endpoint for primary environment
-  google_scp_pbs_remote_host_address = "<primary-url>"
+
   # AWS Region of the primary environment
   google_scp_pbs_remote_cloud_region = "<primary-deployment-region>"
 

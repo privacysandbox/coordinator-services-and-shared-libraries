@@ -52,7 +52,7 @@ resource "google_storage_bucket" "pbs_journal_bucket" {
       type = "Delete"
     }
     condition {
-      age = 60
+      age = 1
     }
   }
 
@@ -61,7 +61,7 @@ resource "google_storage_bucket" "pbs_journal_bucket" {
       type = "Delete"
     }
     condition {
-      days_since_noncurrent_time = 10
+      days_since_noncurrent_time = 1
     }
   }
 }

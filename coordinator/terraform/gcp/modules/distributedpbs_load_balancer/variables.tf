@@ -134,3 +134,36 @@ variable "enable_pbs_cloud_run" {
   type        = bool
   nullable    = false
 }
+
+################################################################################
+# Cloud Armor Variables
+################################################################################
+
+variable "enable_security_policy" {
+  description = "Whether to enable the security policy on the backend service(s)."
+  type        = bool
+}
+
+variable "use_adaptive_protection" {
+  description = "Whether Cloud Armor Adaptive Protection is being used or not."
+  type        = bool
+}
+
+variable "pbs_security_policy_rules" {
+  description = "Set of objects to define as security policy rules for PBS."
+  type = set(object({
+    description = string
+    action      = string
+    priority    = number
+    preview     = bool
+    match = object({
+      versioned_expr = string
+      config = object({
+        src_ip_ranges = list(string)
+      })
+      expr = object({
+        expression = string
+      })
+    })
+  }))
+}

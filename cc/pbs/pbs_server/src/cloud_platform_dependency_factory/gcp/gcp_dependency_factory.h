@@ -68,16 +68,9 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
 
   // Configurations here
   std::string budget_key_table_name_;
-  std::string partition_lock_table_name_;
   std::string auth_service_endpoint_;
   std::string alternate_auth_service_endpoint_;
   std::string alternate_cloud_service_region_;
-
-  // Reporting origin information of this coordinator for the other remote
-  // coordinator.
-  std::string reporting_origin_for_remote_coordinator_;
-  std::string remote_coordinator_endpoint_;
-  std::string remote_coordinator_auth_gateway_endpoint_;
 };
 
 }  // namespace google::scp::pbs

@@ -22,9 +22,6 @@ secondary_region = "us-west3"
 encryption_key_service_cloudfunction_memory_mb = 1024
 key_storage_service_cloudfunction_memory_mb    = 1024
 
-encryption_key_service_zip = "../../../jars/EncryptionKeyServiceHttpCloudFunctionDeploy.zip"
-key_storage_service_zip    = "../../../jars/KeyStorageServiceHttpCloudFunctionDeploy.zip"
-
 private_key_service_image = "<url_to_private_key_service_image>"
 private_key_service_custom_audiences = [
   "<Service URLs for the private key cloud function service>"
@@ -33,17 +30,10 @@ key_storage_service_image = "<url_to_key_storage_service_image>"
 key_storage_service_custom_audiences = [
   "<Service URLs for the key storage cloud function service>"
 ]
-# To use cloud run services for public and private key service as opposed to
-# cloud functions
-use_cloud_run = true
 
 enable_domain_management   = true
 parent_domain_name         = "<domain name from domainrecordsetup>"
 parent_domain_name_project = "<project_id from domainrecordsetup>"
-
-# Multi region location
-# https://cloud.google.com/storage/docs/locations
-mpkhs_package_bucket_location = "US"
 
 # Note: Multi region can optionally be used but is roughly 4x the cost.
 # nam10 is North America - uscentral1 and uswest3:
@@ -64,6 +54,3 @@ assertion_tee_container_image_hash_list = ["<list of hash values for images>"]
 # aws_xc_enabled = true
 # aws_kms_key_encryption_key_arn      = "<output from xc_resources_aws in secondary coordinator>"
 # aws_kms_key_encryption_key_role_arn = "<output from xc_resources_aws in secondary coordinator>"
-
-alarms_enabled            = true
-alarms_notification_email = "<email to receive alarms>"
