@@ -49,7 +49,7 @@ void SpanProcessorFake::OnEnd(
       opentelemetry::sdk::common::ExportResult::kFailure) {
     auto execution_result =
         FailureExecutionResult(SC_SPAN_PROCESSOR_COULD_NOT_EXPORT_DATA);
-    SCP_ERROR(kTraceRouterMock, google::scp::core::common::kZeroUuid,
+    SCP_ERROR(kTraceRouterMock, privacy_sandbox::pbs_common::kZeroUuid,
               execution_result,
               "[Trace Router Mock] Could not force flush the data");
   }

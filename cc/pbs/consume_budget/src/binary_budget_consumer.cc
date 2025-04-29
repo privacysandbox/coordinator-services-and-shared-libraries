@@ -44,7 +44,8 @@ namespace {
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
+using ::google::scp::core::SuccessExecutionResult;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
@@ -52,6 +53,7 @@ using ::google::scp::pbs::errors::
     SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AuthContext;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
@@ -141,7 +143,7 @@ std::tuple<cloud::Status, ExecutionResult> VerifyLaplaceProto(
         FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
   }
 
-  return std::make_tuple(cloud::Status(), core::SuccessExecutionResult());
+  return std::make_tuple(cloud::Status(), SuccessExecutionResult());
 }
 
 ExecutionResult DeserializeHourTokensInTimeGroup(
@@ -165,7 +167,7 @@ ExecutionResult DeserializeHourTokensInTimeGroup(
     hour_tokens[i] = static_cast<int8_t>(value);
   }
 
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
 std::tuple<cloud::Status, ExecutionResult,
@@ -203,8 +205,7 @@ ParseSpannerJson(const spanner::Json& spanner_json) {
                 std::string(json_value[std::string(kTokenCountJsonField)]))),
         FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR), result);
   }
-  return std::make_tuple(cloud::Status(), core::SuccessExecutionResult(),
-                         result);
+  return std::make_tuple(cloud::Status(), SuccessExecutionResult(), result);
 }
 
 spanner::ProtoMessage<privacy_sandbox_pbs::BudgetValue> CreateLaplaceProto(
@@ -240,6 +241,40 @@ spanner::Json CreateSpannerJson(
   return spanner::Json(json_value.dump());
 }
 }  // namespace
+
+BinaryBudgetConsumer::BinaryBudgetConsumer(
+    privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider)
+    : config_provider_(config_provider) {
+  std::string pbs_value_column_migration_phase;
+  ExecutionResult execution_result = config_provider_->Get(
+      kValueProtoMigrationPhase, pbs_value_column_migration_phase);
+  if (!execution_result.Successful() ||
+      !absl::c_any_of(kMigrationPhases, [&pbs_value_column_migration_phase](
+                                            absl::string_view valid_phase) {
+        return pbs_value_column_migration_phase == valid_phase;
+      })) {
+    pbs_value_column_migration_phase = std::string(kMigrationPhase1);
+    SCP_WARNING(kBinaryBudgetConsumer, kZeroUuid,
+                absl::StrFormat("Invalid value for %s config key. Defaulting "
+                                "to phase_1. Provided value: %s",
+                                kValueProtoMigrationPhase,
+                                pbs_value_column_migration_phase));
+  }
+
+  enable_write_to_value_column_ =
+      pbs_value_column_migration_phase == kMigrationPhase1 ||
+      pbs_value_column_migration_phase == kMigrationPhase2 ||
+      pbs_value_column_migration_phase == kMigrationPhase3;
+  enable_write_to_value_proto_column_ =
+      pbs_value_column_migration_phase == kMigrationPhase2 ||
+      pbs_value_column_migration_phase == kMigrationPhase3 ||
+      pbs_value_column_migration_phase == kMigrationPhase4;
+  enable_read_truth_from_value_column_ =
+      pbs_value_column_migration_phase == kMigrationPhase1 ||
+      pbs_value_column_migration_phase == kMigrationPhase2;
+
+  config_provider_->Get(kEnableStopServingV1Request, stop_serving_v1_request_);
+}
 
 // V1 Request Example:
 // {
@@ -318,7 +353,7 @@ ExecutionResult BinaryBudgetConsumer::ParseRequestBodyV1(
         static_cast<size_t>(it - request_body["t"].begin());
     ++key_count_;
   }
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
 // V2 Request Example:
@@ -430,7 +465,7 @@ ExecutionResult BinaryBudgetConsumer::ParseRequestBodyV2(
     consumption_state.hour_of_day_to_key_index_map[time_bucket] = key_index;
     ++key_count_;
 
-    return core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   };
 
   return ParseCommonV2TransactionRequestBody(authorized_domain, request_body,
@@ -469,6 +504,10 @@ ExecutionResult BinaryBudgetConsumer::ParseTransactionRequest(
     }
 
     if (version_it->get<std::string>() == kVersion1) {
+      if (stop_serving_v1_request_) {
+        return FailureExecutionResult(
+            SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+      }
       // v1 API is only allowed for binary budget consumption
       return ParseRequestBodyV1(transaction_origin, request_body);
     }
@@ -480,6 +519,106 @@ ExecutionResult BinaryBudgetConsumer::ParseTransactionRequest(
     return FailureExecutionResult(
         SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
+}
+
+ExecutionResult BinaryBudgetConsumer::ParseTransactionRequest(
+    const AuthContext& auth_context, const HttpHeaders& request_headers,
+    const ConsumePrivacyBudgetRequest& request_proto) {
+  if (auth_context.authorized_domain == nullptr) {
+    SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "No auth context found");
+    return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
+  }
+  absl::string_view authorized_domain = *auth_context.authorized_domain;
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  absl::flat_hash_set<std::string> visited;
+
+  auto key_body_processor =
+      [this, &visited](
+          const ConsumePrivacyBudgetRequest::PrivacyBudgetKey& key_body,
+          const size_t key_index,
+          absl::string_view reporting_origin) -> ExecutionResult {
+    const std::string& reporting_time = key_body.reporting_time();
+    if (key_body.key().empty() || reporting_time.empty()) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
+               "Either one of them is empty : \"key\" or \"reporting_time\"");
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+    const std::string budget_key =
+        absl::StrCat(reporting_origin, "/", key_body.key());
+
+    auto reporting_timestamp = ReportingTimeToTimeBucket(reporting_time);
+    if (!reporting_timestamp.Successful()) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "Invalid reporting time");
+      return reporting_timestamp.result();
+    }
+
+    TimeGroup time_group =
+        budget_key_timeframe_manager::Utils::GetTimeGroup(*reporting_timestamp);
+    TimeBucket time_bucket = budget_key_timeframe_manager::Utils::GetTimeBucket(
+        *reporting_timestamp);
+
+    std::string visited_key =
+        absl::StrCat(budget_key, "_", time_group, "_", time_bucket);
+    if (visited.find(visited_key) != visited.end()) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
+               absl::StrFormat("Repeated key found : %s", visited_key))
+      return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
+    }
+    visited.emplace(visited_key);
+
+    // Binary budget consumption
+    if (key_body.budget_type() != PrivacyBudgetKey::BUDGET_TYPE_UNSPECIFIED &&
+        key_body.budget_type() != PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
+               absl::StrFormat(
+                   "Expected binar or unspecified budget type, found %s",
+                   PrivacyBudgetKey::BudgetType_Name(key_body.budget_type())));
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    int32_t token = key_body.token();
+    if (token == 0 && key_body.tokens().empty()) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
+               "Both \"token\" with non zero value and \"tokens\" are empty");
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    if (token != 0 && !key_body.tokens().empty()) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
+               "Both \"token\" with non zero value and \"tokens\" are present");
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    if (token == 0 && key_body.tokens().size() != 1) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "\"tokens\" is not of size 1");
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+    token = token == 0 ? key_body.tokens(0).token_int32() : token;
+
+    if (token != static_cast<int32_t>(kFullBudgetCount)) {
+      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
+               absl::StrFormat("Expected token equals %d, found %d",
+                               kFullBudgetCount, token));
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    PbsPrimaryKey pbs_primary_key(budget_key, std::to_string(time_group));
+    ConsumptionState& consumption_state = metadata_[pbs_primary_key];
+    consumption_state.hour_of_day_to_key_index_map[time_bucket] = key_index;
+    ++key_count_;
+
+    return SuccessExecutionResult();
+  };
+
+  return ParseCommonV2TransactionRequestProto(authorized_domain, request_proto,
+                                              std::move(key_body_processor));
 }
 
 size_t BinaryBudgetConsumer::GetKeyCount() {
@@ -494,43 +633,8 @@ spanner::KeySet BinaryBudgetConsumer::GetSpannerKeySet() {
   return spanner_key_set;
 }
 
-ExecutionResult BinaryBudgetConsumer::SetMigrationPhaseStates() {
-  std::string pbs_value_column_migration_phase = std::string(kMigrationPhase1);
-  ExecutionResult execution_result = config_provider_->Get(
-      kValueProtoMigrationPhase, pbs_value_column_migration_phase);
-  if (!execution_result.Successful() ||
-      !absl::c_any_of(kMigrationPhases, [&pbs_value_column_migration_phase](
-                                            absl::string_view valid_phase) {
-        return pbs_value_column_migration_phase == valid_phase;
-      })) {
-    SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-             absl::StrFormat("Failed to read or invalid migration phase : %s",
-                             pbs_value_column_migration_phase));
-    return FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR);
-  }
-
-  enable_write_to_value_column_ =
-      pbs_value_column_migration_phase == kMigrationPhase1 ||
-      pbs_value_column_migration_phase == kMigrationPhase2 ||
-      pbs_value_column_migration_phase == kMigrationPhase3;
-  enable_write_to_value_proto_column_ =
-      pbs_value_column_migration_phase == kMigrationPhase2 ||
-      pbs_value_column_migration_phase == kMigrationPhase3 ||
-      pbs_value_column_migration_phase == kMigrationPhase4;
-  enable_read_truth_from_value_column_ =
-      pbs_value_column_migration_phase == kMigrationPhase1 ||
-      pbs_value_column_migration_phase == kMigrationPhase2;
-
-  return core::SuccessExecutionResult();
-}
-
 ExecutionResultOr<std::vector<std::string>>
 BinaryBudgetConsumer::GetReadColumns() {
-  ExecutionResult execution_result = SetMigrationPhaseStates();
-  if (!execution_result.Successful()) {
-    return execution_result;
-  }
-
   std::vector<std::string> columns = {std::string(kBudgetTableBudgetKeyColumn),
                                       std::string(kBudgetTableTimeframeColumn)};
   if (enable_read_truth_from_value_column_) {
@@ -555,7 +659,7 @@ BinaryBudgetConsumer::MutateConsumptionStateForKeysPresentInDatabase(
 
   SpannerMutationsResult spanner_mutations_result{
       .status = cloud::Status(),
-      .execution_result = core::SuccessExecutionResult(),
+      .execution_result = SuccessExecutionResult(),
       .budget_exhausted_indices = std::vector<size_t>(),
       .mutations = spanner::Mutations(),
   };
@@ -708,7 +812,7 @@ SpannerMutationsResult BinaryBudgetConsumer::ConsumeBudget(
     spanner::RowStream& row_stream, absl::string_view table_name) {
   SpannerMutationsResult spanner_mutations_result{
       .status = cloud::Status(),
-      .execution_result = core::SuccessExecutionResult(),
+      .execution_result = SuccessExecutionResult(),
       .budget_exhausted_indices = std::vector<size_t>(),
       .mutations = spanner::Mutations(),
   };

@@ -16,7 +16,6 @@
 
 #include <chrono>
 #include <functional>
-#include <stdexcept>
 #include <thread>
 
 #include "absl/strings/str_cat.h"
@@ -25,9 +24,14 @@
 
 #include "error_codes.h"
 
-namespace google::scp::core::test {
-using ::google::scp::core::common::TimeProvider;
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::test::DurationMs;
 using ::privacy_sandbox::pbs_common::SC_TEST_UTILS_TEST_WAIT_TIMEOUT;
+using ::privacy_sandbox::pbs_common::TestTimeoutException;
+using ::privacy_sandbox::pbs_common::TimeProvider;
 using std::function;
 using std::this_thread::yield;
 
@@ -58,4 +62,4 @@ ExecutionResult WaitUntilOrReturn(function<bool()> condition,
   return SuccessExecutionResult();
 }
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

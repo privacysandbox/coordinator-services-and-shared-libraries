@@ -22,7 +22,7 @@
 
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Creates universally unique identifiers. A uuid is a 128-bit id
  * composed of two parts: high and low. The high part is a uint64_t type and
@@ -83,7 +83,8 @@ std::string ToString(const Uuid& uuid) noexcept;
  * @param uuid The output uuid.
  * @return ExecutionResult The execution result of the operation.
  */
-ExecutionResult FromString(const std::string& uuid_string, Uuid& uuid) noexcept;
+google::scp::core::ExecutionResult FromString(const std::string& uuid_string,
+                                              Uuid& uuid) noexcept;
 
 static constexpr Uuid kZeroUuid{0ULL, 0ULL};
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common

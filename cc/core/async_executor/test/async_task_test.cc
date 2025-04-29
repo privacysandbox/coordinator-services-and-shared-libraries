@@ -18,8 +18,6 @@
 
 #include "cc/core/common/time_provider/src/time_provider.h"
 
-using google::scp::core::common::TimeProvider;
-
 namespace privacy_sandbox::pbs_common {
 TEST(AsyncTaskTests, BasicTests) {
   auto func = []() {};

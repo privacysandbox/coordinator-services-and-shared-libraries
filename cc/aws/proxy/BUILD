@@ -94,8 +94,7 @@ genrule(
         set -eux
         # glibc-common is depended by other glibc packages, installing it
         # separately to avoid race conditions.
-        yum install -y glibc-common-2.26-64.amzn2.0.3
-        yum install glibc-devel-2.26-64.amzn2.0.3 glibc-headers-2.26-64.amzn2.0.3 gcc-7.3.1-17.amzn2 gcc-c++-7.3.1-17.amzn2 tar git -y > /dev/null
+        yum install glibc-devel-2.26-64.amzn2.0.4 glibc-headers-2.26-64.amzn2.0.4  gcc-c++-7.3.1-17.amzn2 tar git -y
         tar xf /source_code.tar -C /
         cd /scp
         # Remove clang flags

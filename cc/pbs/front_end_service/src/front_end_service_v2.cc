@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+#include <google/protobuf/util/json_util.h>
+
 #include "absl/strings/str_format.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
@@ -34,6 +36,7 @@
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/core/utils/src/http.h"
 #include "cc/pbs/consume_budget/src/binary_budget_consumer.h"
+#include "cc/pbs/consume_budget/src/budget_consumer.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/front_end_utils.h"
@@ -41,18 +44,17 @@
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
+#include "proto/pbs/api/v1/api.pb.h"
 
 namespace google::scp::pbs {
 namespace {
 
+using ::google::protobuf::util::JsonStringToMessage;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::MetricRouter;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::core::common::ToString;
-using ::google::scp::core::common::Uuid;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT;
 using ::google::scp::core::errors::
@@ -63,6 +65,7 @@ using ::google::scp::core::errors::
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE;
 using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
 using ::google::scp::core::utils::GetUserAgentOrUnknownValue;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
@@ -77,8 +80,11 @@ using ::privacy_sandbox::pbs_common::HttpServerInterface;
 using ::privacy_sandbox::pbs_common::kPbsAuthDomainLabel;
 using ::privacy_sandbox::pbs_common::kPbsClaimedIdentityLabel;
 using ::privacy_sandbox::pbs_common::kScpHttpRequestClientVersionLabel;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::privacy_sandbox::pbs_common::LogLevel;
 using ::privacy_sandbox::pbs_common::Timestamp;
+using ::privacy_sandbox::pbs_common::ToString;
+using ::privacy_sandbox::pbs_common::Uuid;
 
 constexpr char kFrontEndService[] = "FrontEndServiceV2";
 constexpr char kTransactionLastExecutionTimestampHeader[] =
@@ -299,6 +305,16 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
 
   config_provider_->Get(kEnableBudgetConsumerMigration,
                         should_enable_budget_consumer_);
+  config_provider_->Get(kEnableRequestResponseProtoMigration,
+                        should_use_request_response_protos_);
+
+  SCP_INFO(kFrontEndService, kZeroUuid,
+           absl::StrCat("Using Budget Consumer ",
+                        should_enable_budget_consumer_ ? "true" : "false"));
+  SCP_INFO(
+      kFrontEndService, kZeroUuid,
+      absl::StrCat("Using Request Response Protos ",
+                   should_use_request_response_protos_ ? "true" : "false"));
   return SuccessExecutionResult();
 }
 
@@ -328,6 +344,8 @@ std::string FrontEndServiceV2::ObtainTransactionOrigin(
   return "";
 }
 
+[[deprecated(
+    "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
 ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
 FrontEndServiceV2::GetBudgetConsumer(const nlohmann::json& request_body) {
   auto budget_type = ValidateAndGetBudgetType(request_body);
@@ -336,6 +354,26 @@ FrontEndServiceV2::GetBudgetConsumer(const nlohmann::json& request_body) {
   }
 
   if (budget_type.value() != kBudgetTypeBinaryBudget) {
+    SCP_INFO(kFrontEndService, kZeroUuid,
+             absl::StrCat("Unsupported budget type ", budget_type.value()));
+    return FailureExecutionResult(
+        SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+  }
+
+  return std::make_unique<BinaryBudgetConsumer>(config_provider_.get());
+}
+
+ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
+FrontEndServiceV2::GetBudgetConsumer(
+    const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
+        request_proto) {
+  auto budget_type = ValidateAndGetBudgetType(request_proto);
+  if (!budget_type.Successful()) {
+    return budget_type.result();
+  }
+
+  if (budget_type.value() != ConsumePrivacyBudgetRequest::PrivacyBudgetKey::
+                                 BUDGET_TYPE_BINARY_BUDGET) {
     SCP_INFO(kFrontEndService, kZeroUuid,
              absl::StrCat("Unsupported budget type ", budget_type.value()));
     return FailureExecutionResult(
@@ -374,6 +412,27 @@ ExecutionResult FrontEndServiceV2::ParseRequestWithBudgetConsumer(
     AsyncContext<HttpRequest, HttpResponse>& http_context,
     absl::string_view transaction_id,
     ConsumeBudgetsRequest& consume_budget_request) {
+  if (should_use_request_response_protos_) {
+    privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest request_proto;
+    absl::string_view request_body(http_context.request->body.bytes->begin(),
+                                   http_context.request->body.bytes->end());
+    auto parse_status = JsonStringToMessage(request_body, &request_proto);
+    if (parse_status.ok()) {
+      auto budget_consumer = GetBudgetConsumer(request_proto);
+      if (!budget_consumer.Successful()) {
+        return budget_consumer.result();
+      }
+      consume_budget_request.budget_consumer = std::move(*budget_consumer);
+      return consume_budget_request.budget_consumer->ParseTransactionRequest(
+          http_context.request->auth_context, *http_context.request->headers,
+          request_proto);
+    }
+
+    // Failing to parse JSON string into request proto doesn't mean the request
+    // is invalid. ConsumePrivacyBudgetRequest can only be parsed from v2.0
+    // requests, not v1.0 requests. Fall back to JSON if that's the case.
+  }
+
   auto transaction_request =
       nlohmann::json::parse(http_context.request->body.bytes->begin(),
                             http_context.request->body.bytes->end(),
@@ -533,7 +592,8 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
     // it's a failure or success
     auto serialization_execution_result =
         SerializeTransactionFailedCommandIndicesResponse(
-            budget_exhausted_indices, http_context.response->body);
+            budget_exhausted_indices, should_use_request_response_protos_,
+            http_context.response->body);
     if (!serialization_execution_result.Successful()) {
       // We can log it but should not update the error code getting back
       // to the client since it will make it confusing for the proper
@@ -562,7 +622,8 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
       if (!should_enable_budget_consumer_) {
         auto serialization_execution_result =
             SerializeTransactionFailedCommandIndicesResponse(
-                budget_exhausted_indices, http_context.response->body);
+                budget_exhausted_indices, should_use_request_response_protos_,
+                http_context.response->body);
         if (!serialization_execution_result.Successful()) {
           // We can log it but should not update the error code getting back
           // to the client since it will make it confusing for the proper

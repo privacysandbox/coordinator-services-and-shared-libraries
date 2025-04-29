@@ -23,10 +23,10 @@
 #include "cc/core/common/uuid/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::test::ResultIs;
-using std::string;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::test::ResultIs;
 
-namespace google::scp::core::common::test {
+namespace privacy_sandbox::pbs_common {
 TEST(UuidTests, UuidGeneration) {
   Uuid uuid = Uuid::GenerateUuid();
 
@@ -44,7 +44,7 @@ TEST(UuidTests, UuidToString) {
 }
 
 TEST(UuidTests, InvalidUuidString) {
-  string uuid_string = "123";
+  std::string uuid_string = "123";
   Uuid parsed_uuid;
   EXPECT_THAT(FromString(uuid_string, parsed_uuid),
               ResultIs(FailureExecutionResult(
@@ -65,4 +65,4 @@ TEST(UuidTests, InvalidUuidString) {
               ResultIs(FailureExecutionResult(
                   privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
 }
-}  // namespace google::scp::core::common::test
+}  // namespace privacy_sandbox::pbs_common

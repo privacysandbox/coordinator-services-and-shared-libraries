@@ -49,7 +49,7 @@ class MockHttp2ServerWithOverrides : public Http2Server {
   void OnAuthorizationCallback(
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context,
-      google::scp::core::common::Uuid& request_id,
+      privacy_sandbox::pbs_common::Uuid& request_id,
       const std::shared_ptr<Http2SynchronizationContext>& sync_context) noexcept
       override {
     Http2Server::OnAuthorizationCallback(authorization_context, request_id,
@@ -67,7 +67,7 @@ class MockHttp2ServerWithOverrides : public Http2Server {
 
   void OnHttp2PendingCallback(
       google::scp::core::ExecutionResult execution_result,
-      const google::scp::core::common::Uuid& request_id) noexcept override {
+      const privacy_sandbox::pbs_common::Uuid& request_id) noexcept override {
     Http2Server::OnHttp2PendingCallback(execution_result, request_id);
   }
 
@@ -76,17 +76,15 @@ class MockHttp2ServerWithOverrides : public Http2Server {
     Http2Server::OnHttp2Cleanup(sync_context, error_code);
   }
 
-  google::scp::core::common::ConcurrentMap<
-      std::string, std::shared_ptr<google::scp::core::common::ConcurrentMap<
-                       HttpMethod, HttpHandler>>>&
+  ConcurrentMap<std::string,
+                std::shared_ptr<ConcurrentMap<HttpMethod, HttpHandler>>>&
   GetRegisteredResourceHandlers() {
     return resource_handlers_;
   }
 
-  google::scp::core::common::ConcurrentMap<
-      google::scp::core::common::Uuid,
-      std::shared_ptr<Http2SynchronizationContext>,
-      google::scp::core::common::UuidCompare>&
+  ConcurrentMap<privacy_sandbox::pbs_common::Uuid,
+                std::shared_ptr<Http2SynchronizationContext>,
+                privacy_sandbox::pbs_common::UuidCompare>&
   GetActiveRequests() {
     return active_requests_;
   }

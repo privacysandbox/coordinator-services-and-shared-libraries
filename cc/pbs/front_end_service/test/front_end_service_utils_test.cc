@@ -21,24 +21,33 @@
 #include <string>
 #include <vector>
 
+#include <google/protobuf/util/json_util.h>
+
+#include "absl/status/status_matchers.h"
 #include "cc/core/common/uuid/src/error_codes.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/http_types.h"
 #include "cc/core/interface/type_def.h"
+#include "cc/core/test/utils/proto_test_utils.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/front_end_utils.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "proto/pbs/api/v1/api.pb.h"
 
 namespace google::scp::pbs {
 namespace {
 
+using ::absl_testing::IsOk;
+using ::google::protobuf::util::JsonStringToMessage;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::Uuid;
+using ::google::scp::core::test::EqualsProto;
 using ::google::scp::core::test::ResultIs;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::Byte;
 using ::privacy_sandbox::pbs_common::BytesBuffer;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
@@ -53,8 +62,10 @@ constexpr absl::string_view kTransactionOriginWithSubdomain =
     "https://subdomain.fake.com";
 constexpr absl::string_view kTransactionOriginWithoutSubdomain =
     "https://fake.com";
-constexpr absl::string_view kBudgetTypeBinaryBudget =
-    "BUDGET_TYPE_BINARY_BUDGET";
+const absl::string_view kBudgetTypeBinaryBudget =
+    ConsumePrivacyBudgetRequest::PrivacyBudgetKey::BudgetType_Name(
+        ConsumePrivacyBudgetRequest::PrivacyBudgetKey::
+            BUDGET_TYPE_BINARY_BUDGET);
 
 // Mock class with mock method to test ParseCommonV2TransactionRequestBody
 class MockKeyBodyProcessor {
@@ -62,6 +73,11 @@ class MockKeyBodyProcessor {
   MOCK_METHOD(ExecutionResult, ProcessKeyBody,
               (const nlohmann::json&, size_t, absl::string_view,
                absl::string_view));
+
+  MOCK_METHOD(ExecutionResult, ProcessKeyBody,
+              (const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest::
+                   PrivacyBudgetKey&,
+               size_t, absl::string_view));
 };
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestSuccess) {
@@ -891,14 +907,24 @@ TEST(FrontEndUtilsTest, SerializeTransactionEmptyFailedCommandIndicesResponse) {
   std::vector<size_t> failed_indices;
   BytesBuffer bytes_buffer;
 
-  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(failed_indices,
-                                                             bytes_buffer),
+  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(
+                failed_indices, false, bytes_buffer),
             SuccessExecutionResult());
 
   std::string serialized_failed_response(bytes_buffer.bytes->begin(),
                                          bytes_buffer.bytes->end());
-
   EXPECT_EQ(serialized_failed_response, "{\"f\":[],\"v\":\"1.0\"}");
+  EXPECT_EQ(bytes_buffer.capacity, bytes_buffer.bytes->size());
+  EXPECT_EQ(bytes_buffer.length, bytes_buffer.bytes->size());
+
+  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(
+                failed_indices, true, bytes_buffer),
+            SuccessExecutionResult());
+
+  serialized_failed_response =
+      std::string(bytes_buffer.bytes->begin(), bytes_buffer.bytes->end());
+  EXPECT_EQ(nlohmann::json::parse(serialized_failed_response),
+            nlohmann::json::parse("{\"f\":[],\"v\":\"1.0\"}"));
   EXPECT_EQ(bytes_buffer.capacity, bytes_buffer.bytes->size());
   EXPECT_EQ(bytes_buffer.length, bytes_buffer.bytes->size());
 }
@@ -907,14 +933,24 @@ TEST(FrontEndUtilsTest, SerializeTransactionFailedCommandIndicesResponse) {
   std::vector<size_t> failed_indices = {1, 2, 3, 4, 5};
   BytesBuffer bytes_buffer;
 
-  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(failed_indices,
-                                                             bytes_buffer),
+  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(
+                failed_indices, false, bytes_buffer),
             SuccessExecutionResult());
 
   std::string serialized_failed_response(bytes_buffer.bytes->begin(),
                                          bytes_buffer.bytes->end());
-
   EXPECT_EQ(serialized_failed_response, "{\"f\":[1,2,3,4,5],\"v\":\"1.0\"}");
+  EXPECT_EQ(bytes_buffer.capacity, bytes_buffer.bytes->size());
+  EXPECT_EQ(bytes_buffer.length, bytes_buffer.bytes->size());
+
+  EXPECT_EQ(SerializeTransactionFailedCommandIndicesResponse(
+                failed_indices, true, bytes_buffer),
+            SuccessExecutionResult());
+
+  serialized_failed_response =
+      std::string(bytes_buffer.bytes->begin(), bytes_buffer.bytes->end());
+  EXPECT_EQ(nlohmann::json::parse(serialized_failed_response),
+            nlohmann::json::parse("{\"f\":[1,2,3,4,5],\"v\":\"1.0\"}"));
   EXPECT_EQ(bytes_buffer.capacity, bytes_buffer.bytes->size());
   EXPECT_EQ(bytes_buffer.length, bytes_buffer.bytes->size());
 }
@@ -1123,8 +1159,51 @@ TEST(ParseCommonV2TransactionRequestBodyTest, ValidRequestSuccess) {
         return mock_processor.ProcessKeyBody(key_body, key_index,
                                              reporting_origin, budget_type);
       });
-
   EXPECT_SUCCESS(result);
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+
+  PrivacyBudgetKey expected_key_proto1;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body1.dump(), &expected_key_proto1),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto1),
+                                             Eq(expected_key_index1),
+                                             Eq(expected_reporting_origin1)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  PrivacyBudgetKey expected_key_proto2;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body2.dump(), &expected_key_proto2),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto2),
+                                             Eq(expected_key_index2),
+                                             Eq(expected_reporting_origin2)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  PrivacyBudgetKey expected_key_proto3;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body3.dump(), &expected_key_proto3),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto3),
+                                             Eq(expected_key_index3),
+                                             Eq(expected_reporting_origin3)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  ExecutionResult result_proto = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+  EXPECT_SUCCESS(result_proto);
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutVersion) {
@@ -1145,6 +1224,23 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutVersion) {
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestEmptyJson) {
@@ -1157,6 +1253,23 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestEmptyJson) {
           absl::string_view reporting_origin, absl::string_view budget_type) {
         return mock_processor.ProcessKeyBody(key_body, key_index,
                                              reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
       });
 
   EXPECT_THAT(execution_result,
@@ -1183,6 +1296,23 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidVersion) {
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutData) {
@@ -1203,6 +1333,22 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutData) {
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  // In proto we cannot distinguish between the data key is absent or has a
+  // default value. So, we expect success here.
+  EXPECT_SUCCESS(execution_result);
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidData) {
@@ -1283,6 +1429,34 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutReportingOrigin) {
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  PrivacyBudgetKey expected_key_proto1;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body1.dump(), &expected_key_proto1),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto1),
+                                             Eq(expected_key_index1),
+                                             Eq(expected_reporting_origin1)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutKeys) {
@@ -1298,7 +1472,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutKeys) {
       }]
     },
     {
-      "reporting_origin": "http://a.fake.com"
+      "reporting_origin": "http://b.fake.com"
     }
   ]
 })");
@@ -1334,6 +1508,32 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutKeys) {
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  PrivacyBudgetKey expected_key_proto1;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body1.dump(), &expected_key_proto1),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto1),
+                                             Eq(expected_key_index1),
+                                             Eq(expected_reporting_origin1)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  // In proto we cannot distinguish between the "keys" key is absent or has a
+  // default value. So, we expect success here.
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithEmptyReportingOrigin) {
@@ -1366,6 +1566,23 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithEmptyReportingOrigin) {
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest,
@@ -1374,7 +1591,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
   "v": "2.0",
   "data": [
     {
-      "reporting_origin": "",
+      "reporting_origin": "invalid",
       "keys": [
         {
           "key": "123",
@@ -1393,6 +1610,23 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
           absl::string_view reporting_origin, absl::string_view budget_type) {
         return mock_processor.ProcessKeyBody(key_body, key_index,
                                              reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
       });
 
   EXPECT_THAT(execution_result,
@@ -1461,6 +1695,34 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
       ResultIs(FailureExecutionResult(
           google::scp::core::errors::
               SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  PrivacyBudgetKey expected_key_proto1;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body1.dump(), &expected_key_proto1),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto1),
+                                             Eq(expected_key_index1),
+                                             Eq(expected_reporting_origin1)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  EXPECT_THAT(
+      execution_result,
+      ResultIs(FailureExecutionResult(
+          google::scp::core::errors::
+              SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest,
@@ -1516,6 +1778,33 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
           absl::string_view reporting_origin, absl::string_view budget_type) {
         return mock_processor.ProcessKeyBody(key_body, key_index,
                                              reporting_origin, budget_type);
+      });
+
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  PrivacyBudgetKey expected_key_proto1;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body1.dump(), &expected_key_proto1),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto1),
+                                             Eq(expected_key_index1),
+                                             Eq(expected_reporting_origin1)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
       });
 
   EXPECT_THAT(execution_result,
@@ -1596,6 +1885,44 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithBudgetTypeSpecified) {
                                              reporting_origin, budget_type);
       });
 
+  EXPECT_SUCCESS(execution_result);
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  request_body["data"][0]["keys"][0]["budget_type"] = kBudgetTypeBinaryBudget;
+  request_body["data"][1]["keys"][0]["budget_type"] = kBudgetTypeBinaryBudget;
+  expected_key_body1["budget_type"] = kBudgetTypeBinaryBudget;
+  expected_key_body2["budget_type"] = kBudgetTypeBinaryBudget;
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  PrivacyBudgetKey expected_key_proto1;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body1.dump(), &expected_key_proto1),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto1),
+                                             Eq(expected_key_index1),
+                                             Eq(expected_reporting_origin1)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  PrivacyBudgetKey expected_key_proto2;
+  EXPECT_THAT(
+      JsonStringToMessage(expected_key_body2.dump(), &expected_key_proto2),
+      IsOk());
+  EXPECT_CALL(mock_processor, ProcessKeyBody(EqualsProto(expected_key_proto2),
+                                             Eq(expected_key_index2),
+                                             Eq(expected_reporting_origin2)))
+      .Times(1)
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
   EXPECT_SUCCESS(execution_result);
 }
 
@@ -1745,6 +2072,20 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithNoData) {
       });
 
   EXPECT_SUCCESS(execution_result);
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+
+  execution_result = ParseCommonV2TransactionRequestProto(
+      kAuthorizedDomain, request_proto,
+      [&](const PrivacyBudgetKey& key_body, size_t key_index,
+          absl::string_view reporting_origin) {
+        return mock_processor.ProcessKeyBody(key_body, key_index,
+                                             reporting_origin);
+      });
+
+  EXPECT_SUCCESS(execution_result);
 }
 
 TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
@@ -1778,6 +2119,13 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
   auto execution_result = ValidateAndGetBudgetType(request_body);
   EXPECT_SUCCESS(execution_result);
   EXPECT_EQ(*execution_result, kBudgetTypeBinaryBudget);
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+  auto execution_result_proto = ValidateAndGetBudgetType(request_proto);
+  EXPECT_EQ(
+      *execution_result_proto,
+      ConsumePrivacyBudgetRequest::PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET);
 }
 
 TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
@@ -1792,7 +2140,7 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
           "key": "123",
           "token": 1,
           "reporting_time": "2019-12-11T07:20:50.52Z",
-          "budget_type": "type1"
+          "budget_type": "BUDGET_TYPE_BINARY_BUDGET"
         }
       ]
     },
@@ -1803,7 +2151,7 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
           "key": "456",
           "token": 1,
           "reporting_time": "2019-12-12T07:20:50.52Z",
-          "budget_type": "type1"
+          "budget_type": "BUDGET_TYPE_BINARY_BUDGET"
         }
       ]
     }
@@ -1812,7 +2160,14 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
 
   auto execution_result = ValidateAndGetBudgetType(request_body);
   EXPECT_SUCCESS(execution_result);
-  EXPECT_EQ(*execution_result, "type1");
+  EXPECT_EQ(*execution_result, "BUDGET_TYPE_BINARY_BUDGET");
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+  auto execution_result_proto = ValidateAndGetBudgetType(request_proto);
+  EXPECT_EQ(
+      *execution_result_proto,
+      ConsumePrivacyBudgetRequest::PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET);
 }
 
 TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest, V1Request) {
@@ -1859,6 +2214,38 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  request_body["data"][0]["keys"][0]["budget_type"] =
+      PrivacyBudgetKey::BudgetType_Name(
+          PrivacyBudgetKey::BUDGET_TYPE_UNSPECIFIED);
+  request_body["data"][1]["keys"][0]["budget_type"] = kBudgetTypeBinaryBudget;
+
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+  auto execution_result_proto = ValidateAndGetBudgetType(request_proto);
+  EXPECT_SUCCESS(execution_result_proto);
+  EXPECT_EQ(
+      *execution_result_proto,
+      ConsumePrivacyBudgetRequest::PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET);
+
+  // This an attempt to introduce fake budget types since the only
+  // available budget types available at this time are BUDGET_TYPE_UNSPECIFIED
+  // and BUDGET_TYPE_BINARY_BUDGET which are equivalent
+  PrivacyBudgetKey::BudgetType fake_budget_type1 =
+      static_cast<typename PrivacyBudgetKey::BudgetType>(1000);
+  PrivacyBudgetKey::BudgetType fake_budget_type2 =
+      static_cast<typename PrivacyBudgetKey::BudgetType>(1001);
+  request_proto.mutable_data(0)->mutable_keys(0)->set_budget_type(
+      fake_budget_type1);
+  request_proto.mutable_data(1)->mutable_keys(0)->set_budget_type(
+      fake_budget_type2);
+
+  execution_result_proto = ValidateAndGetBudgetType(request_proto);
+  EXPECT_THAT(execution_result_proto,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
@@ -1892,6 +2279,29 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
 
   auto execution_result = ValidateAndGetBudgetType(request_body);
   EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  google::scp::core::errors::
+                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+
+  request_body["data"][0]["keys"][0]["budget_type"] = kBudgetTypeBinaryBudget;
+  ConsumePrivacyBudgetRequest request_proto;
+  EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
+  auto execution_result_proto = ValidateAndGetBudgetType(request_proto);
+  EXPECT_EQ(*execution_result_proto,
+            PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET);
+
+  // This an attempt to introduce fake budget types since the only
+  // available budget types available at this time are BUDGET_TYPE_UNSPECIFIED
+  // and BUDGET_TYPE_BINARY_BUDGET which are equivalent
+  PrivacyBudgetKey::BudgetType fake_budget_type =
+      static_cast<typename PrivacyBudgetKey::BudgetType>(1000);
+  request_proto.mutable_data(0)->mutable_keys(0)->set_budget_type(
+      fake_budget_type);
+
+  execution_result_proto = ValidateAndGetBudgetType(request_proto);
+  EXPECT_THAT(execution_result_proto,
               ResultIs(FailureExecutionResult(
                   google::scp::core::errors::
                       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));

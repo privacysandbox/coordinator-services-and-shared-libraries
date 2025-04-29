@@ -22,24 +22,18 @@
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "include/gtest/gtest.h"
 #include "opentelemetry/metrics/provider.h"
-#include "opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
-#include "opentelemetry/sdk/metrics/meter_context.h"
-#include "opentelemetry/sdk/metrics/meter_context_factory.h"
-#include "opentelemetry/sdk/metrics/meter_provider.h"
-#include "opentelemetry/sdk/metrics/meter_provider_factory.h"
-#include "opentelemetry/sdk/metrics/view/view.h"
-#include "opentelemetry/sdk/metrics/view/view_factory.h"
-#include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
 namespace google::scp::core::test {
 namespace {
+
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
+
 class MetricRouterTest : public testing::Test {
  protected:
   void SetUp() override {
     exporter_ = std::make_unique<InMemoryMetricExporter>();
-    mock_config_provider_ =
-        std::make_shared<config_provider::mock::MockConfigProvider>();
+    mock_config_provider_ = std::make_shared<MockConfigProvider>();
     std::int32_t metric_export_interval = 1000;
     std::int32_t metric_export_timeout = 500;
 
@@ -56,8 +50,7 @@ class MetricRouterTest : public testing::Test {
         std::move(exporter_));
   }
 
-  std::shared_ptr<config_provider::mock::MockConfigProvider>
-      mock_config_provider_;
+  std::shared_ptr<MockConfigProvider> mock_config_provider_;
   std::unique_ptr<google::scp::core::MetricRouter> metric_router_;
   std::unique_ptr<InMemoryMetricExporter> exporter_;
   std::shared_ptr<InMemoryMetricReader> reader_;

@@ -1,10 +1,54 @@
 # Changelog
 
+## [1.23.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.22.0...v1.23.0) (2025-04-29)
+### Important Note
+**[GCP]**
+- Update the GCP Terraform provider version to 6.29.0.
+  - [To Enable] Update the Terraform dependency lock file (`.terraform.lock.hcl`) by executing the below command:
+    ```
+    terraform init -upgrade
+    ```
+  - [To Rollback] Restore previous version of dependency lock file.
+- [Feature enabling] The `google_scp_pbs_enable_request_response_proto_migration` flag acts as a feature toggle to control whether the PBS Server should attempt to use `ConsumePrivacyBudgetRequest` and `ConsumePrivacyBudgetResponse` protocol buffers for parsing JSON request and serializing response bodies.
+  - [To Enable] The feature is enabled by default. No action is required.
+  - [To Rollback] To rollback, add the following variable in the `auto.tfvars` for `distributedpbs_application`:
+    ```
+    pbs_application_environment_variables = [
+      ...
+      {
+        name = "google_scp_pbs_enable_request_response_proto_migration"
+        value = "false"
+      },
+    ]
+    ```
+
+### Changes
+- BUILD
+  - [AWS] Update `glibc` packages version to `2.26-64.amzn2.0.4` in `amazonlinux_2` container dependency
+  - Replace deprecated `@rules_java//java:defs.bzl` with `@com_google_protobuf//bazel:java_proto_library.bzl`
+- MPKGDS
+  - [GCP] Update the GCP Terraform provider version to `6.29.0` for all modules
+- PBS
+  - [GCP] Detach GCE PBS from PBS Load Balancer
+  - [GCP] Enable Request Response protos in PBS Server
+  - [GCP] Introduce API proto in Integration test
+  - [GCP] Remove PBS image from the built coordinator tarball
+  - [GCP] Update Terraform PBS config so child templates can override `environment_variables` variables from base templates
+  - [GCP] Update the GCP Terraform provider version to `6.29.0` for all modules
+  - Add `json_name` for each field in api proto to avoid serialization issues
+  - Implement proto parsing in binary budget consumer
+  - Introduce `ParseCommonV2TransactionRequestProto` in front end utils
+  - Introduce the `ConsumePrivacyBudgetRequest` and `ConsumePrivacyBudgetResponse` proto
+  - Move `Config Provider` and `cc/core/common` folders to `privacy_sandbox::pbs_common` namespace
+  - Remove unused code
+  - Stop serving disabled v1 request in PBS
+  - Update PBS API proto to use [API-specific protos](https://google.aip.dev/215)
+
 ## [1.22.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.21.0...v1.22.0) (2025-04-15)
 ### Important Note
 **[GCP]**
 - [Cleanup] Cleanup the terraform file as Cloud Function to Cloud Run migration is done
-  - [To Cleanup] Coordinators must be on version 1.22 to perform this action. Remove the following variables from `.tfvars` for MPKHS if they are present to decommission Cloud Functions:
+  - [To Cleanup] Coordinators must be on version 1.21 to perform this action. Remove the following variables from `.tfvars` for MPKHS if they are present to decommission Cloud Functions:
     - Primary Coordinator:
       - `use_cloud_run`
       - `get_public_key_service_zip`

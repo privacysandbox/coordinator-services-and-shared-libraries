@@ -26,7 +26,7 @@
 
 #include "error_codes.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief ConcurrentMap provides multi producers and multi consumers map
  * support to be used generically.
@@ -55,14 +55,16 @@ class ConcurrentMap {
    * @param out_value A reference to the actual value inserted into the map.
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult Insert(std::pair<TKey, TValue> key_value, TValue& out_value) {
+  google::scp::core::ExecutionResult Insert(std::pair<TKey, TValue> key_value,
+                                            TValue& out_value) {
     std::shared_lock lock(concurrent_map_mutex_);
 
     typename ConcurrentMapImpl::accessor map_accessor;
-    ExecutionResult execution_result = SuccessExecutionResult();
+    google::scp::core::ExecutionResult execution_result =
+        google::scp::core::SuccessExecutionResult();
 
     if (!concurrent_map_.insert(map_accessor, key_value)) {
-      execution_result = FailureExecutionResult(
+      execution_result = google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS);
     }
 
@@ -80,14 +82,15 @@ class ConcurrentMap {
    * @param out_value A reference to the actual value in the map.
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult Find(const TKey& key, TValue& out_value) {
+  google::scp::core::ExecutionResult Find(const TKey& key, TValue& out_value) {
     std::shared_lock lock(concurrent_map_mutex_);
 
     typename ConcurrentMapImpl::accessor map_accessor;
-    ExecutionResult execution_result = SuccessExecutionResult();
+    google::scp::core::ExecutionResult execution_result =
+        google::scp::core::SuccessExecutionResult();
 
     if (!concurrent_map_.find(map_accessor, key)) {
-      execution_result = FailureExecutionResult(
+      execution_result = google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
     } else {
       out_value = map_accessor->second;
@@ -105,12 +108,13 @@ class ConcurrentMap {
    * @param key The key to be erased from the map.
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult Erase(const TKey& key) {
+  google::scp::core::ExecutionResult Erase(const TKey& key) {
     std::shared_lock lock(concurrent_map_mutex_);
-    ExecutionResult execution_result = SuccessExecutionResult();
+    google::scp::core::ExecutionResult execution_result =
+        google::scp::core::SuccessExecutionResult();
 
     if (!concurrent_map_.erase(key)) {
-      execution_result = FailureExecutionResult(
+      execution_result = google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
     }
 
@@ -124,7 +128,7 @@ class ConcurrentMap {
    * @param keys A vector of the keys to be filled in once looked up.
    * @return ExecutionResult The execution result of the operation.
    */
-  ExecutionResult Keys(std::vector<TKey>& keys) {
+  google::scp::core::ExecutionResult Keys(std::vector<TKey>& keys) {
     std::unique_lock lock(concurrent_map_mutex_);
 
     keys.clear();
@@ -132,7 +136,7 @@ class ConcurrentMap {
       keys.push_back(it->first);
     }
 
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
   /**
@@ -149,4 +153,4 @@ class ConcurrentMap {
   /// Mutex to prevent write operations during Keys calls.
   mutable std::shared_timed_mutex concurrent_map_mutex_;
 };
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common

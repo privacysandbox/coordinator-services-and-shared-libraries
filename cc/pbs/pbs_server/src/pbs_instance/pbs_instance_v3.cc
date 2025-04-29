@@ -36,7 +36,7 @@ using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::PassThruAuthorizationProxy;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::google::scp::core::errors::SC_PBS_SERVICE_INITIALIZATION_ERROR;
 using ::google::scp::pbs::FrontEndServiceV2;
 using ::google::scp::pbs::HealthService;

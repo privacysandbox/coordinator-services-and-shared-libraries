@@ -37,7 +37,7 @@ ExecutionResultOr<std::string> AwsTokenFetcher::FetchIdToken(
 
   auto execution_result = FetchIdTokenInternal(*iam_client_, auth_config);
   if (!execution_result.Successful()) {
-    SCP_ERROR(kAwsTokenFetcher, google::scp::core::common::kZeroUuid,
+    SCP_ERROR(kAwsTokenFetcher, privacy_sandbox::pbs_common::kZeroUuid,
               execution_result.result(),
               "[Aws Token Fetch] Id token fetch failed: %s",
               privacy_sandbox::pbs_common::GetErrorMessage(

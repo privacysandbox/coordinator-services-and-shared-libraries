@@ -19,7 +19,7 @@
 
 #include "cc/core/interface/type_def.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 class TimeProvider {
  public:
   /**
@@ -102,4 +102,4 @@ class TimeProvider {
     return current_timestamp;
   }
 };
-};  // namespace google::scp::core::common
+};  // namespace privacy_sandbox::pbs_common

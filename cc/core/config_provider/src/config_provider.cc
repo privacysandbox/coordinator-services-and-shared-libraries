@@ -16,7 +16,6 @@
 
 #include "config_provider.h"
 
-#include <exception>
 #include <fstream>
 #include <list>
 
@@ -25,10 +24,13 @@ using std::string;
 using json = nlohmann::json;
 using std::list;
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::privacy_sandbox::pbs_common::ConfigKey;
-}
+}  // namespace
 
 ExecutionResult ConfigProvider::Init() noexcept {
   try {
@@ -93,4 +95,4 @@ ExecutionResult ConfigProvider::Get(const ConfigKey& key,
                                     list<bool>& out) noexcept {
   return Get<bool>(key, out);
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

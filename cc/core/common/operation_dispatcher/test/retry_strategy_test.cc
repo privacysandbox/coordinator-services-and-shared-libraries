@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-namespace google::scp::core::common::test {
+namespace privacy_sandbox::pbs_common {
 TEST(RetryStrategyTests, ExponentialRetryStrategyTest) {
   RetryStrategy retry_strategy(RetryStrategyType::Exponential, 1000, 5);
   EXPECT_EQ(retry_strategy.GetBackOffDurationInMilliseconds(0), 0);
@@ -41,4 +41,4 @@ TEST(RetryStrategyTests, LinearRetryStrategyTest) {
   EXPECT_EQ(retry_strategy.GetMaximumAllowedRetryCount(), 5);
 }
 
-}  // namespace google::scp::core::common::test
+}  // namespace privacy_sandbox::pbs_common

@@ -14,6 +14,11 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+
+#include <google/protobuf/text_format.h>
+
+#include "absl/status/status_matchers.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/notification.h"
 #include "cc/core/async_executor/src/async_executor.h"
@@ -23,25 +28,29 @@
 #include "cc/core/test/utils/docker_helper/docker_helper.h"
 #include "cc/pbs/proto/storage/budget_value.pb.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
+#include "gmock/gmock.h"
 #include "google/cloud/spanner/admin/database_admin_client.h"
 #include "google/cloud/spanner/admin/instance_admin_client.h"
 #include "google/cloud/spanner/admin/instance_admin_connection.h"
 #include "google/cloud/status_or.h"
+#include "proto/pbs/api/v1/api.pb.h"
 
 namespace google::scp::pbs {
 namespace {
 
+using ::absl_testing::IsOk;
 using ::google::cloud::spanner_admin::DatabaseAdminClient;
 using ::google::cloud::spanner_admin::InstanceAdminClient;
 using ::google::cloud::spanner_admin::MakeDatabaseAdminConnection;
-using ::google::scp::core::common::RetryStrategyOptions;
-using ::google::scp::core::common::RetryStrategyType;
+using ::google::protobuf::TextFormat;
+using ::google::protobuf::json::MessageToJsonString;
 using ::google::scp::core::test::CreateNetwork;
 using ::google::scp::core::test::GetIpAddress;
 using ::google::scp::core::test::LoadImage;
 using ::google::scp::core::test::RemoveNetwork;
 using ::google::scp::core::test::StartContainer;
 using ::google::scp::core::test::StopContainer;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
@@ -53,7 +62,11 @@ using ::privacy_sandbox::pbs_common::HttpMethod;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kDefaultMaxConnectionsPerHost;
+using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
+using ::privacy_sandbox::pbs_common::RetryStrategyType;
 using ::privacy_sandbox::pbs_common::TimeDuration;
+using ::privacy_sandbox::pbs_common::ToString;
+using ::privacy_sandbox::pbs_common::Uuid;
 
 constexpr absl::string_view kNetworkName = "testnetwork";
 constexpr absl::string_view kSpannerEmulatorName = "spanner";
@@ -83,33 +96,6 @@ constexpr absl::string_view kPbsServerImageLocation =
     "cc/pbs/deploy/pbs_server/build_defs/pbs_cloud_run_container_for_local.tar";
 constexpr absl::string_view kPbsServerImageName =
     "bazel/cc/pbs/deploy/pbs_server/build_defs:pbs_cloud_run_container_local";
-
-constexpr absl::string_view kRequestBodyV2Template = R"(
-  {
-    "v" : "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [
-          {
-            "key": "%s",
-            "token": 1,
-            "reporting_time": "2019-12-11T07:20:50.52Z"
-          }
-        ]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-        "keys": [
-          {
-            "key": "%s",
-            "token": 1,
-            "reporting_time": "2019-12-12T07:20:50.52Z"
-          }
-        ]
-      }
-    ]
-  })";
 
 constexpr TimeDuration kHTTPClientBackoffDurationInMs = 10;
 constexpr size_t kHTTPClientMaxRetries = 6;
@@ -215,11 +201,45 @@ HttpHeaders CreateHttpHeaders() {
   return headers;
 }
 
-std::string CreateRequestBodyV2() {
-  return absl::StrFormat(
-      kRequestBodyV2Template,
-      core::common::ToString(core::common::Uuid::GenerateUuid()),
-      core::common::ToString(core::common::Uuid::GenerateUuid()));
+absl::StatusOr<std::string> CreateBinaryRequestBodyV2() {
+  std::string proto_string = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        # the key field will be added later
+        budget_type: BUDGET_TYPE_BINARY_BUDGET
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
+    }
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys {
+        # the key field will be added later
+        budget_type: BUDGET_TYPE_BINARY_BUDGET
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
+    }
+  )pb";
+
+  ConsumePrivacyBudgetRequest req;
+  if (!TextFormat::ParseFromString(proto_string, &req)) {
+    return absl::FailedPreconditionError("Coudn't parse proto from the string");
+  }
+
+  for (auto& data : *req.mutable_data()) {
+    for (auto& key : *data.mutable_keys()) {
+      key.set_key(ToString(Uuid::GenerateUuid()));
+    }
+  }
+
+  std::string json_string;
+  if (auto status = MessageToJsonString(req, &json_string); !status.ok()) {
+    return status;
+  }
+  return json_string;
 }
 
 class PBSIntegrationTest : public testing::Test {
@@ -268,6 +288,7 @@ class PBSIntegrationTest : public testing::Test {
          absl::StrCat(emulator_ip_address, ":", kSpannerGrpcPort)},
         {"google_scp_pbs_value_proto_migration_phase", "phase_2"},
         {"google_scp_pbs_migration_enable_budget_consumer_migration", "true"},
+        {"google_scp_pbs_enable_request_response_proto_migration", "true"},
     };
 
     return_status = StartContainer(
@@ -403,27 +424,30 @@ TEST_F(PBSIntegrationTest, ConsumeBudgetV1) {
 TEST_F(PBSIntegrationTest, ConsumeBudgetV2FivePhases) {
   HttpHeaders headers = CreateHttpHeaders();
 
-  std::string request_body = CreateRequestBodyV2();
+  auto request_body = CreateBinaryRequestBodyV2();
+  ASSERT_THAT(request_body.status(), IsOk());
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:begin", request_body, headers).result);
+      PerformRequest("/v1/transactions:begin", *request_body, headers).result);
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:prepare", request_body, headers).result);
+      PerformRequest("/v1/transactions:prepare", *request_body, headers)
+          .result);
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:commit", request_body, headers).result);
+      PerformRequest("/v1/transactions:commit", *request_body, headers).result);
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:notify", request_body, headers).result);
+      PerformRequest("/v1/transactions:notify", *request_body, headers).result);
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:end", request_body, headers).result);
+      PerformRequest("/v1/transactions:end", *request_body, headers).result);
 }
 
 TEST_F(PBSIntegrationTest, ConsumeBudgetV2TwoPhases) {
   HttpHeaders headers = CreateHttpHeaders();
-  std::string request_body = CreateRequestBodyV2();
+  auto request_body = CreateBinaryRequestBodyV2();
+  ASSERT_THAT(request_body.status(), IsOk());
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:health-check", request_body, headers)
+      PerformRequest("/v1/transactions:health-check", *request_body, headers)
           .result);
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:consume-budget", request_body, headers)
+      PerformRequest("/v1/transactions:consume-budget", *request_body, headers)
           .result);
 }
 

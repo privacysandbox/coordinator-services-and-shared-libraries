@@ -320,10 +320,6 @@ resource "google_compute_url_map" "pbs_load_balancer_managed" {
         "/v1/transactions:status"
       ]
       route_action {
-        weighted_backend_services {
-          backend_service = google_compute_backend_service.pbs_backend_service.id
-          weight          = 100 - var.pbs_cloud_run_traffic_percentage
-        }
         dynamic "weighted_backend_services" {
           for_each = var.enable_pbs_cloud_run ? ["true"] : []
           content {

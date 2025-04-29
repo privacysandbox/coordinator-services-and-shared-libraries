@@ -26,8 +26,8 @@
 namespace google::scp::pbs {
 namespace {
 
-using ::google::scp::core::EnvConfigProvider;
 using ::google::scp::pbs::LocalDependencyFactory;
+using ::privacy_sandbox::pbs_common::EnvConfigProvider;
 using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 
 TEST(PBSInstanceV3Test, TestInitRunAndStopWithLocalDependencyFactory) {

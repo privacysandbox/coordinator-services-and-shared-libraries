@@ -53,9 +53,6 @@ using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::MetricRouter;
 using ::google::scp::core::RetryExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::core::common::ToString;
-using ::google::scp::core::common::Uuid;
 using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
 using ::google::scp::core::utils::GetEscapedUriWithQuery;
 using ::nghttp2::asio_http2::header_map;
@@ -67,6 +64,7 @@ using ::opentelemetry::sdk::resource::SemanticConventions::
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerPort;
 using ::opentelemetry::sdk::resource::SemanticConventions::kUrlScheme;
+using ::privacy_sandbox::pbs_common::Uuid;
 
 static constexpr char kContentLengthHeader[] = "content-length";
 static constexpr char kHttp2Client[] = "Http2Client";

@@ -20,20 +20,20 @@
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 #include "include/gtest/gtest.h"
-#include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "opentelemetry/sdk/resource/resource.h"
 
 namespace google::scp::core {
 namespace {
+
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
+
 class OtlpGrpcAuthedExporterMetricTest : public testing::Test {
  protected:
   inline static constexpr absl::string_view kDefaultEndpoint =
       "localhost:45454";
 
   void SetUp() override {
-    mock_config_provider_ =
-        std::make_shared<config_provider::mock::MockConfigProvider>();
+    mock_config_provider_ = std::make_shared<MockConfigProvider>();
     std::int32_t metric_export_interval = 1000;
     std::int32_t metric_export_timeout = 500;
     std::string service_account = "service_account";
@@ -65,8 +65,7 @@ class OtlpGrpcAuthedExporterMetricTest : public testing::Test {
         options, std::move(grpc_id_token_authenticator_));
   }
 
-  std::shared_ptr<config_provider::mock::MockConfigProvider>
-      mock_config_provider_;
+  std::shared_ptr<MockConfigProvider> mock_config_provider_;
   std::unique_ptr<GrpcIdTokenAuthenticator> grpc_id_token_authenticator_;
 };
 

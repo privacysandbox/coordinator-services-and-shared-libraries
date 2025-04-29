@@ -30,7 +30,7 @@
 
 namespace google::scp::core {
 namespace {
-using privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
 
 /**
  * @brief Creates a SpanProcessor based on configuration and SpanExporter.

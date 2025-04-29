@@ -32,8 +32,10 @@ cc_test(
         "//cc/core/test/utils/docker_helper:docker_helper_lib",
         "//cc/pbs/proto/storage:budget_value_cc_proto",
         "//cc/public/core/test/interface:execution_result_matchers",
+        "//proto/pbs/api/v1:api_cc_proto",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:storage",
+        "@com_google_absl//absl/status:status_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

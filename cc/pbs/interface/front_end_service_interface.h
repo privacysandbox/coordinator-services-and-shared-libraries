@@ -45,7 +45,7 @@ struct ConsumeBudgetMetadata {
 /// Represents consume budget transaction request object.
 struct ConsumeBudgetTransactionRequest {
   /// Id of the transaction.
-  core::common::Uuid transaction_id;
+  privacy_sandbox::pbs_common::Uuid transaction_id;
   /// In the case of remote transaction, the transaction secret will provide
   /// other participants to inquiry or update the state of a transaction.
   std::shared_ptr<std::string> transaction_secret;

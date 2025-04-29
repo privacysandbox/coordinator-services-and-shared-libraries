@@ -50,9 +50,9 @@ class LogProviderInterface : public ServiceInterface {
    * @param ... A set of strings to be formatted into the message.
    */
   virtual void Log(const LogLevel& level,
-                   const google::scp::core::common::Uuid& parent_activity_id,
-                   const google::scp::core::common::Uuid& activity_id,
-                   const google::scp::core::common::Uuid& correlation_id,
+                   const privacy_sandbox::pbs_common::Uuid& parent_activity_id,
+                   const privacy_sandbox::pbs_common::Uuid& activity_id,
+                   const privacy_sandbox::pbs_common::Uuid& correlation_id,
                    const std::string_view& component_name,
                    const std::string_view& machine_name,
                    const std::string_view& cluster_name,

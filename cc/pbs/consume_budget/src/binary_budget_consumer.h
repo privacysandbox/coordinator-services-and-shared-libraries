@@ -28,6 +28,7 @@
 #include "cc/pbs/proto/storage/budget_value.pb.h"
 #include "cc/public/core/interface/execution_result.h"
 #include "google/cloud/spanner/results.h"
+#include "proto/pbs/api/v1/api.pb.h"
 
 namespace google::scp::pbs {
 
@@ -37,15 +38,22 @@ namespace google::scp::pbs {
 class BinaryBudgetConsumer : public BudgetConsumer {
  public:
   BinaryBudgetConsumer(
-      privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider)
-      : config_provider_(config_provider) {}
+      privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider);
 
   ~BinaryBudgetConsumer() override = default;
 
+  [[deprecated(
+      "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
   google::scp::core::ExecutionResult ParseTransactionRequest(
       const privacy_sandbox::pbs_common::AuthContext& auth_context,
       const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
       const nlohmann::json& request_body) override;
+
+  core::ExecutionResult ParseTransactionRequest(
+      const privacy_sandbox::pbs_common::AuthContext& auth_context,
+      const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
+      const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
+          request_proto) override;
 
   google::cloud::spanner::KeySet GetSpannerKeySet() override;
 
@@ -108,8 +116,6 @@ class BinaryBudgetConsumer : public BudgetConsumer {
   google::scp::core::ExecutionResult ParseRequestBodyV2(
       absl::string_view authorized_domain, const nlohmann::json& request_body);
 
-  google::scp::core::ExecutionResult SetMigrationPhaseStates();
-
   template <typename TokenMetadataType>
     requires(
         std::is_same_v<TokenMetadataType, google::cloud::spanner::Json> ||
@@ -129,6 +135,7 @@ class BinaryBudgetConsumer : public BudgetConsumer {
   bool enable_write_to_value_column_ = false;
   bool enable_write_to_value_proto_column_ = false;
   bool enable_read_truth_from_value_column_ = false;
+  bool stop_serving_v1_request_ = false;
 };
 
 }  // namespace google::scp::pbs

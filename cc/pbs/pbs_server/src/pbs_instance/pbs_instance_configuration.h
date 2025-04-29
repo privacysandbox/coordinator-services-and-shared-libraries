@@ -19,11 +19,9 @@
 #include <memory>
 #include <string>
 
-#include "absl/strings/str_format.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/config_provider_interface.h"
-#include "cc/core/interface/type_def.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -31,7 +29,7 @@
 #include "error_codes.h"
 
 namespace google::scp::pbs {
-
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 inline constexpr int kDefaultLeaseDurationInSeconds = 10;
 inline constexpr char kComputeEngine[] = "compute_engine";
 
@@ -80,7 +78,7 @@ GetPBSInstanceConfigFromConfigProvider(
   auto execution_result = config_provider->Get(
       kAsyncExecutorQueueSize, pbs_instance_config.async_executor_queue_size);
   if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+    SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                  "Failed to read async executor queue size.");
     return execution_result;
   }
@@ -89,7 +87,7 @@ GetPBSInstanceConfigFromConfigProvider(
       config_provider->Get(kAsyncExecutorThreadsCount,
                            pbs_instance_config.async_executor_thread_pool_size);
   if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+    SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                  "Failed to read async executor thread pool size.");
     return execution_result;
   }
@@ -98,7 +96,7 @@ GetPBSInstanceConfigFromConfigProvider(
       config_provider->Get(kIOAsyncExecutorQueueSize,
                            pbs_instance_config.io_async_executor_queue_size);
   if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+    SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                  "Failed to read io async executor queue size.");
     return execution_result;
   }
@@ -107,7 +105,7 @@ GetPBSInstanceConfigFromConfigProvider(
       kIOAsyncExecutorThreadsCount,
       pbs_instance_config.io_async_executor_thread_pool_size);
   if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+    SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                  "Failed to read io async executor thread pool size.");
     return execution_result;
   }
@@ -116,7 +114,7 @@ GetPBSInstanceConfigFromConfigProvider(
   execution_result = config_provider->Get(kPrivacyBudgetServiceHostAddress,
                                           *pbs_instance_config.host_address);
   if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+    SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                  "Failed to read host address.");
     return execution_result;
   }
@@ -125,7 +123,7 @@ GetPBSInstanceConfigFromConfigProvider(
   execution_result = config_provider->Get(kPrivacyBudgetServiceHostPort,
                                           *pbs_instance_config.host_port);
   if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+    SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                  "Failed to read host port.");
     return execution_result;
   }
@@ -137,7 +135,7 @@ GetPBSInstanceConfigFromConfigProvider(
     execution_result = config_provider->Get(kPrivacyBudgetServiceHealthPort,
                                             *pbs_instance_config.health_port);
     if (!execution_result.Successful()) {
-      SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+      SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                    "Failed to read health port.");
       return execution_result;
     }
@@ -147,7 +145,7 @@ GetPBSInstanceConfigFromConfigProvider(
       config_provider->Get(kTotalHttp2ServerThreadsCount,
                            pbs_instance_config.http2server_thread_pool_size);
   if (!execution_result.Successful()) {
-    SCP_CRITICAL(kPBSInstance, core::common::kZeroUuid, execution_result,
+    SCP_CRITICAL(kPBSInstance, kZeroUuid, execution_result,
                  "Failed to read http2 server thread pool size.");
     return execution_result;
   }

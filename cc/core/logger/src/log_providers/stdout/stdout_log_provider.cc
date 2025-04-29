@@ -29,9 +29,9 @@
 namespace privacy_sandbox::pbs_common {
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::ToString;
-using ::google::scp::core::common::Uuid;
 using ::privacy_sandbox::pbs_common::LogLevel;
+using ::privacy_sandbox::pbs_common::ToString;
+using ::privacy_sandbox::pbs_common::Uuid;
 
 ExecutionResult StdoutLogProvider::Init() noexcept {
   return SuccessExecutionResult();

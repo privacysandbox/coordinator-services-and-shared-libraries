@@ -33,8 +33,7 @@ class AsyncExecutorUtils {
     if (rc != 0) {
       auto result = google::scp::core::FailureExecutionResult(
           SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY);
-      SCP_ERROR(kAsyncExecutorUtils, google::scp::core::common::kZeroUuid,
-                result,
+      SCP_ERROR(kAsyncExecutorUtils, kZeroUuid, result,
                 absl::StrFormat("SetAffinity pthread_setaffinity_np failed: %s",
                                 strerror(rc)));
       return result;

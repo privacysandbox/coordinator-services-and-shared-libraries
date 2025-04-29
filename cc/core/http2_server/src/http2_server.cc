@@ -47,10 +47,6 @@ using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::ConcurrentMap;
-using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::core::common::Uuid;
-using ::google::scp::core::common::UuidCompare;
 using ::google::scp::core::utils::Base64Decode;
 using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
 using ::google::scp::core::utils::GetUserAgentOrUnknownValue;
@@ -65,6 +61,9 @@ using ::opentelemetry::sdk::resource::SemanticConventions::
 using ::opentelemetry::sdk::resource::SemanticConventions::kHttpRoute;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerPort;
+using ::privacy_sandbox::pbs_common::ConcurrentMap;
+using ::privacy_sandbox::pbs_common::Uuid;
+using ::privacy_sandbox::pbs_common::UuidCompare;
 
 static constexpr char kHttp2Server[] = "Http2Server";
 static constexpr size_t kConnectionReadTimeoutInSeconds = 90;

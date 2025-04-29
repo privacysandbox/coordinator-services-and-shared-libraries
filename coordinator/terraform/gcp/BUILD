@@ -30,8 +30,6 @@ pkg_files(
 pkg_files(
     name = "pbs_dist_files",
     srcs = [
-        "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_cloud_run_container_gcp",
-        "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_container_gcp",
         "//cc/pbs/proto/storage:budget_value_proto_descriptor",
         "//python/privacybudget/gcp/pbs_auth_handler:auth_cloud_function_handler",
     ],

@@ -46,19 +46,17 @@ class Http2ServerOptions {
       : use_tls(false),
         private_key_file(std::make_shared<std::string>()),
         certificate_chain_file(std::make_shared<std::string>()),
-        retry_strategy_options(google::scp::core::common::RetryStrategyOptions(
-            google::scp::core::common::RetryStrategyType::Exponential,
-            kHttpServerRetryStrategyDelayInMs,
+        retry_strategy_options(RetryStrategyOptions(
+            RetryStrategyType::Exponential, kHttpServerRetryStrategyDelayInMs,
             kDefaultRetryStrategyMaxRetries)) {}
 
-  Http2ServerOptions(
-      bool use_tls, std::shared_ptr<std::string> private_key_file,
-      std::shared_ptr<std::string> certificate_chain_file,
-      google::scp::core::common::RetryStrategyOptions retry_strategy_options =
-          google::scp::core::common::RetryStrategyOptions(
-              google::scp::core::common::RetryStrategyType::Exponential,
-              kHttpServerRetryStrategyDelayInMs,
-              kDefaultRetryStrategyMaxRetries))
+  Http2ServerOptions(bool use_tls,
+                     std::shared_ptr<std::string> private_key_file,
+                     std::shared_ptr<std::string> certificate_chain_file,
+                     RetryStrategyOptions retry_strategy_options =
+                         RetryStrategyOptions(RetryStrategyType::Exponential,
+                                              kHttpServerRetryStrategyDelayInMs,
+                                              kDefaultRetryStrategyMaxRetries))
       : use_tls(use_tls),
         private_key_file(std::move(private_key_file)),
         certificate_chain_file(std::move(certificate_chain_file)),
@@ -71,7 +69,7 @@ class Http2ServerOptions {
   /// The path and filename of the server certificate chain file.
   const std::shared_ptr<std::string> certificate_chain_file;
   /// Retry strategy options.
-  const google::scp::core::common::RetryStrategyOptions retry_strategy_options;
+  const RetryStrategyOptions retry_strategy_options;
 
  private:
   static constexpr TimeDuration kHttpServerRetryStrategyDelayInMs = 31;
@@ -99,8 +97,7 @@ class Http2Server : public HttpServerInterface {
         otel_server_metrics_enabled_(false),
         async_executor_(async_executor),
         operation_dispatcher_(async_executor,
-                              google::scp::core::common::RetryStrategy(
-                                  options.retry_strategy_options)),
+                              RetryStrategy(options.retry_strategy_options)),
         use_tls_(options.use_tls),
         private_key_file_(*options.private_key_file),
         certificate_chain_file_(*options.certificate_chain_file),
@@ -222,7 +219,7 @@ class Http2Server : public HttpServerInterface {
   virtual void OnAuthorizationCallback(
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context,
-      google::scp::core::common::Uuid& request_id,
+      privacy_sandbox::pbs_common::Uuid& request_id,
       const std::shared_ptr<Http2SynchronizationContext>&
           sync_context) noexcept;
 
@@ -241,7 +238,7 @@ class Http2Server : public HttpServerInterface {
    */
   virtual void OnHttp2PendingCallback(
       google::scp::core::ExecutionResult execution_result,
-      const google::scp::core::common::Uuid& request_id) noexcept;
+      const privacy_sandbox::pbs_common::Uuid& request_id) noexcept;
 
   // The host address to run the http server on.
   std::string host_address_;
@@ -256,16 +253,14 @@ class Http2Server : public HttpServerInterface {
   size_t thread_pool_size_;
 
   // Registry of all the paths and handlers.
-  google::scp::core::common::ConcurrentMap<
-      std::string, std::shared_ptr<google::scp::core::common::ConcurrentMap<
-                       HttpMethod, HttpHandler>>>
+  ConcurrentMap<std::string,
+                std::shared_ptr<ConcurrentMap<HttpMethod, HttpHandler>>>
       resource_handlers_;
 
   // Registry of all the active requests.
-  google::scp::core::common::ConcurrentMap<
-      google::scp::core::common::Uuid,
-      std::shared_ptr<Http2SynchronizationContext>,
-      google::scp::core::common::UuidCompare>
+  ConcurrentMap<privacy_sandbox::pbs_common::Uuid,
+                std::shared_ptr<Http2SynchronizationContext>,
+                privacy_sandbox::pbs_common::UuidCompare>
       active_requests_;
 
   // Indicates whether the http server is running.
@@ -286,7 +281,7 @@ class Http2Server : public HttpServerInterface {
   std::shared_ptr<AsyncExecutorInterface> async_executor_;
 
   // An instance of the operation dispatcher.
-  google::scp::core::common::OperationDispatcher operation_dispatcher_;
+  OperationDispatcher operation_dispatcher_;
 
   // Whether to use TLS.
   bool use_tls_;

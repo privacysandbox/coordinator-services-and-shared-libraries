@@ -54,9 +54,8 @@ class LoggerInterface : public ServiceInterface {
    * @param message The actual message to log.
    */
   virtual void Info(const std::string_view& component_name,
-                    const google::scp::core::common::Uuid& parent_activity_id,
-                    const google::scp::core::common::Uuid& activity_id,
-                    const google::scp::core::common::Uuid& correlation_id,
+                    const Uuid& parent_activity_id, const Uuid& activity_id,
+                    const Uuid& correlation_id,
                     const std::string_view& location,
                     const std::string_view& message, ...) noexcept = 0;
 
@@ -71,9 +70,8 @@ class LoggerInterface : public ServiceInterface {
    * @param message The actual message to log.
    */
   virtual void Debug(const std::string_view& component_name,
-                     const google::scp::core::common::Uuid& parent_activity_id,
-                     const google::scp::core::common::Uuid& activity_id,
-                     const google::scp::core::common::Uuid& correlation_id,
+                     const Uuid& parent_activity_id, const Uuid& activity_id,
+                     const Uuid& correlation_id,
                      const std::string_view& location,
                      const std::string_view& message, ...) noexcept = 0;
 
@@ -87,13 +85,11 @@ class LoggerInterface : public ServiceInterface {
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
-  virtual void Warning(
-      const std::string_view& component_name,
-      const google::scp::core::common::Uuid& parent_activity_id,
-      const google::scp::core::common::Uuid& activity_id,
-      const google::scp::core::common::Uuid& correlation_id,
-      const std::string_view& location, const std::string_view& message,
-      ...) noexcept = 0;
+  virtual void Warning(const std::string_view& component_name,
+                       const Uuid& parent_activity_id, const Uuid& activity_id,
+                       const Uuid& correlation_id,
+                       const std::string_view& location,
+                       const std::string_view& message, ...) noexcept = 0;
 
   /**
    * @brief Logs a message with Error severity.
@@ -106,9 +102,8 @@ class LoggerInterface : public ServiceInterface {
    * @param message The actual message to log.
    */
   virtual void Error(const std::string_view& component_name,
-                     const google::scp::core::common::Uuid& parent_activity_id,
-                     const google::scp::core::common::Uuid& activity_id,
-                     const google::scp::core::common::Uuid& correlation_id,
+                     const Uuid& parent_activity_id, const Uuid& activity_id,
+                     const Uuid& correlation_id,
                      const std::string_view& location,
                      const std::string_view& message, ...) noexcept = 0;
 
@@ -123,9 +118,8 @@ class LoggerInterface : public ServiceInterface {
    * @param message The actual message to log.
    */
   virtual void Alert(const std::string_view& component_name,
-                     const google::scp::core::common::Uuid& parent_activity_id,
-                     const google::scp::core::common::Uuid& activity_id,
-                     const google::scp::core::common::Uuid& correlation_id,
+                     const Uuid& parent_activity_id, const Uuid& activity_id,
+                     const Uuid& correlation_id,
                      const std::string_view& location,
                      const std::string_view& message, ...) noexcept = 0;
 
@@ -139,13 +133,11 @@ class LoggerInterface : public ServiceInterface {
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
-  virtual void Critical(
-      const std::string_view& component_name,
-      const google::scp::core::common::Uuid& parent_activity_id,
-      const google::scp::core::common::Uuid& activity_id,
-      const google::scp::core::common::Uuid& correlation_id,
-      const std::string_view& location, const std::string_view& message,
-      ...) noexcept = 0;
+  virtual void Critical(const std::string_view& component_name,
+                        const Uuid& parent_activity_id, const Uuid& activity_id,
+                        const Uuid& correlation_id,
+                        const std::string_view& location,
+                        const std::string_view& message, ...) noexcept = 0;
 
   /**
    * @brief Logs a message with Emergency severity.
@@ -157,13 +149,11 @@ class LoggerInterface : public ServiceInterface {
    * @param location The file, function, and line where the log was triggered.
    * @param message The actual message to log.
    */
-  virtual void Emergency(
-      const std::string_view& component_name,
-      const google::scp::core::common::Uuid& parent_activity_id,
-      const google::scp::core::common::Uuid& activity_id,
-      const google::scp::core::common::Uuid& correlation_id,
-      const std::string_view& location, const std::string_view& message,
-      ...) noexcept = 0;
+  virtual void Emergency(const std::string_view& component_name,
+                         const Uuid& parent_activity_id,
+                         const Uuid& activity_id, const Uuid& correlation_id,
+                         const std::string_view& location,
+                         const std::string_view& message, ...) noexcept = 0;
 };
 }  // namespace privacy_sandbox::pbs_common
 

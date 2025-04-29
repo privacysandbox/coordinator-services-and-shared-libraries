@@ -33,7 +33,6 @@ namespace google::scp::pbs::test {
 namespace {
 using google::scp::core::ExecutionResult;
 using google::scp::core::SuccessExecutionResult;
-using google::scp::core::config_provider::mock::MockConfigProvider;
 using google::scp::core::test::ResultIs;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
@@ -41,6 +40,7 @@ using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 using ::privacy_sandbox::pbs_common::kGcpProjectId;
 using ::privacy_sandbox::pbs_common::kSpannerDatabase;
 using ::privacy_sandbox::pbs_common::kSpannerInstance;
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::privacy_sandbox::pbs_common::MockHttpClient;
 using std::make_shared;
 using std::shared_ptr;

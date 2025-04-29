@@ -117,6 +117,11 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   core::ExecutionResultOr<std::unique_ptr<BudgetConsumer>> GetBudgetConsumer(
       const nlohmann::json& request_body);
 
+  // Returns the BudgetConsumer interface based on first seen "budget_type"
+  core::ExecutionResultOr<std::unique_ptr<BudgetConsumer>> GetBudgetConsumer(
+      const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
+          request_proto);
+
   core::ExecutionResult ParseRequestWithBudgetConsumer(
       privacy_sandbox::pbs_common::AsyncContext<
           privacy_sandbox::pbs_common::HttpRequest,
@@ -189,6 +194,9 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
 
   // Should use budget consumer or continue on the old path
   bool should_enable_budget_consumer_;
+
+  // Should Consume Privacy Budget Request Response protos be used
+  bool should_use_request_response_protos_;
 };
 
 }  // namespace google::scp::pbs

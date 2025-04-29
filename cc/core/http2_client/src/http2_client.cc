@@ -29,7 +29,7 @@ using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::MetricRouter;
 using ::google::scp::core::RetryExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using google::scp::core::common::RetryStrategy;
+using ::privacy_sandbox::pbs_common::RetryStrategy;
 using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
 using std::make_unique;
 using std::shared_ptr;

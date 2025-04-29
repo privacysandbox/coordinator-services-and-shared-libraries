@@ -24,49 +24,49 @@ static constexpr char kPBSInstance[] = "PBSInstance";
 
 #define INIT_PBS_COMPONENT(component)                                      \
   SCP_INFO(::google::scp::pbs::kPBSInstance,                               \
-           ::google::scp::core::common::kZeroUuid,                         \
+           privacy_sandbox::pbs_common::kZeroUuid,                         \
            "PBS component '" #component "' is initializing");              \
   if (auto execution_result = component->Init();                           \
       !execution_result.Successful()) {                                    \
     SCP_CRITICAL(::google::scp::pbs::kPBSInstance,                         \
-                 ::google::scp::core::common::kZeroUuid, execution_result, \
+                 privacy_sandbox::pbs_common::kZeroUuid, execution_result, \
                  "PBS component '" #component "' failed to initialize");   \
     return execution_result;                                               \
   } else {                                                                 \
     SCP_INFO(::google::scp::pbs::kPBSInstance,                             \
-             ::google::scp::core::common::kZeroUuid,                       \
+             privacy_sandbox::pbs_common::kZeroUuid,                       \
              "PBS component '" #component "'successfully initialized");    \
   }
 
 #define RUN_PBS_COMPONENT(component)                                       \
   SCP_INFO(::google::scp::pbs::kPBSInstance,                               \
-           ::google::scp::core::common::kZeroUuid,                         \
+           privacy_sandbox::pbs_common::kZeroUuid,                         \
            "PBS component '" #component "' is running");                   \
   if (auto execution_result = component->Run();                            \
       !execution_result.Successful()) {                                    \
     SCP_CRITICAL(::google::scp::pbs::kPBSInstance,                         \
-                 ::google::scp::core::common::kZeroUuid, execution_result, \
+                 privacy_sandbox::pbs_common::kZeroUuid, execution_result, \
                  "PBS component '" #component "' failed to run");          \
     return execution_result;                                               \
   } else {                                                                 \
     SCP_INFO(::google::scp::pbs::kPBSInstance,                             \
-             ::google::scp::core::common::kZeroUuid,                       \
+             privacy_sandbox::pbs_common::kZeroUuid,                       \
              "PBS component '" #component "'successfully ran");            \
   }
 
 #define STOP_PBS_COMPONENT(component)                                      \
   SCP_INFO(::google::scp::pbs::kPBSInstance,                               \
-           ::google::scp::core::common::kZeroUuid,                         \
+           privacy_sandbox::pbs_common::kZeroUuid,                         \
            "PBS component '" #component "' is stopping");                  \
   if (auto execution_result = component->Stop();                           \
       !execution_result.Successful()) {                                    \
     SCP_CRITICAL(::google::scp::pbs::kPBSInstance,                         \
-                 ::google::scp::core::common::kZeroUuid, execution_result, \
+                 privacy_sandbox::pbs_common::kZeroUuid, execution_result, \
                  "PBS component '" #component "' failed to stop");         \
     return execution_result;                                               \
   } else {                                                                 \
     SCP_INFO(::google::scp::pbs::kPBSInstance,                             \
-             ::google::scp::core::common::kZeroUuid,                       \
+             privacy_sandbox::pbs_common::kZeroUuid,                       \
              "PBS component '" #component "'successfully stopped");        \
   }
 }  // namespace google::scp::pbs

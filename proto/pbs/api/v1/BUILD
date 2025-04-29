@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 
-package(default_visibility = ["//cc:pbs_visibility"])
+package(default_visibility = ["//visibility:private"])
 
-cc_library(
-    name = "serialization_lib",
-    srcs = glob(
-        [
-            "*.cc",
-            "*.h",
-        ],
-    ),
-    deps = [
-        "//cc/core/interface:interface_lib",
-        "//cc/core/interface:type_def_lib",
-        "@com_google_protobuf//:protobuf",
+proto_library(
+    name = "api_proto",
+    srcs = [
+        "api.proto",
     ],
+)
+
+cc_proto_library(
+    name = "api_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":api_proto"],
 )

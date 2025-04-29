@@ -21,7 +21,7 @@
 
 namespace google::scp::core {
 namespace {
-using privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::HttpHeaders;
 
 TEST(HttpTest, NullHeadersExtractRequestClaimedIdentity) {
   HttpHeaders null_headers;

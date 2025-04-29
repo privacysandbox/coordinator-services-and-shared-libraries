@@ -46,7 +46,6 @@ namespace {
 
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::test::IsSuccessful;
 using ::google::scp::core::test::IsSuccessfulAndHolds;
 using ::google::scp::core::test::ResultIs;
@@ -57,6 +56,7 @@ using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::std::make_shared;
 using ::std::string;
 using ::testing::ContainsRegex;

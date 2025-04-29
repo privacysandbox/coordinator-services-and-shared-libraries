@@ -204,7 +204,8 @@ TEST_F(MacroLogTest, RETURN_IF_FAILURELogTest) {
 
   auto helper2 = [](ExecutionResult result) -> ExecutionResult {
     string some_str = "s";
-    RETURN_AND_LOG_IF_FAILURE(result, "component", common::kZeroUuid, "msg %s",
+    RETURN_AND_LOG_IF_FAILURE(result, "component",
+                              privacy_sandbox::pbs_common::kZeroUuid, "msg %s",
                               some_str.c_str());
     return SuccessExecutionResult();
   };
@@ -266,8 +267,9 @@ TEST_F(MacroLogTest, ASSIGN_OR_RETURNLogTest) {
 
   auto helper2 = [](ExecutionResultOr<int> result_or,
                     int& val) -> ExecutionResult {
-    ASSIGN_OR_LOG_AND_RETURN(val, result_or, "component", common::kZeroUuid,
-                             "msg %d", val);
+    ASSIGN_OR_LOG_AND_RETURN(val, result_or, "component",
+                             privacy_sandbox::pbs_common::kZeroUuid, "msg %d",
+                             val);
     val++;
     return SuccessExecutionResult();
   };

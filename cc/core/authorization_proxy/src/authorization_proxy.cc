@@ -31,7 +31,6 @@ static constexpr int kAuthorizationCacheEntryLifetimeSeconds = 150;
 
 namespace google::scp::core {
 using boost::system::error_code;
-using google::scp::core::common::kZeroUuid;
 using nghttp2::asio_http2::host_service_from_uri;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
@@ -44,6 +43,7 @@ using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::
     HttpRequestResponseAuthInterceptorInterface;
 using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using std::function;
 using std::make_shared;
 using std::move;

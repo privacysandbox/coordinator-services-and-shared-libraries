@@ -37,7 +37,7 @@ using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::google::scp::core::errors::
     SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO;
 using ::google::scp::core::errors::

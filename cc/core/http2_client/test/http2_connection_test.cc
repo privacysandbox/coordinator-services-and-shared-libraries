@@ -41,10 +41,10 @@ using ::google::scp::core::ExecutionStatus;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::GetMetricPointData;
 using ::google::scp::core::InMemoryMetricRouter;
-using ::google::scp::core::common::Uuid;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::WaitUntilOrReturn;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
+using ::privacy_sandbox::pbs_common::Uuid;
+using ::privacy_sandbox::pbs_common::WaitUntilOrReturn;
 using ::testing::IsEmpty;
 
 class HttpConnectionTest : public testing::Test {

@@ -28,13 +28,13 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;
-
+using google::scp::core::test::ResultIs;
 using std::list;
 using std::move;
 using std::string;
 using std::filesystem::path;
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 path GetTestDataDir(std::string relative_path) {
   path test_srcdir_env = std::getenv("TEST_SRCDIR");
   path test_workspace_env = std::getenv("TEST_WORKSPACE");
@@ -135,4 +135,4 @@ TEST(ConfigProviderTest, ShowErrorInfo) {
 
   EXPECT_EQ(status_description, "Config provider cannot load config file");
 }
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

@@ -39,8 +39,8 @@ using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::RetryExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
 using nghttp2::asio_http2::host_service_from_uri;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 
 static constexpr char kHttpsTag[] = "https";
 static constexpr char kHttpTag[] = "http";

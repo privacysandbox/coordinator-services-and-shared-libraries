@@ -19,13 +19,17 @@
 #include <list>
 #include <string>
 
+#include "cc/public/core/interface/execution_result.h"
+
 using std::list;
 using std::string;
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
-using ::privacy_sandbox::pbs_common::ConfigKey;
-}
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+}  // namespace
 
 ExecutionResult EnvConfigProvider::Init() noexcept {
   return SuccessExecutionResult();
@@ -83,4 +87,4 @@ ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
                                        double& out) noexcept {
   return Get<double>(key, out);
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

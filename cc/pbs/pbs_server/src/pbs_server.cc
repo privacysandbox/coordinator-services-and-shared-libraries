@@ -41,13 +41,13 @@
 
 namespace {
 
-using ::google::scp::core::EnvConfigProvider;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::google::scp::pbs::CloudPlatformDependencyFactoryInterface;
 using ::google::scp::pbs::PBSInstanceV3;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::EnvConfigProvider;
 using ::privacy_sandbox::pbs_common::GlobalLogger;
 using ::privacy_sandbox::pbs_common::Logger;
 using ::privacy_sandbox::pbs_common::LoggerInterface;

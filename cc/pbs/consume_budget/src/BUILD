@@ -21,6 +21,7 @@ cc_library(
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/public/core/interface:execution_result",
+        "//proto/pbs/api/v1:api_cc_proto",
     ],
 )
 

@@ -21,21 +21,20 @@
 
 #include "cc/core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 
-namespace google::scp::core::common::auto_expiry_concurrent_map::mock {
+namespace privacy_sandbox::pbs_common {
 
 template <class TKey, class TValue,
           typename TCompare = oneapi::tbb::tbb_hash_compare<TKey>>
 class MockAutoExpiryConcurrentMap
-    : public common::AutoExpiryConcurrentMap<TKey, TValue, TCompare> {
+    : public AutoExpiryConcurrentMap<TKey, TValue, TCompare> {
  public:
   MockAutoExpiryConcurrentMap(
       size_t map_entry_lifetime_seconds, bool extend_entry_lifetime_on_access,
       bool block_entry_while_eviction,
       std::function<void(TKey&, TValue&, std::function<void(bool)>)>
           on_before_element_deletion_callback,
-      const std::shared_ptr<
-          privacy_sandbox::pbs_common::AsyncExecutorInterface>& async_executor)
-      : common::AutoExpiryConcurrentMap<TKey, TValue, TCompare>(
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor)
+      : AutoExpiryConcurrentMap<TKey, TValue, TCompare>(
             map_entry_lifetime_seconds, extend_entry_lifetime_on_access,
             block_entry_while_eviction, on_before_element_deletion_callback,
             async_executor) {}
@@ -83,8 +82,8 @@ class MockAutoExpiryConcurrentMap
                                                               can_delete);
   }
 
-  virtual ExecutionResult Insert(std::pair<TKey, TValue> key_value,
-                                 TValue& out_value) noexcept {
+  virtual google::scp::core::ExecutionResult Insert(
+      std::pair<TKey, TValue> key_value, TValue& out_value) noexcept {
     if (insert_mock) {
       return insert_mock();
     }
@@ -93,6 +92,6 @@ class MockAutoExpiryConcurrentMap
                                                                    out_value);
   }
 
-  std::function<ExecutionResult()> insert_mock;
+  std::function<google::scp::core::ExecutionResult()> insert_mock;
 };
-}  // namespace google::scp::core::common::auto_expiry_concurrent_map::mock
+}  // namespace privacy_sandbox::pbs_common

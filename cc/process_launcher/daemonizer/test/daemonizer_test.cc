@@ -33,7 +33,7 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::Uuid;
 using google::scp::core::test::ScpTestBase;
 using json = nlohmann::json;
 using google::scp::core::FailureExecutionResult;

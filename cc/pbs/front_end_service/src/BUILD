@@ -49,6 +49,7 @@ cc_library(
         "//cc/pbs/consume_budget/src/gcp:consume_budget",
         "//cc/pbs/consume_budget/src/gcp:error_codes",
         "//cc/pbs/interface:pbs_interface_lib",
+        "//proto/pbs/api/v1:api_cc_proto",
         "@com_github_nlohmann_json//:singleheader-json",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:bind_front",

@@ -30,16 +30,3 @@ cc_test(
         "@com_google_protobuf//:protobuf",
     ],
 )
-
-cc_test(
-    name = "stopwatch_test",
-    size = "small",
-    srcs =
-        [
-            "stopwatch_test.cc",
-        ],
-    deps = [
-        "//cc/core/test/utils:utils_lib",
-        "@com_google_googletest//:gtest_main",
-    ],
-)

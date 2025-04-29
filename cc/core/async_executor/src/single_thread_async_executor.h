@@ -62,8 +62,8 @@ class SingleThreadAsyncExecutor : ServiceInterface {
    * @return google::scp::core::ExecutionResult result of the execution with
    * possible error code.
    */
-  google::scp::core::ExecutionResult Schedule(
-      const AsyncOperation& work, AsyncPriority priority) noexcept;
+  google::scp::core::ExecutionResult Schedule(const AsyncOperation& work,
+                                              AsyncPriority priority) noexcept;
 
   /**
    * @brief Returns the ID of the spawned thread object to enable looking it up
@@ -106,13 +106,10 @@ class SingleThreadAsyncExecutor : ServiceInterface {
   /// An optional CPU to have an affinity for.
   std::optional<size_t> affinity_cpu_number_;
   /// Queue for accepting the incoming normal priority tasks.
-  std::shared_ptr<
-      google::scp::core::common::ConcurrentQueue<std::shared_ptr<AsyncTask>>>
+  std::shared_ptr<ConcurrentQueue<std::shared_ptr<AsyncTask>>>
       normal_pri_queue_;
   /// Queue for accepting the incoming high priority tasks.
-  std::shared_ptr<
-      google::scp::core::common::ConcurrentQueue<std::shared_ptr<AsyncTask>>>
-      high_pri_queue_;
+  std::shared_ptr<ConcurrentQueue<std::shared_ptr<AsyncTask>>> high_pri_queue_;
   /// A unique pointer to the working thread.
   std::unique_ptr<std::thread> working_thread_;
   /// The ID of the working_thread_.

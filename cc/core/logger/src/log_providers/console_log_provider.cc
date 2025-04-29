@@ -28,9 +28,9 @@ namespace privacy_sandbox::pbs_common {
 
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::TimeProvider;
-using ::google::scp::core::common::Uuid;
 using ::privacy_sandbox::pbs_common::LogLevel;
+using ::privacy_sandbox::pbs_common::TimeProvider;
+using ::privacy_sandbox::pbs_common::Uuid;
 using std::cout;
 using std::endl;
 using std::string;
@@ -53,12 +53,11 @@ ExecutionResult ConsoleLogProvider::Stop() noexcept {
 }
 
 void ConsoleLogProvider::Log(
-    const LogLevel& level,
-    const Uuid& correlation_id, const Uuid& parent_activity_id,
-    const Uuid& activity_id, const string_view& component_name,
-    const string_view& machine_name, const string_view& cluster_name,
-    const string_view& location, const string_view& message,
-    va_list args) noexcept {
+    const LogLevel& level, const Uuid& correlation_id,
+    const Uuid& parent_activity_id, const Uuid& activity_id,
+    const string_view& component_name, const string_view& machine_name,
+    const string_view& cluster_name, const string_view& location,
+    const string_view& message, va_list args) noexcept {
   auto current_timestamp =
       TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
   auto current_timestamp_seconds = current_timestamp / nano_seconds_multiplier;

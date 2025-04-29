@@ -41,6 +41,7 @@ using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::
     HttpRequestResponseAuthInterceptorInterface;
 using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::WaitUntil;
 using std::make_shared;
 using std::shared_ptr;
 using ::testing::_;

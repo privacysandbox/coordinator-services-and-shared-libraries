@@ -28,14 +28,15 @@
 namespace google::scp::core {
 namespace {
 
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
+
 class TraceRouterTest : public ::testing::Test {
  protected:
   void SetUp() override {
     std::unique_ptr<opentelemetry::sdk::trace::SpanExporter> exporter =
         opentelemetry::exporter::trace::OStreamSpanExporterFactory::Create();
 
-    auto mock_config_provider_ =
-        std::make_shared<config_provider::mock::MockConfigProvider>();
+    auto mock_config_provider_ = std::make_shared<MockConfigProvider>();
     int32_t trace_export_interval = 1000;       // 1 second
     int32_t trace_max_queue_size = 2048;        // Example buffer size
     int32_t trace_max_export_batch_size = 512;  // Example batch size

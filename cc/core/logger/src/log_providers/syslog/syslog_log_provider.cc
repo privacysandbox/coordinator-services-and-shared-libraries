@@ -38,7 +38,7 @@ using ::absl::StrCat;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::Uuid;
 using ::privacy_sandbox::pbs_common::LogLevel;
 using ::privacy_sandbox::pbs_common::SC_SYSLOG_CLOSE_CONNECTION_ERROR;
 using ::privacy_sandbox::pbs_common::SC_SYSLOG_OPEN_CONNECTION_ERROR;

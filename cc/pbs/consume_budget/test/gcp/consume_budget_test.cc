@@ -40,6 +40,7 @@
 #include "google/cloud/spanner/mocks/mock_spanner_connection.h"
 #include "google/cloud/spanner/mocks/row.h"
 #include "google/protobuf/text_format.h"
+#include "proto/pbs/api/v1/api.pb.h"
 
 namespace google::scp::pbs {
 namespace {
@@ -48,18 +49,19 @@ using ::google::protobuf::TextFormat;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::test::ResultIs;
 using ::google::scp::pbs::kBudgetKeyTableName;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_INITIALIZATION_ERROR;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::AuthContext;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::privacy_sandbox::pbs_common::SC_ASYNC_EXECUTOR_NOT_RUNNING;
 using ::testing::_;
 using ::testing::AllOf;
@@ -228,6 +230,10 @@ class MockBudgetConsumer : public BudgetConsumer {
  public:
   MOCK_METHOD(core::ExecutionResult, ParseTransactionRequest,
               (const AuthContext&, const HttpHeaders&, const nlohmann::json&),
+              (override));
+  MOCK_METHOD(core::ExecutionResult, ParseTransactionRequest,
+              (const AuthContext&, const HttpHeaders&,
+               const ConsumePrivacyBudgetRequest&),
               (override));
   MOCK_METHOD(spanner::KeySet, GetSpannerKeySet, (), (override));
   MOCK_METHOD(size_t, GetKeyCount, (), (override));

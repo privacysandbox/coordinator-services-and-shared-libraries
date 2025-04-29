@@ -24,86 +24,101 @@
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::config_provider::mock {
-class MockConfigProvider
-    : public privacy_sandbox::pbs_common::ConfigProviderInterface {
+namespace privacy_sandbox::pbs_common {
+class MockConfigProvider : public ConfigProviderInterface {
  public:
   MockConfigProvider() {}
 
-  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Init() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Run() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); }
+  google::scp::core::ExecutionResult Stop() noexcept override {
+    return google::scp::core::SuccessExecutionResult();
+  }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::string& out) noexcept override {
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::string& out) noexcept override {
     if (string_config_map_.find(key) == string_config_map_.end()) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
     out = string_config_map_[key];
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      size_t& out) noexcept override {
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      size_t& out) noexcept override {
     if (size_t_config_map_.find(key) == size_t_config_map_.end()) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
     out = size_t_config_map_[key];
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      int32_t& out) noexcept override {
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      int32_t& out) noexcept override {
     if (int32_t_config_map_.find(key) == int32_t_config_map_.end()) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
     out = int32_t_config_map_[key];
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      bool& out) noexcept override {
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      bool& out) noexcept override {
     if (bool_config_map_.find(key) == bool_config_map_.end()) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
     out = bool_config_map_[key];
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<std::string>& out) noexcept override {
-    return SuccessExecutionResult();
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<std::string>& out) noexcept override {
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<int32_t>& out) noexcept override {
-    return SuccessExecutionResult();
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<int32_t>& out) noexcept override {
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<size_t>& out) noexcept override {
-    return SuccessExecutionResult();
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<size_t>& out) noexcept override {
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<bool>& out) noexcept override {
-    return SuccessExecutionResult();
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<bool>& out) noexcept override {
+    return google::scp::core::SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      double& out) noexcept override {
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      double& out) noexcept override {
     if (double_config_map_.find(key) == double_config_map_.end()) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
     out = double_config_map_[key];
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
   void Set(const privacy_sandbox::pbs_common::ConfigKey& key,
@@ -144,4 +159,4 @@ class MockConfigProvider
   std::map<privacy_sandbox::pbs_common::ConfigKey, bool> bool_config_map_;
   std::map<privacy_sandbox::pbs_common::ConfigKey, double> double_config_map_;
 };
-}  // namespace google::scp::core::config_provider::mock
+}  // namespace privacy_sandbox::pbs_common

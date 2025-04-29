@@ -33,12 +33,12 @@ using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::InMemoryMetricExporter;
 using ::google::scp::core::MetricRouter;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
-using ::google::scp::core::common::Uuid;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
 using ::privacy_sandbox::pbs_common::HttpClientInterface;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::Uuid;
 
 static constexpr char kLocalDependencyProvider[] = "kLocalDependencyProvider";
 

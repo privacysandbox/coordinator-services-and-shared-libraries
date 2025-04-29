@@ -22,7 +22,7 @@
 
 #include "error_codes.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief ConcurrentQueue provides multi producers and multi consumers queue
  * support to be used generically.
@@ -46,12 +46,12 @@ class ConcurrentQueue {
    * thread-safe.
    * @param element the element to be queued.
    */
-  ExecutionResult TryEnqueue(const T& element) noexcept {
+  google::scp::core::ExecutionResult TryEnqueue(const T& element) noexcept {
     if (!queue_->try_push(element)) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE);
     }
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
   /**
@@ -60,12 +60,12 @@ class ConcurrentQueue {
    * @param element the element to be dequeued
    * @return ExecutionResult result of the operation.
    */
-  ExecutionResult TryDequeue(T& element) noexcept {
+  google::scp::core::ExecutionResult TryDequeue(T& element) noexcept {
     if (!queue_->try_pop(element)) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE);
     }
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
   /**
@@ -79,4 +79,4 @@ class ConcurrentQueue {
   /// queue implementation.
   std::unique_ptr<tbb::concurrent_bounded_queue<T>> queue_;
 };
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common

@@ -26,12 +26,14 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/pbs/front_end_service/src:error_codes",
         "//cc/pbs/front_end_service/src:front_end_utils",
+        "@com_google_absl//absl/status:status_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )
 
 cc_test(
     name = "front_end_service_v2_test",
+    size = "small",
     srcs = ["front_end_service_v2_test.cc"],
     linkopts = [
         "-latomic",

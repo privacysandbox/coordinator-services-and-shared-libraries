@@ -35,7 +35,7 @@ class AsyncTask {
    * @param async_operation The async operation to be executed.
    */
   AsyncTask(AsyncOperation async_operation = AsyncOperation([]() {}),
-            Timestamp execution_timestamp = google::scp::core::common::
+            Timestamp execution_timestamp =
                 TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks())
       : async_operation_(async_operation),
         execution_timestamp_(execution_timestamp),

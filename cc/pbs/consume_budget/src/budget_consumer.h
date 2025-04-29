@@ -24,6 +24,7 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "google/cloud/spanner/mutations.h"
 #include "google/cloud/spanner/results.h"
+#include "proto/pbs/api/v1/api.pb.h"
 
 namespace google::scp::pbs {
 
@@ -58,10 +59,27 @@ class BudgetConsumer {
    * @param request_body The body of the HTTP request.
    * @return core::ExecutionResult The execution result of the operation.
    */
+  [[deprecated(
+      "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
   virtual core::ExecutionResult ParseTransactionRequest(
       const privacy_sandbox::pbs_common::AuthContext& auth_context,
       const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
       const nlohmann::json& request_body) = 0;
+
+  /**
+   * @brief Parse the HTTP request headers and body to an internal state to be
+   * later used by the BudgetConsumptionHelper.
+   *
+   * @param authorized_domain The authorized domain in HTTP auth headers.
+   * @param request_headers The headers from the HTTP request.
+   * @param request_proto The request proto derived from the HTTP request body.
+   * @return core::ExecutionResult The execution result of the operation.
+   */
+  virtual core::ExecutionResult ParseTransactionRequest(
+      const privacy_sandbox::pbs_common::AuthContext& auth_context,
+      const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
+      const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
+          request_proto) = 0;
 
   /**
     * @brief Returns the numbers of keys in the request

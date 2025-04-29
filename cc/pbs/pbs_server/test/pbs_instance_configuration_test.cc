@@ -30,15 +30,15 @@
 namespace google::scp::pbs::test {
 
 namespace {
-using ::google::scp::core::EnvConfigProvider;
 using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::errors::SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH;
 using ::google::scp::core::errors::
     SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH;
 using ::google::scp::core::test::ResultIs;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::EnvConfigProvider;
 using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using std::make_shared;
 using std::shared_ptr;
 

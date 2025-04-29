@@ -47,7 +47,7 @@ ExecutionResultOr<std::string> FetchIdTokenInternal(
           iam_client.GenerateIdToken(request_name, delegates, audience, true);
   if (!response) {
     SCP_ERROR(
-        kFetchIdTokenInternal, google::scp::core::common::kZeroUuid,
+        kFetchIdTokenInternal, privacy_sandbox::pbs_common::kZeroUuid,
         ExecutionResult(),
         "FetchIdTokenInternal() iam_client.GenerateIdToken(\"%s\", delegates, "
         "\"%s\") failed: %s: %s",

@@ -26,6 +26,7 @@ cc_test(
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:spanner_mocks",
+        "@com_google_absl//absl/status:status_matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -21,9 +21,13 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
+#include <google/protobuf/util/json_util.h>
+
+#include "absl/status/status_matchers.h"
 #include "absl/strings/str_join.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/interface/http_types.h"
@@ -36,19 +40,29 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "google/cloud/spanner/mocks/mock_spanner_connection.h"
 #include "google/cloud/spanner/mocks/row.h"
+#include "proto/pbs/api/v1/api.pb.h"
 
 namespace google::scp::pbs {
 namespace {
 
-using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::absl_testing::IsOk;
+using ::google::protobuf::util::JsonStringToMessage;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
 using ::google::scp::core::test::ResultIs;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
 using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AuthContext;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
+using ::testing::Bool;
+using ::testing::Combine;
+using ::testing::ConvertGenerator;
 using ::testing::ElementsAre;
 using ::testing::Return;
 using ::testing::UnorderedElementsAreArray;
@@ -74,9 +88,19 @@ constexpr size_t k20191211DaysFromEpoch = 18241;
 constexpr absl::string_view kAuthorizedDomain = "https://fake.com";
 constexpr absl::string_view kTableName = "fake-table-name";
 
-class BinaryBudgetConsumerTest : public ::testing::Test,
-                                 public testing::WithParamInterface<
-                                     /*migration_phase=*/std::string> {
+struct BinaryBudgetConsumerTestParam {
+  using TupleT = std::tuple<absl::string_view, bool>;
+
+  explicit BinaryBudgetConsumerTestParam(const TupleT& t)
+      : migration_phase(std::get<0>(t)), test_proto(std::get<1>(t)) {}
+
+  absl::string_view migration_phase;
+  bool test_proto;
+};
+
+class BinaryBudgetConsumerTest
+    : public testing::Test,
+      public testing::WithParamInterface<BinaryBudgetConsumerTestParam> {
  protected:
   void SetUp() override {
     auto mock_config_provider = std::make_unique<MockConfigProvider>();
@@ -84,12 +108,14 @@ class BinaryBudgetConsumerTest : public ::testing::Test,
 
     binary_budget_consumer_ =
         std::make_unique<BinaryBudgetConsumer>(mock_config_provider.get());
-    // To set the internal migration states
-    binary_budget_consumer_->GetReadColumns();
     mock_source_ = std::make_unique<spanner_mocks::MockResultSetSource>();
   }
 
-  std::string GetMigrationPhase() { return GetParam(); }
+  std::string GetMigrationPhase() {
+    return std::string(GetParam().migration_phase);
+  }
+
+  bool ShouldTestProto() { return GetParam().test_proto; }
 
   bool WriteValueColumn() {
     return (GetMigrationPhase() == kMigrationPhase1 ||
@@ -214,13 +240,30 @@ class BinaryBudgetConsumerTest : public ::testing::Test,
     };
   }
 
+  ExecutionResult MakeParseTransactionRequestCall(
+      const AuthContext& auth_context, const HttpHeaders& request_headers,
+      const nlohmann::json& request_body) {
+    if (ShouldTestProto()) {
+      ConsumePrivacyBudgetRequest request_proto;
+      EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto),
+                  IsOk());
+      return binary_budget_consumer_->ParseTransactionRequest(
+          GetAuthContext(), HttpHeaders{}, request_proto);
+    }
+    return binary_budget_consumer_->ParseTransactionRequest(
+        GetAuthContext(), HttpHeaders{}, request_body);
+  }
+
   std::unique_ptr<BinaryBudgetConsumer> binary_budget_consumer_;
   std::unique_ptr<spanner_mocks::MockResultSetSource> mock_source_;
 };
 
-INSTANTIATE_TEST_SUITE_P(BinaryBudgetConsumerTest, BinaryBudgetConsumerTest,
-                         Values(kMigrationPhase1, kMigrationPhase2,
-                                kMigrationPhase3, kMigrationPhase4));
+INSTANTIATE_TEST_SUITE_P(
+    BinaryBudgetConsumerTest, BinaryBudgetConsumerTest,
+    ConvertGenerator<BinaryBudgetConsumerTestParam::TupleT>(
+        Combine(Values(kMigrationPhase1, kMigrationPhase2, kMigrationPhase3,
+                       kMigrationPhase4),
+                Bool())));
 
 TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2Success) {
   nlohmann::json request_body = nlohmann::json::parse(R"(
@@ -260,10 +303,9 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2Success) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
   // sets and metadata is a hash set). So, this is an hack around
@@ -318,10 +360,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
   // sets and metadata is a hash set). So, this is an hack around
@@ -376,10 +417,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
   // sets and metadata is a hash set). So, this is an hack around
@@ -434,11 +474,10 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result, core::FailureExecutionResult(
-                                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, core::FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingKeyInRequestBody) {
@@ -464,12 +503,11 @@ TEST_P(BinaryBudgetConsumerTest, MissingKeyInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, RepeatedKeyInRequestBody) {
@@ -496,11 +534,10 @@ TEST_P(BinaryBudgetConsumerTest, RepeatedKeyInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result, core::FailureExecutionResult(
-                                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingReportingTimeInRequestBody) {
@@ -526,12 +563,11 @@ TEST_P(BinaryBudgetConsumerTest, MissingReportingTimeInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidReportingTimeInRequestBody) {
@@ -553,11 +589,10 @@ TEST_P(BinaryBudgetConsumerTest, InvalidReportingTimeInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result, core::FailureExecutionResult(
-                                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingTokenInRequestBody) {
@@ -583,12 +618,11 @@ TEST_P(BinaryBudgetConsumerTest, MissingTokenInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, TokenAndTokensInRequestBody) {
@@ -615,12 +649,11 @@ TEST_P(BinaryBudgetConsumerTest, TokenAndTokensInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, EmptyTokensInRequestBody) {
@@ -644,12 +677,11 @@ TEST_P(BinaryBudgetConsumerTest, EmptyTokensInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MultipleTokensInRequestBody) {
@@ -678,12 +710,11 @@ TEST_P(BinaryBudgetConsumerTest, MultipleTokensInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidTokensInRequestBody) {
@@ -709,15 +740,19 @@ TEST_P(BinaryBudgetConsumerTest, InvalidTokensInRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidBudgetTypeRequestBody) {
+  if (ShouldTestProto()) {
+    // Proto parsing will fail for this test
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "2.0",
@@ -740,12 +775,17 @@ TEST_P(BinaryBudgetConsumerTest, InvalidBudgetTypeRequestBody) {
   core::ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV1Success) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -767,7 +807,7 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV1Success) {
   core::ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
   // sets and metadata is a hash set). So, this is an hack around
@@ -781,8 +821,46 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV1Success) {
   EXPECT_EQ(binary_budget_consumer_->GetKeyCount(), expected_keys_list.size());
 }
 
+TEST_P(BinaryBudgetConsumerTest, StopServingV1Request) {
+  nlohmann::json request_body = nlohmann::json::parse(R"(
+{
+  "v": "1.0",
+  "t": [
+    {
+      "key": "123",
+      "token": 1,
+      "reporting_time": "2019-12-11T07:20:50.52Z"
+    },
+    {
+      "key": "234",
+      "token": 1,
+      "reporting_time": "2019-12-11T07:20:50.52Z"
+    }
+  ]
+}
+  )");
+
+  auto mock_config_provider = std::make_unique<MockConfigProvider>();
+  mock_config_provider->Set(kValueProtoMigrationPhase, GetMigrationPhase());
+  mock_config_provider->SetBool(kEnableStopServingV1Request, true);
+
+  auto binary_budget_consumer =
+      std::make_unique<BinaryBudgetConsumer>(mock_config_provider.get());
+  core::ExecutionResult execution_result =
+      binary_budget_consumer->ParseTransactionRequest(
+          GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_EQ(execution_result,
+            core::FailureExecutionResult(
+                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+}
+
 TEST_P(BinaryBudgetConsumerTest,
        ValidRequestBodyWithSameKeyDifferentReportingTimeV1Success) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -804,7 +882,7 @@ TEST_P(BinaryBudgetConsumerTest,
   core::ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
   // sets and metadata is a hash set). So, this is an hack around
@@ -819,6 +897,11 @@ TEST_P(BinaryBudgetConsumerTest,
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingKeyInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -834,12 +917,17 @@ TEST_P(BinaryBudgetConsumerTest, MissingKeyInRequestBodyV1) {
   core::ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_THAT(execution_result,
+              ResultIs(FailureExecutionResult(
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, RepeatedKeyInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -861,11 +949,16 @@ TEST_P(BinaryBudgetConsumerTest, RepeatedKeyInRequestBodyV1) {
   core::ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result, core::FailureExecutionResult(
-                                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingReportingTimeInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -892,6 +985,11 @@ TEST_P(BinaryBudgetConsumerTest, MissingReportingTimeInRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidReportingTimeInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -908,11 +1006,16 @@ TEST_P(BinaryBudgetConsumerTest, InvalidReportingTimeInRequestBodyV1) {
   core::ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result, core::FailureExecutionResult(
-                                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingTokenInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -934,6 +1037,11 @@ TEST_P(BinaryBudgetConsumerTest, MissingTokenInRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidVersionInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"({ "v": "" })");
 
   core::ExecutionResult execution_result =
@@ -945,6 +1053,11 @@ TEST_P(BinaryBudgetConsumerTest, InvalidVersionInRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidVersionAndDataInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "", "t": "" })");
 
@@ -957,6 +1070,11 @@ TEST_P(BinaryBudgetConsumerTest, InvalidVersionAndDataInRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidVersion2InRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.2", "t": "" })");
 
@@ -969,6 +1087,11 @@ TEST_P(BinaryBudgetConsumerTest, InvalidVersion2InRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidDataInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.0", "t": "" })");
 
@@ -981,17 +1104,27 @@ TEST_P(BinaryBudgetConsumerTest, InvalidDataInRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, EmptyDataInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.0", "t": [] })");
 
   core::ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
   EXPECT_EQ(binary_budget_consumer_->GetKeyCount(), 0);
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidData2InRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.0", "t": [{ "blah": "12" }] })");
 
@@ -1004,6 +1137,11 @@ TEST_P(BinaryBudgetConsumerTest, InvalidData2InRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidTokenInRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(
       R"({ "v": "1.0", "t": [{ "key": "3d4sd", "token": "ds1", "reporting_time": "2019-12-11T07:20:50.52Z" }] })");
 
@@ -1016,6 +1154,11 @@ TEST_P(BinaryBudgetConsumerTest, InvalidTokenInRequestBodyV1) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidToken2InRequestBodyV1) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(
       R"({ "v": "1.0", "t": [{ "key": "test_key", "token": "10", "reporting_time": "2019-12-11T07:20:50.52Z" }] })");
 
@@ -1070,10 +1213,9 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2SuccessfulMutations) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Entries present with budget consumed at the first hour
   std::array<int8_t, kDefaultTokenCountSize> token_count;
@@ -1099,6 +1241,11 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2SuccessfulMutations) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV1SuccessfulMutations) {
+  if (ShouldTestProto()) {
+    // Proto is only supported for request version v2
+    return;
+  }
+
   nlohmann::json request_body = nlohmann::json::parse(R"(
 {
   "v": "1.0",
@@ -1117,10 +1264,9 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV1SuccessfulMutations) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Entries present with budget consumed at the first hour
   std::array<int8_t, kDefaultTokenCountSize> token_count;
@@ -1164,10 +1310,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionOnExistingRowShouldSuccess) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Entries present with budget consumed at the first hour
   std::array<int8_t, kDefaultTokenCountSize> token_count;
@@ -1223,10 +1368,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow()).WillRepeatedly(Return(spanner::Row()));
 
@@ -1274,10 +1418,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithoutBudget) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // consume budget for 7th hour
   std::array<int8_t, kDefaultTokenCountSize> token_count;
@@ -1343,10 +1486,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // consume budget for 7th hour
   std::array<int8_t, kDefaultTokenCountSize> token_count;
@@ -1408,10 +1550,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // consume budget for 7th hour
   std::array<int8_t, kDefaultTokenCountSize> token_count;
@@ -1458,10 +1599,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidRow) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
       .WillOnce(
@@ -1500,10 +1640,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidJsonValueColumn) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
@@ -1549,10 +1688,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
@@ -1598,10 +1736,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
@@ -1646,10 +1783,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithNoLaplaceDp) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
@@ -1695,10 +1831,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpSize) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
       .WillOnce(Return(spanner_mocks::MakeRow(
@@ -1742,10 +1877,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpTokens) {
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   std::vector<int32_t> token_count(kDefaultTokenCountSize,
                                    kDefaultLaplaceDpBudgetCount);
@@ -1804,10 +1938,9 @@ TEST_P(
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Entries present with budget consumed at the first hour
   std::array<int8_t, kDefaultTokenCountSize> token_count;
@@ -1873,10 +2006,9 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_SUCCESS(execution_result);
+  ExecutionResult execution_result = MakeParseTransactionRequestCall(
+      GetAuthContext(), HttpHeaders{}, request_body);
+  EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow()).WillRepeatedly(Return(spanner::Row()));
 

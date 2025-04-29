@@ -33,7 +33,7 @@ class NgHttp2Request : public HttpRequest {
  public:
   explicit NgHttp2Request(
       const nghttp2::asio_http2::server::request& ng2_request)
-      : id(google::scp::core::common::Uuid::GenerateUuid()),
+      : id(privacy_sandbox::pbs_common::Uuid::GenerateUuid()),
         ng2_request_(ng2_request) {}
 
   using RequestBodyDataReceivedCallback =
@@ -52,7 +52,7 @@ class NgHttp2Request : public HttpRequest {
   std::string handler_path;
 
   /// The auto-generated id of the request.
-  const google::scp::core::common::Uuid id;
+  const privacy_sandbox::pbs_common::Uuid id;
 
   /**
    * @brief Set callback to be invoked when the request body is completely

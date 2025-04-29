@@ -23,19 +23,22 @@
 #include <vector>
 
 #include "cc/core/test/scp_test_base.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::ExecutionResult;
-using google::scp::core::common::ConcurrentQueue;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::ScpTestBase;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::ScpTestBase;
+using ::privacy_sandbox::pbs_common::ConcurrentQueue;
 
 using std::atomic;
 using std::thread;
 using std::vector;
 using std::this_thread::yield;
 
-namespace google::scp::core::common::test {
+namespace privacy_sandbox::pbs_common {
 
 class ConcurrentQueueTests : public ScpTestBase {};
 
@@ -112,4 +115,4 @@ TEST_F(ConcurrentQueueTests, MultiThreadedEnqueue) {
   // the queue size should be empty after all thread done.
   EXPECT_EQ(queue.Size(), 0);
 }
-}  // namespace google::scp::core::common::test
+}  // namespace privacy_sandbox::pbs_common

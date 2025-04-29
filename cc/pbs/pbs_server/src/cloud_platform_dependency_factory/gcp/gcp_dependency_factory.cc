@@ -53,7 +53,7 @@ using ::google::scp::core::GrpcIdTokenAuthenticator;
 using ::google::scp::core::MetricRouter;
 using ::google::scp::core::OtlpGrpcAuthedMetricExporter;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::google::scp::pbs::AwsHttpRequestResponseAuthInterceptor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;

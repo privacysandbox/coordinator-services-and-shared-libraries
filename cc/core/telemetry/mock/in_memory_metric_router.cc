@@ -68,7 +68,7 @@ InMemoryMetricRouter::GetExportedData() const {
   } else {
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_FAKE_COULD_NOT_EXPORT_DATA);
-    SCP_ERROR(kInMemoryMetricRouter, google::scp::core::common::kZeroUuid,
+    SCP_ERROR(kInMemoryMetricRouter, privacy_sandbox::pbs_common::kZeroUuid,
               execution_result, "[Telmetry Fake] Could force flush the data");
 
     return {};

@@ -57,7 +57,6 @@ class Http2ServerPeer {
 };
 
 namespace {
-using ::google::scp::core::EnvConfigProvider;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionStatus;
 using ::google::scp::core::FailureExecutionResult;
@@ -67,16 +66,15 @@ using ::google::scp::core::PassThruAuthorizationProxy;
 using ::google::scp::core::RetryExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::authorization_proxy::mock::MockAuthorizationProxy;
-using ::google::scp::core::common::RetryStrategyOptions;
-using ::google::scp::core::common::RetryStrategyType;
-using ::google::scp::core::common::Uuid;
-using ::google::scp::core::config_provider::mock::MockConfigProvider;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::WaitUntil;
 using ::google::scp::core::utils::Base64Encode;
 using ::google::scp::core::utils::PadBase64Encoding;
 using ::opentelemetry::sdk::resource::SemanticConventions::
     kHttpResponseStatusCode;
+using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
+using ::privacy_sandbox::pbs_common::RetryStrategyType;
+using ::privacy_sandbox::pbs_common::Uuid;
+using ::privacy_sandbox::pbs_common::WaitUntil;
 using ::testing::Return;
 
 class Http2ServerTest : public testing::Test {

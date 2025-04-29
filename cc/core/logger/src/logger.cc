@@ -27,7 +27,7 @@
 #include "cc/public/core/interface/execution_result.h"
 
 using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::common::Uuid;
+using ::privacy_sandbox::pbs_common::Uuid;
 using ::privacy_sandbox::pbs_common::LogLevel;
 using std::string;
 using std::string_view;

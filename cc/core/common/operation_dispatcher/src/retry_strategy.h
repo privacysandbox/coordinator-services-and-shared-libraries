@@ -20,7 +20,7 @@
 
 #include "cc/core/interface/type_def.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 
 /// Types of retry strategy
 enum class RetryStrategyType {
@@ -117,4 +117,4 @@ class RetryStrategy {
   /// Maximum allowed retry count for the retry strategy.
   size_t maximum_allowed_retry_count_;
 };
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common

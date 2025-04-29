@@ -24,6 +24,12 @@ syntax = "proto2";
 
 package privacy_sandbox_pbs;
 
+option java_multiple_files = true;
+option java_package = "com.google.privacysandbox.pbs";
+option java_outer_classname = "BudgetValueProto";
+
+option go_package = "github.com/privacysandbox/coordinator-services-and-shared-libraries/pbs/protos/budgetvalue";
+
 // Represents the budget value for a given privacy budget key. The privacy
 // budget key is represented as a different string column and is not shown here.
 //

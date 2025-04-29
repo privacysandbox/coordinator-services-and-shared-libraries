@@ -17,35 +17,31 @@
 #include "uuid.h"
 
 #include <cctype>
-#include <chrono>
 #include <cstdint>
 #include <random>
-#include <sstream>
 #include <string>
 
 #include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
 
-using std::atomic;
-using std::isxdigit;
-using std::mt19937;
-using std::random_device;
-using std::string;
-using std::uniform_int_distribution;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 
 static constexpr char kHexMap[] = {"0123456789ABCDEF"};
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 Uuid Uuid::GenerateUuid() noexcept {
   // TODO: Might want to use GetUniqueWallTimestampInNanoseconds()
-  static atomic<privacy_sandbox::pbs_common::Timestamp> current_clock(
+  static std::atomic<privacy_sandbox::pbs_common::Timestamp> current_clock(
       TimeProvider::GetWallTimestampInNanosecondsAsClockTicks());
 
   uint64_t high = current_clock.fetch_add(1);
-  static random_device random_device_local;
-  static mt19937 random_generator(random_device_local());
-  uniform_int_distribution<uint64_t> distribution;
+  static std::random_device random_device_local;
+  static std::mt19937 random_generator(random_device_local());
+  std::uniform_int_distribution<uint64_t> distribution;
 
   uint64_t low = distribution(random_generator);
   return Uuid{.high = high, .low = low};
@@ -159,4 +155,4 @@ ExecutionResult FromString(const std::string& uuid_string,
 
   return SuccessExecutionResult();
 }
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common

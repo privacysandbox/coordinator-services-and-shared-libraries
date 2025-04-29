@@ -18,13 +18,12 @@
 
 syntax = "proto3";
 
-package privacy_sandbox.pbs;
+package privacy_sandbox.pbs.v1;
 
 // Request message for consuming privacy budget from the PBS server.
 message ConsumePrivacyBudgetRequest {
-  // Version identifier for the API, e.g., "2.0".
-  // Used to ensure correct parsing logic for different protocol versions.
-  string version = 1 [json_name = "v"];
+  // Version identifier for the API. Must be set to "2.0".
+  string version = 1 [json_name = "v", deprecated = true];
 
   // Represents a privacy token used in budget consumption and management.
   // A privacy token represents the amount of budget that gets consumed when
@@ -32,8 +31,8 @@ message ConsumePrivacyBudgetRequest {
   // logic. For example, a token value of 1 for BUDGET_TYPE_BINARY_BUDGET will
   // consume all the privacy budget.
   message Token {
-    double token_double = 1;
-    int32 token_int32 = 2;
+    double token_double = 1 [json_name = "token_double"];
+    int32 token_int32 = 2 [json_name = "token_int32"];
   }
 
   // Represents a privacy budget key for privacy budget tracking and
@@ -52,21 +51,21 @@ message ConsumePrivacyBudgetRequest {
     }
 
     // Unique identifier for this privacy budget allocation.
-    string key = 1;
+    string key = 1 [json_name = "key"];
 
     // Scheduled report time for encrypted report.
-    string reporting_time = 2;
+    string reporting_time = 2 [json_name = "reporting_time"];
 
     // The type of privacy budgeting mechanism to be used for this allocation.
     // Determines how the privacy budget is calculated and consumed.
-    BudgetType budget_type = 3;
+    BudgetType budget_type = 3 [json_name = "budget_type"];
 
     // Privacy tokens associated with this budget key.
     // These tokens specify the amount of privacy budget to be consumed.
-    repeated Token tokens = 4;
+    repeated Token tokens = 4 [json_name = "tokens"];
 
     // Used by Binary budget consumption only, for backward compatibility.
-    int32 token = 5;
+    int32 token = 5 [json_name = "token"];
   }
 
   // Contains the data for a single budget consumption request, including the
@@ -75,17 +74,17 @@ message ConsumePrivacyBudgetRequest {
     // Reporting origin refers to the the fully qualified domain name for an
     // adtech hosted endpoint that receives privacy-protected reports. Example:
     // "https://example.com"
-    string reporting_origin = 1;
+    string reporting_origin = 1 [json_name = "reporting_origin"];
 
     // List of privacy budget keys to be consumed.
     // Each key represents a distinct privacy budget allocation request.
-    repeated PrivacyBudgetKey keys = 2;
+    repeated PrivacyBudgetKey keys = 2 [json_name = "keys"];
   }
 
   // List of budget consumption requests.
   // Each element represents a separate budget request that can be processed
   // independently.
-  repeated BudgetRequestData data = 2;
+  repeated BudgetRequestData data = 2 [json_name = "data"];
 }
 
 // Response message indicating the result of privacy budget consumption

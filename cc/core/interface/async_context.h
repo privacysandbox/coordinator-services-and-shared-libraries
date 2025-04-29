@@ -46,8 +46,7 @@ struct AsyncContext {
   AsyncContext()
       : AsyncContext(
             nullptr /* request */, [](AsyncContext<TRequest, TResponse>&) {},
-            google::scp::core::common::kZeroUuid,
-            google::scp::core::common::kZeroUuid) {}
+            kZeroUuid, kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -57,8 +56,7 @@ struct AsyncContext {
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
                const Callback& callback)
-      : AsyncContext(request, callback, google::scp::core::common::kZeroUuid,
-                     google::scp::core::common::kZeroUuid) {}
+      : AsyncContext(request, callback, kZeroUuid, kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -69,10 +67,8 @@ struct AsyncContext {
    * context.
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
-               const Callback& callback,
-               const google::scp::core::common::Uuid& parent_activity_id)
-      : AsyncContext(request, callback, parent_activity_id,
-                     google::scp::core::common::kZeroUuid) {}
+               const Callback& callback, const Uuid& parent_activity_id)
+      : AsyncContext(request, callback, parent_activity_id, kZeroUuid) {}
 
   /**
    * @brief Constructs a new Async Context object.
@@ -99,11 +95,10 @@ struct AsyncContext {
    * @param correlation_id The correlation id of the current async context.
    */
   AsyncContext(const std::shared_ptr<TRequest>& request,
-               const Callback& callback,
-               const google::scp::core::common::Uuid& parent_activity_id,
-               const google::scp::core::common::Uuid& correlation_id)
+               const Callback& callback, const Uuid& parent_activity_id,
+               const Uuid& correlation_id)
       : parent_activity_id(parent_activity_id),
-        activity_id(google::scp::core::common::Uuid::GenerateUuid()),
+        activity_id(Uuid::GenerateUuid()),
         correlation_id(correlation_id),
         request(request),
         response(nullptr),
@@ -111,8 +106,7 @@ struct AsyncContext {
         callback(callback),
         retry_count(0) {
     expiration_time =
-        (google::scp::core::common::TimeProvider::
-             GetSteadyTimestampInNanoseconds() +
+        (TimeProvider::GetSteadyTimestampInNanoseconds() +
          std::chrono::seconds(kAsyncContextExpirationDurationInSeconds))
             .count();
   }
@@ -159,15 +153,15 @@ struct AsyncContext {
   }
 
   /// The parent id of the current context.
-  google::scp::core::common::Uuid parent_activity_id;
+  Uuid parent_activity_id;
 
   /// The id of the current context.
-  google::scp::core::common::Uuid activity_id;
+  Uuid activity_id;
 
   /// The unique id for the operation the current context is relate to.
   /// For example, in CMRTIO, it could be for a request, and in PBS, it could be
   /// for a transaction.
-  google::scp::core::common::Uuid correlation_id;
+  Uuid correlation_id;
 
   /// The input request for the operation.
   std::shared_ptr<TRequest> request;

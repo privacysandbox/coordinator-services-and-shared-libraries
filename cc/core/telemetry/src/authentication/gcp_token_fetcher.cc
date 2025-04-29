@@ -29,7 +29,7 @@ ExecutionResultOr<std::string> GcpTokenFetcher::FetchIdToken(
   CreateIamClient();
   auto execution_result = FetchIdTokenInternal(*iam_client_, auth_config);
   if (!execution_result.Successful()) {
-    SCP_ERROR(kGcpTokenFetcher, google::scp::core::common::kZeroUuid,
+    SCP_ERROR(kGcpTokenFetcher, privacy_sandbox::pbs_common::kZeroUuid,
               execution_result.result(),
               "FetchIdToken() ID Token fetch failed: %s",
               privacy_sandbox::pbs_common::GetErrorMessage(

@@ -34,7 +34,7 @@ using ::google::scp::core::GetMetricPointData;
 using ::google::scp::core::InMemoryMetricRouter;
 using ::google::scp::core::RetryExecutionResult;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::WaitUntil;
+using ::privacy_sandbox::pbs_common::WaitUntil;
 using ::testing::IsEmpty;
 
 class HttpConnectionPoolTest : public testing::Test {

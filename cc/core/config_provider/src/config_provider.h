@@ -26,11 +26,10 @@
 
 #include "error_codes.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /*! @copydoc ConfigProviderInterface
  */
-class ConfigProvider
-    : public privacy_sandbox::pbs_common::ConfigProviderInterface {
+class ConfigProvider : public ConfigProviderInterface {
  public:
   /**
    * @brief Constructs a new Config Provider object
@@ -40,62 +39,72 @@ class ConfigProvider
   explicit ConfigProvider(std::filesystem::path config_file)
       : config_file_(config_file) {}
 
-  ExecutionResult Init() noexcept override;
+  google::scp::core::ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
+  google::scp::core::ExecutionResult Run() noexcept override;
 
-  ExecutionResult Stop() noexcept override;
+  google::scp::core::ExecutionResult Stop() noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::string& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::string& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      int32_t& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      int32_t& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      size_t& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      size_t& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      bool& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      bool& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<std::string>& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<std::string>& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<int32_t>& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<int32_t>& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<size_t>& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<size_t>& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<bool>& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<bool>& out) noexcept override;
 
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      double& out) noexcept override;
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      double& out) noexcept override;
 
  private:
   template <typename T>
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      T& out) noexcept {
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key, T& out) noexcept {
     if (!config_json_.contains(key)) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
     try {
       out = config_json_[key].get<T>();
     } catch (nlohmann::json::exception& e) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
     }
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
   template <typename T>
-  ExecutionResult Get(const privacy_sandbox::pbs_common::ConfigKey& key,
-                      std::list<T>& out) noexcept {
+  google::scp::core::ExecutionResult Get(
+      const privacy_sandbox::pbs_common::ConfigKey& key,
+      std::list<T>& out) noexcept {
     auto it = config_json_.find(key);
     if (it == config_json_.end()) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
 
@@ -104,11 +113,11 @@ class ConfigProvider
         out.push_back(value);
       }
     } catch (nlohmann::json::exception& e) {
-      return FailureExecutionResult(
+      return google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
     }
 
-    return SuccessExecutionResult();
+    return google::scp::core::SuccessExecutionResult();
   }
 
   /// The file path for the configuration .json file.
@@ -116,4 +125,4 @@ class ConfigProvider
   /// The parsed json content.
   nlohmann::json config_json_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

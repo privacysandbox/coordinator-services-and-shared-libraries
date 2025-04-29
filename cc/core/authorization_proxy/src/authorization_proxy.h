@@ -75,7 +75,8 @@ class AuthorizationProxy
           privacy_sandbox::pbs_common::HttpResponse>& http_context);
 
   /// The authorization token cache.
-  common::AutoExpiryConcurrentMap<std::string, std::shared_ptr<CacheEntry>>
+  privacy_sandbox::pbs_common::AutoExpiryConcurrentMap<
+      std::string, std::shared_ptr<CacheEntry>>
       cache_;
 
   /// The remote authorization end point URI

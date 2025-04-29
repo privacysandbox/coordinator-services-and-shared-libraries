@@ -17,7 +17,6 @@
 #pragma once
 
 #include <chrono>
-#include <functional>
 #include <memory>
 
 #include "cc/core/common/global_logger/src/global_logger.h"
@@ -27,7 +26,7 @@
 #include "error_codes.h"
 #include "retry_strategy.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 
 static constexpr char kOperationDispatcher[] = "OperationDispatcher";
 
@@ -60,13 +59,15 @@ class OperationDispatcher {
    * component.
    */
   template <class Context>
-  void Dispatch(Context& async_context,
-                const std::function<ExecutionResult(Context&)>&
-                    dispatch_to_target_function) {
+  void Dispatch(
+      Context& async_context,
+      const std::function<google::scp::core::ExecutionResult(Context&)>&
+          dispatch_to_target_function) {
     auto original_callback = async_context.callback;
     async_context.callback = [this, dispatch_to_target_function,
                               original_callback](Context& async_context) {
-      if (async_context.result.status == ExecutionStatus::Retry) {
+      if (async_context.result.status ==
+          google::scp::core::ExecutionStatus::Retry) {
         async_context.retry_count++;
         DispatchWithRetry(async_context, dispatch_to_target_function);
         return;
@@ -80,9 +81,10 @@ class OperationDispatcher {
 
  private:
   template <class Context>
-  void DispatchWithRetry(Context& async_context,
-                         const std::function<ExecutionResult(Context&)>&
-                             dispatch_to_target_function) {
+  void DispatchWithRetry(
+      Context& async_context,
+      const std::function<google::scp::core::ExecutionResult(Context&)>&
+          dispatch_to_target_function) {
     auto async_operation = [async_context,
                             dispatch_to_target_function]() mutable {
       auto execution_result = dispatch_to_target_function(async_context);
@@ -108,7 +110,7 @@ class OperationDispatcher {
           kOperationDispatcher, async_context, async_context.result,
           absl::StrFormat("Max retries exceeded. Total retries: %lld",
                           async_context.retry_count));
-      async_context.result = FailureExecutionResult(
+      async_context.result = google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_DISPATCHER_EXHAUSTED_RETRIES);
       async_context.Finish();
       return;
@@ -124,7 +126,7 @@ class OperationDispatcher {
                                         "%lld, Expiration time: %lld",
                                         async_context.retry_count,
                                         async_context.expiration_time));
-      async_context.result = FailureExecutionResult(
+      async_context.result = google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_DISPATCHER_OPERATION_EXPIRED);
       async_context.Finish();
       return;
@@ -142,7 +144,7 @@ class OperationDispatcher {
               "Not enough time available for a retry in Async Context. "
               "Total retries: %lld, Expiration time: %lld",
               async_context.retry_count, async_context.expiration_time));
-      async_context.result = FailureExecutionResult(
+      async_context.result = google::scp::core::FailureExecutionResult(
           privacy_sandbox::pbs_common::
               SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION);
       async_context.Finish();
@@ -163,4 +165,4 @@ class OperationDispatcher {
   /// The retry strategy for the dispatcher.
   RetryStrategy retry_strategy_;
 };
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common

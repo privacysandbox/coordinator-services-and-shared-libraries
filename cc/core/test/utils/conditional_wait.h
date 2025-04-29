@@ -20,7 +20,7 @@
 #include "cc/core/test/test_config.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief Timeout exception object thrown by WaitUntil
@@ -39,8 +39,9 @@ class TestTimeoutException : public std::exception {
  * @param condition when the condition is met, stop waiting.
  * @param timeout the maximum time before stop waiting.
  */
-void WaitUntil(std::function<bool()> condition,
-               DurationMs timeout = UNIT_TEST_TIME_OUT_MS);
+void WaitUntil(
+    std::function<bool()> condition,
+    google::scp::core::test::DurationMs timeout = UNIT_TEST_TIME_OUT_MS);
 
 /**
  * @brief Waits util the given condition is met. This is a no exception version
@@ -49,7 +50,8 @@ void WaitUntil(std::function<bool()> condition,
  * @param condition when the condition is met, stop waiting.
  * @param timeout the maximum time before stop waiting.
  */
-ExecutionResult WaitUntilOrReturn(
+google::scp::core::ExecutionResult WaitUntilOrReturn(
     std::function<bool()> condition,
-    DurationMs timeout = UNIT_TEST_TIME_OUT_MS) noexcept;
-}  // namespace google::scp::core::test
+    google::scp::core::test::DurationMs timeout =
+        UNIT_TEST_TIME_OUT_MS) noexcept;
+}  // namespace privacy_sandbox::pbs_common

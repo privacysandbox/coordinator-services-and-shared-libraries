@@ -32,21 +32,24 @@
 #include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/core/test/utils/error_codes.h"
+#include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::core::common::test {
-
-using ::google::scp::core::common::AutoExpiryConcurrentMap;
-using ::google::scp::core::common::auto_expiry_concurrent_map::mock::
-    MockAutoExpiryConcurrentMap;
+namespace privacy_sandbox::pbs_common {
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::RetryExecutionResult;
+using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::TestTimeoutException;
-using ::google::scp::core::test::WaitUntil;
-using ::google::scp::core::test::WaitUntilOrReturn;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncOperation;
+using ::privacy_sandbox::pbs_common::AutoExpiryConcurrentMap;
 using ::privacy_sandbox::pbs_common::MockAsyncExecutor;
+using ::privacy_sandbox::pbs_common::MockAutoExpiryConcurrentMap;
+using ::privacy_sandbox::pbs_common::TestTimeoutException;
 using ::privacy_sandbox::pbs_common::Timestamp;
+using ::privacy_sandbox::pbs_common::WaitUntil;
+using ::privacy_sandbox::pbs_common::WaitUntilOrReturn;
 using std::defer_lock;
 using std::find;
 using std::function;
@@ -779,4 +782,4 @@ TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
   stop_thread.join();
   EXPECT_SUCCESS(async_executor->Stop());
 }
-}  // namespace google::scp::core::common::test
+}  // namespace privacy_sandbox::pbs_common

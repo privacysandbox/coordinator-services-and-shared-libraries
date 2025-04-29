@@ -16,10 +16,11 @@
 
 #include <gtest/gtest.h>
 
-#include <map>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/authorization_proxy/src/pass_thru_authorization_proxy.h"
@@ -34,35 +35,19 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::PassThruAuthorizationProxy;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::common::RetryStrategy;
-using google::scp::core::common::RetryStrategyOptions;
-using google::scp::core::common::RetryStrategyType;
-using google::scp::core::common::Uuid;
-using google::scp::core::config_provider::mock::MockConfigProvider;
-using google::scp::core::test::IsSuccessful;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::TestLoggingUtils;
-using google::scp::core::test::WaitUntil;
+using ::google::scp::core::ExecutionResult;
+using ::google::scp::core::FailureExecutionResult;
+using ::google::scp::core::PassThruAuthorizationProxy;
+using ::google::scp::core::SuccessExecutionResult;
+using ::google::scp::core::test::IsSuccessful;
+using ::google::scp::core::test::ResultIs;
+using ::google::scp::core::test::TestLoggingUtils;
 using ::privacy_sandbox::pbs_common::HttpStatusCode;
-using std::atomic;
-using std::cout;
-using std::endl;
-using std::make_shared;
-using std::make_unique;
-using std::map;
-using std::shared_ptr;
-using std::string;
-using std::thread;
-using std::to_string;
-using std::unique_ptr;
-using std::vector;
-using std::chrono::milliseconds;
-using std::chrono::seconds;
-using std::this_thread::sleep_for;
+using ::privacy_sandbox::pbs_common::RetryStrategy;
+using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
+using ::privacy_sandbox::pbs_common::RetryStrategyType;
+using ::privacy_sandbox::pbs_common::Uuid;
+using ::privacy_sandbox::pbs_common::WaitUntil;
 using ::testing::_;
 using ::testing::An;
 using ::testing::AnyOf;
@@ -72,37 +57,37 @@ using ::testing::Eq;
 class HttpServerLoadTest : public testing::Test {
  protected:
   HttpServerLoadTest() {
-    auto mock_config_provider = make_shared<MockConfigProvider>();
+    auto mock_config_provider = std::make_shared<MockConfigProvider>();
     config_provider_ = mock_config_provider;
-    async_executor_for_server_ = make_shared<AsyncExecutor>(
+    async_executor_for_server_ = std::make_shared<AsyncExecutor>(
         20 /* thread pool size */, 100000 /* queue size */,
         true /* drop_tasks_on_stop */);
-    async_executor_for_client_ = make_shared<AsyncExecutor>(
+    async_executor_for_client_ = std::make_shared<AsyncExecutor>(
         20 /* thread pool size */, 100000 /* queue size */,
         true /* drop_tasks_on_stop */);
     HttpClientOptions client_options(
         RetryStrategyOptions(RetryStrategyType::Linear, 100 /* delay in ms */,
                              5 /* num retries */),
         1 /* max connections per host */, 5 /* read timeout in sec */);
-    http2_client_ =
-        make_shared<HttpClient>(async_executor_for_client_, client_options);
+    http2_client_ = std::make_shared<HttpClient>(async_executor_for_client_,
+                                                 client_options);
 
     // Authorization is not tested for the purposes of this test.
-    shared_ptr<AuthorizationProxyInterface> authorization_proxy =
-        make_shared<PassThruAuthorizationProxy>();
+    std::shared_ptr<AuthorizationProxyInterface> authorization_proxy =
+        std::make_shared<PassThruAuthorizationProxy>();
 
-    http_server_ = make_shared<Http2Server>(
+    http_server_ = std::make_shared<Http2Server>(
         host_, port_, 10 /* http server thread pool size */,
         async_executor_for_server_, authorization_proxy,
         /*aws_authorization_proxy=*/nullptr, config_provider_);
 
-    string path = "/v1/test";
+    std::string path = "/v1/test";
     HttpHandler handler =
         [this](AsyncContext<HttpRequest, HttpResponse>& context) {
           total_requests_received_on_server++;
-          context.response = make_shared<HttpResponse>();
+          context.response = std::make_shared<HttpResponse>();
           context.response->body =
-              BytesBuffer(to_string(total_requests_received_on_server));
+              BytesBuffer(std::to_string(total_requests_received_on_server));
           context.response->code = HttpStatusCode(200);
           context.result = SuccessExecutionResult();
           context.Finish();
@@ -132,14 +117,14 @@ class HttpServerLoadTest : public testing::Test {
     EXPECT_SUCCESS(async_executor_for_server_->Stop());
   }
 
-  string host_ = "localhost";
-  string port_ = "8099";  // TODO: Pick this randomly.
-  shared_ptr<ConfigProviderInterface> config_provider_;
-  shared_ptr<AsyncExecutorInterface> async_executor_for_server_;
-  shared_ptr<AsyncExecutorInterface> async_executor_for_client_;
-  shared_ptr<HttpServerInterface> http_server_;
-  shared_ptr<HttpClientInterface> http2_client_;
-  atomic<size_t> total_requests_received_on_server = 0;
+  std::string host_ = "localhost";
+  std::string port_ = "8099";  // TODO: Pick this randomly.
+  std::shared_ptr<ConfigProviderInterface> config_provider_;
+  std::shared_ptr<AsyncExecutorInterface> async_executor_for_server_;
+  std::shared_ptr<AsyncExecutorInterface> async_executor_for_client_;
+  std::shared_ptr<HttpServerInterface> http_server_;
+  std::shared_ptr<HttpClientInterface> http2_client_;
+  std::atomic<size_t> total_requests_received_on_server = 0;
 };
 
 TEST_F(HttpServerLoadTest,
@@ -153,14 +138,14 @@ TEST_F(HttpServerLoadTest,
   size_t connections_per_client = 1;
   size_t client_connection_read_timeout_in_seconds = 4;
 
-  atomic<bool> is_qps_thread_stopped = false;
-  thread qps_thread([this, &is_qps_thread_stopped]() {
+  std::atomic<bool> is_qps_thread_stopped = false;
+  std::thread qps_thread([this, &is_qps_thread_stopped]() {
     auto req_prev = total_requests_received_on_server.load();
     while (!is_qps_thread_stopped) {
       auto req = total_requests_received_on_server.load();
-      cout << "QPS: " << req - req_prev << endl;
+      std::cout << "QPS: " << req - req_prev << std::endl;
       req_prev = req;
-      sleep_for(seconds(1));
+      std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   });
 
@@ -174,26 +159,26 @@ TEST_F(HttpServerLoadTest,
         total_requests_received_on_server;
 
     // Reset the counter to process new clients.
-    atomic<size_t> client_requests_completed_in_current_round = 0;
+    std::atomic<size_t> client_requests_completed_in_current_round = 0;
 
     // Initialize a bunch of clients.
-    vector<shared_ptr<HttpClientInterface>> http2_clients;
+    std::vector<std::shared_ptr<HttpClientInterface>> http2_clients;
     for (int j = 0; j < num_clients; j++) {
-      auto http2_client =
-          make_shared<HttpClient>(async_executor_for_client_, client_options);
+      auto http2_client = std::make_shared<HttpClient>(
+          async_executor_for_client_, client_options);
       EXPECT_SUCCESS(http2_client->Init());
       EXPECT_SUCCESS(http2_client->Run());
       http2_clients.push_back(http2_client);
     }
 
     // Send requests on each of the http clients.
-    cout << "Round " << i + 1 << ": "
-         << "Initialized clients. Sending requests..." << endl;
+    std::cout << "Round " << i + 1 << ": "
+              << "Initialized clients. Sending requests..." << std::endl;
     for (auto& http2_client : http2_clients) {
-      auto request = make_shared<HttpRequest>();
+      auto request = std::make_shared<HttpRequest>();
       request->method = HttpMethod::POST;
-      request->path =
-          make_shared<string>("http://" + host_ + ":" + port_ + "/v1/test");
+      request->path = std::make_shared<std::string>("http://" + host_ + ":" +
+                                                    port_ + "/v1/test");
       AsyncContext<HttpRequest, HttpResponse> request_context(
           std::move(request),
           [&](AsyncContext<HttpRequest, HttpResponse>& result_context) {
@@ -203,21 +188,21 @@ TEST_F(HttpServerLoadTest,
     }
 
     while (client_requests_completed_in_current_round < num_clients) {
-      sleep_for(milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    cout << "Round " << i + 1 << ": "
-         << "client_requests_completed_in_current_round: "
-         << client_requests_completed_in_current_round
-         << " total_requests_received_on_server: "
-         << total_requests_received_on_server << endl;
+    std::cout << "Round " << i + 1 << ": "
+              << "client_requests_completed_in_current_round: "
+              << client_requests_completed_in_current_round
+              << " total_requests_received_on_server: "
+              << total_requests_received_on_server << std::endl;
 
     // Send another round of multiple requests on the same set of clients.
     for (auto& http2_client : http2_clients) {
-      auto request = make_shared<HttpRequest>();
+      auto request = std::make_shared<HttpRequest>();
       request->method = HttpMethod::POST;
-      request->path =
-          make_shared<string>("http://" + host_ + ":" + port_ + "/v1/test");
+      request->path = std::make_shared<std::string>("http://" + host_ + ":" +
+                                                    port_ + "/v1/test");
       AsyncContext<HttpRequest, HttpResponse> request_context(
           std::move(request),
           [&](AsyncContext<HttpRequest, HttpResponse>& result_context) {
@@ -230,16 +215,16 @@ TEST_F(HttpServerLoadTest,
 
     while (client_requests_completed_in_current_round <
            (num_clients * requests_per_client)) {
-      sleep_for(milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    cout << "Round " << i + 1 << ": "
-         << "client_requests_completed_in_current_round: "
-         << client_requests_completed_in_current_round
-         << " total_requests_received_on_server: "
-         << total_requests_received_on_server << endl;
+    std::cout << "Round " << i + 1 << ": "
+              << "client_requests_completed_in_current_round: "
+              << client_requests_completed_in_current_round
+              << " total_requests_received_on_server: "
+              << total_requests_received_on_server << std::endl;
 
-    cout << "Stopping clients" << endl;
+    std::cout << "Stopping clients" << std::endl;
 
     for (auto& http2_client : http2_clients) {
       EXPECT_SUCCESS(http2_client->Stop());

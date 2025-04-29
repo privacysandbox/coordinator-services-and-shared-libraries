@@ -101,7 +101,7 @@ namespace {
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::config_provider::mock::MockConfigProvider;
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT;
 using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
@@ -205,15 +205,22 @@ std::unique_ptr<FrontEndServiceV2Peer> MakeFrontEndServiceV2Peer(
 // failure based on different scenarios. Since the SetUp() performs Init(),
 // those tests cannout use this test fixture.
 
+struct FrontEndServiceV2LifecycleTestParam {
+  bool enable_budget_consumer_migration;
+  bool enable_request_response_proto_migration;
+};
+
 class FrontEndServiceV2LifecycleTest
     : public testing::Test,
-      public testing::WithParamInterface<
-          /*enable_budget_consumer_migration=*/bool> {
+      public testing::WithParamInterface<FrontEndServiceV2LifecycleTestParam> {
  protected:
   void SetUp() override {
     mock_config_provider_ = std::make_shared<MockConfigProvider>();
     mock_config_provider_->SetBool(kEnableBudgetConsumerMigration,
                                    IsWithBudgetConsumer());
+    mock_config_provider_->SetBool(kEnableRequestResponseProtoMigration,
+                                   ShouldUseRequestResponseProto());
+
     metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
     budget_consumption_helper_ =
         std::make_unique<MockBudgetConsumptionHelper>();
@@ -230,7 +237,13 @@ class FrontEndServiceV2LifecycleTest
         << GetErrorMessage(execution_result.status_code);
   }
 
-  bool IsWithBudgetConsumer() { return GetParam(); }
+  bool IsWithBudgetConsumer() {
+    return GetParam().enable_budget_consumer_migration;
+  }
+
+  bool ShouldUseRequestResponseProto() {
+    return GetParam().enable_request_response_proto_migration;
+  }
 
   std::shared_ptr<MockHttpServerInterface> http2_server_;
   std::shared_ptr<MockConfigProvider> mock_config_provider_;
@@ -239,8 +252,11 @@ class FrontEndServiceV2LifecycleTest
   std::unique_ptr<FrontEndServiceV2Peer> front_end_service_v2_peer_;
 };
 
-INSTANTIATE_TEST_SUITE_P(FrontEndServiceV2LifecycleTest,
-                         FrontEndServiceV2LifecycleTest, Values(true, false));
+INSTANTIATE_TEST_SUITE_P(
+    FrontEndServiceV2LifecycleTest, FrontEndServiceV2LifecycleTest,
+    Values(FrontEndServiceV2LifecycleTestParam{true, true},
+           FrontEndServiceV2LifecycleTestParam{true, false},
+           FrontEndServiceV2LifecycleTestParam{false, false}));
 
 void InsertCommonHeaders(
     absl::string_view transaction_id, absl::string_view secret,
@@ -331,7 +347,6 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithConstructorWithLessParams) {
   http_context.response = CreateEmptyResponse();
 
   auto mock_config_provider = std::make_shared<MockConfigProvider>();
-  static constexpr char kClaimedIdentity[] = "123";
 
   std::unique_ptr<FrontEndServiceV2> front_end_service_v2 =
       std::make_unique<FrontEndServiceV2>(
@@ -496,8 +511,9 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransaction) {
                 UnorderedElementsAreArray(expected_keys_list));
     // With budget consumer, we serialize budget exhausted indices even for
     // success
-    EXPECT_EQ(captured_http_context.response->body.ToString(),
-              kBudgetExhaustedResponseBody);
+    EXPECT_EQ(
+        nlohmann::json::parse(captured_http_context.response->body.ToString()),
+        nlohmann::json::parse(kBudgetExhaustedResponseBody));
   } else {
     ASSERT_EQ(captured_consume_budgets_context.request->budgets.size(), 2);
     EXPECT_EQ(
@@ -620,8 +636,9 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransactionBudgetExhausted) {
   EXPECT_FALSE(captured_http_context.result);
   EXPECT_EQ(captured_http_context.result.status_code,
             SC_CONSUME_BUDGET_EXHAUSTED);
-  EXPECT_EQ(captured_http_context.response->body.ToString(),
-            kBudgetExhaustedResponseBody);
+  EXPECT_EQ(
+      nlohmann::json::parse(captured_http_context.response->body.ToString()),
+      nlohmann::json::parse(kBudgetExhaustedResponseBody));
 }
 
 TEST_P(FrontEndServiceV2LifecycleTest,

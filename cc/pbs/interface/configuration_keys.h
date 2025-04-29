@@ -77,4 +77,12 @@ static constexpr char kValueProtoMigrationPhase[] =
 // Migration of PBS to use budget consumer
 static constexpr char kEnableBudgetConsumerMigration[] =
     "google_scp_pbs_migration_enable_budget_consumer_migration";
+
+// Migration of PBS to use request response proto
+static constexpr char kEnableRequestResponseProtoMigration[] =
+    "google_scp_pbs_enable_request_response_proto_migration";
+
+// Stop servering requests with JSON request version 1.0
+static constexpr char kEnableStopServingV1Request[] =
+    "google_pbs_stop_serving_v1_request";
 }  // namespace google::scp::pbs

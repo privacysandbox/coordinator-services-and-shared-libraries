@@ -31,21 +31,24 @@ namespace privacy_sandbox::pbs_common {
 
 struct HttpClientOptions {
   HttpClientOptions()
-      : retry_strategy_options(google::scp::core::common::RetryStrategyOptions(
-            google::scp::core::common::RetryStrategyType::Exponential,
-            kDefaultRetryStrategyDelayInMs, kDefaultRetryStrategyMaxRetries)),
+      : retry_strategy_options(
+            privacy_sandbox::pbs_common::RetryStrategyOptions(
+                privacy_sandbox::pbs_common::RetryStrategyType::Exponential,
+                kDefaultRetryStrategyDelayInMs,
+                kDefaultRetryStrategyMaxRetries)),
         max_connections_per_host(kDefaultMaxConnectionsPerHost),
         http2_read_timeout_in_sec(kDefaultHttp2ReadTimeoutInSeconds) {}
 
   HttpClientOptions(
-      google::scp::core::common::RetryStrategyOptions retry_strategy_options,
+      privacy_sandbox::pbs_common::RetryStrategyOptions retry_strategy_options,
       size_t max_connections_per_host, TimeDuration http2_read_timeout_in_sec)
       : retry_strategy_options(retry_strategy_options),
         max_connections_per_host(max_connections_per_host),
         http2_read_timeout_in_sec(http2_read_timeout_in_sec) {}
 
   /// Retry strategy options.
-  const google::scp::core::common::RetryStrategyOptions retry_strategy_options;
+  const privacy_sandbox::pbs_common::RetryStrategyOptions
+      retry_strategy_options;
   /// Max http connections per host.
   const size_t max_connections_per_host;
   /// nghttp client read timeout.
@@ -92,7 +95,7 @@ class HttpClient : public HttpClientInterface {
   std::unique_ptr<HttpConnectionPool> http_connection_pool_;
 
   // Operation dispatcher
-  google::scp::core::common::OperationDispatcher operation_dispatcher_;
+  privacy_sandbox::pbs_common::OperationDispatcher operation_dispatcher_;
 
   // An instance of metric router which will provide APIs to create metrics.
   google::scp::core::MetricRouter* metric_router_;

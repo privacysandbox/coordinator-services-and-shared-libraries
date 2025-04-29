@@ -35,9 +35,9 @@ namespace {
 using ::google::scp::core::FailureExecutionResult;
 using ::google::scp::core::RetryExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::common::TimeProvider;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::WaitUntil;
+using ::privacy_sandbox::pbs_common::TimeProvider;
+using ::privacy_sandbox::pbs_common::WaitUntil;
 using std::atomic;
 using std::make_shared;
 using std::string;

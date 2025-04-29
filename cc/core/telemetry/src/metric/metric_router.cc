@@ -173,7 +173,7 @@ ExecutionResult MetricRouter::CreateViewForInstrument(
   } else {
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_METER_PROVIDER_NOT_INITIALIZED);
-    SCP_ERROR(kMetricRouter, google::scp::core::common::kZeroUuid,
+    SCP_ERROR(kMetricRouter, privacy_sandbox::pbs_common::kZeroUuid,
               execution_result, "[OTLP Metric Router] Meter Provider is NOOP.");
     return execution_result;
   }

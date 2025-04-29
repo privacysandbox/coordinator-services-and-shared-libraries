@@ -142,8 +142,7 @@ class HttpConnectionPool : public ServiceInterface {
   TimeDuration http2_read_timeout_in_sec_;
 
   /// The pool of all the connections.
-  google::scp::core::common::ConcurrentMap<
-      std::string, std::shared_ptr<HttpConnectionPoolEntry>>
+  ConcurrentMap<std::string, std::shared_ptr<HttpConnectionPoolEntry>>
       connections_;
 
   /// Indicates whether the connection pool is running.

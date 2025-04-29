@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <google/protobuf/timestamp.pb.h>
+#include <google/protobuf/util/json_util.h>
 #include <google/protobuf/util/time_util.h>
 #include <nlohmann/json.hpp>
 
@@ -45,6 +46,8 @@ namespace google::scp::pbs {
 
 namespace {
 
+using ::google::protobuf::util::JsonPrintOptions;
+using ::google::protobuf::util::MessageToJsonString;
 using ::google::scp::core::ExecutionResult;
 using ::google::scp::core::ExecutionResultOr;
 using ::google::scp::core::FailureExecutionResult;
@@ -58,11 +61,15 @@ using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE;
 using ::google::scp::core::errors::
     SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetResponse;
 using ::privacy_sandbox::pbs_common::Byte;
 using ::privacy_sandbox::pbs_common::BytesBuffer;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::Uuid;
 
 constexpr absl::string_view kFrontEndUtils = "FrontEndUtils";
 constexpr absl::string_view kVersion1 = "1.0";
@@ -255,7 +262,7 @@ ExecutionResult ParseBeginTransactionRequestBodyV2(
 
     if (*site != authorized_domain) {
       SCP_INFO(
-          kFrontEndUtils, core::common::kZeroUuid,
+          kFrontEndUtils, kZeroUuid,
           absl::StrFormat(
               "The provided reporting origin does not belong to the authorized "
               "domain. reporting_origin: %s; authorized_domain: %s",
@@ -316,36 +323,55 @@ ExecutionResult ParseBeginTransactionRequestBodyV2(
 
 ExecutionResult SerializeTransactionFailedCommandIndicesResponse(
     const std::vector<size_t> command_failed_indices,
-    BytesBuffer& response_body) {
-  try {
-    nlohmann::json serialized_body = nlohmann::json::parse("{\"v\": \"1.0\"}");
-    serialized_body["f"] = nlohmann::json::parse("[]");
-    for (auto index : command_failed_indices) {
-      serialized_body["f"].push_back(index);
+    bool should_use_request_response_protos, BytesBuffer& response_body) {
+  std::string serialized;
+  if (should_use_request_response_protos) {
+    ConsumePrivacyBudgetResponse response_proto;
+    response_proto.set_version(kVersion1);
+    response_proto.mutable_exhausted_budget_indices()->Assign(
+        command_failed_indices.begin(), command_failed_indices.end());
+
+    JsonPrintOptions json_print_options;
+    json_print_options.always_print_fields_with_no_presence = true;
+
+    if (auto status = MessageToJsonString(response_proto, &serialized,
+                                          json_print_options);
+        !status.ok()) {
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
     }
-    auto serialized = serialized_body.dump();
-    response_body.bytes = std::make_shared<std::vector<Byte>>(
-        serialized.begin(), serialized.end());
-    response_body.length = serialized.size();
-    response_body.capacity = serialized.size();
-  } catch (...) {
-    return FailureExecutionResult(
-        SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
+  } else {
+    try {
+      nlohmann::json serialized_body =
+          nlohmann::json::parse("{\"v\": \"1.0\"}");
+      serialized_body["f"] = nlohmann::json::parse("[]");
+      for (auto index : command_failed_indices) {
+        serialized_body["f"].push_back(index);
+      }
+      serialized = serialized_body.dump();
+    } catch (...) {
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY);
+    }
   }
+
+  response_body.bytes =
+      std::make_shared<std::vector<Byte>>(serialized.begin(), serialized.end());
+  response_body.length = serialized.size();
+  response_body.capacity = serialized.size();
 
   return core::SuccessExecutionResult();
 }
 
 ExecutionResult ExtractTransactionIdFromHTTPHeaders(
-    const std::shared_ptr<HttpHeaders>& request_headers,
-    core::common::Uuid& uuid) {
+    const std::shared_ptr<HttpHeaders>& request_headers, Uuid& uuid) {
   auto header_iter = request_headers->find(kTransactionIdHeader);
   if (header_iter == request_headers->end()) {
     return FailureExecutionResult(
         core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
   }
 
-  return core::common::FromString(header_iter->second, uuid);
+  return FromString(header_iter->second, uuid);
 }
 
 ExecutionResult ExtractRequestClaimedIdentity(
@@ -412,7 +438,7 @@ ExecutionResult ParseBeginTransactionRequestBody(
     return ParseBeginTransactionRequestBodyV2(
         transaction_request, authorized_domain, consume_budget_metadata_list);
   } catch (const std::exception& exception) {
-    SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
+    SCP_INFO(kFrontEndUtils, kZeroUuid,
              absl::StrCat("ParseBeginTransactionRequestBody failed ",
                           exception.what()));
     return FailureExecutionResult(
@@ -458,8 +484,7 @@ ExecutionResultOr<std::string> ValidateAndGetBudgetType(
   try {
     auto version_it = request_body.find("v");
     if (version_it == request_body.end()) {
-      SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-               "JSON key absent : \"v\"");
+      SCP_INFO(kFrontEndUtils, kZeroUuid, "JSON key absent : \"v\"");
       return FailureExecutionResult(
           SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
     }
@@ -470,8 +495,7 @@ ExecutionResultOr<std::string> ValidateAndGetBudgetType(
 
     auto request_body_data_it = request_body.find("data");
     if (request_body_data_it == request_body.end()) {
-      SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-               "JSON key absent : \"data\"");
+      SCP_INFO(kFrontEndUtils, kZeroUuid, "JSON key absent : \"data\"");
       return FailureExecutionResult(
           SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
     }
@@ -485,8 +509,7 @@ ExecutionResultOr<std::string> ValidateAndGetBudgetType(
     for (const auto& data_body : *request_body_data_it) {
       auto keys_it = data_body.find("keys");
       if (keys_it == data_body.end()) {
-        SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-                 "JSON keys absent :  \"keys\"");
+        SCP_INFO(kFrontEndUtils, kZeroUuid, "JSON keys absent :  \"keys\"");
         return FailureExecutionResult(
             SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
       }
@@ -502,8 +525,7 @@ ExecutionResultOr<std::string> ValidateAndGetBudgetType(
         if (budget_type_it != key_body.end()) {
           key_budget_type = budget_type_it->get<std::string>();
           if (key_budget_type.empty()) {
-            SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-                     "Empty budget type");
+            SCP_INFO(kFrontEndUtils, kZeroUuid, "Empty budget type");
             return FailureExecutionResult(
                 SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
           }
@@ -511,7 +533,7 @@ ExecutionResultOr<std::string> ValidateAndGetBudgetType(
 
         // All keys should have the same budget type.
         if (!budget_type.empty() && key_budget_type != budget_type) {
-          SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
+          SCP_INFO(kFrontEndUtils, kZeroUuid,
                    absl::StrFormat("All keys should have the same budget type. "
                                    "Expected %s Found %s",
                                    budget_type, key_budget_type));
@@ -527,7 +549,7 @@ ExecutionResultOr<std::string> ValidateAndGetBudgetType(
     // We can expect exceptions from failing types. For example if "data" is set
     // to something other than an array.
     SCP_INFO(
-        kFrontEndUtils, core::common::kZeroUuid,
+        kFrontEndUtils, kZeroUuid,
         absl::StrCat("ValidateAndGetBudgetType failed ", exception.what()));
     return FailureExecutionResult(
         SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
@@ -539,23 +561,20 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
     KeyBodyProcesserFunction key_body_processer) {
   auto version_it = request_body.find("v");
   if (version_it == request_body.end()) {
-    SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-             "JSON key absent : \"v\"");
+    SCP_INFO(kFrontEndUtils, kZeroUuid, "JSON key absent : \"v\"");
     return FailureExecutionResult(
         SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
 
   if (version_it->get<std::string>() != kVersion2) {
-    SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-             "Not a version 2.0 request");
+    SCP_INFO(kFrontEndUtils, kZeroUuid, "Not a version 2.0 request");
     return FailureExecutionResult(
         SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
 
   auto request_body_data_it = request_body.find("data");
   if (request_body_data_it == request_body.end()) {
-    SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-             "JSON key absent : \"data\"");
+    SCP_INFO(kFrontEndUtils, kZeroUuid, "JSON key absent : \"data\"");
     return FailureExecutionResult(
         SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
@@ -568,7 +587,7 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
     auto keys_it = data_body.find("keys");
 
     if (reporting_origin_it == data_body.end() || keys_it == data_body.end()) {
-      SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
+      SCP_INFO(kFrontEndUtils, kZeroUuid,
                "One of more JSON keys absent : "
                "\"reporting_origin\" or \"keys\"");
       return FailureExecutionResult(
@@ -578,8 +597,7 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
     const std::string& reporting_origin =
         reporting_origin_it->get<std::string>();
     if (reporting_origin.empty()) {
-      SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-               "Empty reporting origin");
+      SCP_INFO(kFrontEndUtils, kZeroUuid, "Empty reporting origin");
       return FailureExecutionResult(
           SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
     }
@@ -587,15 +605,14 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
     ExecutionResultOr<std::string> site =
         TransformReportingOriginToSite(reporting_origin);
     if (!site.Successful()) {
-      SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-               "Invalid reporting origin");
+      SCP_INFO(kFrontEndUtils, kZeroUuid, "Invalid reporting origin");
       return FailureExecutionResult(
           SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
     }
 
     if (*site != authorized_domain) {
       SCP_INFO(
-          kFrontEndUtils, core::common::kZeroUuid,
+          kFrontEndUtils, kZeroUuid,
           absl::StrFormat(
               "The provided reporting origin does not belong to the authorized "
               "domain. reporting_origin: %s; authorized_domain: %s",
@@ -606,7 +623,7 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
 
     if (visited_reporting_origin.find(reporting_origin) !=
         visited_reporting_origin.end()) {
-      SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
+      SCP_INFO(kFrontEndUtils, kZeroUuid,
                absl::StrFormat("Repeated reporting origin found : %s",
                                reporting_origin))
       return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
@@ -619,8 +636,7 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
       if (budget_type_it != key_body.end()) {
         key_budget_type = budget_type_it->get<std::string>();
         if (key_budget_type.empty()) {
-          SCP_INFO(kFrontEndUtils, core::common::kZeroUuid,
-                   "Empty budget type");
+          SCP_INFO(kFrontEndUtils, kZeroUuid, "Empty budget type");
           return FailureExecutionResult(
               SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
         }
@@ -628,6 +644,108 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
 
       ExecutionResult execution_result = key_body_processer(
           key_body, key_index, reporting_origin, key_budget_type);
+      if (!execution_result.Successful()) {
+        return execution_result;
+      }
+
+      ++key_index;
+    }
+  }
+  return core::SuccessExecutionResult();
+}
+
+ExecutionResultOr<ConsumePrivacyBudgetRequest::PrivacyBudgetKey::BudgetType>
+ValidateAndGetBudgetType(const ConsumePrivacyBudgetRequest& request_proto) {
+  if (request_proto.version() != kVersion2) {
+    SCP_INFO(kFrontEndUtils, kZeroUuid,
+             absl::StrCat("Proto must have version 2.0, found ",
+                          request_proto.version()));
+    return FailureExecutionResult(
+        SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+  }
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  PrivacyBudgetKey::BudgetType budget_type =
+      PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET;
+
+  for (const auto& data_body : request_proto.data()) {
+    for (const auto& key_body : data_body.keys()) {
+      auto key_budget_type = key_body.budget_type();
+      if (key_budget_type == PrivacyBudgetKey::BUDGET_TYPE_UNSPECIFIED) {
+        // Default is binary budget consumer
+        key_budget_type = PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET;
+      }
+
+      // All keys should have the same budget type.
+      if (budget_type != key_budget_type) {
+        SCP_INFO(kFrontEndUtils, kZeroUuid,
+                 absl::StrFormat(
+                     "All keys should have the same budget type. "
+                     "Expected %s Found %s",
+                     PrivacyBudgetKey::BudgetType_Name(budget_type),
+                     PrivacyBudgetKey::BudgetType_Name(key_budget_type)));
+        return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
+      }
+      budget_type = key_budget_type;
+    }
+  }
+
+  // Default is binary budget consumer
+  return budget_type;
+}
+
+ExecutionResult ParseCommonV2TransactionRequestProto(
+    absl::string_view authorized_domain,
+    const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest& request_proto,
+    ProtoKeyBodyProcesserFunction key_body_processer) {
+  if (request_proto.version() != kVersion2) {
+    SCP_INFO(kFrontEndUtils, kZeroUuid, "Not a version 2.0 request");
+    return FailureExecutionResult(
+        SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+  }
+
+  absl::flat_hash_set<std::string> visited_reporting_origin;
+  size_t key_index = 0;
+
+  for (const auto& data_body : request_proto.data()) {
+    absl::string_view reporting_origin = data_body.reporting_origin();
+    if (reporting_origin.empty()) {
+      SCP_INFO(kFrontEndUtils, kZeroUuid, "Empty reporting origin");
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    ExecutionResultOr<std::string> site =
+        TransformReportingOriginToSite(std::string(reporting_origin));
+    if (!site.Successful()) {
+      SCP_INFO(kFrontEndUtils, kZeroUuid, "Invalid reporting origin");
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
+    }
+
+    if (*site != authorized_domain) {
+      SCP_INFO(
+          kFrontEndUtils, kZeroUuid,
+          absl::StrFormat(
+              "The provided reporting origin does not belong to the authorized "
+              "domain. reporting_origin: %s; authorized_domain: %s",
+              *site, authorized_domain));
+      return FailureExecutionResult(
+          SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE);
+    }
+
+    if (visited_reporting_origin.find(reporting_origin) !=
+        visited_reporting_origin.end()) {
+      SCP_INFO(kFrontEndUtils, kZeroUuid,
+               absl::StrFormat("Repeated reporting origin found : %s",
+                               reporting_origin))
+      return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
+    }
+    visited_reporting_origin.emplace(reporting_origin);
+
+    for (const auto& key_body : data_body.keys()) {
+      ExecutionResult execution_result =
+          key_body_processer(key_body, key_index, reporting_origin);
       if (!execution_result.Successful()) {
         return execution_result;
       }

@@ -24,7 +24,7 @@
 
 using std::chrono::nanoseconds;
 
-namespace google::scp::core::common::test {
+namespace privacy_sandbox::pbs_common {
 TEST(TimeProviderTest,
      GetUniqueWallTimestampInNanosecondsReturnsUniqueTimestampSingleThread) {
   nanoseconds prev_timestamp =
@@ -90,4 +90,4 @@ TEST(TimeProviderTest,
     }
   }
 }
-};  // namespace google::scp::core::common::test
+};  // namespace privacy_sandbox::pbs_common

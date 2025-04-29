@@ -16,7 +16,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 5.37.0"
+      version = ">= 6.29.0"
     }
   }
 }
@@ -40,174 +40,74 @@ locals {
   pbs_auth_endpoint = var.enable_domain_management ? "${var.pbs_domain}/v1/auth" : var.pbs_auth_audience_url
   pbs_image         = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-image:${var.pbs_image_tag}"
   pbs_image_cr      = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-cloud-run-image:${var.pbs_image_tag}"
-
-  pbs_application_environment_variables = concat(var.pbs_application_environment_variables, [
-    {
-      name  = "google_scp_gcp_project_id"
-      value = var.project
-    },
-    {
-      name  = "google_scp_core_cloud_region"
-      value = var.region
-    },
+  pbs_application_environment_variables_base = {
+    google_scp_gcp_project_id    = var.project,
+    google_scp_core_cloud_region = var.region,
     # This is required for Gcp Metric as the default aggregated metric interval
     # value is 1000, which exceeds Gcp custom metric quota limit (one data
     # point per 5 seconds).
+    google_scp_aggregated_metric_interval_ms                              = "5000",
+    google_scp_pbs_journal_service_bucket_name                            = var.pbs_cloud_storage_journal_bucket_name,
+    google_scp_spanner_instance_name                                      = var.pbs_spanner_instance_name,
+    google_scp_spanner_database_name                                      = var.pbs_spanner_database_name,
+    google_scp_pbs_budget_key_table_name                                  = var.pbs_spanner_budget_key_table_name,
+    google_scp_pbs_partition_lock_table_name                              = var.pbs_spanner_partition_lock_table_name,
+    google_scp_pbs_auth_endpoint                                          = local.pbs_auth_endpoint,
+    google_scp_pbs_host_port                                              = var.main_port,
+    google_scp_pbs_external_exposed_host_port                             = var.main_port,
+    google_scp_pbs_http2_server_private_key_file_path                     = "${local.container_certificate_path}/privatekey.pem",
+    google_scp_pbs_http2_server_certificate_file_path                     = "${local.container_certificate_path}/public.crt",
+    google_scp_pbs_partition_lease_duration_in_seconds                    = "5",
+    google_scp_pbs_async_executor_queue_size                              = "100000000",
+    google_scp_pbs_io_async_executor_queue_size                           = "100000000",
+    google_scp_pbs_transaction_manager_capacity                           = "100000000",
+    google_scp_pbs_journal_service_partition_name                         = "00000000-0000-0000-0000-000000000000",
+    google_scp_pbs_host_address                                           = "0.0.0.0",
+    google_scp_pbs_remote_claimed_identity                                = "remote-coordinator.com",
+    google_scp_pbs_multi_instance_mode_disabled                           = local.target_instance_count > 1 || var.pbs_autoscaling_policy != null ? "false" : "true",
+    google_scp_transaction_manager_skip_duplicate_transaction_in_recovery = "true",
+    google_scp_pbs_relaxed_consistency_enabled                            = "true",
+    google_scp_otel_enabled                                               = "true",
+    google_scp_otel_metric_export_interval_msec                           = "60000",
+    google_scp_otel_metric_export_timeout_msec                            = "50000",
+    OTEL_METRICS_EXPORTER                                                 = "googlecloud",
+    google_scp_pbs_enable_request_response_proto_migration                = "true",
+  }
+  pbs_gce_environment_variables = {
+    google_scp_pbs_health_port                     = var.health_check_port
+    google_scp_pbs_http2_server_use_tls            = "true"
+    google_scp_pbs_log_provider                    = "SyslogLogProvider"
+    google_scp_pbs_container_type                  = "compute_engine"
+    google_scp_pbs_async_executor_threads_count    = "64"
+    google_scp_pbs_io_async_executor_threads_count = "256"
+    google_scp_core_http2server_threads_count      = "160"
+  }
+  pbs_cloud_run_environment_variables = {
+    google_scp_pbs_http2_server_use_tls            = "false"
+    google_scp_pbs_log_provider                    = "StdoutLogProvider"
+    google_scp_pbs_container_type                  = "cloud_run"
+    google_scp_pbs_async_executor_threads_count    = "8"
+    google_scp_pbs_io_async_executor_threads_count = "16"
+    google_scp_core_http2server_threads_count      = "40"
+  }
+  pbs_application_environment_variables_child = { for item in var.pbs_application_environment_variables :
+    item.name => item.value
+  }
+
+  // The environment variables in child terraform config will override the base
+  // terraform config. Base terraform config is define in this file.
+  //
+  // Quote from:
+  // https://developer.hashicorp.com/terraform/language/functions/merge
+  // "If more than one given map or object defines the same key or attribute,
+  // then the one that is later in the argument sequence takes precedence."
+
+  pbs_cloud_run_environment_variables_merged = merge(local.pbs_application_environment_variables_base, local.pbs_cloud_run_environment_variables, local.pbs_application_environment_variables_child)
+
+  pbs_gce_environment_variables_merged = [for k, v in merge(local.pbs_application_environment_variables_base, local.pbs_gce_environment_variables, local.pbs_application_environment_variables_child) :
     {
-      name  = "google_scp_aggregated_metric_interval_ms"
-      value = "5000"
-    },
-    {
-      name  = "google_scp_pbs_journal_service_bucket_name"
-      value = var.pbs_cloud_storage_journal_bucket_name
-    },
-    {
-      name  = "google_scp_spanner_instance_name"
-      value = var.pbs_spanner_instance_name
-    },
-    {
-      name  = "google_scp_spanner_database_name"
-      value = var.pbs_spanner_database_name
-    },
-    {
-      name  = "google_scp_pbs_budget_key_table_name"
-      value = var.pbs_spanner_budget_key_table_name
-    },
-    {
-      name  = "google_scp_pbs_partition_lock_table_name"
-      value = var.pbs_spanner_partition_lock_table_name
-    },
-    {
-      name  = "google_scp_pbs_auth_endpoint"
-      value = local.pbs_auth_endpoint
-    },
-    {
-      name  = "google_scp_pbs_host_port"
-      value = var.main_port
-    },
-    {
-      name  = "google_scp_pbs_external_exposed_host_port"
-      value = var.main_port
-    },
-    {
-      name  = "google_scp_pbs_http2_server_private_key_file_path"
-      value = "${local.container_certificate_path}/privatekey.pem"
-    },
-    {
-      name  = "google_scp_pbs_http2_server_certificate_file_path"
-      value = "${local.container_certificate_path}/public.crt"
-    },
-    {
-      name  = "google_scp_pbs_partition_lease_duration_in_seconds"
-      value = "5"
-    },
-    {
-      name  = "google_scp_pbs_async_executor_queue_size"
-      value = "100000000"
-    },
-    {
-      name  = "google_scp_pbs_io_async_executor_queue_size"
-      value = "100000000"
-    },
-    {
-      name  = "google_scp_pbs_transaction_manager_capacity"
-      value = "100000000"
-    },
-    {
-      name  = "google_scp_pbs_journal_service_partition_name"
-      value = "00000000-0000-0000-0000-000000000000"
-    },
-    {
-      name  = "google_scp_pbs_host_address"
-      value = "0.0.0.0"
-    },
-    {
-      name  = "google_scp_pbs_remote_claimed_identity"
-      value = "remote-coordinator.com"
-    },
-    {
-      name  = "google_scp_pbs_multi_instance_mode_disabled"
-      value = local.target_instance_count > 1 || var.pbs_autoscaling_policy != null ? "false" : "true"
-    },
-    {
-      name  = "google_scp_transaction_manager_skip_duplicate_transaction_in_recovery"
-      value = "true"
-    },
-    {
-      name  = "google_scp_pbs_relaxed_consistency_enabled"
-      value = "true"
-    },
-    {
-      name  = "google_scp_otel_enabled"
-      value = "true"
-    },
-    {
-      name  = "google_scp_otel_metric_export_interval_msec"
-      value = "60000"
-    },
-    {
-      name  = "google_scp_otel_metric_export_timeout_msec"
-      value = "50000"
-    },
-    {
-      name  = "OTEL_METRICS_EXPORTER"
-      value = "googlecloud"
-    },
-  ])
-  pbs_gce_environment_variables = [
-    {
-      name  = "google_scp_pbs_health_port"
-      value = var.health_check_port
-    },
-    {
-      name  = "google_scp_pbs_http2_server_use_tls"
-      value = "true"
-    },
-    {
-      name  = "google_scp_pbs_log_provider"
-      value = "SyslogLogProvider"
-    },
-    {
-      name  = "google_scp_pbs_container_type"
-      value = "compute_engine"
-    },
-    {
-      name  = "google_scp_pbs_async_executor_threads_count"
-      value = "64"
-    },
-    {
-      name  = "google_scp_pbs_io_async_executor_threads_count"
-      value = "256"
-    },
-    {
-      name  = "google_scp_core_http2server_threads_count"
-      value = "160"
-    },
-  ]
-  pbs_cloud_run_environment_variables = [
-    {
-      name  = "google_scp_pbs_http2_server_use_tls"
-      value = "false"
-    },
-    {
-      name  = "google_scp_pbs_log_provider"
-      value = "StdoutLogProvider"
-    },
-    {
-      name  = "google_scp_pbs_container_type"
-      value = "cloud_run"
-    },
-    {
-      name  = "google_scp_pbs_async_executor_threads_count"
-      value = "8"
-    },
-    {
-      name  = "google_scp_pbs_io_async_executor_threads_count"
-      value = "16"
-    },
-    {
-      name  = "google_scp_core_http2server_threads_count"
-      value = "40"
+      name  = k
+      value = v
     }
   ]
 
@@ -221,7 +121,7 @@ locals {
           }
           tty : false
 
-          env = concat(local.pbs_application_environment_variables, local.pbs_gce_environment_variables)
+          env = local.pbs_gce_environment_variables_merged
 
           volumeMounts = [
             # Mount the self-signed cert directory from the host machine on the container
@@ -489,10 +389,10 @@ resource "google_cloud_run_v2_service" "pbs_instance" {
         container_port = var.main_port
       }
       dynamic "env" {
-        for_each = concat(local.pbs_application_environment_variables, local.pbs_cloud_run_environment_variables)
+        for_each = local.pbs_cloud_run_environment_variables_merged
         content {
-          name  = env.value["name"]
-          value = env.value["value"]
+          name  = env.key
+          value = env.value
         }
       }
       resources {

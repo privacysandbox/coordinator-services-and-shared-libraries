@@ -41,7 +41,7 @@ using ::google::scp::core::RetryExecutionResult;
 using ::google::scp::core::SuccessExecutionResult;
 using ::google::scp::core::test::IsSuccessfulAndHolds;
 using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::WaitUntil;
+using ::privacy_sandbox::pbs_common::WaitUntil;
 using ::privacy_sandbox::pbs_common::MockAsyncExecutorWithInternals;
 using std::atomic;
 using std::make_shared;

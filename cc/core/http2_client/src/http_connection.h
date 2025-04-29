@@ -104,7 +104,7 @@ class HttpConnection : public ServiceInterface {
    * @param http_context The http context of the operation.
    */
   void SendHttpRequest(
-      google::scp::core::common::Uuid& request_id,
+      privacy_sandbox::pbs_common::Uuid& request_id,
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept;
 
   /**
@@ -117,7 +117,7 @@ class HttpConnection : public ServiceInterface {
    * @param error_code The error code of the stream closure operation.
    */
   void OnRequestResponseClosed(
-      google::scp::core::common::Uuid& request_id,
+      privacy_sandbox::pbs_common::Uuid& request_id,
       AsyncContext<HttpRequest, HttpResponse>& http_context,
       uint32_t error_code,
       std::chrono::time_point<std::chrono::steady_clock>
@@ -278,9 +278,9 @@ class HttpConnection : public ServiceInterface {
 
   // Indicates if the connection is dropped.
   std::atomic<bool> is_dropped_;
-  google::scp::core::common::ConcurrentMap<
-      google::scp::core::common::Uuid, AsyncContext<HttpRequest, HttpResponse>,
-      google::scp::core::common::UuidCompare>
+  ConcurrentMap<privacy_sandbox::pbs_common::Uuid,
+                AsyncContext<HttpRequest, HttpResponse>,
+                privacy_sandbox::pbs_common::UuidCompare>
       pending_network_calls_;
 
  private:

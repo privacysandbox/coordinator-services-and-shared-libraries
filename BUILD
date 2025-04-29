@@ -109,6 +109,12 @@ copy_directory(
     out = "srcs/operator",
 )
 
+copy_directory(
+    name = "proto_dir",
+    src = "proto",
+    out = "srcs/proto",
+)
+
 # This rule is used to copy the source code from other bazel rules.
 # This can be used for reproducible builds.
 # Only cc targets are needed at this point, so only the files needed to build
@@ -127,6 +133,7 @@ pkg_tar(
         ":licenses_dir",
         ":operator_dir",
         ":python_dir",
+        ":proto_dir",
         "MODULE.bazel",
         "WORKSPACE.bzlmod",
     ] + glob(["*.bzl"]),

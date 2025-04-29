@@ -29,11 +29,11 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::FailureExecutionResult;
-
+using google::scp::core::test::ResultIs;
 using std::list;
 using std::string;
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 
 TEST(EnvConfigProviderTest, GetConfigsHappyPath) {
   EnvConfigProvider config;
@@ -267,4 +267,4 @@ TEST(EnvConfigProviderTest, GetBoolListShouldFailWhenNotBoolList) {
       ResultIs(FailureExecutionResult(
           privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

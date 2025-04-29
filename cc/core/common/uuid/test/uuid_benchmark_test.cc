@@ -18,7 +18,7 @@
 
 #include "cc/core/common/uuid/src/uuid.h"
 
-namespace google::scp::core::common {
+namespace privacy_sandbox::pbs_common {
 namespace {
 
 static void BM_UuidFromString(benchmark::State& state) {
@@ -46,7 +46,7 @@ BENCHMARK(BM_UuidFromString)->Range(1, 1 << 19);
 BENCHMARK(BM_UuidToString)->Range(1, 1 << 19);
 
 }  // namespace
-}  // namespace google::scp::core::common
+}  // namespace privacy_sandbox::pbs_common
 
 // Run the benchmark.
 BENCHMARK_MAIN();
