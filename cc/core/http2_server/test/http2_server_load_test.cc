@@ -35,19 +35,6 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::PassThruAuthorizationProxy;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::test::IsSuccessful;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::TestLoggingUtils;
-using ::privacy_sandbox::pbs_common::HttpStatusCode;
-using ::privacy_sandbox::pbs_common::RetryStrategy;
-using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
-using ::privacy_sandbox::pbs_common::RetryStrategyType;
-using ::privacy_sandbox::pbs_common::Uuid;
-using ::privacy_sandbox::pbs_common::WaitUntil;
 using ::testing::_;
 using ::testing::An;
 using ::testing::AnyOf;

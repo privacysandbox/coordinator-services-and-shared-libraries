@@ -33,7 +33,7 @@ class HttpClientInterface : public ServiceInterface {
    * @param context the context of HTTP action.
    * @return ExecutionResult the execution result of the action.
    */
-  virtual google::scp::core::ExecutionResult PerformRequest(
+  virtual ExecutionResult PerformRequest(
       AsyncContext<HttpRequest, HttpResponse>& context) noexcept = 0;
 };
 }  // namespace privacy_sandbox::pbs_common

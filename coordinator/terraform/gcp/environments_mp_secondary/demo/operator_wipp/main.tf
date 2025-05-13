@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,25 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Demo main.tf
-#
-# This file is meant to show an example of what necessary environment-specific
-# configuration is necessary in each environment. Terraform backend
-# configuration cannot reference Terraform variables so this file must be
-# customized for each environment.
-terraform {
-  # Note: the following lines should be uncommented in order to store Terraform
-  # state in a remote backend.
+module "operator_workloadidentitypoolprovider" {
+  source = "../../../applications/operator_workloadidentitypoolprovider"
 
-  # backend "gcs" {
-  #  bucket = "<bucket name goes here, recommended suffix -mp-secondary>"
-  #  prefix = "operator_wipp-secondary-tfstate"
-  # }
+  environment = "<environment name>"
+  project_id  = "<project id>"
+  # wipp_project_id_override = <project_id_to_deploy_wip_wipp> # defaults to `project_id` if not set
+  # wip_allowed_service_account_project_id_override = <project_id_to_create_wip_allowed_service_account> # defaults to `project_id` if not set
 
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = ">= 6.29.0"
-    }
-  }
+  key_encryption_key_id = "<output from mpkhs_secondary>"
+
+  allowed_wip_iam_principals = ["group:<output from allowedoperatorgroup in secondary coordinator>"]
+
+  assertion_tee_swname = "CONFIDENTIAL_SPACE"
+
+  assertion_tee_container_image_hash_list = ["<list of hash values for images>"]
 }

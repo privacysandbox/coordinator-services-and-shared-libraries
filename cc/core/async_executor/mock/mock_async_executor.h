@@ -25,52 +25,44 @@ class MockAsyncExecutor : public AsyncExecutorInterface {
  public:
   MockAsyncExecutor() {}
 
-  google::scp::core::ExecutionResult Init() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Run() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Stop() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Schedule(
-      const AsyncOperation& work, AsyncPriority priority) noexcept override {
+  ExecutionResult Schedule(const AsyncOperation& work,
+                           AsyncPriority priority) noexcept override {
     if (schedule_mock) {
       return schedule_mock(work);
     }
 
     work();
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
-  google::scp::core::ExecutionResult Schedule(
-      const AsyncOperation& work, AsyncPriority priority,
-      AsyncExecutorAffinitySetting) noexcept override {
+  ExecutionResult Schedule(const AsyncOperation& work, AsyncPriority priority,
+                           AsyncExecutorAffinitySetting) noexcept override {
     return Schedule(work, priority);
   }
 
-  google::scp::core::ExecutionResult ScheduleFor(
-      const AsyncOperation& work, Timestamp timestamp) noexcept override {
+  ExecutionResult ScheduleFor(const AsyncOperation& work,
+                              Timestamp timestamp) noexcept override {
     if (schedule_for_mock) {
       std::function<bool()> callback;
       return schedule_for_mock(work, timestamp, callback);
     }
 
     work();
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
-  google::scp::core::ExecutionResult ScheduleFor(
-      const AsyncOperation& work, Timestamp timestamp,
-      AsyncExecutorAffinitySetting) noexcept override {
+  ExecutionResult ScheduleFor(const AsyncOperation& work, Timestamp timestamp,
+                              AsyncExecutorAffinitySetting) noexcept override {
     return ScheduleFor(work, timestamp);
   }
 
-  google::scp::core::ExecutionResult ScheduleFor(
+  ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       std::function<bool()>& cancellation_callback) noexcept override {
     if (schedule_for_mock) {
@@ -78,22 +70,18 @@ class MockAsyncExecutor : public AsyncExecutorInterface {
     }
 
     work();
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
-  google::scp::core::ExecutionResult ScheduleFor(
-      const AsyncOperation& work, Timestamp timestamp,
-      std::function<bool()>& cancellation_callback,
-      AsyncExecutorAffinitySetting) noexcept override {
+  ExecutionResult ScheduleFor(const AsyncOperation& work, Timestamp timestamp,
+                              std::function<bool()>& cancellation_callback,
+                              AsyncExecutorAffinitySetting) noexcept override {
     return ScheduleFor(work, timestamp, cancellation_callback);
   }
 
-  std::function<google::scp::core::ExecutionResult(
-      const privacy_sandbox::pbs_common::AsyncOperation& work)>
-      schedule_mock;
-  std::function<google::scp::core::ExecutionResult(
-      const privacy_sandbox::pbs_common::AsyncOperation& work,
-      privacy_sandbox::pbs_common::Timestamp, std::function<bool()>&)>
+  std::function<ExecutionResult(const AsyncOperation& work)> schedule_mock;
+  std::function<ExecutionResult(const AsyncOperation& work, Timestamp,
+                                std::function<bool()>&)>
       schedule_for_mock;
 };
 }  // namespace privacy_sandbox::pbs_common

@@ -46,12 +46,11 @@ class ConcurrentQueue {
    * thread-safe.
    * @param element the element to be queued.
    */
-  google::scp::core::ExecutionResult TryEnqueue(const T& element) noexcept {
+  ExecutionResult TryEnqueue(const T& element) noexcept {
     if (!queue_->try_push(element)) {
-      return google::scp::core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE);
+      return FailureExecutionResult(SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE);
     }
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
   /**
@@ -60,12 +59,11 @@ class ConcurrentQueue {
    * @param element the element to be dequeued
    * @return ExecutionResult result of the operation.
    */
-  google::scp::core::ExecutionResult TryDequeue(T& element) noexcept {
+  ExecutionResult TryDequeue(T& element) noexcept {
     if (!queue_->try_pop(element)) {
-      return google::scp::core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE);
+      return FailureExecutionResult(SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE);
     }
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
   /**

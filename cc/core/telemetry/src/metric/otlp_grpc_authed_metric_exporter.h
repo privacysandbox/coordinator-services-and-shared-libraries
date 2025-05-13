@@ -29,7 +29,7 @@
 #include "opentelemetry/proto/collector/metrics/v1/metrics_service.grpc.pb.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * The OtlpGrpcAuthedMetricExporter is largely copied from
@@ -87,4 +87,4 @@ class OtlpGrpcAuthedMetricExporter
   bool is_shutdown_;
   mutable std::mutex mutex_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

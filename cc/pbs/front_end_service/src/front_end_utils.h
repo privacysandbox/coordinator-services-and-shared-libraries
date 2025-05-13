@@ -30,39 +30,37 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
-core::ExecutionResult ParseBeginTransactionRequestBody(
+pbs_common::ExecutionResult ParseBeginTransactionRequestBody(
     const std::string& authorized_domain, const std::string& transaction_origin,
-    const privacy_sandbox::pbs_common::BytesBuffer& request_body,
+    const pbs_common::BytesBuffer& request_body,
     std::vector<ConsumeBudgetMetadata>& consume_budget_metadata_list);
 
-core::ExecutionResult SerializeTransactionFailedCommandIndicesResponse(
+pbs_common::ExecutionResult SerializeTransactionFailedCommandIndicesResponse(
     const std::vector<size_t> command_failed_indices,
     bool should_use_request_response_protos,
-    privacy_sandbox::pbs_common::BytesBuffer& response_body);
+    pbs_common::BytesBuffer& response_body);
 
-core::ExecutionResult ExtractTransactionIdFromHTTPHeaders(
-    const std::shared_ptr<privacy_sandbox::pbs_common::HttpHeaders>&
-        request_headers,
-    privacy_sandbox::pbs_common::Uuid& uuid);
+pbs_common::ExecutionResult ExtractTransactionIdFromHTTPHeaders(
+    const std::shared_ptr<pbs_common::HttpHeaders>& request_headers,
+    pbs_common::Uuid& uuid);
 
-core::ExecutionResult ExtractRequestClaimedIdentity(
-    const std::shared_ptr<privacy_sandbox::pbs_common::HttpHeaders>&
-        request_headers,
+pbs_common::ExecutionResult ExtractRequestClaimedIdentity(
+    const std::shared_ptr<pbs_common::HttpHeaders>& request_headers,
     std::string& claimed_identity);
 
 std::string GetReportingOriginMetricLabel();
 
-core::ExecutionResultOr<std::string> ExtractTransactionOrigin(
-    const privacy_sandbox::pbs_common::HttpHeaders& request_headers);
+pbs_common::ExecutionResultOr<std::string> ExtractTransactionOrigin(
+    const pbs_common::HttpHeaders& request_headers);
 
-core::ExecutionResultOr<std::string> TransformReportingOriginToSite(
+pbs_common::ExecutionResultOr<std::string> TransformReportingOriginToSite(
     const std::string& reporting_origin);
 
 [[deprecated(
     "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-core::ExecutionResultOr<std::string> ValidateAndGetBudgetType(
+pbs_common::ExecutionResultOr<std::string> ValidateAndGetBudgetType(
     const nlohmann::json& request_body);
 
 // A function type used by ParseCommonV2TransactionRequestBody.
@@ -72,17 +70,18 @@ core::ExecutionResultOr<std::string> ValidateAndGetBudgetType(
 // passing the key JSON object, its index in the overall request, the
 // associated reporting origin, and the determined budget type. This allows the
 // caller to implement specific logic for handling each key entry from the JSON.
-using KeyBodyProcesserFunction = absl::AnyInvocable<core::ExecutionResult(
+using KeyBodyProcesserFunction = absl::AnyInvocable<pbs_common::ExecutionResult(
     const nlohmann::json& key_body, const size_t key_index,
     absl::string_view reporting_origin, absl::string_view budget_type)>;
 [[deprecated(
     "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-core::ExecutionResult ParseCommonV2TransactionRequestBody(
+pbs_common::ExecutionResult ParseCommonV2TransactionRequestBody(
     absl::string_view authorized_domain, const nlohmann::json& request_body,
     KeyBodyProcesserFunction key_body_processer);
 
-core::ExecutionResultOr<privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest::
-                            PrivacyBudgetKey::BudgetType>
+pbs_common::ExecutionResultOr<
+    privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest::PrivacyBudgetKey::
+        BudgetType>
 ValidateAndGetBudgetType(
     const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest& request_proto);
 
@@ -93,13 +92,14 @@ ValidateAndGetBudgetType(
 // passing the key proto message, its index in the overall request, and the
 // associated reporting origin. This allows the caller to implement specific
 // logic for handling each key entry.
-using ProtoKeyBodyProcesserFunction = absl::AnyInvocable<core::ExecutionResult(
-    const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest::
-        PrivacyBudgetKey& key_body,
-    const size_t key_index, absl::string_view reporting_origin)>;
-core::ExecutionResult ParseCommonV2TransactionRequestProto(
+using ProtoKeyBodyProcesserFunction =
+    absl::AnyInvocable<pbs_common::ExecutionResult(
+        const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest::
+            PrivacyBudgetKey& key_body,
+        const size_t key_index, absl::string_view reporting_origin)>;
+pbs_common::ExecutionResult ParseCommonV2TransactionRequestProto(
     absl::string_view authorized_domain,
     const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest& request_proto,
     ProtoKeyBodyProcesserFunction key_body_processer);
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

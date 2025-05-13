@@ -26,16 +26,12 @@
 
 #include "error_codes.h"
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-
 static constexpr char kHexMap[] = {"0123456789ABCDEF"};
 
 namespace privacy_sandbox::pbs_common {
 Uuid Uuid::GenerateUuid() noexcept {
   // TODO: Might want to use GetUniqueWallTimestampInNanoseconds()
-  static std::atomic<privacy_sandbox::pbs_common::Timestamp> current_clock(
+  static std::atomic<Timestamp> current_clock(
       TimeProvider::GetWallTimestampInNanosecondsAsClockTicks());
 
   uint64_t high = current_clock.fetch_add(1);
@@ -114,14 +110,12 @@ std::string ToString(const Uuid& uuid) noexcept {
 ExecutionResult FromString(const std::string& uuid_string,
                            Uuid& uuid) noexcept {
   if (uuid_string.length() != 36) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING);
+    return FailureExecutionResult(SC_UUID_INVALID_STRING);
   }
 
   if (uuid_string[8] != '-' || uuid_string[13] != '-' ||
       uuid_string[18] != '-' || uuid_string[23] != '-') {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING);
+    return FailureExecutionResult(SC_UUID_INVALID_STRING);
   }
 
   for (size_t i = 0; i < uuid_string.length(); ++i) {
@@ -131,13 +125,11 @@ ExecutionResult FromString(const std::string& uuid_string,
     }
 
     if (!std::isxdigit(c)) {
-      return FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING);
+      return FailureExecutionResult(SC_UUID_INVALID_STRING);
     }
 
     if (std::islower(c)) {
-      return FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING);
+      return FailureExecutionResult(SC_UUID_INVALID_STRING);
     }
   }
 

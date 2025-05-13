@@ -1,5 +1,52 @@
 # Changelog
 
+## [1.24.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.23.0...v1.24.0) (2025-05-13)
+### Important Note
+**[GCP]**
+- [Breaking change] Before deployment, please remove the following variables from the auto.tfvars for distributedpbs_application
+    ```
+    pbs_cloud_run_traffic_percentage = 100
+    deploy_pbs_cloud_run             = true
+    enable_pbs_cloud_run             = true
+    machine_type                     = "n2-standard-32"
+    root_volume_size_gb              = "512"
+    pbs_cloud_logging_enabled        = true
+    pbs_cloud_monitoring_enabled     = true
+    pbs_instance_allow_ssh           = false
+    enable_public_ip_address         = false
+    pbs_custom_vm_tags               = ["allow-health-checks"]
+    ```
+  - [To Rollback] Restore previous version of terraform.
+
+### Changes
+- INFRA
+  - [GCP] Refactor Cloud Armor security policy into shared module
+  - [GCP] Update coordinator demo environment to remove dependency on 'shared' directory
+- MPKGDS
+  - [GCP] Add Cloud Armor alerting policies for KMS.
+  - [GCP] Prepare initial Liquibase changeset for KeyDb (for future adoption)
+  - [GCP] Refactor SpannerKeyDbConfig to generic SpannerDatabaseConfig
+  - [GCP] Remove unused KeyDb readStaleness parameter
+  - [GCP] Replace SpannerMetadataDbConfig with generic SpannerDatabaseConfig
+  - [GCP] Simplify method names of SpannerDatabaseConfig
+  - [GCP] Simplify SpannerEmulatorContainerTestModule by passing config instead of individual args
+- OPERATOR
+  - [AWS] Delete AWS EBS volume on instance termination
+- BUILD
+  - [CA] Update container dependencies.
+- PBS
+  - [CA] Change config provider to use absl::StrSplit instead of SplitStringByDelimiter
+  - [CA] Change PeriodicClosure default to use real clock
+  - [CA] Clean up long namespaces that are specified in the //cc/...
+  - [CA] Delete unused codes under cc/core/utils
+  - [CA] Delete use of "cc/core/common/proto/common.proto" from C++ code
+  - [CA] Move "cc/core/utils" folders to privacy_sandbox::pbs_common namespace
+  - [CA] Move "cc/public/core" and telemetry codes to to privacy_sandbox::pbs_common namespace
+  - [CA] Move google::scp::pbs to the privacy_sandbox::pbs namespace
+  - [GCP] Add Cloud Armor alerting policies for PBS.
+  - [GCP] Delete GCE PBS terraform. All traffic is already being served by Cloud Run PBS
+  - [GCP] Unconditionally deploy Cloud Run PBS. Deprecate related tfvars.
+
 ## [1.23.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.22.0...v1.23.0) (2025-04-29)
 ### Important Note
 **[GCP]**

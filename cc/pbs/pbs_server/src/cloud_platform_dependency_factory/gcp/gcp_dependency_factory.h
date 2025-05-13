@@ -23,48 +23,44 @@
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  public:
   GcpDependencyFactory(
-      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-          config_provider);
+      std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider);
 
-  core::ExecutionResult Init() noexcept override;
+  pbs_common::ExecutionResult Init() noexcept override;
 
-  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+  std::unique_ptr<pbs_common::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor,
-      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
-          http_client) noexcept override;
+      std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<pbs_common::HttpClientInterface> http_client) noexcept
+      override;
 
-  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+  std::unique_ptr<pbs_common::AuthorizationProxyInterface>
   ConstructAwsAuthorizationProxyClient(
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor,
-      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
-          http_client) noexcept override;
+      std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<pbs_common::HttpClientInterface> http_client) noexcept
+      override;
 
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
-      privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor,
-      privacy_sandbox::pbs_common::AsyncExecutorInterface*
-          io_async_executor) noexcept override;
+      pbs_common::AsyncExecutorInterface* async_executor,
+      pbs_common::AsyncExecutorInterface* io_async_executor) noexcept override;
 
-  std::unique_ptr<core::MetricRouter> ConstructMetricRouter() noexcept override;
+  std::unique_ptr<pbs_common::MetricRouter> ConstructMetricRouter() noexcept
+      override;
 
   // This overload exists so that we can pass in a Resource from either this
   // dependency factory, or an integration test.
-  std::unique_ptr<core::MetricRouter> ConstructMetricRouter(
+  std::unique_ptr<pbs_common::MetricRouter> ConstructMetricRouter(
       opentelemetry::sdk::resource::Resource resource) noexcept;
 
  protected:
-  core::ExecutionResult ReadConfigurations();
+  pbs_common::ExecutionResult ReadConfigurations();
 
-  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-      config_provider_;
+  std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider_;
 
   // Configurations here
   std::string budget_key_table_name_;
@@ -73,4 +69,4 @@ class GcpDependencyFactory : public CloudPlatformDependencyFactoryInterface {
   std::string alternate_cloud_service_region_;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

@@ -154,6 +154,7 @@ variable "pbs_auth_cloudfunction_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
   nullable    = false
+  default     = 1
 }
 
 variable "pbs_auth_cloudfunction_max_instances" {
@@ -239,41 +240,6 @@ variable "pbs_application_environment_variables" {
   default     = [{}]
 }
 
-################################################################################
-# PBS VM Variables.
-################################################################################
-
-variable "machine_type" {
-  type     = string
-  nullable = false
-}
-
-variable "root_volume_size_gb" {
-  type     = string
-  nullable = false
-}
-
-variable "pbs_cloud_logging_enabled" {
-  description = "Enables cloud logging of the PBS instances."
-  type        = bool
-  nullable    = false
-  default     = true
-}
-
-variable "pbs_cloud_monitoring_enabled" {
-  description = "Enables cloud monitoring of the PBS instances."
-  type        = bool
-  nullable    = false
-  default     = true
-}
-
-variable "pbs_instance_allow_ssh" {
-  description = "Enables SSH to the PBS instances."
-  type        = bool
-  nullable    = false
-  default     = false
-}
-
 variable "pbs_service_account_email" {
   description = "The email of the service account to be used for the PBS instance permissions."
   type        = string
@@ -284,23 +250,6 @@ variable "pbs_remote_coordinator_service_account_email" {
   description = "The email of the service account for the PBS remote coordinator."
   type        = string
   default     = null
-}
-
-variable "pbs_custom_vm_tags" {
-  description = "List of custom tags to be set on the PBS VM instances."
-  type        = list(string)
-  nullable    = false
-  default     = []
-}
-
-variable "pbs_autoscaling_policy" {
-  description = "Auto-scaling policy for PBS instances."
-  type = object({
-    min_replicas           = number
-    max_replicas           = number
-    cpu_utilization_target = number
-  })
-  default = null
 }
 
 ################################################################################
@@ -326,13 +275,6 @@ variable "pbs_cloud_run_max_concurrency" {
   type        = number
   nullable    = false
   default     = 1000
-}
-
-variable "deploy_pbs_cloud_run" {
-  description = "If true, a Cloud Run PBS backend will be instantiated but not linked to the PBS load balancer"
-  type        = bool
-  nullable    = false
-  default     = false
 }
 
 ################################################################################
@@ -370,25 +312,6 @@ variable "pbs_main_port" {
   default     = 8080
 }
 
-variable "vpc_network_id" {
-  description = "The VPC ID. If left blank, the default network will be used."
-  type        = string
-  default     = null
-}
-
-variable "vpc_subnet_id" {
-  description = "The VPC subnetwork ID. Must be provided if using a custom VPC."
-  type        = string
-  default     = null
-}
-
-variable "enable_public_ip_address" {
-  description = "Whether to enable a public IP address on the created instances."
-  type        = bool
-  nullable    = false
-  default     = false
-}
-
 variable "enable_domain_management" {
   description = "value"
   type        = bool
@@ -404,41 +327,12 @@ variable "pbs_tls_alternate_names" {
 }
 
 ################################################################################
-# Health Check Variables.
-################################################################################
-
-variable "enable_health_check" {
-  description = "Whether to enable the managed instance group health check."
-  type        = bool
-  nullable    = false
-  default     = true
-}
-
-################################################################################
 # PBS Alternate domains
 ################################################################################
 
 output "pbs_alternate_instance_domain_record_data" {
   value       = module.distributedpbs_application.pbs_alternate_instance_domain_record_data
   description = "Alternate DNS record data."
-}
-
-################################################################################
-# URL Map Variables.
-################################################################################
-
-variable "pbs_cloud_run_traffic_percentage" {
-  description = "Specifies the percent of traffic sent to Cloud Run PBS."
-  type        = number
-  nullable    = false
-  default     = 0
-}
-
-variable "enable_pbs_cloud_run" {
-  description = "If true, the Cloud Run PBS backend will be linked to the PBS load balancer and will be able to serve traffi"
-  type        = bool
-  nullable    = false
-  default     = false
 }
 
 ################################################################################
@@ -475,4 +369,39 @@ variable "pbs_security_policy_rules" {
     })
   }))
   default = []
+}
+
+variable "enable_cloud_armor_alerts" {
+  description = <<-EOT
+    Enable alerts and incidents for Cloud Armor.
+
+    This turns on alerts and incidents for Cloud Armor in the Cloud
+    Monitoring dashboards, but does not turn on alert notification messages.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "enable_cloud_armor_notifications" {
+  description = <<-EOT
+    Enable alert notifications for Cloud Armor Alerts.
+
+    This turns on notification messages when Cloud Armor alerts fire. Note
+    alerts can only fire when enable_cloud_armor_alerts is true, and it
+    requires cloud_armor_notification_channel_id to be set.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "cloud_armor_notification_channel_id" {
+  description = <<-EOT
+    Notification channel to send Cloud Armor alert notifications to.
+
+    This only needs to be set when enable_cloud_armor_alerts and
+    enable_cloud_armor_notifications are both true, and must be set to a valid
+    google_monitoring_notification_channel resource id.
+  EOT
+  type        = string
+  default     = null
 }

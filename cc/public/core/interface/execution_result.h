@@ -17,13 +17,12 @@
 #ifndef SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
 #define SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <variant>
 
-#include "cc/core/common/proto/common.pb.h"
-
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 // Macro to shorten this pattern:
 // ExecutionResult result = foo();
@@ -42,10 +41,10 @@ namespace google::scp::core {
 // Example 2:
 // RETURN_IF_FAILURE(foo());
 // // If we reach this point, foo() was Successful.
-#define RETURN_IF_FAILURE(execution_result)                          \
-  if (::google::scp::core::ExecutionResult __res = execution_result; \
-      !__res.Successful()) {                                         \
-    return __res;                                                    \
+#define RETURN_IF_FAILURE(execution_result)                                    \
+  if (::privacy_sandbox::pbs_common::ExecutionResult __res = execution_result; \
+      !__res.Successful()) {                                                   \
+    return __res;                                                              \
   }
 
 // Same as above but logs an error before returning upon failure.
@@ -72,7 +71,7 @@ namespace google::scp::core {
 
 #define __RETURN_IF_FAILURE_LOG(execution_result, error_level, component_name, \
                                 activity_id, message, ...)                     \
-  if (::google::scp::core::ExecutionResult __res = execution_result;           \
+  if (::privacy_sandbox::pbs_common::ExecutionResult __res = execution_result; \
       !__res.Successful()) {                                                   \
     error_level(component_name, activity_id, __res, message, ##__VA_ARGS__);   \
     return __res;                                                              \
@@ -174,9 +173,6 @@ enum class ExecutionStatus {
   Retry = 2,
 };
 
-/// Convert ExecutionStatus to Proto.
-core::common::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status);
-
 std::string ExecutionStatusToString(const ExecutionStatus& status);
 
 /// Status code returned from operation execution.
@@ -201,9 +197,6 @@ struct ExecutionResult {
   constexpr ExecutionResult()
       : ExecutionResult(ExecutionStatus::Failure, SC_UNKNOWN) {}
 
-  explicit ExecutionResult(
-      const core::common::proto::ExecutionResult result_proto);
-
   bool operator==(const ExecutionResult& other) const {
     return status == other.status && status_code == other.status_code;
   }
@@ -211,8 +204,6 @@ struct ExecutionResult {
   bool operator!=(const ExecutionResult& other) const {
     return !operator==(other);
   }
-
-  core::common::proto::ExecutionResult ToProto();
 
   bool Successful() const { return *this == SuccessExecutionResult(); }
 
@@ -329,6 +320,6 @@ class ExecutionResultOr : public std::variant<ExecutionResult, T> {
   }
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 
 #endif  // SCP_CORE_INTERFACE_EXECUTION_RESULT_H_

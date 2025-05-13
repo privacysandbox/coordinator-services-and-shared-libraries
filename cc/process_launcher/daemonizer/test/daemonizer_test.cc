@@ -33,15 +33,9 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using ::privacy_sandbox::pbs_common::Uuid;
-using google::scp::core::test::ScpTestBase;
 using json = nlohmann::json;
-using google::scp::core::FailureExecutionResult;
-using ::privacy_sandbox::pbs_common::DAEMONIZER_INVALID_INPUT;
-using google::scp::core::test::ResultIs;
-using google::scp::process_launcher::ExecutableArgument;
 
-namespace google::scp::process_launcher::test {
+namespace privacy_sandbox::pbs_common {
 constexpr int five_hundres_ms = 500000;
 
 class DaemonizerForTests : public Daemonizer {
@@ -365,4 +359,4 @@ TEST_F(DaemonizerTest, ShouldNotRestartProcessIfConfigured) {
   // Make sure the daemonizer process exited
   waitpid(daemonizer_proc_id, NULL, 0);
 }
-}  // namespace google::scp::process_launcher::test
+}  // namespace privacy_sandbox::pbs_common

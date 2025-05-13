@@ -24,8 +24,8 @@ import com.google.inject.Singleton;
 import com.google.scp.operator.autoscaling.tasks.gcp.Annotations.TerminationWaitTimeout;
 import com.google.scp.operator.autoscaling.tasks.gcp.GcpInstanceManagementConfig;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.AsgInstancesDbSpannerTtlDays;
-import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbConfig;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbModule;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import java.time.Clock;
 import java.util.Map;
 
@@ -93,12 +93,12 @@ public final class WorkerScaleInModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(SpannerMetadataDbConfig.class)
+    bind(SpannerDatabaseConfig.class)
         .toInstance(
-            SpannerMetadataDbConfig.builder()
+            SpannerDatabaseConfig.builder()
                 .setGcpProjectId(getProjectId())
-                .setSpannerInstanceId(env.get(SPANNER_INSTANCE_ID_ENV_VAR))
-                .setSpannerDbName(env.get(SPANNER_DB_ID_ENV_VAR))
+                .setInstanceId(env.get(SPANNER_INSTANCE_ID_ENV_VAR))
+                .setDatabaseName(env.get(SPANNER_DB_ID_ENV_VAR))
                 .build());
     install(new SpannerMetadataDbModule());
     bind(GcpInstanceManagementConfig.class)

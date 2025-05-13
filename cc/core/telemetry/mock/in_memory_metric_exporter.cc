@@ -26,7 +26,7 @@
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk_config.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 InMemoryMetricExporter::InMemoryMetricExporter(
     bool is_otel_print_data_to_console_enabled, std::ostream& sout,
@@ -111,4 +111,4 @@ InMemoryMetricExporter::data() const {
   return data_;
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

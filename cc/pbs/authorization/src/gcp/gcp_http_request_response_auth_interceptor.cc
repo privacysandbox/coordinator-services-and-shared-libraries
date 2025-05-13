@@ -35,22 +35,24 @@
 #include "cc/core/utils/src/base64.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::utils::Base64Decode;
-using ::google::scp::core::utils::PadBase64Encoding;
 using ::privacy_sandbox::pbs_common::AuthorizationMetadata;
 using ::privacy_sandbox::pbs_common::AuthorizedDomain;
 using ::privacy_sandbox::pbs_common::AuthorizedMetadata;
+using ::privacy_sandbox::pbs_common::Base64Decode;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
+using ::privacy_sandbox::pbs_common::PadBase64Encoding;
+using ::privacy_sandbox::pbs_common::RetryExecutionResult;
+using ::privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using std::make_pair;
 using std::make_shared;
 using std::shared_ptr;
@@ -79,16 +81,14 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
     HttpRequest& http_request) {
   if (authorization_metadata.authorization_token.length() == 0 ||
       authorization_metadata.claimed_identity.length() == 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   // The token is split like so: <HEADER>.<PAYLOAD>.<SIGNATURE>
   vector<string> parts =
       absl::StrSplit(authorization_metadata.authorization_token, '.');
   if (parts.size() != kIdTokenParts) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   // The JSON Web Token (JWT) lives in the middle (1) part of the whole
@@ -103,16 +103,14 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
   string token;
   auto execution_result = Base64Decode(*padded_token_or, token);
   if (!execution_result) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   json json_token;
   try {
     json_token = json::parse(token);
   } catch (...) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
   // Check if all the required fields are present
   if (!std::all_of(GetRequiredJWTComponents().begin(),
@@ -120,8 +118,7 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
                    [&json_token](const auto& component) {
                      return json_token.contains(component);
                    })) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   http_request.headers->insert({string(kClaimedIdentityHeader),
@@ -135,7 +132,7 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
   return SuccessExecutionResult();
 }
 
-core::ExecutionResultOr<AuthorizedMetadata>
+ExecutionResultOr<AuthorizedMetadata>
 GcpHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     const AuthorizationMetadata&, const HttpResponse& http_response) {
   string body_str = http_response.body.ToString();
@@ -146,12 +143,11 @@ GcpHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     parse_fail = false;
   } catch (...) {}
   if (parse_fail || !body_json.contains(kAuthorizedDomain)) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   return AuthorizedMetadata{.authorized_domain = make_shared<AuthorizedDomain>(
                                 body_json[kAuthorizedDomain].get<string>())};
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

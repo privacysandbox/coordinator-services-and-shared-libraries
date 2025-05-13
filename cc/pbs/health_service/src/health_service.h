@@ -29,30 +29,27 @@
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/observer_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 /**
  * @brief To provide health check functionality, a health service will return
  * success execution result to all health inquiries.
  */
-class HealthService : public privacy_sandbox::pbs_common::ServiceInterface {
+class HealthService : public pbs_common::ServiceInterface {
  public:
   HealthService(
-      const std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>&
-          http_server,
-      const std::shared_ptr<
-          privacy_sandbox::pbs_common::ConfigProviderInterface>&
+      const std::shared_ptr<pbs_common::HttpServerInterface>& http_server,
+      const std::shared_ptr<pbs_common::ConfigProviderInterface>&
           config_provider,
-      const std::shared_ptr<
-          privacy_sandbox::pbs_common::AsyncExecutorInterface>& async_executor)
+      const std::shared_ptr<pbs_common::AsyncExecutorInterface>& async_executor)
       : http_server_(http_server),
         config_provider_(config_provider),
         async_executor_(async_executor) {}
 
   ~HealthService();
 
-  core::ExecutionResult Init() noexcept override;
-  core::ExecutionResult Run() noexcept override;
-  core::ExecutionResult Stop() noexcept override;
+  pbs_common::ExecutionResult Init() noexcept override;
+  pbs_common::ExecutionResult Run() noexcept override;
+  pbs_common::ExecutionResult Stop() noexcept override;
 
  protected:
   // Callback to be used with an OTel ObservableInstrument.
@@ -71,19 +68,20 @@ class HealthService : public privacy_sandbox::pbs_common::ServiceInterface {
    * @brief Returns success if the instance if healthy.
    *
    * @param http_context The http context of the operation.
-   * @return core::ExecutionResult The execution result of the operation.
+   * @return pbs_common::ExecutionResult The execution result
+   * of the operation.
    */
-  core::ExecutionResult CheckHealth(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context) noexcept;
+  pbs_common::ExecutionResult CheckHealth(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>&
+          http_context) noexcept;
 
   /**
    * @brief Check the memory and storage usage to determine heath.
    *
-   * @return core::ExecutionResult
+   * @return pbs_common::ExecutionResult
    */
-  virtual core::ExecutionResult CheckMemoryAndStorageUsage() noexcept;
+  virtual pbs_common::ExecutionResult CheckMemoryAndStorageUsage() noexcept;
 
   /**
    * @brief Whether to perform a memory and storage usage check and count
@@ -105,9 +103,9 @@ class HealthService : public privacy_sandbox::pbs_common::ServiceInterface {
    * @brief Get the percentage of memory that is currently being used in this
    * system.
    *
-   * @return core::ExecutionResultOr<int>
+   * @return pbs_common::ExecutionResultOr<int>
    */
-  core::ExecutionResultOr<int> GetMemoryUsagePercentage() noexcept;
+  pbs_common::ExecutionResultOr<int> GetMemoryUsagePercentage() noexcept;
 
   /**
    * @brief Get the File System Space Info object
@@ -115,27 +113,24 @@ class HealthService : public privacy_sandbox::pbs_common::ServiceInterface {
    * @param directory
    * @return ExecutionResultOr<std::filesystem::space_info>
    */
-  virtual core::ExecutionResultOr<std::filesystem::space_info>
+  virtual pbs_common::ExecutionResultOr<std::filesystem::space_info>
   GetFileSystemSpaceInfo(std::string directory) noexcept;
 
   /**
    * @brief Get the percentage of storage that is currently being used in this
    * directory or mount point.
    *
-   * @return core::ExecutionResultOr<int>
+   * @return pbs_common::ExecutionResultOr<int>
    */
-  core::ExecutionResultOr<int> GetFileSystemStorageUsagePercentage(
+  pbs_common::ExecutionResultOr<int> GetFileSystemStorageUsagePercentage(
       const std::string& directory) noexcept;
 
   // An instance of the http server.
-  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
-      http_server_;
+  std::shared_ptr<pbs_common::HttpServerInterface> http_server_;
   // An instance of the config provider.
-  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-      config_provider_;
+  std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider_;
   // Async executor instance.
-  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-      async_executor_;
+  std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor_;
   // The OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
   // The OpenTelemetry Instrument for instance memory usage.
@@ -146,4 +141,4 @@ class HealthService : public privacy_sandbox::pbs_common::ServiceInterface {
       filesystem_storage_usage_instrument_;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

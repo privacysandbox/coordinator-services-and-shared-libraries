@@ -21,7 +21,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/core/interface/config_provider_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 class GrpcAuthConfig {
  public:
@@ -30,8 +30,7 @@ class GrpcAuthConfig {
   GrpcAuthConfig(std::string service_account, std::string audience,
                  std::string cred_config = "");
 
-  explicit GrpcAuthConfig(
-      privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider);
+  explicit GrpcAuthConfig(ConfigProviderInterface& config_provider);
 
   // Common for both GCP and AWS
   absl::string_view service_account() const;
@@ -49,4 +48,4 @@ class GrpcAuthConfig {
   std::string audience_;
   std::string cred_config_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

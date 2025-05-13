@@ -36,13 +36,6 @@
 namespace privacy_sandbox::pbs_common {
 namespace {
 
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::test::IsSuccessfulAndHolds;
-using ::google::scp::core::test::ResultIs;
-using ::privacy_sandbox::pbs_common::WaitUntil;
-using ::privacy_sandbox::pbs_common::MockAsyncExecutorWithInternals;
 using std::atomic;
 using std::make_shared;
 using std::map;

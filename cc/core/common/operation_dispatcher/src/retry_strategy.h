@@ -32,10 +32,9 @@ enum class RetryStrategyType {
 struct RetryStrategyOptions {
   RetryStrategyOptions() = delete;
 
-  RetryStrategyOptions(
-      RetryStrategyType retry_strategy_type,
-      privacy_sandbox::pbs_common::TimeDuration delay_duration_ms,
-      size_t maximum_allowed_retry_count)
+  RetryStrategyOptions(RetryStrategyType retry_strategy_type,
+                       TimeDuration delay_duration_ms,
+                       size_t maximum_allowed_retry_count)
       : retry_strategy_type(retry_strategy_type),
         delay_duration_ms(delay_duration_ms),
         maximum_allowed_retry_count(maximum_allowed_retry_count) {}
@@ -44,7 +43,7 @@ struct RetryStrategyOptions {
   const RetryStrategyType retry_strategy_type;
 
   /// The initial delay for any types of retries in milliseconds.
-  const privacy_sandbox::pbs_common::TimeDuration delay_duration_ms;
+  const TimeDuration delay_duration_ms;
 
   /// The maximum number of retries that is allowed.
   const size_t maximum_allowed_retry_count;
@@ -69,7 +68,7 @@ class RetryStrategy {
    * allowed.
    */
   RetryStrategy(RetryStrategyType retry_strategy_type,
-                privacy_sandbox::pbs_common::TimeDuration delay_duration_ms,
+                TimeDuration delay_duration_ms,
                 size_t maximum_allowed_retry_count)
       : retry_strategy_type_(retry_strategy_type),
         delay_duration_ms_(delay_duration_ms),
@@ -87,8 +86,7 @@ class RetryStrategy {
    * @param retry_count The number of retries.
    * @return TimeDuration The back off duration in milliseconds.
    */
-  privacy_sandbox::pbs_common::TimeDuration GetBackOffDurationInMilliseconds(
-      size_t retry_count) {
+  TimeDuration GetBackOffDurationInMilliseconds(size_t retry_count) {
     if (retry_count == 0) {
       return 0;
     }
@@ -113,7 +111,7 @@ class RetryStrategy {
   /// Retry strategy type.
   RetryStrategyType retry_strategy_type_;
   /// The delay in the back off time in milliseconds.
-  privacy_sandbox::pbs_common::TimeDuration delay_duration_ms_;
+  TimeDuration delay_duration_ms_;
   /// Maximum allowed retry count for the retry strategy.
   size_t maximum_allowed_retry_count_;
 };

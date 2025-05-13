@@ -15,13 +15,13 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_PBS_TELEMETRY_FAKE, 0x0235)
 
-DEFINE_ERROR_CODE(
-    SC_TELEMETRY_FAKE_COULD_NOT_EXPORT_DATA, SC_PBS_TELEMETRY_FAKE, 0x0001,
-    "Metric reader could not export/force-flush the data",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TELEMETRY_FAKE_COULD_NOT_EXPORT_DATA,
+                  SC_PBS_TELEMETRY_FAKE, 0x0001,
+                  "Metric reader could not export/force-flush the data",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

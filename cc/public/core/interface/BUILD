@@ -18,7 +18,6 @@ package(default_visibility = ["//cc:pbs_visibility"])
 
 cc_library(
     name = "errors",
-    srcs = ["//cc/public/core/src:errors.cc"],
     hdrs =
         [
             "errors.h",
@@ -36,6 +35,6 @@ cc_library(
             "execution_result.h",
         ],
     deps = [
-        "//cc/core/common/proto:core_common_proto_lib",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )

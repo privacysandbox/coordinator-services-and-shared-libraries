@@ -27,18 +27,18 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::pbs::test {
+namespace privacy_sandbox::pbs {
 
 namespace {
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::errors::SC_PBS_INVALID_HTTP2_SERVER_CERT_FILE_PATH;
-using ::google::scp::core::errors::
-    SC_PBS_INVALID_HTTP2_SERVER_PRIVATE_KEY_FILE_PATH;
-using ::google::scp::core::test::ResultIs;
+
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
 using ::privacy_sandbox::pbs_common::EnvConfigProvider;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
+using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
+using ::privacy_sandbox::pbs_common::ResultIs;
 using std::make_shared;
 using std::shared_ptr;
 
@@ -220,7 +220,7 @@ TEST_F(PBSInstanceConfiguration, ReadConfigurationReadsAllConfigs) {
   config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
   config_provider->Set(kContainerType, kComputeEngine);
 
-  core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
+  ExecutionResultOr<PBSInstanceConfig> pbs_config =
       GetPBSInstanceConfigFromConfigProvider(config_provider);
   EXPECT_SUCCESS(pbs_config);
 
@@ -253,9 +253,9 @@ TEST_F(PBSInstanceConfiguration, ConfigNotSetShouldUseDefaultValue) {
   config_provider->Set(kHttp2ServerCertificateFilePath, "/cert/path");
   config_provider->Set(kContainerType, kComputeEngine);
 
-  core::ExecutionResultOr<PBSInstanceConfig> pbs_config =
+  ExecutionResultOr<PBSInstanceConfig> pbs_config =
       GetPBSInstanceConfigFromConfigProvider(config_provider);
   EXPECT_SUCCESS(pbs_config);
 }
 }  // namespace
-}  // namespace google::scp::pbs::test
+}  // namespace privacy_sandbox::pbs

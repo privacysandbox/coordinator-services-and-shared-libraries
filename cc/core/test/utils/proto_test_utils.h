@@ -20,11 +20,11 @@
 
 #include <google/protobuf/util/message_differencer.h>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 /// Matcher to compare protos.
 MATCHER_P(EqualsProto, expected, "") {
   std::string explanation;
-  protobuf::util::MessageDifferencer differ;
+  google::protobuf::util::MessageDifferencer differ;
   differ.ReportDifferencesToString(&explanation);
   if (!differ.Compare(expected, arg)) {
     *result_listener << explanation;
@@ -38,4 +38,4 @@ MATCHER(EqualsProto, "") {
   return testing::ExplainMatchResult(EqualsProto(expected), actual,
                                      result_listener);
 }
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

@@ -25,7 +25,7 @@
 #include "opentelemetry/sdk/trace/sampler.h"
 #include "opentelemetry/trace/tracer.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief A mock TraceRouter for testing purposes.
@@ -97,5 +97,5 @@ class TraceRouterFake : public TraceRouter {
  private:
   std::shared_ptr<SpanExporterFake> span_exporter_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_MOCK_TRACE_TRACE_ROUTER_FAKE_H_

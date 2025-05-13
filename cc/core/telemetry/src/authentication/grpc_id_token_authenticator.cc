@@ -22,7 +22,7 @@
 
 #include "cc/core/telemetry/src/authentication/gcp_token_fetcher.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 // Token validity
 // Defaults to 1hr
@@ -92,4 +92,4 @@ GrpcIdTokenAuthenticator::expiry_time() const {
 bool GrpcIdTokenAuthenticator::IsExpired() const {
   return std::chrono::system_clock::now() >= expiry_time_;
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

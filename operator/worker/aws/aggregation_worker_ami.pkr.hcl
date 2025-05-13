@@ -54,6 +54,7 @@ source "amazon-ebs" "sample-ami" {
   launch_block_device_mappings {
     device_name = "/dev/xvda"
     volume_size = 8
+    delete_on_termination = true
   }
   ssh_username = "ec2-user"
   ssh_timeout = "15m"

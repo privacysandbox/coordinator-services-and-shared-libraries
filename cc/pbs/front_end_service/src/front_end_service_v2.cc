@@ -46,31 +46,22 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
 using ::google::protobuf::util::JsonStringToMessage;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::MetricRouter;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_INITIALIZATION_FAILED;
-using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
-using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE;
-using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
-using ::google::scp::core::utils::GetUserAgentOrUnknownValue;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
+using ::privacy_sandbox::pbs_common::GetClaimedIdentityOrUnknownValue;
 using ::privacy_sandbox::pbs_common::GetErrorMessage;
 using ::privacy_sandbox::pbs_common::GetErrorName;
+using ::privacy_sandbox::pbs_common::GetUserAgentOrUnknownValue;
+using ::privacy_sandbox::pbs_common::GlobalLogger;
 using ::privacy_sandbox::pbs_common::HttpHandler;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpMethod;
@@ -82,6 +73,8 @@ using ::privacy_sandbox::pbs_common::kPbsClaimedIdentityLabel;
 using ::privacy_sandbox::pbs_common::kScpHttpRequestClientVersionLabel;
 using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::privacy_sandbox::pbs_common::LogLevel;
+using ::privacy_sandbox::pbs_common::MetricRouter;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::privacy_sandbox::pbs_common::Timestamp;
 using ::privacy_sandbox::pbs_common::ToString;
 using ::privacy_sandbox::pbs_common::Uuid;
@@ -526,9 +519,8 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
     return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE);
   }
 
-  if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&
-      privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(
-          LogLevel::kDebug)) {
+  if (GlobalLogger::GetGlobalLogger() &&
+      GlobalLogger::IsLogLevelEnabled(LogLevel::kDebug)) {
     SCP_DEBUG_CONTEXT(
         kFrontEndService, http_context,
         absl::StrFormat("Starting Transaction: %s Total Keys: %lld",
@@ -611,7 +603,7 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
 
   if (!consume_budget_context.result.Successful()) {
     if (consume_budget_context.result.status_code ==
-        errors::SC_CONSUME_BUDGET_EXHAUSTED) {
+        SC_CONSUME_BUDGET_EXHAUSTED) {
       SCP_WARNING_CONTEXT(
           kFrontEndService, http_context,
           absl::StrFormat(
@@ -716,4 +708,4 @@ ExecutionResult FrontEndServiceV2::GetTransactionStatus(
   return FailureExecutionResult(
       SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT);
 }
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

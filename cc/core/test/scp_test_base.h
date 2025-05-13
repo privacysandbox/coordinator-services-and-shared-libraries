@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Base class for SCP tests
  */
@@ -32,4 +32,4 @@ class ScpTestBase : public ::testing::Test {
 #endif
   }
 };
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

@@ -83,8 +83,7 @@ std::string ToString(const Uuid& uuid) noexcept;
  * @param uuid The output uuid.
  * @return ExecutionResult The execution result of the operation.
  */
-google::scp::core::ExecutionResult FromString(const std::string& uuid_string,
-                                              Uuid& uuid) noexcept;
+ExecutionResult FromString(const std::string& uuid_string, Uuid& uuid) noexcept;
 
 static constexpr Uuid kZeroUuid{0ULL, 0ULL};
 }  // namespace privacy_sandbox::pbs_common

@@ -40,24 +40,22 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::test::IsSuccessful;
-using ::google::scp::core::test::IsSuccessfulAndHolds;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::utils::Base64Encode;
 using ::privacy_sandbox::pbs_common::AuthorizationMetadata;
+using ::privacy_sandbox::pbs_common::Base64Encode;
 using ::privacy_sandbox::pbs_common::BytesBuffer;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::IsSuccessful;
+using ::privacy_sandbox::pbs_common::IsSuccessfulAndHolds;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
-using ::std::make_shared;
-using ::std::string;
-using ::std::vector;
+using ::privacy_sandbox::pbs_common::ResultIs;
+using ::privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
 using ::testing::Eq;
 using ::testing::FieldsAre;
 using ::testing::Pointee;
@@ -68,9 +66,9 @@ constexpr char kAuthorizationHeader[] = "Authorization";
 
 constexpr char kIdentity[] = "identity";
 
-const vector<string>& GetRequiredJWTComponents() {
+const std::vector<std::string>& GetRequiredJWTComponents() {
   static const auto* const components =
-      new vector<string>{"iss", "aud", "sub", "iat", "exp"};
+      new std::vector<std::string>{"iss", "aud", "sub", "iat", "exp"};
   return *components;
 }
 
@@ -84,7 +82,7 @@ class GcpHttpRequestResponseAuthInterceptorTest : public testing::Test {
         "iat": "issued_at",
         "exp": "expiration"
       })""");
-    string jwt;
+    std::string jwt;
     if (!Base64Encode(token_json_.dump(), jwt).Successful()) {
       throw std::runtime_error("error encoding");
     }
@@ -92,7 +90,7 @@ class GcpHttpRequestResponseAuthInterceptorTest : public testing::Test {
         absl::StrCat("header.", jwt, ".signature");
     authorization_metadata_.claimed_identity = kIdentity;
 
-    http_request_.headers = make_shared<HttpHeaders>();
+    http_request_.headers = std::make_shared<HttpHeaders>();
   }
 
   json token_json_;
@@ -141,14 +139,12 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
   AuthorizationMetadata bad_metadata;
   EXPECT_THAT(
       subject_.PrepareRequest(bad_metadata, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   bad_metadata.authorization_token = "some_token";
   EXPECT_THAT(
       subject_.PrepareRequest(bad_metadata, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
@@ -156,27 +152,24 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
   for (const auto& key : GetRequiredJWTComponents()) {
     json incomplete_json = token_json_;
     incomplete_json.erase(key);
-    string jwt;
+    std::string jwt;
     EXPECT_THAT(Base64Encode(incomplete_json.dump(), jwt), IsSuccessful());
     authorization_metadata_.authorization_token =
         absl::StrCat("header.", jwt, ".signature");
     EXPECT_THAT(
         subject_.PrepareRequest(authorization_metadata_, http_request_),
-        ResultIs(core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+        ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
   }
 
   authorization_metadata_.authorization_token = "two.parts";
   EXPECT_THAT(
       subject_.PrepareRequest(authorization_metadata_, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   authorization_metadata_.authorization_token = "bad.json.web_token";
   EXPECT_THAT(
       subject_.PrepareRequest(authorization_metadata_, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(GcpHttpRequestResponseAuthInterceptorTest, ObtainAuthorizedMetadata) {
@@ -204,9 +197,8 @@ TEST_F(GcpHttpRequestResponseAuthInterceptorTest,
   EXPECT_THAT(
       subject_.ObtainAuthorizedMetadataFromResponse(request_auth_metadata,
                                                     http_response),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

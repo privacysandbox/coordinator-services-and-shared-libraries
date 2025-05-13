@@ -19,7 +19,7 @@
 
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::test::internal {
+namespace privacy_sandbox::pbs_common {
 std::string ToString(ExecutionStatus status) {
   switch (status) {
     case ExecutionStatus::Success:
@@ -32,4 +32,4 @@ std::string ToString(ExecutionStatus status) {
       return "UNKNOWN EXECUTIONSTATUS";
   }
 }
-}  // namespace google::scp::core::test::internal
+}  // namespace privacy_sandbox::pbs_common

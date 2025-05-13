@@ -22,7 +22,7 @@
 #include "opentelemetry/trace/span_context.h"
 #include "opentelemetry/trace/trace_id.h"
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 namespace {
 
 // Helper function to create a TraceId with a specific uint64_t value.
@@ -129,4 +129,4 @@ TEST_F(TraceSamplerTest, ShouldNotSampleWithNotSampledParentContext) {
 }
 
 }  // namespace
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

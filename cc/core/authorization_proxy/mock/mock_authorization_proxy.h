@@ -20,10 +20,9 @@
 
 #include "cc/core/interface/authorization_proxy_interface.h"
 
-namespace google::scp::core::authorization_proxy::mock {
+namespace privacy_sandbox::pbs_common {
 
-class MockAuthorizationProxy
-    : public privacy_sandbox::pbs_common::AuthorizationProxyInterface {
+class MockAuthorizationProxy : public AuthorizationProxyInterface {
  public:
   MOCK_METHOD(ExecutionResult, Init, (), (noexcept, override));
 
@@ -31,10 +30,9 @@ class MockAuthorizationProxy
 
   MOCK_METHOD(ExecutionResult, Stop, (), (noexcept, override));
 
-  MOCK_METHOD(ExecutionResult, Authorize,
-              ((privacy_sandbox::pbs_common::AsyncContext<
-                  privacy_sandbox::pbs_common::AuthorizationProxyRequest,
-                  privacy_sandbox::pbs_common::AuthorizationProxyResponse>&)),
-              (noexcept, override));
+  MOCK_METHOD(
+      ExecutionResult, Authorize,
+      ((AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&)),
+      (noexcept, override));
 };
-}  // namespace google::scp::core::authorization_proxy::mock
+}  // namespace privacy_sandbox::pbs_common

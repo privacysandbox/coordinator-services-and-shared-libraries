@@ -28,28 +28,29 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 
 /** Module for spanner key db. */
 public final class SpannerKeyDbModule extends AbstractModule {
 
   private static final LazySpannerInitializer SPANNER_INITIALIZER = new LazySpannerInitializer();
 
-  /** Caller is expected to bind {@link SpannerKeyDbConfig}. */
+  /** Caller is expected to bind {@link SpannerDatabaseConfig}. */
   public SpannerKeyDbModule() {}
 
   @Provides
   @Singleton
   @KeyDbClient
-  public DatabaseClient getDatabaseClient(SpannerKeyDbConfig config) throws Exception {
+  public DatabaseClient getDatabaseClient(SpannerDatabaseConfig config) throws Exception {
     if (config.endpointUrl().isPresent()) {
       return getDatabaseClientByEndpointUrl(config);
     }
     DatabaseId dbId =
-        DatabaseId.of(config.gcpProjectId(), config.spannerInstanceId(), config.spannerDbName());
+        DatabaseId.of(config.gcpProjectId(), config.instanceId(), config.databaseName());
     return SPANNER_INITIALIZER.get().getDatabaseClient(dbId);
   }
 
-  private static DatabaseClient getDatabaseClientByEndpointUrl(SpannerKeyDbConfig config) {
+  private static DatabaseClient getDatabaseClientByEndpointUrl(SpannerDatabaseConfig config) {
     String endpointUrl = config.endpointUrl().get();
     SpannerOptions.Builder spannerOptions =
         SpannerOptions.newBuilder().setProjectId(config.gcpProjectId());
@@ -59,8 +60,8 @@ public final class SpannerKeyDbModule extends AbstractModule {
       spannerOptions.setHost(endpointUrl);
     }
     Spanner spanner = spannerOptions.build().getService();
-    InstanceId instanceId = InstanceId.of(config.gcpProjectId(), config.spannerInstanceId());
-    DatabaseId databaseId = DatabaseId.of(instanceId, config.spannerDbName());
+    InstanceId instanceId = InstanceId.of(config.gcpProjectId(), config.instanceId());
+    DatabaseId databaseId = DatabaseId.of(instanceId, config.databaseName());
     return spanner.getDatabaseClient(databaseId);
   }
 

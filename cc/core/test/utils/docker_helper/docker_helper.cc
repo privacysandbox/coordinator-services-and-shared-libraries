@@ -32,7 +32,7 @@ static constexpr char kLocalstackImage[] = "localstack/localstack:1.0.3";
 static constexpr char kGcpImage[] =
     "gcr.io/google.com/cloudsdktool/google-cloud-cli:380.0.0-emulators";
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 string PortMapToSelf(string port) {
   return port + ":" + port;
 }
@@ -146,4 +146,4 @@ std::string GetIpAddress(const std::string& network_name,
   return result.substr(0, length);
 }
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

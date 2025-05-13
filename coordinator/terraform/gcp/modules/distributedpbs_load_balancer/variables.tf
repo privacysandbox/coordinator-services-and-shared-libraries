@@ -70,26 +70,8 @@ variable "pbs_cloud_run_name" {
   nullable    = false
 }
 
-variable "pbs_managed_instance_group_url" {
-  description = "The URL of the PBS managed instance group."
-  type        = string
-  nullable    = false
-}
-
-variable "pbs_named_port" {
-  description = "The name of the port that PBS uses. This is a string value which represents the managed instance group named port. Should map to pbs_main_port."
-  type        = string
-  nullable    = false
-}
-
 variable "pbs_main_port" {
   description = "The port to access the main PBS. Should map to pbs_named_port."
-  type        = number
-  nullable    = false
-}
-
-variable "pbs_health_check_port" {
-  description = "The health check port for PBS."
   type        = number
   nullable    = false
 }
@@ -99,40 +81,10 @@ variable "pbs_vpc_network_id" {
   type        = string
 }
 
-variable "pbs_instance_target_tag" {
-  description = "The tag added to instances that the load balancer traffic should reach."
-  type        = string
-  nullable    = false
-}
-
-variable "pbs_instance_allow_ssh" {
-  description = "Whether to allow ssh traffic through firewall."
-  type        = bool
-  nullable    = false
-}
-
 variable "pbs_tls_alternate_names" {
   description = "PBS Subject Alternative Names for the TLS cert"
   type        = list(string)
   nullable    = true
-}
-
-variable "pbs_cloud_run_traffic_percentage" {
-  description = "Specifies the percent of traffic sent to Cloud Run PBS."
-  type        = number
-  nullable    = false
-}
-
-variable "deploy_pbs_cloud_run" {
-  description = "If true, a Cloud Run PBS backend will be instantiated and attached to the PBS load balancer"
-  type        = bool
-  nullable    = false
-}
-
-variable "enable_pbs_cloud_run" {
-  description = "If true, the Cloud Run PBS backend will be linked to the PBS load balancer and will be able to serve traffi"
-  type        = bool
-  nullable    = false
 }
 
 ################################################################################
@@ -166,4 +118,22 @@ variable "pbs_security_policy_rules" {
       })
     })
   }))
+}
+
+variable "enable_cloud_armor_alerts" {
+  description = "Enable alerts and incidents for Cloud Armor."
+  type        = bool
+  default     = false
+}
+
+variable "enable_cloud_armor_notifications" {
+  description = "Enable alert notifications for Cloud Armor to cloud_armor_notification_channel_id."
+  type        = bool
+  default     = false
+}
+
+variable "cloud_armor_notification_channel_id" {
+  description = "Notification channel to send Cloud Armor alert notifications to."
+  type        = string
+  default     = null
 }

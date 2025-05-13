@@ -26,7 +26,7 @@
 #include "google/cloud/spanner/results.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 inline constexpr absl::string_view kBudgetTableBudgetKeyColumn = "Budget_Key";
 inline constexpr absl::string_view kBudgetTableTimeframeColumn = "Timeframe";
@@ -39,7 +39,7 @@ inline constexpr absl::string_view kBudgetTypeBinaryBudget =
 // Results while trying to create spanner mutations from the related rows.
 struct SpannerMutationsResult {
   google::cloud::Status status;
-  google::scp::core::ExecutionResult execution_result;
+  pbs_common::ExecutionResult execution_result;
   std::vector<size_t> budget_exhausted_indices;
   google::cloud::spanner::Mutations mutations;
 };
@@ -57,13 +57,13 @@ class BudgetConsumer {
    * @param authorized_domain The authorized domain in HTTP auth headers.
    * @param request_headers The headers from the HTTP request.
    * @param request_body The body of the HTTP request.
-   * @return core::ExecutionResult The execution result of the operation.
+   * @return ExecutionResult The execution result of the operation.
    */
   [[deprecated(
       "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-  virtual core::ExecutionResult ParseTransactionRequest(
-      const privacy_sandbox::pbs_common::AuthContext& auth_context,
-      const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
+  virtual pbs_common::ExecutionResult ParseTransactionRequest(
+      const pbs_common::AuthContext& auth_context,
+      const pbs_common::HttpHeaders& request_headers,
       const nlohmann::json& request_body) = 0;
 
   /**
@@ -73,11 +73,11 @@ class BudgetConsumer {
    * @param authorized_domain The authorized domain in HTTP auth headers.
    * @param request_headers The headers from the HTTP request.
    * @param request_proto The request proto derived from the HTTP request body.
-   * @return core::ExecutionResult The execution result of the operation.
+   * @return ExecutionResult The execution result of the operation.
    */
-  virtual core::ExecutionResult ParseTransactionRequest(
-      const privacy_sandbox::pbs_common::AuthContext& auth_context,
-      const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
+  virtual pbs_common::ExecutionResult ParseTransactionRequest(
+      const pbs_common::AuthContext& auth_context,
+      const pbs_common::HttpHeaders& request_headers,
       const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
           request_proto) = 0;
 
@@ -117,7 +117,7 @@ class BudgetConsumer {
    *
    * @return Returns the columns to read from the datababse
    */
-  virtual google::scp::core::ExecutionResultOr<std::vector<std::string>>
+  virtual pbs_common::ExecutionResultOr<std::vector<std::string>>
   GetReadColumns() {
     return std::vector<std::string>{
         std::string(kBudgetTableBudgetKeyColumn),
@@ -127,6 +127,6 @@ class BudgetConsumer {
   }
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs
 
 #endif  // CC_PBS_CONSUME_BUDGET_SRC_BUDGET_CONSUMER_H_

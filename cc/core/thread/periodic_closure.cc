@@ -56,12 +56,12 @@ PeriodicClosure::PeriodicClosure(absl::Duration interval,
     : interval_(interval),
       startup_delay_(startup_delay),
       closure_(std::move(closure)) {
-  clock_ = std::make_shared<internal::SimulatedClock>();
+  clock_ = std::make_shared<Clock>();
 }
 
 PeriodicClosure::PeriodicClosure(absl::Duration interval,
                                  absl::AnyInvocable<void()> closure,
-                                 std::shared_ptr<internal::Clock> clock,
+                                 std::shared_ptr<Clock> clock,
                                  absl::Duration startup_delay)
     : interval_(interval),
       startup_delay_(startup_delay),

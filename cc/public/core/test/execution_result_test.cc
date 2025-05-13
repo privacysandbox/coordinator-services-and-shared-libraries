@@ -17,26 +17,18 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "cc/core/common/global_logger/src/global_logger.h"
-#include "cc/core/common/proto/common.pb.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/logger_interface.h"
 #include "cc/core/logger/mock/mock_logger.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::core::test {
-using ::privacy_sandbox::pbs_common::AsyncContext;
-using ::privacy_sandbox::pbs_common::GlobalLogger;
-using ::privacy_sandbox::pbs_common::LoggerInterface;
-using ::privacy_sandbox::pbs_common::MockLogger;
-using std::function;
-using std::make_unique;
-using std::pair;
-using std::string;
-using std::unique_ptr;
-using std::vector;
+namespace privacy_sandbox::pbs_common {
 using ::testing::_;
 using ::testing::ElementsAre;
 using ::testing::Eq;
@@ -46,60 +38,6 @@ using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::Pointee;
 using ::testing::UnorderedPointwise;
-
-TEST(ExecutionResultTest, ToProto) {
-  auto success = SuccessExecutionResult();
-  auto actual_result = success.ToProto();
-  EXPECT_EQ(actual_result.status(),
-            core::common::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS);
-  EXPECT_EQ(actual_result.status_code(), 0);
-
-  FailureExecutionResult failure(2);
-  actual_result = failure.ToProto();
-  EXPECT_EQ(actual_result.status(),
-            core::common::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE);
-  EXPECT_EQ(actual_result.status_code(), 2);
-
-  RetryExecutionResult retry(2);
-  actual_result = retry.ToProto();
-  EXPECT_EQ(actual_result.status(),
-            core::common::proto::ExecutionStatus::EXECUTION_STATUS_RETRY);
-  EXPECT_EQ(actual_result.status_code(), 2);
-}
-
-TEST(ExecutionResultTest, FromProto) {
-  core::common::proto::ExecutionResult success_proto;
-  success_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS);
-  auto actual_result = ExecutionResult(success_proto);
-  EXPECT_EQ(actual_result.status, ExecutionStatus::Success);
-  EXPECT_EQ(actual_result.status_code, 0);
-
-  core::common::proto::ExecutionResult failure_proto;
-  failure_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE);
-  failure_proto.set_status_code(2);
-  actual_result = ExecutionResult(failure_proto);
-  EXPECT_EQ(actual_result.status, ExecutionStatus::Failure);
-  EXPECT_EQ(actual_result.status_code, 2);
-
-  core::common::proto::ExecutionResult retry_proto;
-  retry_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_RETRY);
-  retry_proto.set_status_code(2);
-  actual_result = ExecutionResult(retry_proto);
-  EXPECT_EQ(actual_result.status, ExecutionStatus::Retry);
-  EXPECT_EQ(actual_result.status_code, 2);
-}
-
-TEST(ExecutionResultTest, FromUnknownProto) {
-  core::common::proto::ExecutionResult unknown_proto;
-  unknown_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_UNKNOWN);
-  auto actual_result = ExecutionResult(unknown_proto);
-  EXPECT_EQ(actual_result.status, ExecutionStatus::Failure);
-  EXPECT_EQ(actual_result.status_code, 0);
-}
 
 TEST(MacroTest, RETURN_IF_FAILURETest) {
   {
@@ -122,7 +60,7 @@ TEST(MacroTest, RETURN_IF_FAILURETest) {
   }
 
   {
-    auto helper = [](function<ExecutionResult()> fun,
+    auto helper = [](std::function<ExecutionResult()> fun,
                      bool& succeeded) -> ExecutionResult {
       RETURN_IF_FAILURE(fun());
       succeeded = true;
@@ -173,9 +111,9 @@ TEST(MacroTest, RETURN_IF_FAILURETest) {
 class MacroLogTest : public testing::Test {
  protected:
   MacroLogTest() {
-    auto mock_logger = make_unique<MockLogger>();
+    auto mock_logger = std::make_unique<MockLogger>();
     logger_ = mock_logger.get();
-    unique_ptr<LoggerInterface> logger = std::move(mock_logger);
+    std::unique_ptr<LoggerInterface> logger = std::move(mock_logger);
     logger->Init();
     logger->Run();
     GlobalLogger::SetGlobalLogger(std::move(logger));
@@ -188,7 +126,7 @@ class MacroLogTest : public testing::Test {
 
 TEST_F(MacroLogTest, RETURN_IF_FAILURELogTest) {
   auto helper1 = [](ExecutionResult result) -> ExecutionResult {
-    string some_str = "s";
+    std::string some_str = "s";
     AsyncContext<int, int> ctx;
     RETURN_AND_LOG_IF_FAILURE_CONTEXT(result, "component", ctx, "msg %s",
                                       some_str.c_str());
@@ -203,9 +141,8 @@ TEST_F(MacroLogTest, RETURN_IF_FAILURELogTest) {
   EXPECT_THAT(logger_->GetMessages(), ElementsAre(HasSubstr("msg s")));
 
   auto helper2 = [](ExecutionResult result) -> ExecutionResult {
-    string some_str = "s";
-    RETURN_AND_LOG_IF_FAILURE(result, "component",
-                              privacy_sandbox::pbs_common::kZeroUuid, "msg %s",
+    std::string some_str = "s";
+    RETURN_AND_LOG_IF_FAILURE(result, "component", kZeroUuid, "msg %s",
                               some_str.c_str());
     return SuccessExecutionResult();
   };
@@ -267,8 +204,7 @@ TEST_F(MacroLogTest, ASSIGN_OR_RETURNLogTest) {
 
   auto helper2 = [](ExecutionResultOr<int> result_or,
                     int& val) -> ExecutionResult {
-    ASSIGN_OR_LOG_AND_RETURN(val, result_or, "component",
-                             privacy_sandbox::pbs_common::kZeroUuid, "msg %d",
+    ASSIGN_OR_LOG_AND_RETURN(val, result_or, "component", kZeroUuid, "msg %d",
                              val);
     val++;
     return SuccessExecutionResult();
@@ -289,7 +225,7 @@ TEST_F(MacroLogTest, ASSIGN_OR_RETURNLogTest) {
 }
 
 TEST(MacroTest, ASSIGN_OR_RETURNFunctionTest) {
-  auto helper = [](function<ExecutionResultOr<int>()> fun,
+  auto helper = [](std::function<ExecutionResultOr<int>()> fun,
                    int& val) -> ExecutionResult {
     ASSIGN_OR_RETURN(val, fun());
     val++;
@@ -346,7 +282,7 @@ TEST(MacroTest, ASSIGN_OR_RETURNDeclareWorksInline) {
 
 TEST(MacroTest, ASSIGN_OR_RETURNWorksWithInnerMembers) {
   auto helper = [](ExecutionResultOr<int> result_or) -> ExecutionResultOr<int> {
-    pair<int, string> pair;
+    std::pair<int, std::string> pair;
     ASSIGN_OR_RETURN(pair.first, result_or);
     return pair.first;
   };
@@ -362,9 +298,9 @@ class NoCopyNoDefault {
   NoCopyNoDefault(NoCopyNoDefault&&) = default;
   NoCopyNoDefault& operator=(NoCopyNoDefault&&) = default;
 
-  explicit NoCopyNoDefault(unique_ptr<int> x) : x_(std::move(x)) {}
+  explicit NoCopyNoDefault(std::unique_ptr<int> x) : x_(std::move(x)) {}
 
-  unique_ptr<int> x_;
+  std::unique_ptr<int> x_;
 };
 
 TEST(MacroTest, ASSIGN_OR_RETURNWorksWithTemporaryNonCopyableTypes) {
@@ -374,7 +310,7 @@ TEST(MacroTest, ASSIGN_OR_RETURNWorksWithTemporaryNonCopyableTypes) {
     ASSIGN_OR_RETURN(auto ret, foo());
     return ret;
   };
-  EXPECT_THAT(helper1(NoCopyNoDefault(make_unique<int>(5))),
+  EXPECT_THAT(helper1(NoCopyNoDefault(std::make_unique<int>(5))),
               IsSuccessfulAndHolds(FieldsAre(Pointee(Eq(5)))));
 
   auto helper2 = [](ExecutionResultOr<NoCopyNoDefault> result_or)
@@ -382,7 +318,7 @@ TEST(MacroTest, ASSIGN_OR_RETURNWorksWithTemporaryNonCopyableTypes) {
     ASSIGN_OR_RETURN(auto ret, std::move(result_or));
     return ret;
   };
-  EXPECT_THAT(helper2(NoCopyNoDefault(make_unique<int>(5))),
+  EXPECT_THAT(helper2(NoCopyNoDefault(std::make_unique<int>(5))),
               IsSuccessfulAndHolds(FieldsAre(Pointee(Eq(5)))));
 }
 
@@ -391,20 +327,15 @@ TEST(ExecutionResultTest, MatcherTest) {
   EXPECT_THAT(result1, ResultIs(ExecutionResult(ExecutionStatus::Failure, 1)));
   EXPECT_THAT(result1, Not(IsSuccessful()));
 
-  auto result1_proto = result1.ToProto();
-  EXPECT_THAT(result1_proto,
-              ResultIs(ExecutionResult(ExecutionStatus::Failure, 1)));
-  EXPECT_THAT(result1_proto, Not(IsSuccessful()));
-
   ExecutionResultOr<int> result_or(result1);
   EXPECT_THAT(result1, ResultIs(ExecutionResult(ExecutionStatus::Failure, 1)));
   EXPECT_THAT(result1, Not(IsSuccessful()));
 
-  vector<ExecutionResult> results;
+  std::vector<ExecutionResult> results;
   results.push_back(ExecutionResult(ExecutionStatus::Failure, 1));
   results.push_back(ExecutionResult(ExecutionStatus::Retry, 2));
 
-  vector<ExecutionResult> expected_results;
+  std::vector<ExecutionResult> expected_results;
   expected_results.push_back(ExecutionResult(ExecutionStatus::Retry, 2));
   expected_results.push_back(ExecutionResult(ExecutionStatus::Failure, 1));
   EXPECT_THAT(results, UnorderedPointwise(ResultIs(), expected_results));
@@ -461,7 +392,7 @@ TEST(ExecutionResultOrTest, ValueMethods) {
   *subject = 3;
   EXPECT_EQ(subject.value(), 3);
 
-  ExecutionResultOr<string> subject_2("start");
+  ExecutionResultOr<std::string> subject_2("start");
   subject_2->clear();
   EXPECT_THAT(subject_2, IsSuccessfulAndHolds(Eq("")));
 
@@ -472,27 +403,28 @@ TEST(ExecutionResultOrTest, ValueMethods) {
 
 TEST(ExecutionResultOrTest, DeathTests) {
   EXPECT_ANY_THROW({
-    ExecutionResultOr<string> subject(
+    ExecutionResultOr<std::string> subject(
         ExecutionResult(ExecutionStatus::Failure, 2));
     subject.value();
   });
   EXPECT_ANY_THROW({
-    ExecutionResultOr<string> subject(
+    ExecutionResultOr<std::string> subject(
         ExecutionResult(ExecutionStatus::Failure, 2));
     *subject;
   });
   EXPECT_DEATH(
       {
-        ExecutionResultOr<string> subject(
+        ExecutionResultOr<std::string> subject(
             ExecutionResult(ExecutionStatus::Failure, 2));
         bool e = subject->empty();
-        subject = string(e ? "t" : "f");
+        subject = std::string(e ? "t" : "f");
       },
       _);
 }
 
 TEST(ExecutionResultOrTest, FunctionalTest) {
-  auto string_or_result = [](bool return_string) -> ExecutionResultOr<string> {
+  auto string_or_result =
+      [](bool return_string) -> ExecutionResultOr<std::string> {
     if (return_string)
       return "returning a string";
     else
@@ -506,7 +438,7 @@ TEST(ExecutionResultOrTest, FunctionalTest) {
 }
 
 TEST(ExecutionResultOrTest, MoveTest_operator_star) {
-  NoCopyNoDefault ncnd(make_unique<int>(5));
+  NoCopyNoDefault ncnd(std::make_unique<int>(5));
   // ExecutionResultOr<NoCopyNoDefault> result_or(ncnd);  // Won't compile.
   ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
@@ -521,7 +453,7 @@ TEST(ExecutionResultOrTest, MoveTest_operator_star) {
 }
 
 TEST(ExecutionResultOrTest, MoveTest_value) {
-  NoCopyNoDefault ncnd(make_unique<int>(5));
+  NoCopyNoDefault ncnd(std::make_unique<int>(5));
   ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
   NoCopyNoDefault other = std::move(result_or).value();
@@ -533,7 +465,7 @@ TEST(ExecutionResultOrTest, MoveTest_value) {
 }
 
 TEST(ExecutionResultOrTest, MoveTest_release) {
-  NoCopyNoDefault ncnd(make_unique<int>(5));
+  NoCopyNoDefault ncnd(std::make_unique<int>(5));
   ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
   // No need of writing move!
@@ -546,7 +478,7 @@ TEST(ExecutionResultOrTest, MoveTest_release) {
 }
 
 TEST(ExecutionResultOrTest, DiscardedMoveResult) {
-  NoCopyNoDefault ncnd(make_unique<int>(5));
+  NoCopyNoDefault ncnd(std::make_unique<int>(5));
   ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
   // We expect that just calling operator* && does not invalidate the object.
@@ -560,4 +492,4 @@ TEST(ExecutionResultOrTest, DiscardedMoveResult) {
   ASSERT_THAT(result_or->x_, Pointee(Eq(5)));
 }
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

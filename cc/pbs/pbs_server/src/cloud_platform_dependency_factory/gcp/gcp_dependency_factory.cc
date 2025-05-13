@@ -43,24 +43,25 @@
 #include "opentelemetry/sdk/resource/resource_detector.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::GcpTokenFetcher;
-using ::google::scp::core::GetConfigValue;
-using ::google::scp::core::GrpcAuthConfig;
-using ::google::scp::core::GrpcIdTokenAuthenticator;
-using ::google::scp::core::MetricRouter;
-using ::google::scp::core::OtlpGrpcAuthedMetricExporter;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::kZeroUuid;
-using ::google::scp::pbs::AwsHttpRequestResponseAuthInterceptor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::AuthorizationProxy;
 using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::GcpTokenFetcher;
+using ::privacy_sandbox::pbs_common::GetConfigValue;
+using ::privacy_sandbox::pbs_common::GrpcAuthConfig;
+using ::privacy_sandbox::pbs_common::GrpcIdTokenAuthenticator;
 using ::privacy_sandbox::pbs_common::HttpClientInterface;
 using ::privacy_sandbox::pbs_common::kAlternateCloudServiceRegion;
 using ::privacy_sandbox::pbs_common::kHttpServerDnsRoutingEnabled;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::MetricRouter;
+using ::privacy_sandbox::pbs_common::OtlpGrpcAuthedMetricExporter;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::privacy_sandbox::pbs_common::TimeDuration;
 
 static constexpr char kGcpDependencyProvider[] = "kGCPDependencyProvider";
@@ -133,7 +134,7 @@ std::unique_ptr<AuthorizationProxyInterface>
 GcpDependencyFactory::ConstructAuthorizationProxyClient(
     std::shared_ptr<AsyncExecutorInterface> async_executor,
     std::shared_ptr<HttpClientInterface> http_client) noexcept {
-  return std::make_unique<core::AuthorizationProxy>(
+  return std::make_unique<AuthorizationProxy>(
       auth_service_endpoint_, async_executor, http_client,
       std::make_unique<GcpHttpRequestResponseAuthInterceptor>(
           config_provider_));
@@ -143,7 +144,7 @@ std::unique_ptr<AuthorizationProxyInterface>
 GcpDependencyFactory::ConstructAwsAuthorizationProxyClient(
     std::shared_ptr<AsyncExecutorInterface> async_executor,
     std::shared_ptr<HttpClientInterface> http_client) noexcept {
-  return std::make_unique<core::AuthorizationProxy>(
+  return std::make_unique<AuthorizationProxy>(
       alternate_auth_service_endpoint_, async_executor, http_client,
       std::make_unique<AwsHttpRequestResponseAuthInterceptor>(
           alternate_cloud_service_region_, config_provider_));
@@ -153,8 +154,7 @@ std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
 GcpDependencyFactory::ConstructBudgetConsumptionHelper(
     AsyncExecutorInterface* async_executor,
     AsyncExecutorInterface* io_async_executor) noexcept {
-  google::scp::core::ExecutionResultOr<
-      std::shared_ptr<cloud::spanner::Connection>>
+  ExecutionResultOr<std::shared_ptr<google::cloud::spanner::Connection>>
       spanner_connection =
           BudgetConsumptionHelper::MakeSpannerConnectionForProd(
               *config_provider_);
@@ -166,7 +166,7 @@ GcpDependencyFactory::ConstructBudgetConsumptionHelper(
       std::move(*spanner_connection));
 }
 
-std::unique_ptr<core::MetricRouter>
+std::unique_ptr<MetricRouter>
 GcpDependencyFactory::ConstructMetricRouter() noexcept {
   auto resource_detector = google::cloud::otel::MakeResourceDetector();
   opentelemetry::sdk::resource::ResourceAttributes resource_attributes = {
@@ -180,11 +180,11 @@ GcpDependencyFactory::ConstructMetricRouter() noexcept {
   return this->ConstructMetricRouter(std::move(resource));
 }
 
-std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
+std::unique_ptr<MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
     opentelemetry::sdk::resource::Resource resource) noexcept {
   const std::string exporter_config = GetConfigValue(
-      std::string(core::kOtelMetricsExporterKey),
-      std::string(core::kOtelMetricsExporterValue), *config_provider_);
+      std::string(pbs_common::kOtelMetricsExporterKey),
+      std::string(pbs_common::kOtelMetricsExporterValue), *config_provider_);
 
   if (exporter_config == "otlp") {
     SCP_INFO(kGcpDependencyProvider, kZeroUuid,
@@ -192,24 +192,25 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
                  " for option OTEL_METRICS_EXPORTER.");
     std::unique_ptr<GrpcAuthConfig> metric_auth_config =
         std::make_unique<GrpcAuthConfig>(
-            GetConfigValue(std::string(core::kOtelServiceAccountKey),
-                           std::string(core::kOtelServiceAccountValue),
+            GetConfigValue(std::string(pbs_common::kOtelServiceAccountKey),
+                           std::string(pbs_common::kOtelServiceAccountValue),
                            *config_provider_),
-            GetConfigValue(std::string(core::kOtelAudienceKey),
-                           std::string(core::kOtelAudienceValue),
+            GetConfigValue(std::string(pbs_common::kOtelAudienceKey),
+                           std::string(pbs_common::kOtelAudienceValue),
                            *config_provider_),
-            GetConfigValue(std::string(core::kOtelCredConfigKey),
-                           std::string(core::kOtelCredConfigValue),
+            GetConfigValue(std::string(pbs_common::kOtelCredConfigKey),
+                           std::string(pbs_common::kOtelCredConfigValue),
                            *config_provider_));
-    std::unique_ptr<core::TokenFetcher> metric_token_fetcher =
+    std::unique_ptr<pbs_common::TokenFetcher> metric_token_fetcher =
         std::make_unique<GcpTokenFetcher>();
     std::unique_ptr<GrpcIdTokenAuthenticator> metric_id_token_authenticator =
         std::make_unique<GrpcIdTokenAuthenticator>(
             std::move(metric_auth_config), std::move(metric_token_fetcher));
 
-    const std::string exporter_path = GetConfigValue(
-        std::string(core::kOtelExporterOtlpEndpointKey),
-        std::string(core::kOtelExporterOtlpEndpointValue), *config_provider_);
+    const std::string exporter_path =
+        GetConfigValue(std::string(pbs_common::kOtelExporterOtlpEndpointKey),
+                       std::string(pbs_common::kOtelExporterOtlpEndpointValue),
+                       *config_provider_);
 
     opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions
         exporter_options;
@@ -266,4 +267,4 @@ std::unique_ptr<core::MetricRouter> GcpDependencyFactory::ConstructMetricRouter(
   return nullptr;
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

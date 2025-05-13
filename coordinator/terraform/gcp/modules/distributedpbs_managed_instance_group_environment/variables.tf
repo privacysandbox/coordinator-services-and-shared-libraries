@@ -108,50 +108,10 @@ variable "pbs_application_environment_variables" {
   nullable    = false
 }
 
-################################################################################
-# PBS VM Variables.
-################################################################################
-
-variable "machine_type" {
-  type     = string
-  nullable = false
-}
-
-variable "root_volume_size_gb" {
-  type     = number
-  nullable = false
-}
-
-variable "pbs_cloud_logging_enabled" {
-  type     = bool
-  nullable = false
-}
-
-variable "pbs_cloud_monitoring_enabled" {
-  type     = bool
-  nullable = false
-}
-
 variable "pbs_service_account_email" {
   description = "The email of the service account to be used for the PBS instance permissions."
   type        = string
   nullable    = false
-}
-
-variable "pbs_custom_vm_tags" {
-  description = "List of custom tags to be set on the PBS VM instances."
-  type        = list(string)
-  nullable    = false
-}
-
-variable "pbs_autoscaling_policy" {
-  description = "Auto-scaling policy for PBS instances."
-  type = object({
-    min_replicas           = number
-    max_replicas           = number
-    cpu_utilization_target = number
-  })
-  default = null
 }
 
 ################################################################################
@@ -176,53 +136,13 @@ variable "pbs_cloud_run_max_concurrency" {
   nullable    = false
 }
 
-variable "deploy_pbs_cloud_run" {
-  description = "If true, a Cloud Run PBS backend will be instantiated but not linked to the PBS load balancer"
-  type        = bool
-  nullable    = false
-}
-
 ################################################################################
 # Network Variables.
 ################################################################################
 
-variable "vpc_network_id" {
-  description = "The VPC ID. If left blank, the default network will be used."
-  type        = string
-}
-
-variable "vpc_subnet_id" {
-  description = "The VPC subnetwork ID. Must be provided if using a custom VPC."
-  type        = string
-}
-
-variable "network_target_tag" {
-  description = "Used to mark the created instances as network targets."
-  type        = string
-  nullable    = false
-}
-
 variable "main_port" {
   description = "The main port for the PBS."
   type        = number
-  nullable    = false
-}
-
-variable "health_check_port" {
-  description = "The port to use for health checks."
-  type        = number
-  nullable    = false
-}
-
-variable "named_ports" {
-  description = "The named ports to assign to the generated instances."
-  type        = list(object({ name = string, port = number }))
-  nullable    = false
-}
-
-variable "enable_public_ip_address" {
-  description = "Whether to enable a public IP address on the created instances."
-  type        = bool
   nullable    = false
 }
 
@@ -235,15 +155,5 @@ variable "enable_domain_management" {
 variable "pbs_domain" {
   description = "The PBS domain. Unused if domain management is disabled."
   type        = string
-  nullable    = false
-}
-
-################################################################################
-# Health Check Variables.
-################################################################################
-
-variable "enable_health_check" {
-  description = "Whether to enable the managed instance group health check."
-  type        = bool
   nullable    = false
 }

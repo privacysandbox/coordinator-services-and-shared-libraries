@@ -36,22 +36,23 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
 using ::absl_testing::IsOk;
 using ::google::protobuf::util::JsonStringToMessage;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::Uuid;
-using ::google::scp::core::test::EqualsProto;
-using ::google::scp::core::test::ResultIs;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::Byte;
 using ::privacy_sandbox::pbs_common::BytesBuffer;
+using ::privacy_sandbox::pbs_common::EqualsProto;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
+using ::privacy_sandbox::pbs_common::ResultIs;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
+using ::privacy_sandbox::pbs_common::Uuid;
 using ::testing::_;
 using ::testing::AnyOf;
 using ::testing::Eq;
@@ -178,8 +179,7 @@ TEST(ParseBeginTransactionTest, V2RequestWithUnauthorizedReportingOrigin) {
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
-          google::scp::core::errors::
-              SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
+          SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
   EXPECT_EQ(consume_budget_metadata_list.size(), 0);
 }
 
@@ -197,8 +197,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutData) {
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
@@ -215,8 +214,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestInvalidJson) {
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
@@ -255,8 +253,7 @@ TEST(ParseBeginTransactionTest,
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
@@ -288,8 +285,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKeys) {
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
@@ -327,10 +323,8 @@ TEST(ParseBeginTransactionTest,
       std::string(kAuthorizedDomain),
       std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
@@ -368,8 +362,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutKey) {
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
@@ -407,8 +400,7 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionV2RequestWithoutToken) {
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
@@ -447,8 +439,7 @@ TEST(ParseBeginTransactionTest,
       consume_budget_metadata_list);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseBeginTransactionTest,
@@ -486,10 +477,8 @@ TEST(ParseBeginTransactionTest,
       std::string(kAuthorizedDomain),
       std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(ParseBeginTransactionTest,
@@ -522,36 +511,32 @@ TEST(ParseBeginTransactionTest,
       std::string(kAuthorizedDomain),
       std::string(kTransactionOriginWithoutSubdomain), bytes_buffer,
       consume_budget_metadata_list);
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer) {
   BytesBuffer bytes_buffer;
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer1) {
   BytesBuffer bytes_buffer(120);
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
@@ -564,13 +549,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer2) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
@@ -583,13 +567,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer3) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
@@ -602,13 +585,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer4) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
@@ -621,13 +603,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer5) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
@@ -640,13 +621,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer6) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer7) {
@@ -677,13 +657,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer8) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
@@ -698,13 +677,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer9) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
@@ -719,13 +697,12 @@ TEST(ParseBeginTransactionTest, ParseBeginTransactionInvalidBuffer10) {
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(ParseBeginTransactionRequestBody(
-                std::string(kAuthorizedDomain),
-                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-                consume_budget_metadata_list),
-            FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      ParseBeginTransactionRequestBody(
+          std::string(kAuthorizedDomain),
+          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+          consume_budget_metadata_list),
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST(ParseBeginTransactionTest, ParseBeginTransactionValidBuffer) {
@@ -810,13 +787,11 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(
-      ParseBeginTransactionRequestBody(
-          std::string(kAuthorizedDomain),
-          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-          consume_budget_metadata_list),
-      FailureExecutionResult(
-          google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
+            FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
 TEST(ParseBeginTransactionTest,
@@ -834,13 +809,11 @@ TEST(ParseBeginTransactionTest,
 
   std::vector<ConsumeBudgetMetadata> consume_budget_metadata_list;
 
-  EXPECT_EQ(
-      ParseBeginTransactionRequestBody(
-          std::string(kAuthorizedDomain),
-          std::string(kTransactionOriginWithSubdomain), bytes_buffer,
-          consume_budget_metadata_list),
-      FailureExecutionResult(
-          google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  EXPECT_EQ(ParseBeginTransactionRequestBody(
+                std::string(kAuthorizedDomain),
+                std::string(kTransactionOriginWithSubdomain), bytes_buffer,
+                consume_budget_metadata_list),
+            FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
 TEST(FrontEndUtilsTest, ExtractTransactionId) {
@@ -848,14 +821,12 @@ TEST(FrontEndUtilsTest, ExtractTransactionId) {
   Uuid transaction_id;
   EXPECT_EQ(ExtractTransactionIdFromHTTPHeaders(headers, transaction_id),
             FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+                SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
 
   headers->insert(
       {std::string(kTransactionIdHeader), std::string("Asdasdasd")});
   EXPECT_EQ(ExtractTransactionIdFromHTTPHeaders(headers, transaction_id),
-            FailureExecutionResult(
-                ::privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING));
+            FailureExecutionResult(pbs_common::SC_UUID_INVALID_STRING));
 
   headers->clear();
   headers->insert({std::string(kTransactionIdHeader),
@@ -869,8 +840,7 @@ TEST(FrontEndUtilsTest, ExtractTransactionOrigin) {
   auto transaction_origin = ExtractTransactionOrigin(headers);
   EXPECT_EQ(transaction_origin.result(),
             FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+                SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
 
   std::string extracted_transaction_origin;
   headers.insert({std::string(kTransactionOriginHeader),
@@ -886,13 +856,11 @@ TEST(FrontEndUtilsTest, ExtractRequestClaimedIdentity) {
   std::string claimed_identity;
   EXPECT_EQ(ExtractRequestClaimedIdentity(headers, claimed_identity),
             FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+                SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
   headers = std::make_shared<HttpHeaders>();
   EXPECT_EQ(ExtractRequestClaimedIdentity(headers, claimed_identity),
             FailureExecutionResult(
-                google::scp::core::errors::
-                    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
+                SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND));
 
   std::string extracted_claimed_identity;
   headers->insert(
@@ -1064,8 +1032,8 @@ TEST(TransformReportingOriginToSite, InvalidSite) {
   auto site = TransformReportingOriginToSite("******");
   EXPECT_THAT(site.result(),
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN)));
+
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, ValidRequestSuccess) {
@@ -1222,8 +1190,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutVersion) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1239,8 +1206,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutVersion) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestEmptyJson) {
@@ -1257,8 +1223,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestEmptyJson) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1274,8 +1239,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestEmptyJson) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidVersion) {
@@ -1294,8 +1258,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidVersion) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1311,8 +1274,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidVersion) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutData) {
@@ -1331,8 +1293,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutData) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1368,8 +1329,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithInvalidData) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutReportingOrigin) {
@@ -1427,8 +1387,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutReportingOrigin) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1455,8 +1414,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutReportingOrigin) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutKeys) {
@@ -1506,8 +1464,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithoutKeys) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1564,8 +1521,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithEmptyReportingOrigin) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1581,8 +1537,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithEmptyReportingOrigin) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest,
@@ -1614,8 +1569,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1631,8 +1585,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest,
@@ -1693,8 +1646,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
-          google::scp::core::errors::
-              SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
+          SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1721,8 +1673,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
   EXPECT_THAT(
       execution_result,
       ResultIs(FailureExecutionResult(
-          google::scp::core::errors::
-              SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
+          SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest,
@@ -1780,10 +1731,8 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
                                              reporting_origin, budget_type);
       });
 
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 
   ConsumePrivacyBudgetRequest request_proto;
   EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto), IsOk());
@@ -1807,10 +1756,8 @@ TEST(ParseCommonV2TransactionRequestBodyTest,
                                              reporting_origin);
       });
 
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithBudgetTypeSpecified) {
@@ -2049,8 +1996,7 @@ TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithEmptyBudgetType) {
 
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST(ParseCommonV2TransactionRequestBodyTest, RequestWithNoData) {
@@ -2210,10 +2156,8 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
 })");
 
   auto execution_result = ValidateAndGetBudgetType(request_body);
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 
   using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
   request_body["data"][0]["keys"][0]["budget_type"] =
@@ -2244,8 +2188,7 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
   execution_result_proto = ValidateAndGetBudgetType(request_proto);
   EXPECT_THAT(execution_result_proto,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
@@ -2278,10 +2221,8 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
 })");
 
   auto execution_result = ValidateAndGetBudgetType(request_body);
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+  EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
+                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 
   using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
 
@@ -2303,9 +2244,8 @@ TEST(CheckAndGetIfBudgetTypeTheSameInRequestTest,
   execution_result_proto = ValidateAndGetBudgetType(request_proto);
   EXPECT_THAT(execution_result_proto,
               ResultIs(FailureExecutionResult(
-                  google::scp::core::errors::
-                      SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
+                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

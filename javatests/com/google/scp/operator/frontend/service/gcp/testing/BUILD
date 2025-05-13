@@ -26,6 +26,7 @@ java_library(
         ":FrontendServiceTestModule",
         "//java/com/google/scp/operator/frontend/service/gcp",
         "//java/com/google/scp/operator/frontend/service/gcp:FrontendServiceHttpCloudFunction",
+        "//java/com/google/scp/shared/gcp/util",
         "//java/external:gcp_core",
         "//java/external:gcp_spanner",
         "//java/external:guice",

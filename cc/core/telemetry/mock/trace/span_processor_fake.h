@@ -31,7 +31,7 @@
 #include "opentelemetry/sdk/trace/span_data.h"
 #include "opentelemetry/trace/span_context.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief A mock span processor for testing purposes.
@@ -110,5 +110,5 @@ class SpanProcessorFake : public opentelemetry::sdk::trace::SpanProcessor {
   std::atomic_flag shutdown_latch_ = ATOMIC_FLAG_INIT;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_MOCK_TRACE_SPAN_PROCESSOR_FAKE_H_

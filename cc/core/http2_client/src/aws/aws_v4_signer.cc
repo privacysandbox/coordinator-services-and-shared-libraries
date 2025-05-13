@@ -55,9 +55,6 @@ static constexpr const char* kSigV4Algorithm = "AWS4-HMAC-SHA256";
 static constexpr const char* hex_lookup = "0123456789abcdef";
 
 namespace privacy_sandbox::pbs_common {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
 
 static string HexEncode(unsigned char data[], size_t size) {
   string result;

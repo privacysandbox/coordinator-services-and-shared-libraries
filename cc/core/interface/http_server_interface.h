@@ -26,8 +26,8 @@
 namespace privacy_sandbox::pbs_common {
 
 /// Type definition for the resource handler.
-using HttpHandler = std::function<google::scp::core::ExecutionResult(
-    AsyncContext<HttpRequest, HttpResponse>&)>;
+using HttpHandler =
+    std::function<ExecutionResult(AsyncContext<HttpRequest, HttpResponse>&)>;
 
 /// Provides HTTP(S) server functionality.
 class HttpServerInterface : public ServiceInterface {
@@ -42,7 +42,7 @@ class HttpServerInterface : public ServiceInterface {
    * @param handler The handler of the specific path.
    * @return ExecutionResult
    */
-  virtual google::scp::core::ExecutionResult RegisterResourceHandler(
+  virtual ExecutionResult RegisterResourceHandler(
       HttpMethod http_method, std::string& resource_path,
       HttpHandler& handler) noexcept = 0;
 };

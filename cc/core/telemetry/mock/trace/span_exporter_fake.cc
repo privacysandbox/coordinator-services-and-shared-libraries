@@ -18,7 +18,7 @@
 
 #include "cc/core/telemetry/src/common/trace/trace_utils.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 SpanExporterFake::SpanExporterFake() noexcept = default;
 
@@ -103,4 +103,4 @@ SpanExporterFake::GetCollectedSpansBySpanName() const {
   return collected_spans_by_name_;
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

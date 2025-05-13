@@ -24,6 +24,7 @@
 #include <thread>
 #include <utility>
 
+#include "absl/strings/str_cat.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/async_executor/src/async_executor.h"
@@ -57,24 +58,8 @@ class Http2ServerPeer {
 };
 
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionStatus;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::GetMetricPointData;
-using ::google::scp::core::InMemoryMetricRouter;
-using ::google::scp::core::PassThruAuthorizationProxy;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::authorization_proxy::mock::MockAuthorizationProxy;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::utils::Base64Encode;
-using ::google::scp::core::utils::PadBase64Encoding;
 using ::opentelemetry::sdk::resource::SemanticConventions::
     kHttpResponseStatusCode;
-using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
-using ::privacy_sandbox::pbs_common::RetryStrategyType;
-using ::privacy_sandbox::pbs_common::Uuid;
-using ::privacy_sandbox::pbs_common::WaitUntil;
 using ::testing::Return;
 
 class Http2ServerTest : public testing::Test {
@@ -695,10 +680,9 @@ TEST_F(Http2ServerTest, OnHttp2PendingCallbackFailure) {
 
   http_server.OnHttp2PendingCallback(callback_execution_result, request_id);
   http_server.OnHttp2Cleanup(*sync_context, /*error_code=*/0);
-  EXPECT_THAT(http_server.GetActiveRequests().Find(request_id, sync_context),
-              ResultIs(FailureExecutionResult(
-
-                  SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+  EXPECT_THAT(
+      http_server.GetActiveRequests().Find(request_id, sync_context),
+      ResultIs(FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(Http2ServerTest, OnHttp2PendingCallbackHttpHandlerFailure) {
@@ -802,7 +786,6 @@ TEST_F(Http2ServerTest,
 
   EXPECT_THAT(http_server.Init(),
               ResultIs(FailureExecutionResult(
-
                   SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
 }
 
@@ -830,7 +813,6 @@ TEST_F(Http2ServerTest,
 
   EXPECT_THAT(http_server.Init(),
               ResultIs(FailureExecutionResult(
-
                   SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT)));
 }
 
@@ -1031,7 +1013,6 @@ TEST_F(Http2ServerTest,
     bool callback_called = false;
     request.SetOnRequestBodyDataReceivedCallback([&](ExecutionResult result) {
       EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-
                               SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
       callback_called = true;
     });
@@ -1088,7 +1069,6 @@ TEST_F(Http2ServerTest, OnBodyDataReceivedWithLessDataReturnsPartialDataError) {
     bool callback_called = false;
     request.SetOnRequestBodyDataReceivedCallback([&](ExecutionResult result) {
       EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-
                               SC_HTTP2_SERVER_PARTIAL_REQUEST_BODY)));
       callback_called = true;
     });

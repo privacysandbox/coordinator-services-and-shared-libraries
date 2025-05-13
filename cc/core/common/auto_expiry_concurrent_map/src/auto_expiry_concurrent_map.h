@@ -52,8 +52,7 @@ namespace privacy_sandbox::pbs_common {
  */
 template <class TKey, class TValue,
           typename TCompare = oneapi::tbb::tbb_hash_compare<TKey>>
-class AutoExpiryConcurrentMap
-    : public privacy_sandbox::pbs_common::ServiceInterface {
+class AutoExpiryConcurrentMap : public ServiceInterface {
  public:
   /**
    * @brief Represents auto expiry concurrent map entry. Any value in the
@@ -74,12 +73,10 @@ class AutoExpiryConcurrentMap
      * given parameter value must be greater than 0.
      * @return ExecutionResult The execution result of the operation.
      */
-    google::scp::core::ExecutionResult ExtendExpiration(
-        size_t expiration_seconds) {
+    ExecutionResult ExtendExpiration(size_t expiration_seconds) {
       if (expiration_seconds == 0) {
-        auto execution_result = google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_AUTO_EXPIRY_CONCURRENT_MAP_INVALID_EXPIRATION);
+        auto execution_result = FailureExecutionResult(
+            SC_AUTO_EXPIRY_CONCURRENT_MAP_INVALID_EXPIRATION);
         SCP_ERROR(
             kAutoExpiryConcurrentMap, kZeroUuid, execution_result,
             "The provided extended expiration value is 0, which is invalid. "
@@ -90,16 +87,15 @@ class AutoExpiryConcurrentMap
       std::shared_lock<std::shared_timed_mutex> lock(record_lock);
 
       if (being_evicted) {
-        return google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
+        return FailureExecutionResult(
+            SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
       }
 
       expiration_time = (TimeProvider::GetSteadyTimestampInNanoseconds() +
                          std::chrono::seconds(expiration_seconds))
                             .count();
 
-      return google::scp::core::SuccessExecutionResult();
+      return SuccessExecutionResult();
     }
 
     /**
@@ -131,7 +127,7 @@ class AutoExpiryConcurrentMap
     bool is_evictable;
 
     /// Expiration of the entry in the memory
-    std::atomic<privacy_sandbox::pbs_common::Timestamp> expiration_time;
+    std::atomic<Timestamp> expiration_time;
   };
 
   /**
@@ -152,8 +148,7 @@ class AutoExpiryConcurrentMap
       bool block_entry_while_eviction,
       std::function<void(TKey&, TValue&, std::function<void(bool)>)>
           on_before_element_deletion_callback,
-      const std::shared_ptr<
-          privacy_sandbox::pbs_common::AsyncExecutorInterface>& async_executor)
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor)
       : map_entry_lifetime_seconds_(map_entry_lifetime_seconds),
         extend_entry_lifetime_on_access_(extend_entry_lifetime_on_access),
         block_entry_while_eviction_(block_entry_while_eviction),
@@ -163,16 +158,14 @@ class AutoExpiryConcurrentMap
         pending_garbage_collection_callbacks_(0),
         is_running_(false) {}
 
-  google::scp::core::ExecutionResult Init() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Run() noexcept override {
+  ExecutionResult Run() noexcept override {
     is_running_ = true;
     return ScheduleGarbageCollection();
   }
 
-  google::scp::core::ExecutionResult Stop() noexcept override {
+  ExecutionResult Stop() noexcept override {
     SCP_INFO(kAutoExpiryConcurrentMap, kZeroUuid, "Stopping...");
     sync_mutex.lock();
     is_running_ = false;
@@ -189,9 +182,8 @@ class AutoExpiryConcurrentMap
       if ((TimeProvider::GetSteadyTimestampInNanoseconds() -
            wait_start_timestamp) >=
           kAutoExpiryConcurrentMapStopWaitMaxDurationToWait) {
-        auto result = google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_AUTO_EXPIRY_CONCURRENT_MAP_STOP_INCOMPLETE);
+        auto result = FailureExecutionResult(
+            SC_AUTO_EXPIRY_CONCURRENT_MAP_STOP_INCOMPLETE);
         SCP_ERROR(
             kAutoExpiryConcurrentMap, kZeroUuid, result,
             "Exiting prematurely. Waited for '%llu' (ms). There are still "
@@ -205,7 +197,7 @@ class AutoExpiryConcurrentMap
       }
     }
 
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
   /**
@@ -222,8 +214,8 @@ class AutoExpiryConcurrentMap
    * @param out_value A reference to the actual value inserted into the map.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual google::scp::core::ExecutionResult Insert(
-      std::pair<TKey, TValue> key_value, TValue& out_value) noexcept {
+  virtual ExecutionResult Insert(std::pair<TKey, TValue> key_value,
+                                 TValue& out_value) noexcept {
     auto record = std::make_shared<AutoExpiryConcurrentMapEntry>(
         key_value.second, map_entry_lifetime_seconds_);
 
@@ -231,17 +223,15 @@ class AutoExpiryConcurrentMap
     auto execution_result = concurrent_map_.Insert(pair, record);
 
     if (!execution_result.Successful()) {
-      if (execution_result != google::scp::core::FailureExecutionResult(
-                                  privacy_sandbox::pbs_common::
-                                      SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
+      if (execution_result != FailureExecutionResult(
+                                  SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
         return execution_result;
       }
 
       std::shared_lock<std::shared_timed_mutex> lock(record->record_lock);
       if (block_entry_while_eviction_ && record->being_evicted) {
-        return google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
+        return FailureExecutionResult(
+            SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
       }
 
       if (extend_entry_lifetime_on_access_ && !record->being_evicted) {
@@ -262,17 +252,15 @@ class AutoExpiryConcurrentMap
    * @param out_value A reference to the actual value in the map.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual google::scp::core::ExecutionResult Find(const TKey& key,
-                                                  TValue& out_value) noexcept {
+  virtual ExecutionResult Find(const TKey& key, TValue& out_value) noexcept {
     std::shared_ptr<AutoExpiryConcurrentMapEntry> record;
     auto execution_result = concurrent_map_.Find(key, record);
 
     if (execution_result.Successful()) {
       std::shared_lock<std::shared_timed_mutex> lock(record->record_lock);
       if (block_entry_while_eviction_ && record->being_evicted) {
-        return google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
+        return FailureExecutionResult(
+            SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
       }
 
       if (extend_entry_lifetime_on_access_ && !record->being_evicted) {
@@ -292,7 +280,7 @@ class AutoExpiryConcurrentMap
    * @param key The key to be erased from the map.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual google::scp::core::ExecutionResult Erase(TKey& key) noexcept {
+  virtual ExecutionResult Erase(TKey& key) noexcept {
     return concurrent_map_.Erase(key);
   }
 
@@ -303,8 +291,7 @@ class AutoExpiryConcurrentMap
    * @param keys A vector of the keys to be filled in once looked up.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual google::scp::core::ExecutionResult Keys(
-      std::vector<TKey>& keys) noexcept {
+  virtual ExecutionResult Keys(std::vector<TKey>& keys) noexcept {
     return concurrent_map_.Keys(keys);
   }
 
@@ -321,16 +308,14 @@ class AutoExpiryConcurrentMap
    * @param key The key to be used to find the element to disable eviction.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual google::scp::core::ExecutionResult DisableEviction(
-      const TKey& key) noexcept {
+  virtual ExecutionResult DisableEviction(const TKey& key) noexcept {
     std::shared_ptr<AutoExpiryConcurrentMapEntry> record;
     auto execution_result = concurrent_map_.Find(key, record);
     if (execution_result.Successful()) {
       std::shared_lock<std::shared_timed_mutex> lock(record->record_lock);
       if (record->being_evicted) {
-        return google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
+        return FailureExecutionResult(
+            SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
       }
 
       if (extend_entry_lifetime_on_access_) {
@@ -348,16 +333,14 @@ class AutoExpiryConcurrentMap
    * @param key The key to be used to find the element to enable eviction.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual google::scp::core::ExecutionResult EnableEviction(
-      const TKey& key) noexcept {
+  virtual ExecutionResult EnableEviction(const TKey& key) noexcept {
     std::shared_ptr<AutoExpiryConcurrentMapEntry> record;
     auto execution_result = concurrent_map_.Find(key, record);
     if (execution_result.Successful()) {
       std::shared_lock<std::shared_timed_mutex> lock(record->record_lock);
       if (record->being_evicted) {
-        return google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
+        return FailureExecutionResult(
+            SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED);
       }
 
       if (extend_entry_lifetime_on_access_) {
@@ -374,8 +357,8 @@ class AutoExpiryConcurrentMap
    * @brief Schedules a round of garbage collection in the next
    * map_entry_lifetime_seconds_.
    */
-  google::scp::core::ExecutionResult ScheduleGarbageCollection() noexcept {
-    privacy_sandbox::pbs_common::Timestamp next_schedule_time =
+  ExecutionResult ScheduleGarbageCollection() noexcept {
+    Timestamp next_schedule_time =
         (TimeProvider::GetSteadyTimestampInNanoseconds() +
          std::chrono::seconds(map_entry_lifetime_seconds_))
             .count();
@@ -383,9 +366,8 @@ class AutoExpiryConcurrentMap
     if (!is_running_) {
       sync_mutex.unlock();
 
-      auto execution_result = google::scp::core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::
-              SC_AUTO_EXPIRY_CONCURRENT_MAP_CANNOT_SCHEDULE);
+      auto execution_result = FailureExecutionResult(
+          SC_AUTO_EXPIRY_CONCURRENT_MAP_CANNOT_SCHEDULE);
       SCP_ERROR(
           kAutoExpiryConcurrentMap, kZeroUuid, execution_result,
           "Concurrent map is not running. Cannot schedule garbage collection.");
@@ -509,8 +491,7 @@ class AutoExpiryConcurrentMap
   std::function<void(TKey&, TValue&, std::function<void(bool)>)>
       on_before_element_deletion_callback_;
   /// An instance to the async executor.
-  const std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-      async_executor_;
+  const std::shared_ptr<AsyncExecutorInterface> async_executor_;
   /// The total pending callbacks waiting during the garbage collection period.
   std::atomic<size_t> pending_garbage_collection_callbacks_;
   /// The cancellation callback.

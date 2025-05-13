@@ -18,7 +18,7 @@
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 namespace {
 class InMemoryMetricExporterTest : public ::testing::Test {
  protected:
@@ -228,4 +228,4 @@ TEST_F(InMemoryMetricExporterTest, ValidateAggregationTemporality) {
             opentelemetry::sdk::metrics::AggregationTemporality::kCumulative);
 }
 }  // namespace
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

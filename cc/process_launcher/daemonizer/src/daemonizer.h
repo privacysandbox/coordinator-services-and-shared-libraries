@@ -27,7 +27,7 @@
 #include "cc/process_launcher/argument_parser/src/json_arg_parser.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::process_launcher {
+namespace privacy_sandbox::pbs_common {
 class Daemonizer {
  public:
   Daemonizer() = delete;
@@ -46,9 +46,10 @@ class Daemonizer {
   /**
    * @brief Launch and monitor the input processes.
    * This function blocks, and will only return on error.
-   * @return google::scp::core::ExecutionResult the filure execution result.
+   * @return ExecutionResult the filure execution
+   * result.
    */
-  google::scp::core::ExecutionResult Run() noexcept;
+  ExecutionResult Run() noexcept;
 
  protected:
   int executable_count_ = 0;
@@ -64,7 +65,7 @@ class Daemonizer {
    * @brief Turn input into executable args list
    *
    */
-  google::scp::core::ExecutionResult GetExecutableArgs() noexcept;
+  ExecutionResult GetExecutableArgs() noexcept;
 
   /**
    * @brief Whether the daemonizer should stop restarting processes
@@ -73,4 +74,4 @@ class Daemonizer {
    */
   virtual bool ShouldStopRestartingProcesses() noexcept;
 };
-}  // namespace google::scp::process_launcher
+}  // namespace privacy_sandbox::pbs_common

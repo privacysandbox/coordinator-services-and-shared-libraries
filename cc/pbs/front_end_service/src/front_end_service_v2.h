@@ -30,109 +30,94 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "opentelemetry/metrics/meter.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 // An implementation of a FrontEndServiceInterface to support relaxed
 // consistency in PBS.
 class FrontEndServiceV2 : public FrontEndServiceInterface {
  public:
   FrontEndServiceV2(
-      std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
-          http_server,
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor,
-      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-          config_provider,
+      std::shared_ptr<pbs_common::HttpServerInterface> http_server,
+      std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider,
       BudgetConsumptionHelperInterface* budget_consumption_helper,
-      core::MetricRouter* metric_router = nullptr);
+      pbs_common::MetricRouter* metric_router = nullptr);
 
-  core::ExecutionResult Init() noexcept override;
-  core::ExecutionResult Run() noexcept override;
-  core::ExecutionResult Stop() noexcept override;
+  pbs_common::ExecutionResult Init() noexcept override;
+  pbs_common::ExecutionResult Run() noexcept override;
+  pbs_common::ExecutionResult Stop() noexcept override;
 
  private:
   // Peer class for testing.
   friend class FrontEndServiceV2Peer;
 
   // Executes common transaction phase
-  core::ExecutionResult CommonTransactionProcess(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context,
+  pbs_common::ExecutionResult CommonTransactionProcess(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context,
       absl::string_view transaction_phase);
 
   // Executes the begin transaction phase.
-  core::ExecutionResult BeginTransaction(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+  pbs_common::ExecutionResult BeginTransaction(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context);
 
   // Executes the prepare transaction phase.
-  core::ExecutionResult PrepareTransaction(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+  pbs_common::ExecutionResult PrepareTransaction(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context);
 
   // Executes the commit transaction phase.
-  core::ExecutionResult CommitTransaction(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+  pbs_common::ExecutionResult CommitTransaction(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context);
 
   // Executes the notify transaction phase.
-  core::ExecutionResult NotifyTransaction(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+  pbs_common::ExecutionResult NotifyTransaction(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context);
 
   // Executes the abort transaction phase.
-  core::ExecutionResult AbortTransaction(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+  pbs_common::ExecutionResult AbortTransaction(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context);
 
   // Executes the end transaction phase.
-  core::ExecutionResult EndTransaction(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+  pbs_common::ExecutionResult EndTransaction(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context);
 
   void OnConsumeBudgetCallback(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>
           http_context,
       std::string transaction_id,
-      privacy_sandbox::pbs_common::AsyncContext<ConsumeBudgetsRequest,
-                                                ConsumeBudgetsResponse>&
+      pbs_common::AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>&
           consume_budget_context);
 
   // Returns 404 to maintain compatibility with the client code.
-  core::ExecutionResult GetTransactionStatus(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context);
+  pbs_common::ExecutionResult GetTransactionStatus(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context);
 
   // Returns the BudgetConsumer interface based on first seen "budget_type"
-  core::ExecutionResultOr<std::unique_ptr<BudgetConsumer>> GetBudgetConsumer(
-      const nlohmann::json& request_body);
+  pbs_common::ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
+  GetBudgetConsumer(const nlohmann::json& request_body);
 
   // Returns the BudgetConsumer interface based on first seen "budget_type"
-  core::ExecutionResultOr<std::unique_ptr<BudgetConsumer>> GetBudgetConsumer(
-      const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
-          request_proto);
+  pbs_common::ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
+  GetBudgetConsumer(const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
+                        request_proto);
 
-  core::ExecutionResult ParseRequestWithBudgetConsumer(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context,
+  pbs_common::ExecutionResult ParseRequestWithBudgetConsumer(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context,
       absl::string_view transaction_id,
       ConsumeBudgetsRequest& consume_budget_request);
 
-  core::ExecutionResult ParseRequestWithoutBudgetConsumer(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context,
+  pbs_common::ExecutionResult ParseRequestWithoutBudgetConsumer(
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context,
       absl::string_view transaction_id,
       ConsumeBudgetsRequest& consume_budget_request);
 
@@ -146,24 +131,20 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
    * @return std::shared_ptr<std::string>
    */
   std::string ObtainTransactionOrigin(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::HttpRequest,
-          privacy_sandbox::pbs_common::HttpResponse>& http_context) const;
+      pbs_common::AsyncContext<pbs_common::HttpRequest,
+                               pbs_common::HttpResponse>& http_context) const;
 
   // Initializes the metrics.
   void MetricInit();
 
   // An instance to the http server.
-  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
-      http_server_;
+  std::shared_ptr<pbs_common::HttpServerInterface> http_server_;
 
   // An instance of the async executor.
-  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-      async_executor_;
+  std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor_;
 
   // An instance of the config provider.
-  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-      config_provider_;
+  std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider_;
 
   /// The claimed-identity string of the remote coordinator. This value is
   /// present in the requests coming from the remote coordinator and can be
@@ -173,7 +154,7 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   BudgetConsumptionHelperInterface* budget_consumption_helper_;
 
   // An instance of metric router which will provide APIs to create metrics.
-  core::MetricRouter* metric_router_;
+  pbs_common::MetricRouter* metric_router_;
 
   // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;
@@ -199,6 +180,6 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   bool should_use_request_response_protos_;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs
 
 #endif  // CC_PBS_FRONT_END_SERVICE_SRC_FRONT_END_SERVICE_V2

@@ -82,8 +82,8 @@ class MockAutoExpiryConcurrentMap
                                                               can_delete);
   }
 
-  virtual google::scp::core::ExecutionResult Insert(
-      std::pair<TKey, TValue> key_value, TValue& out_value) noexcept {
+  virtual ExecutionResult Insert(std::pair<TKey, TValue> key_value,
+                                 TValue& out_value) noexcept {
     if (insert_mock) {
       return insert_mock();
     }
@@ -92,6 +92,6 @@ class MockAutoExpiryConcurrentMap
                                                                    out_value);
   }
 
-  std::function<google::scp::core::ExecutionResult()> insert_mock;
+  std::function<ExecutionResult()> insert_mock;
 };
 }  // namespace privacy_sandbox::pbs_common

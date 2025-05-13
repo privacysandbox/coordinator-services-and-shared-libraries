@@ -35,31 +35,28 @@ class Http2Utils {
    * successful.
    * @return ExecutionResult The execution result of the operation.
    */
-  static google::scp::core::ExecutionResult ParseContentLength(
+  static ExecutionResult ParseContentLength(
       // TODO: In HTTP2, content-length header is not required anymore,
       // see https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.6
       // We should not rely on this header at all.
       std::shared_ptr<HttpHeaders>& headers, size_t& content_length) noexcept {
     auto header_iter = headers->find("content-length");
     if (header_iter == headers->end()) {
-      return google::scp::core::FailureExecutionResult(
-          ::privacy_sandbox::pbs_common::SC_HTTP2_SERVER_BAD_REQUEST);
+      return FailureExecutionResult(SC_HTTP2_SERVER_BAD_REQUEST);
     }
     const auto& content_length_val = header_iter->second;
 
     if (!IsNumber(content_length_val)) {
-      return google::scp::core::FailureExecutionResult(
-          ::privacy_sandbox::pbs_common::SC_HTTP2_SERVER_INVALID_HEADER);
+      return FailureExecutionResult(SC_HTTP2_SERVER_INVALID_HEADER);
     }
 
     try {
       content_length = strtoul(content_length_val.c_str(), NULL, 0);
     } catch (...) {
-      return google::scp::core::FailureExecutionResult(
-          ::privacy_sandbox::pbs_common::SC_HTTP2_SERVER_INVALID_HEADER);
+      return FailureExecutionResult(SC_HTTP2_SERVER_INVALID_HEADER);
     }
 
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
  private:

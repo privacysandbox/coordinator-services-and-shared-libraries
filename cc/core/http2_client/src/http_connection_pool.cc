@@ -35,12 +35,7 @@
 namespace privacy_sandbox::pbs_common {
 using boost::algorithm::to_lower;
 using boost::system::error_code;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
 using nghttp2::asio_http2::host_service_from_uri;
-using ::privacy_sandbox::pbs_common::kZeroUuid;
 
 static constexpr char kHttpsTag[] = "https";
 static constexpr char kHttpTag[] = "http";
@@ -151,8 +146,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
     std::shared_ptr<HttpConnection>& connection) noexcept {
   if (!is_running_) {
     return FailureExecutionResult(
-        privacy_sandbox::pbs_common::
-            SC_HTTP2_CLIENT_CONNECTION_POOL_IS_NOT_AVAILABLE);
+        SC_HTTP2_CLIENT_CONNECTION_POOL_IS_NOT_AVAILABLE);
   }
 
   error_code ec;
@@ -161,8 +155,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
   std::string service;
   if (host_service_from_uri(ec, scheme, host, service, *uri)) {
     IncrementClientAddressError(uri->c_str());
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_HTTP2_CLIENT_INVALID_URI);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_INVALID_URI);
   }
 
   to_lower(scheme);
@@ -173,8 +166,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
   } else if (scheme == kHttpTag) {
     is_https = false;
   } else {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_HTTP2_CLIENT_INVALID_URI);
+    return FailureExecutionResult(SC_HTTP2_CLIENT_INVALID_URI);
   }
 
   auto http_connection_entry = std::make_shared<HttpConnectionPoolEntry>();
@@ -215,8 +207,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
   }
 
   if (!http_connection_entry->is_initialized.load()) {
-    return RetryExecutionResult(
-        privacy_sandbox::pbs_common::SC_HTTP2_CLIENT_NO_CONNECTION_ESTABLISHED);
+    return RetryExecutionResult(SC_HTTP2_CLIENT_NO_CONNECTION_ESTABLISHED);
   }
 
   auto value = http_connection_entry->order_counter.fetch_add(1);
@@ -241,9 +232,7 @@ ExecutionResult HttpConnectionPool::GetConnection(
       }
       // Return a retry if we are not able to pick a ready connection.
       if (!connection->IsReady()) {
-        return RetryExecutionResult(
-            privacy_sandbox::pbs_common::
-                SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY);
+        return RetryExecutionResult(SC_HTTP2_CLIENT_HTTP_CONNECTION_NOT_READY);
       }
     }
   }

@@ -83,31 +83,31 @@ class AsyncExecutor : public AsyncExecutorInterface {
         drop_tasks_on_stop_(drop_tasks_on_stop),
         task_load_balancing_scheme_(task_load_balancing_scheme) {}
 
-  google::scp::core::ExecutionResult Init() noexcept override;
+  ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
-  google::scp::core::ExecutionResult Schedule(
-      const AsyncOperation& work, AsyncPriority priority) noexcept override;
+  ExecutionResult Schedule(const AsyncOperation& work,
+                           AsyncPriority priority) noexcept override;
 
-  google::scp::core::ExecutionResult Schedule(
+  ExecutionResult Schedule(
       const AsyncOperation& work, AsyncPriority priority,
       AsyncExecutorAffinitySetting affinity) noexcept override;
 
-  google::scp::core::ExecutionResult ScheduleFor(
-      const AsyncOperation& work, Timestamp timestamp) noexcept override;
+  ExecutionResult ScheduleFor(const AsyncOperation& work,
+                              Timestamp timestamp) noexcept override;
 
-  google::scp::core::ExecutionResult ScheduleFor(
+  ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       AsyncExecutorAffinitySetting affinity) noexcept override;
 
-  google::scp::core::ExecutionResult ScheduleFor(
+  ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback) noexcept override;
 
-  google::scp::core::ExecutionResult ScheduleFor(
+  ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback,
       AsyncExecutorAffinitySetting affinity) noexcept override;
@@ -123,8 +123,7 @@ class AsyncExecutor : public AsyncExecutorInterface {
   using NormalTaskExecutor = SingleThreadAsyncExecutor;
 
   template <class TaskExecutorType>
-  google::scp::core::ExecutionResultOr<std::shared_ptr<TaskExecutorType>>
-  PickTaskExecutor(
+  ExecutionResultOr<std::shared_ptr<TaskExecutorType>> PickTaskExecutor(
       AsyncExecutorAffinitySetting affinity,
       const std::vector<std::shared_ptr<TaskExecutorType>>& task_executor_pool,
       TaskExecutorPoolType task_executor_pool_type,

@@ -23,8 +23,6 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::test::ResultIs;
 using std::make_shared;
 using std::string;
 using std::vector;
@@ -144,7 +142,6 @@ TEST(AwsV4SignerTest, NoHeaderToSign) {
   vector<string> headers_to_sign;
   auto res = signer.SignRequest(request, headers_to_sign);
   EXPECT_THAT(res, ResultIs(FailureExecutionResult(
-
                        SC_HTTP2_CLIENT_AUTH_NO_HEADER_SPECIFIED)));
 }
 

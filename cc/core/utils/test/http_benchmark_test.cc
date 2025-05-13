@@ -17,9 +17,8 @@
 #include "cc/core/interface/http_types.h"
 #include "cc/core/utils/src/http.h"
 
-namespace google::scp::core::utils {
+namespace privacy_sandbox::pbs_common {
 namespace {
-using ::privacy_sandbox::pbs_common::HttpHeaders;
 
 void BM_ExtractValidUserAgent(benchmark::State& state) {
   HttpHeaders request_headers;
@@ -45,7 +44,7 @@ BENCHMARK(BM_ExtractValidUserAgent);
 BENCHMARK(BM_ExtractInvalidUserAgent);
 
 }  // namespace
-}  // namespace google::scp::core::utils
+}  // namespace privacy_sandbox::pbs_common
 
 // Run the benchmark.
 BENCHMARK_MAIN();

@@ -36,15 +36,7 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionStatus;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::GetMetricPointData;
-using ::google::scp::core::InMemoryMetricRouter;
-using ::google::scp::core::test::ResultIs;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
-using ::privacy_sandbox::pbs_common::Uuid;
-using ::privacy_sandbox::pbs_common::WaitUntilOrReturn;
 using ::testing::IsEmpty;
 
 class HttpConnectionTest : public testing::Test {
@@ -98,10 +90,8 @@ TEST_F(HttpConnectionTest, CancelCallbacks) {
   http_context.callback =
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         if (!is_called) {
-          EXPECT_THAT(context.result,
-                      ResultIs(FailureExecutionResult(
-                          ::privacy_sandbox::pbs_common::
-                              SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
+          EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(
+                                          SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
           is_called = true;
           counter.DecrementCount();
         }
@@ -158,10 +148,8 @@ TEST_F(HttpConnectionTest, StopRemovesCallback) {
   http_context.callback =
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         if (!is_called) {
-          EXPECT_THAT(context.result,
-                      ResultIs(FailureExecutionResult(
-                          ::privacy_sandbox::pbs_common::
-                              SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
+          EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(
+                                          SC_HTTP2_CLIENT_CONNECTION_DROPPED)));
           is_called = true;
           counter.DecrementCount();
         }
@@ -259,8 +247,7 @@ TEST_F(HttpConnectionTest, UnsupportedHttpMethod) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_EQ(context.result.status, ExecutionStatus::Failure);
         EXPECT_EQ(context.result.status_code,
-                  ::privacy_sandbox::pbs_common::
-                      SC_HTTP2_CLIENT_HTTP_METHOD_NOT_SUPPORTED);
+                  SC_HTTP2_CLIENT_HTTP_METHOD_NOT_SUPPORTED);
         counter.DecrementCount();
       };
 
@@ -361,8 +348,7 @@ TEST_F(HttpConnectionTest, RequestSubmissionFailure) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_EQ(context.result.status, ExecutionStatus::Retry);
         EXPECT_EQ(context.result.status_code,
-                  ::privacy_sandbox::pbs_common::
-                      SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
+                  SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
         counter.DecrementCount();
       };
 
@@ -696,8 +682,7 @@ TEST_F(HttpConnectionTest, ClientConnectionError) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_EQ(context.result.status, ExecutionStatus::Retry);
         EXPECT_EQ(context.result.status_code,
-                  ::privacy_sandbox::pbs_common::
-                      SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
+                  SC_HTTP2_CLIENT_FAILED_TO_ISSUE_HTTP_REQUEST);
         counter.DecrementCount();
       };
 

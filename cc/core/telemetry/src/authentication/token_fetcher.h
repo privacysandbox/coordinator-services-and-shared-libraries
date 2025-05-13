@@ -21,7 +21,7 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "grpcpp/impl/status.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * TokenFetcher is an abstract base class that defines an interface for
@@ -37,5 +37,5 @@ class TokenFetcher {
   virtual ExecutionResultOr<std::string> FetchIdToken(
       GrpcAuthConfig& auth_config) = 0;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif

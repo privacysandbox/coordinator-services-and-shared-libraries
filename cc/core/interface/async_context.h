@@ -102,7 +102,7 @@ struct AsyncContext {
         correlation_id(correlation_id),
         request(request),
         response(nullptr),
-        result(google::scp::core::FailureExecutionResult(SC_UNKNOWN)),
+        result(FailureExecutionResult(SC_UNKNOWN)),
         callback(callback),
         retry_count(0) {
     expiration_time =
@@ -144,8 +144,7 @@ struct AsyncContext {
                   "AsyncContext Finished. Mangled RequestType: '%s', "
                   "Mangled ResponseType: '%s', Message: '%s'",
                   typeid(TRequest).name(), typeid(TResponse).name(),
-                  privacy_sandbox::pbs_common::GetErrorMessage(
-                      result.status_code)));
+                  GetErrorMessage(result.status_code)));
         }
       }
       callback(*this);
@@ -170,7 +169,7 @@ struct AsyncContext {
   std::shared_ptr<TResponse> response;
 
   /// The execution result of the operation.
-  google::scp::core::ExecutionResult result;
+  ExecutionResult result;
 
   /// Callback function after the execution is done.
   Callback callback;
@@ -195,8 +194,7 @@ struct AsyncContext {
  */
 template <typename TRequest, typename TResponse>
 void FinishContext(
-    const google::scp::core::ExecutionResult& result,
-    AsyncContext<TRequest, TResponse>& context,
+    const ExecutionResult& result, AsyncContext<TRequest, TResponse>& context,
     const std::shared_ptr<AsyncExecutorInterface>& async_executor,
     AsyncPriority priority = AsyncPriority::High) {
   context.result = result;
@@ -218,7 +216,7 @@ void FinishContext(
  * @param context the async context to be completed.
  */
 template <typename TRequest, typename TResponse>
-void FinishContext(const google::scp::core::ExecutionResult& result,
+void FinishContext(const ExecutionResult& result,
                    AsyncContext<TRequest, TResponse>& context) {
   context.result = result;
   context.Finish();

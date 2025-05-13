@@ -31,23 +31,20 @@ static unordered_set<LogLevel> enabled_log_levels_ = {
     LogLevel::kEmergency, LogLevel::kError,    LogLevel::kInfo,
     LogLevel::kWarning};
 
-const unique_ptr<privacy_sandbox::pbs_common::LoggerInterface>&
-GlobalLogger::GetGlobalLogger() {
+const unique_ptr<LoggerInterface>& GlobalLogger::GetGlobalLogger() {
   return logger_instance_;
 }
 
 void GlobalLogger::SetGlobalLogLevels(
-    const unordered_set<privacy_sandbox::pbs_common::LogLevel>& log_levels) {
+    const unordered_set<LogLevel>& log_levels) {
   enabled_log_levels_ = log_levels;
 }
 
-void GlobalLogger::SetGlobalLogger(
-    unique_ptr<privacy_sandbox::pbs_common::LoggerInterface> logger) {
+void GlobalLogger::SetGlobalLogger(unique_ptr<LoggerInterface> logger) {
   logger_instance_ = std::move(logger);
 }
 
-bool GlobalLogger::IsLogLevelEnabled(
-    const privacy_sandbox::pbs_common::LogLevel log_level) {
+bool GlobalLogger::IsLogLevelEnabled(const LogLevel log_level) {
   return enabled_log_levels_.find(log_level) != enabled_log_levels_.end();
 }
 }  // namespace privacy_sandbox::pbs_common

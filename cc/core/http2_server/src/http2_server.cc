@@ -43,15 +43,6 @@ namespace {
 using ::boost::asio::ssl::context;
 using ::boost::system::error_code;
 using ::boost::system::errc::success;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::utils::Base64Decode;
-using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
-using ::google::scp::core::utils::GetUserAgentOrUnknownValue;
-using ::google::scp::core::utils::HttpMethodToString;
-using ::google::scp::core::utils::PadBase64Encoding;
 using ::nghttp2::asio_http2::server::configure_tls_context_easy;
 using ::nghttp2::asio_http2::server::request;
 using ::nghttp2::asio_http2::server::response;
@@ -61,9 +52,6 @@ using ::opentelemetry::sdk::resource::SemanticConventions::
 using ::opentelemetry::sdk::resource::SemanticConventions::kHttpRoute;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerPort;
-using ::privacy_sandbox::pbs_common::ConcurrentMap;
-using ::privacy_sandbox::pbs_common::Uuid;
-using ::privacy_sandbox::pbs_common::UuidCompare;
 
 static constexpr char kHttp2Server[] = "Http2Server";
 static constexpr size_t kConnectionReadTimeoutInSeconds = 90;
@@ -266,8 +254,7 @@ ExecutionResult Http2Server::Init() noexcept {
       configure_tls_context_easy(nghttp2_error_code, tls_context_);
     } catch (...) {
       auto execution_result = FailureExecutionResult(
-          privacy_sandbox::pbs_common::
-              SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
+          SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
       SCP_ERROR(kHttp2Server, kZeroUuid, execution_result,
                 "Failed to initialize TLS context.");
       return execution_result;
@@ -275,8 +262,7 @@ ExecutionResult Http2Server::Init() noexcept {
 
     if (nghttp2_error_code.value() != success) {
       auto execution_result = FailureExecutionResult(
-          privacy_sandbox::pbs_common::
-              SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
+          SC_HTTP2_SERVER_FAILED_TO_INITIALIZE_TLS_CONTEXT);
       SCP_ERROR(kHttp2Server, kZeroUuid, execution_result,
                 absl::StrFormat(
                     "Failed to initialize TLS context with error code: %d",
@@ -293,8 +279,7 @@ ExecutionResult Http2Server::Init() noexcept {
 
 ExecutionResult Http2Server::Run() noexcept {
   if (is_running_) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_ALREADY_RUNNING);
+    return FailureExecutionResult(SC_HTTP2_SERVER_ALREADY_RUNNING);
   }
 
   is_running_ = true;
@@ -331,8 +316,7 @@ ExecutionResult Http2Server::Run() noexcept {
   }
 
   if (server_listen_and_serve_error_code) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_INITIALIZATION_FAILED);
+    return FailureExecutionResult(SC_HTTP2_SERVER_INITIALIZATION_FAILED);
   }
 
   return SuccessExecutionResult();
@@ -340,8 +324,7 @@ ExecutionResult Http2Server::Run() noexcept {
 
 ExecutionResult Http2Server::Stop() noexcept {
   if (!is_running_) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_ALREADY_STOPPED);
+    return FailureExecutionResult(SC_HTTP2_SERVER_ALREADY_STOPPED);
   }
 
   is_running_ = false;
@@ -361,8 +344,7 @@ ExecutionResult Http2Server::Stop() noexcept {
 ExecutionResult Http2Server::RegisterResourceHandler(
     HttpMethod http_method, std::string& path, HttpHandler& handler) noexcept {
   if (is_running_) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_HTTP2_SERVER_CANNOT_REGISTER_HANDLER);
+    return FailureExecutionResult(SC_HTTP2_SERVER_CANNOT_REGISTER_HANDLER);
   }
   auto verb_to_handler_map =
       std::make_shared<ConcurrentMap<HttpMethod, HttpHandler>>();
@@ -372,8 +354,7 @@ ExecutionResult Http2Server::RegisterResourceHandler(
       resource_handlers_.Insert(path_to_map_pair, verb_to_handler_map);
   if (!execution_result.Successful()) {
     if (execution_result !=
-        FailureExecutionResult(privacy_sandbox::pbs_common::
-                                   SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
+        FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
       return execution_result;
     }
   }

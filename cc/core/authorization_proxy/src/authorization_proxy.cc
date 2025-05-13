@@ -29,44 +29,25 @@ static constexpr const char kAuthorizationProxy[] = "AuthorizationProxy";
 
 static constexpr int kAuthorizationCacheEntryLifetimeSeconds = 150;
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
+
 using boost::system::error_code;
 using nghttp2::asio_http2::host_service_from_uri;
-using ::privacy_sandbox::pbs_common::AsyncContext;
-using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
-using ::privacy_sandbox::pbs_common::AuthorizationProxyRequest;
-using ::privacy_sandbox::pbs_common::AuthorizationProxyResponse;
-using ::privacy_sandbox::pbs_common::HttpClientInterface;
-using ::privacy_sandbox::pbs_common::HttpHeaders;
-using ::privacy_sandbox::pbs_common::HttpMethod;
-using ::privacy_sandbox::pbs_common::HttpRequest;
-using ::privacy_sandbox::pbs_common::
-    HttpRequestResponseAuthInterceptorInterface;
-using ::privacy_sandbox::pbs_common::HttpResponse;
-using ::privacy_sandbox::pbs_common::kZeroUuid;
-using std::function;
-using std::make_shared;
-using std::move;
-using std::shared_ptr;
-using std::string;
-using std::placeholders::_1;
-using std::placeholders::_2;
-using std::placeholders::_3;
 
 void OnBeforeGarbageCollection(std::string&,
-                               shared_ptr<AuthorizationProxy::CacheEntry>&,
-                               function<void(bool)> should_delete_entry) {
+                               std::shared_ptr<AuthorizationProxy::CacheEntry>&,
+                               std::function<void(bool)> should_delete_entry) {
   should_delete_entry(true);
 }
 
 ExecutionResult AuthorizationProxy::Init() noexcept {
   error_code http2_error_code;
-  string scheme;
-  string service;
+  std::string scheme;
+  std::string service;
   if (host_service_from_uri(http2_error_code, scheme, host_, service,
                             *server_endpoint_uri_)) {
-    auto execution_result = FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_INVALID_CONFIG);
+    auto execution_result =
+        FailureExecutionResult(SC_AUTHORIZATION_PROXY_INVALID_CONFIG);
     SCP_ERROR(kAuthorizationProxy, kZeroUuid, execution_result,
               absl::StrFormat("Failed to parse URI with boost error_code: %s",
                               http2_error_code.message().c_str()));
@@ -84,15 +65,17 @@ ExecutionResult AuthorizationProxy::Stop() noexcept {
 }
 
 AuthorizationProxy::AuthorizationProxy(
-    const string& server_endpoint_url,
-    const shared_ptr<AsyncExecutorInterface>& async_executor,
-    const shared_ptr<HttpClientInterface>& http_client,
+    const std::string& server_endpoint_url,
+    const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+    const std::shared_ptr<HttpClientInterface>& http_client,
     std::unique_ptr<HttpRequestResponseAuthInterceptorInterface> http_helper)
     : cache_(kAuthorizationCacheEntryLifetimeSeconds,
              false /* extend_entry_lifetime_on_access */,
              false /* block_entry_while_eviction */,
-             bind(&OnBeforeGarbageCollection, _1, _2, _3), async_executor),
-      server_endpoint_uri_(make_shared<string>(server_endpoint_url)),
+             bind(&OnBeforeGarbageCollection, std::placeholders::_1,
+                  std::placeholders::_2, std::placeholders::_3),
+             async_executor),
+      server_endpoint_uri_(make_shared<std::string>(server_endpoint_url)),
       http_client_(http_client),
       http_helper_(std::move(http_helper)) {}
 
@@ -100,39 +83,36 @@ ExecutionResult AuthorizationProxy::Authorize(
     AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
         authorization_context) noexcept {
   if (!authorization_context.request) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST);
+    return FailureExecutionResult(SC_AUTHORIZATION_PROXY_BAD_REQUEST);
   }
 
   const auto& request = *authorization_context.request;
   if (!request.authorization_metadata.IsValid()) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST);
+    return FailureExecutionResult(SC_AUTHORIZATION_PROXY_BAD_REQUEST);
   }
 
   // Q: Is decoded token necessary here?
-  shared_ptr<CacheEntry> cache_entry_result;
+  std::shared_ptr<CacheEntry> cache_entry_result;
   // TODO Current map doesn't allow custom types i.e. AuthorizationMetadata
   // to be part of key because there is a need to specialise std::hash template
   // for AuthorizationMetadata, keeping string for now as the key.
   auto key_value_pair = make_pair(request.authorization_metadata.GetKey(),
-                                  make_shared<CacheEntry>());
+                                  std::make_shared<CacheEntry>());
   auto execution_result = cache_.Insert(key_value_pair, cache_entry_result);
   if (!execution_result.Successful()) {
     if (execution_result.status_code ==
-        privacy_sandbox::pbs_common::
-            SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED) {
+        SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED) {
       return RetryExecutionResult(execution_result.status_code);
     }
 
     if (execution_result.status_code !=
-        privacy_sandbox::pbs_common::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS) {
+        SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS) {
       return execution_result;
     }
 
     if (cache_entry_result->is_loaded) {
       authorization_context.response =
-          make_shared<AuthorizationProxyResponse>();
+          std::make_shared<AuthorizationProxyResponse>();
       authorization_context.response->authorized_metadata =
           cache_entry_result->authorized_metadata;
       authorization_context.result = SuccessExecutionResult();
@@ -140,24 +120,20 @@ ExecutionResult AuthorizationProxy::Authorize(
       return SuccessExecutionResult();
     }
 
-    return RetryExecutionResult(
-        privacy_sandbox::pbs_common::
-            SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS);
+    return RetryExecutionResult(SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS);
   }
 
   // Cache entry was not present, inserted.
   execution_result = cache_.DisableEviction(key_value_pair.first);
   if (!execution_result.Successful()) {
     cache_.Erase(key_value_pair.first);
-    return RetryExecutionResult(
-        privacy_sandbox::pbs_common::
-            SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS);
+    return RetryExecutionResult(SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS);
   }
 
-  auto http_request = make_shared<HttpRequest>();
+  auto http_request = std::make_shared<HttpRequest>();
   http_request->method = HttpMethod::POST;
   http_request->path = server_endpoint_uri_;
-  http_request->headers = make_shared<HttpHeaders>();
+  http_request->headers = std::make_shared<HttpHeaders>();
 
   execution_result = http_helper_->PrepareRequest(
       request.authorization_metadata, *http_request);
@@ -165,20 +141,18 @@ ExecutionResult AuthorizationProxy::Authorize(
     SCP_ERROR(kAuthorizationProxy, kZeroUuid, execution_result,
               "Failed adding headers to request");
     cache_.Erase(key_value_pair.first);
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST);
+    return FailureExecutionResult(SC_AUTHORIZATION_PROXY_BAD_REQUEST);
   }
 
   AsyncContext<HttpRequest, HttpResponse> http_context(
       std::move(http_request),
       bind(&AuthorizationProxy::HandleAuthorizeResponse, this,
-           authorization_context, key_value_pair.first, _1),
+           authorization_context, key_value_pair.first, std::placeholders::_1),
       authorization_context);
   auto result = http_client_->PerformRequest(http_context);
   if (!result.Successful()) {
     cache_.Erase(key_value_pair.first);
-    return RetryExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE);
+    return RetryExecutionResult(SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE);
   }
 
   return SuccessExecutionResult();
@@ -207,11 +181,12 @@ void AuthorizationProxy::HandleAuthorizeResponse(
     return;
   }
 
-  authorization_context.response = make_shared<AuthorizationProxyResponse>();
+  authorization_context.response =
+      std::make_shared<AuthorizationProxyResponse>();
   authorization_context.response->authorized_metadata = std::move(*metadata_or);
 
   // Update cache entry
-  shared_ptr<CacheEntry> cache_entry;
+  std::shared_ptr<CacheEntry> cache_entry;
   auto execution_result = cache_.Find(cache_entry_key, cache_entry);
   if (!execution_result.Successful()) {
     SCP_DEBUG_CONTEXT(kAuthorizationProxy, authorization_context,
@@ -232,4 +207,4 @@ void AuthorizationProxy::HandleAuthorizeResponse(
   authorization_context.result = SuccessExecutionResult();
   authorization_context.Finish();
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

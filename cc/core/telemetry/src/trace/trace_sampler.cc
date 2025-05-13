@@ -17,7 +17,7 @@
 #include <cmath>
 #include <cstring>
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 TraceSampler::TraceSampler(double sampling_ratio)
     : sampling_ratio_(sampling_ratio) {
@@ -100,4 +100,4 @@ uint64_t TraceSampler::CalculateThresholdFromBuffer(
   return CalculateThreshold(ratio);
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

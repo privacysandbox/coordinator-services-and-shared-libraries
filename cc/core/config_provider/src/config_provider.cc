@@ -25,21 +25,14 @@ using json = nlohmann::json;
 using std::list;
 
 namespace privacy_sandbox::pbs_common {
-namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::ConfigKey;
-}  // namespace
+namespace {}  // namespace
 
 ExecutionResult ConfigProvider::Init() noexcept {
   try {
     ifstream jsonFile(config_file_);
     config_json_ = json::parse(jsonFile);
   } catch (json::parse_error& e) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::
-            SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE);
+    return FailureExecutionResult(SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE);
   }
   return SuccessExecutionResult();
 };

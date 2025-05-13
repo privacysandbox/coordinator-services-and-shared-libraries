@@ -105,4 +105,7 @@ module "multipartykeyhosting_primary" {
   use_adaptive_protection              = var.use_adaptive_protection
   encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
   public_key_security_policy_rules     = var.public_key_security_policy_rules
+  enable_cloud_armor_alerts            = var.enable_cloud_armor_alerts
+  enable_cloud_armor_notifications     = var.enable_cloud_armor_notifications
+  cloud_armor_notification_channel_id  = var.cloud_armor_notification_channel_id
 }

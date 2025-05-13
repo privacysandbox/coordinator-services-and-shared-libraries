@@ -21,24 +21,10 @@ terraform {
   }
 }
 
-data "google_compute_zones" "available_zones" {}
-
 locals {
-  target_instance_count = 3
-  zone_usage_count      = length(data.google_compute_zones.available_zones)
-
-  docker_cert_volume_name    = "pbscertsvolume"
-  host_certificate_path      = "/tmp/self-signed-certs"
   container_certificate_path = "/opt/google/ssl/self-signed-certs"
 
-  pbs_log_volume_name    = "pbslogs"
-  pbs_container_log_path = "/var/log/"
-  pbs_host_log_path      = "/var/log/pbs/"
-
-  startup_script = templatefile("${path.module}/files/instance_startup.sh.tftpl", { host_certificate_path = local.host_certificate_path })
-
   pbs_auth_endpoint = var.enable_domain_management ? "${var.pbs_domain}/v1/auth" : var.pbs_auth_audience_url
-  pbs_image         = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-image:${var.pbs_image_tag}"
   pbs_image_cr      = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-cloud-run-image:${var.pbs_image_tag}"
   pbs_application_environment_variables_base = {
     google_scp_gcp_project_id    = var.project,
@@ -64,7 +50,7 @@ locals {
     google_scp_pbs_journal_service_partition_name                         = "00000000-0000-0000-0000-000000000000",
     google_scp_pbs_host_address                                           = "0.0.0.0",
     google_scp_pbs_remote_claimed_identity                                = "remote-coordinator.com",
-    google_scp_pbs_multi_instance_mode_disabled                           = local.target_instance_count > 1 || var.pbs_autoscaling_policy != null ? "false" : "true",
+    google_scp_pbs_multi_instance_mode_disabled                           = "true"
     google_scp_transaction_manager_skip_duplicate_transaction_in_recovery = "true",
     google_scp_pbs_relaxed_consistency_enabled                            = "true",
     google_scp_otel_enabled                                               = "true",
@@ -72,15 +58,6 @@ locals {
     google_scp_otel_metric_export_timeout_msec                            = "50000",
     OTEL_METRICS_EXPORTER                                                 = "googlecloud",
     google_scp_pbs_enable_request_response_proto_migration                = "true",
-  }
-  pbs_gce_environment_variables = {
-    google_scp_pbs_health_port                     = var.health_check_port
-    google_scp_pbs_http2_server_use_tls            = "true"
-    google_scp_pbs_log_provider                    = "SyslogLogProvider"
-    google_scp_pbs_container_type                  = "compute_engine"
-    google_scp_pbs_async_executor_threads_count    = "64"
-    google_scp_pbs_io_async_executor_threads_count = "256"
-    google_scp_core_http2server_threads_count      = "160"
   }
   pbs_cloud_run_environment_variables = {
     google_scp_pbs_http2_server_use_tls            = "false"
@@ -103,59 +80,6 @@ locals {
   // then the one that is later in the argument sequence takes precedence."
 
   pbs_cloud_run_environment_variables_merged = merge(local.pbs_application_environment_variables_base, local.pbs_cloud_run_environment_variables, local.pbs_application_environment_variables_child)
-
-  pbs_gce_environment_variables_merged = [for k, v in merge(local.pbs_application_environment_variables_base, local.pbs_gce_environment_variables, local.pbs_application_environment_variables_child) :
-    {
-      name  = k
-      value = v
-    }
-  ]
-
-  container_spec = {
-    spec = {
-      containers = [
-        {
-          image = local.pbs_image
-          securityContext = {
-            privileged : true
-          }
-          tty : false
-
-          env = local.pbs_gce_environment_variables_merged
-
-          volumeMounts = [
-            # Mount the self-signed cert directory from the host machine on the container
-            # so that it can be accessed by the HTTP2 server.
-            {
-              name      = "${local.docker_cert_volume_name}"
-              mountPath = "${local.container_certificate_path}"
-              readOnly  = true
-            },
-            {
-              name      = "${local.pbs_log_volume_name}"
-              mountPath = "${local.pbs_container_log_path}"
-              readOnly  = false
-            },
-          ]
-        },
-      ]
-      volumes = [
-        {
-          name = local.docker_cert_volume_name
-          hostPath = {
-            path = local.host_certificate_path
-          }
-        },
-        {
-          name = local.pbs_log_volume_name
-          hostPath = {
-            path = local.pbs_host_log_path
-          }
-        },
-      ]
-      restartPolicy = "Always"
-    }
-  }
 }
 
 resource "google_artifact_registry_repository_iam_member" "pbs_artifact_registry_iam_read" {
@@ -212,171 +136,14 @@ data "google_iam_policy" "cloud_run_no_auth" {
   }
 }
 
-# The following options cannot be used together.
-# `name` can be specified for a specific cos stable OS version
-# `family` can be specified for the latest cos stable OS.
-# See https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/compute_image.
-## IMPORTANT: Here we have pinned `cos-105-17412-370-67` which has LTS due to the upcoming change from
-## fluentd to fluent-bit. Preliminary testing shows enabling fluent-bit will break PBS logs. Migration
-## must occur before the deprecation of cos-105-LTS (March 2025).
-data "google_compute_image" "pbs_container_vm_image" {
-  name    = "cos-105-17412-370-67"
-  project = "cos-cloud"
-}
-
-resource "google_compute_instance_template" "pbs_instance_template" {
-  # Cannot be longer than 37 characters
-  name_prefix          = "${var.environment}-pbs-inst-template"
-  description          = "The PBS template for creating instances for ${var.environment}."
-  instance_description = "A PBS instance for ${var.environment}"
-  machine_type         = var.machine_type
-
-  disk {
-    device_name  = "${var.environment}-pbs"
-    source_image = data.google_compute_image.pbs_container_vm_image.self_link
-    boot         = true
-    auto_delete  = true
-    disk_size_gb = var.root_volume_size_gb
-    disk_type    = "pd-ssd"
-  }
-
-  network_interface {
-    # If a VPC ID is provided, use that, otherwise use the default network.
-    network    = var.vpc_network_id != null ? var.vpc_network_id : "default"
-    subnetwork = var.vpc_subnet_id
-
-    # There is no specific flag to enable/disable auto-assigment of a public IP
-    # address. However, this is controlled via the access_config block.
-    # Excluding this block will result in a public IP address not being assigned.
-    # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance_template#access_config
-    dynamic "access_config" {
-      for_each = var.enable_public_ip_address ? [1] : []
-      content {
-        network_tier = "PREMIUM"
-      }
-    }
-  }
-
-  metadata = {
-    gce-container-declaration = yamlencode(local.container_spec)
-    google-logging-enabled    = var.pbs_cloud_logging_enabled
-    google-monitoring-enabled = var.pbs_cloud_monitoring_enabled
-    startup-script            = local.startup_script
-    enable-oslogin            = true
-  }
-
-  service_account {
-    # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
-    email  = var.pbs_service_account_email
-    scopes = ["cloud-platform"]
-  }
-
-  scheduling {
-    automatic_restart   = true
-    on_host_maintenance = "MIGRATE"
-  }
-
-  shielded_instance_config {
-    enable_secure_boot          = false
-    enable_vtpm                 = true
-    enable_integrity_monitoring = true
-  }
-
-  tags = concat([var.environment, var.network_target_tag], var.pbs_custom_vm_tags)
-
-  # Create before destroy since template is being used by the PBS instance group
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "google_compute_health_check" "pbs_health_check" {
-  count   = var.enable_health_check ? 1 : 0
-  name    = "${var.environment}-pbs-mig-hc"
-  project = var.project
-
-  check_interval_sec  = 10
-  timeout_sec         = 10
-  unhealthy_threshold = 5
-
-  http2_health_check {
-    request_path       = "/health"
-    port               = var.health_check_port
-    port_specification = "USE_FIXED_PORT"
-    proxy_header       = "NONE"
-  }
-}
-
-resource "google_compute_region_instance_group_manager" "pbs_instance_group" {
-  name               = "${var.environment}-pbs-mig"
-  description        = "The PBS managed instance group for ${var.environment}."
-  base_instance_name = "${var.environment}-pbs"
-  region             = var.region
-  # target_size is managed by autoscaling if pbs_autoscaling_policy is set.
-  target_size = var.pbs_autoscaling_policy == null ? local.target_instance_count : null
-
-  version {
-    instance_template = google_compute_instance_template.pbs_instance_template.id
-  }
-
-  update_policy {
-    minimal_action               = "REPLACE"
-    type                         = "PROACTIVE"
-    instance_redistribution_type = "PROACTIVE"
-    replacement_method           = "SUBSTITUTE"
-    max_unavailable_fixed        = 0
-    max_surge_fixed              = local.zone_usage_count
-  }
-
-  dynamic "auto_healing_policies" {
-    for_each = var.enable_health_check ? [1] : []
-    content {
-      health_check = google_compute_health_check.pbs_health_check[0].id
-      // Wait 5 min when an instance first comes up before we start taking health checks into account.
-      initial_delay_sec = 300
-    }
-  }
-
-  dynamic "named_port" {
-    for_each = var.named_ports
-    content {
-      name = named_port.value["name"]
-      port = named_port.value["port"]
-    }
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "google_compute_region_autoscaler" "pbs_instance_group" {
-  count = var.pbs_autoscaling_policy != null ? 1 : 0
-
-  name   = "${var.environment}-pbs-autoscaler"
-  region = var.region
-  target = google_compute_region_instance_group_manager.pbs_instance_group.id
-
-  autoscaling_policy {
-    max_replicas = var.pbs_autoscaling_policy.max_replicas
-    min_replicas = var.pbs_autoscaling_policy.min_replicas
-
-    cpu_utilization {
-      target = var.pbs_autoscaling_policy.cpu_utilization_target
-    }
-  }
-}
-
 resource "google_cloud_run_service_iam_policy" "no_auth" {
-  count       = var.deploy_pbs_cloud_run ? 1 : 0
-  location    = google_cloud_run_v2_service.pbs_instance[0].location
-  project     = google_cloud_run_v2_service.pbs_instance[0].project
-  service     = google_cloud_run_v2_service.pbs_instance[0].name
+  location    = google_cloud_run_v2_service.pbs_instance.location
+  project     = google_cloud_run_v2_service.pbs_instance.project
+  service     = google_cloud_run_v2_service.pbs_instance.name
   policy_data = data.google_iam_policy.cloud_run_no_auth.policy_data
 }
 
 resource "google_cloud_run_v2_service" "pbs_instance" {
-  count    = var.deploy_pbs_cloud_run ? 1 : 0
   name     = "${var.environment}-${var.region}-pbs-cloud-run"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"

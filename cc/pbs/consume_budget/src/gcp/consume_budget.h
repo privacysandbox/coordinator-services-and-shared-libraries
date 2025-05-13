@@ -23,56 +23,54 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "google/cloud/spanner/connection.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 // A helper class to consume privacy budgets for a given list of privacy budget
 // keys by writing to GCP Spanner.
 class BudgetConsumptionHelper : public BudgetConsumptionHelperInterface {
  public:
   BudgetConsumptionHelper(
-      privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider,
-      privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor,
-      privacy_sandbox::pbs_common::AsyncExecutorInterface* io_async_executor,
-      std::shared_ptr<cloud::spanner::Connection> spanner_connection);
+      pbs_common::ConfigProviderInterface* config_provider,
+      pbs_common::AsyncExecutorInterface* async_executor,
+      pbs_common::AsyncExecutorInterface* io_async_executor,
+      std::shared_ptr<google::cloud::spanner::Connection> spanner_connection);
 
-  google::scp::core::ExecutionResult Init() noexcept override;
+  pbs_common::ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  pbs_common::ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  pbs_common::ExecutionResult Stop() noexcept override;
 
   // Consumes privacy budgets for the given list of privacy budget keys in
   // consume_budget_context.
-  google::scp::core::ExecutionResult ConsumeBudgets(
-      privacy_sandbox::pbs_common::AsyncContext<ConsumeBudgetsRequest,
-                                                ConsumeBudgetsResponse>
+  pbs_common::ExecutionResult ConsumeBudgets(
+      pbs_common::AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
           consume_budgets_context) override;
 
-  static google::scp::core::ExecutionResultOr<
-      std::shared_ptr<cloud::spanner::Connection>>
+  static pbs_common::ExecutionResultOr<
+      std::shared_ptr<google::cloud::spanner::Connection>>
   MakeSpannerConnectionForProd(
-      privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider);
+      pbs_common::ConfigProviderInterface& config_provider);
 
  private:
   void ConsumeBudgetsSyncAndFinishContext(
-      privacy_sandbox::pbs_common::AsyncContext<ConsumeBudgetsRequest,
-                                                ConsumeBudgetsResponse>
+      pbs_common::AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
           consume_budgets_context);
 
-  google::scp::core::ExecutionResult ConsumeBudgetsSyncWithBudgetConsumer(
-      const privacy_sandbox::pbs_common::AsyncContext<ConsumeBudgetsRequest,
-                                                      ConsumeBudgetsResponse>&
+  pbs_common::ExecutionResult ConsumeBudgetsSyncWithBudgetConsumer(
+      const pbs_common::AsyncContext<ConsumeBudgetsRequest,
+                                     ConsumeBudgetsResponse>&
           consume_budgets_context);
 
-  google::scp::core::ExecutionResult ConsumeBudgetsSyncWithoutBudgetConsumer(
-      const privacy_sandbox::pbs_common::AsyncContext<ConsumeBudgetsRequest,
-                                                      ConsumeBudgetsResponse>&
+  pbs_common::ExecutionResult ConsumeBudgetsSyncWithoutBudgetConsumer(
+      const pbs_common::AsyncContext<ConsumeBudgetsRequest,
+                                     ConsumeBudgetsResponse>&
           consume_budgets_context);
 
-  privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider_;
-  privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor_;
-  privacy_sandbox::pbs_common::AsyncExecutorInterface* io_async_executor_;
-  std::shared_ptr<cloud::spanner::Connection> spanner_connection_;
+  pbs_common::ConfigProviderInterface* config_provider_;
+  pbs_common::AsyncExecutorInterface* async_executor_;
+  pbs_common::AsyncExecutorInterface* io_async_executor_;
+  std::shared_ptr<google::cloud::spanner::Connection> spanner_connection_;
   std::string table_name_;
 
   // These are migration parameters that will be removed eventually and
@@ -85,6 +83,6 @@ class BudgetConsumptionHelper : public BudgetConsumptionHelperInterface {
   bool should_enable_budget_consumer_;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs
 
 #endif  // CC_PBS_CONSUME_BUDGET_SRC_GCP_CONSUME_BUDGET_H_

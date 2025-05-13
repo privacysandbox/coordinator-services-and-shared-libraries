@@ -25,35 +25,30 @@
 #include "cc/core/interface/http_types.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 class AwsHttpRequestResponseAuthInterceptor
-    : public privacy_sandbox::pbs_common::
-          HttpRequestResponseAuthInterceptorInterface {
+    : public pbs_common::HttpRequestResponseAuthInterceptorInterface {
  public:
   explicit AwsHttpRequestResponseAuthInterceptor(const std::string& aws_region)
       : aws_region_(aws_region) {}
 
   AwsHttpRequestResponseAuthInterceptor(
       const std::string& aws_region,
-      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-          config_provider)
+      std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider)
       : aws_region_(aws_region) {}
 
-  core::ExecutionResult PrepareRequest(
-      const privacy_sandbox::pbs_common::AuthorizationMetadata&
-          authorization_metadata,
-      privacy_sandbox::pbs_common::HttpRequest& http_request) override;
+  pbs_common::ExecutionResult PrepareRequest(
+      const pbs_common::AuthorizationMetadata& authorization_metadata,
+      pbs_common::HttpRequest& http_request) override;
 
-  core::ExecutionResultOr<privacy_sandbox::pbs_common::AuthorizedMetadata>
+  pbs_common::ExecutionResultOr<pbs_common::AuthorizedMetadata>
   ObtainAuthorizedMetadataFromResponse(
-      const privacy_sandbox::pbs_common::AuthorizationMetadata&
-          authorization_metadata,
-      const privacy_sandbox::pbs_common::HttpResponse& http_response)
-      override;
+      const pbs_common::AuthorizationMetadata& authorization_metadata,
+      const pbs_common::HttpResponse& http_response) override;
 
  private:
   std::string aws_region_;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

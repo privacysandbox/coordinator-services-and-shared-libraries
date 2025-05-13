@@ -23,9 +23,6 @@
 #include "cc/core/common/uuid/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::test::ResultIs;
-
 namespace privacy_sandbox::pbs_common {
 TEST(UuidTests, UuidGeneration) {
   Uuid uuid = Uuid::GenerateUuid();
@@ -47,22 +44,18 @@ TEST(UuidTests, InvalidUuidString) {
   std::string uuid_string = "123";
   Uuid parsed_uuid;
   EXPECT_THAT(FromString(uuid_string, parsed_uuid),
-              ResultIs(FailureExecutionResult(
-                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
+              ResultIs(FailureExecutionResult(SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09r48EDrA355rD346rAD7DC6CB0909";
   EXPECT_THAT(FromString(uuid_string, parsed_uuid),
-              ResultIs(FailureExecutionResult(
-                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
+              ResultIs(FailureExecutionResult(SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09-48RD-A355-D346-AD7DC6CB0909";
   EXPECT_THAT(FromString(uuid_string, parsed_uuid),
-              ResultIs(FailureExecutionResult(
-                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
+              ResultIs(FailureExecutionResult(SC_UUID_INVALID_STRING)));
 
   uuid_string = "3E2A3D09-48Ed-A355-D346-AD7DC6CB0909";
   EXPECT_THAT(FromString(uuid_string, parsed_uuid),
-              ResultIs(FailureExecutionResult(
-                  privacy_sandbox::pbs_common::SC_UUID_INVALID_STRING)));
+              ResultIs(FailureExecutionResult(SC_UUID_INVALID_STRING)));
 }
 }  // namespace privacy_sandbox::pbs_common

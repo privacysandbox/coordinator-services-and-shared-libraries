@@ -36,7 +36,7 @@
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/version.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 class InMemoryMetricRouter : public MetricRouter {
  public:
   explicit InMemoryMetricRouter(
@@ -52,7 +52,7 @@ class InMemoryMetricRouter : public MetricRouter {
   static std::shared_ptr<InMemoryMetricReader> CreateInMemoryReader(
       bool is_otel_print_data_to_console_enabled);
 
-  std::shared_ptr<core::InMemoryMetricReader> metric_reader_;
+  std::shared_ptr<InMemoryMetricReader> metric_reader_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif

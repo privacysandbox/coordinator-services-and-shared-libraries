@@ -42,24 +42,20 @@
 #include "google/cloud/spanner/mocks/row.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
 using ::absl_testing::IsOk;
 using ::google::protobuf::util::JsonStringToMessage;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AuthContext;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
+using ::privacy_sandbox::pbs_common::ResultIs;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::testing::Bool;
 using ::testing::Combine;
 using ::testing::ConvertGenerator;
@@ -476,8 +472,8 @@ TEST_P(BinaryBudgetConsumerTest,
 
   ExecutionResult execution_result = MakeParseTransactionRequestCall(
       GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_THAT(execution_result, core::FailureExecutionResult(
-                                    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
+  EXPECT_THAT(execution_result,
+              FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingKeyInRequestBody) {
@@ -772,7 +768,7 @@ TEST_P(BinaryBudgetConsumerTest, InvalidBudgetTypeRequestBody) {
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
   EXPECT_THAT(execution_result,
@@ -804,7 +800,7 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV1Success) {
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
@@ -846,12 +842,12 @@ TEST_P(BinaryBudgetConsumerTest, StopServingV1Request) {
 
   auto binary_budget_consumer =
       std::make_unique<BinaryBudgetConsumer>(mock_config_provider.get());
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest,
@@ -879,7 +875,7 @@ TEST_P(BinaryBudgetConsumerTest,
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
@@ -914,7 +910,7 @@ TEST_P(BinaryBudgetConsumerTest, MissingKeyInRequestBodyV1) {
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
   EXPECT_THAT(execution_result,
@@ -946,7 +942,7 @@ TEST_P(BinaryBudgetConsumerTest, RepeatedKeyInRequestBodyV1) {
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
   EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
@@ -976,12 +972,12 @@ TEST_P(BinaryBudgetConsumerTest, MissingReportingTimeInRequestBodyV1) {
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidReportingTimeInRequestBodyV1) {
@@ -1003,7 +999,7 @@ TEST_P(BinaryBudgetConsumerTest, InvalidReportingTimeInRequestBodyV1) {
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
   EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
@@ -1028,12 +1024,12 @@ TEST_P(BinaryBudgetConsumerTest, MissingTokenInRequestBodyV1) {
 }
   )");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidVersionInRequestBodyV1) {
@@ -1044,12 +1040,12 @@ TEST_P(BinaryBudgetConsumerTest, InvalidVersionInRequestBodyV1) {
 
   nlohmann::json request_body = nlohmann::json::parse(R"({ "v": "" })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidVersionAndDataInRequestBodyV1) {
@@ -1061,12 +1057,12 @@ TEST_P(BinaryBudgetConsumerTest, InvalidVersionAndDataInRequestBodyV1) {
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "", "t": "" })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidVersion2InRequestBodyV1) {
@@ -1078,12 +1074,12 @@ TEST_P(BinaryBudgetConsumerTest, InvalidVersion2InRequestBodyV1) {
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.2", "t": "" })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidDataInRequestBodyV1) {
@@ -1095,12 +1091,12 @@ TEST_P(BinaryBudgetConsumerTest, InvalidDataInRequestBodyV1) {
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.0", "t": "" })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, EmptyDataInRequestBodyV1) {
@@ -1112,7 +1108,7 @@ TEST_P(BinaryBudgetConsumerTest, EmptyDataInRequestBodyV1) {
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.0", "t": [] })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
@@ -1128,12 +1124,12 @@ TEST_P(BinaryBudgetConsumerTest, InvalidData2InRequestBodyV1) {
   nlohmann::json request_body =
       nlohmann::json::parse(R"({ "v": "1.0", "t": [{ "blah": "12" }] })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidTokenInRequestBodyV1) {
@@ -1145,12 +1141,12 @@ TEST_P(BinaryBudgetConsumerTest, InvalidTokenInRequestBodyV1) {
   nlohmann::json request_body = nlohmann::json::parse(
       R"({ "v": "1.0", "t": [{ "key": "3d4sd", "token": "ds1", "reporting_time": "2019-12-11T07:20:50.52Z" }] })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidToken2InRequestBodyV1) {
@@ -1162,12 +1158,12 @@ TEST_P(BinaryBudgetConsumerTest, InvalidToken2InRequestBodyV1) {
   nlohmann::json request_body = nlohmann::json::parse(
       R"({ "v": "1.0", "t": [{ "key": "test_key", "token": "10", "reporting_time": "2019-12-11T07:20:50.52Z" }] })");
 
-  core::ExecutionResult execution_result =
+  ExecutionResult execution_result =
       binary_budget_consumer_->ParseTransactionRequest(
           GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(execution_result,
-            core::FailureExecutionResult(
-                SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
+  EXPECT_EQ(
+      execution_result,
+      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 // Spanner mutations are ordered. Since we use absl::flat_hash_map, the order
@@ -1438,11 +1434,10 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithoutBudget) {
       binary_budget_consumer_->ConsumeBudget(row_stream, kTableName);
 
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
-  EXPECT_THAT(
-      spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
+  EXPECT_THAT(spanner_mutations_result.execution_result,
+              ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_THAT(spanner_mutations_result.budget_exhausted_indices,
               ElementsAre(0));
 }
@@ -1512,11 +1507,10 @@ TEST_P(BinaryBudgetConsumerTest,
       binary_budget_consumer_->ConsumeBudget(row_stream, kTableName);
 
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
-  EXPECT_THAT(
-      spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
+  EXPECT_THAT(spanner_mutations_result.execution_result,
+              ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_THAT(spanner_mutations_result.budget_exhausted_indices,
               ElementsAre(0, 1, 2));
 }
@@ -1571,11 +1565,10 @@ TEST_P(BinaryBudgetConsumerTest,
       binary_budget_consumer_->ConsumeBudget(row_stream, kTableName);
 
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
-  EXPECT_THAT(
-      spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
+  EXPECT_THAT(spanner_mutations_result.execution_result,
+              ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_THAT(spanner_mutations_result.budget_exhausted_indices,
               ElementsAre(0, 1));
 }
@@ -1615,9 +1608,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidRow) {
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
   EXPECT_THAT(
       spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_TRUE(spanner_mutations_result.budget_exhausted_indices.empty());
 }
 
@@ -1662,9 +1655,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidJsonValueColumn) {
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
   EXPECT_THAT(
       spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_TRUE(spanner_mutations_result.budget_exhausted_indices.empty());
 }
 
@@ -1710,9 +1703,9 @@ TEST_P(BinaryBudgetConsumerTest,
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
   EXPECT_THAT(
       spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_TRUE(spanner_mutations_result.budget_exhausted_indices.empty());
 }
 
@@ -1758,9 +1751,9 @@ TEST_P(BinaryBudgetConsumerTest,
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
   EXPECT_THAT(
       spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_TRUE(spanner_mutations_result.budget_exhausted_indices.empty());
 }
 
@@ -1806,9 +1799,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithNoLaplaceDp) {
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
   EXPECT_THAT(
       spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_TRUE(spanner_mutations_result.budget_exhausted_indices.empty());
 }
 
@@ -1852,9 +1845,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpSize) {
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
   EXPECT_THAT(
       spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_TRUE(spanner_mutations_result.budget_exhausted_indices.empty());
 }
 
@@ -1902,9 +1895,9 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpTokens) {
   EXPECT_TRUE(spanner_mutations_result.mutations.empty());
   EXPECT_THAT(
       spanner_mutations_result.execution_result,
-      ResultIs(core::FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR)));
   EXPECT_EQ(spanner_mutations_result.status.code(),
-            cloud::StatusCode::kInvalidArgument);
+            google::cloud::StatusCode::kInvalidArgument);
   EXPECT_TRUE(spanner_mutations_result.budget_exhausted_indices.empty());
 }
 
@@ -2039,4 +2032,4 @@ TEST_P(BinaryBudgetConsumerTest,
 }
 
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

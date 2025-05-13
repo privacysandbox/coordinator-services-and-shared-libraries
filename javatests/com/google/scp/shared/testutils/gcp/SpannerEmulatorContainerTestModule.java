@@ -17,9 +17,9 @@
 package com.google.scp.shared.testutils.gcp;
 
 import com.google.cloud.NoCredentials;
+import com.google.cloud.spanner.Database;
 import com.google.cloud.spanner.DatabaseAdminClient;
 import com.google.cloud.spanner.DatabaseClient;
-import com.google.cloud.spanner.DatabaseId;
 import com.google.cloud.spanner.InstanceAdminClient;
 import com.google.cloud.spanner.InstanceConfigId;
 import com.google.cloud.spanner.InstanceId;
@@ -29,25 +29,25 @@ import com.google.cloud.spanner.SpannerOptions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import java.time.Clock;
+import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 import org.testcontainers.utility.DockerImageName;
 
 public class SpannerEmulatorContainerTestModule extends AbstractModule {
 
-  private final String projectName;
-  private final String instanceName;
-  private final String databaseName;
+  private final SpannerDatabaseConfig config;
   private final Iterable<String> createTableStatements;
 
+  public SpannerEmulatorContainerTestModule(SpannerDatabaseConfig config) {
+    this.config = config;
+    this.createTableStatements = Collections.emptyList();
+  }
+
   public SpannerEmulatorContainerTestModule(
-      String projectName,
-      String instanceName,
-      String databaseName,
-      Iterable<String> createTableStatements) {
-    this.projectName = projectName;
-    this.instanceName = instanceName;
-    this.databaseName = databaseName;
+      SpannerDatabaseConfig config, Iterable<String> createTableStatements) {
+    this.config = config;
     this.createTableStatements = createTableStatements;
   }
 
@@ -63,18 +63,17 @@ public class SpannerEmulatorContainerTestModule extends AbstractModule {
   @Singleton
   public DatabaseClient getDatabaseClient(SpannerEmulatorContainer emulator)
       throws ExecutionException, InterruptedException {
-    SpannerOptions options =
+    Spanner spanner =
         SpannerOptions.newBuilder()
             .setEmulatorHost(emulator.getEmulatorGrpcEndpoint())
             .setCredentials(NoCredentials.getInstance())
-            .setProjectId(projectName)
-            .build();
-    Spanner spanner = options.getService();
-    InstanceId instanceId = createInstance(spanner);
-    createDatabase(spanner);
+            .setProjectId(config.gcpProjectId())
+            .build()
+            .getService();
 
-    DatabaseId databaseId = DatabaseId.of(instanceId, databaseName);
-    return spanner.getDatabaseClient(databaseId);
+    createInstance(spanner);
+    Database database = createDatabase(spanner);
+    return spanner.getDatabaseClient(database.getId());
   }
 
   /** Provides an instance of the {@code Clock} class. */
@@ -84,15 +83,9 @@ public class SpannerEmulatorContainerTestModule extends AbstractModule {
     return Clock.systemUTC();
   }
 
-  private void createDatabase(Spanner spanner) throws InterruptedException, ExecutionException {
-    DatabaseAdminClient dbAdminClient = spanner.getDatabaseAdminClient();
-    dbAdminClient.createDatabase(instanceName, databaseName, createTableStatements).get();
-  }
-
-  private InstanceId createInstance(Spanner spanner)
-      throws InterruptedException, ExecutionException {
-    InstanceConfigId instanceConfig = InstanceConfigId.of(projectName, "emulator-config");
-    InstanceId instanceId = InstanceId.of(projectName, instanceName);
+  private void createInstance(Spanner spanner) throws InterruptedException, ExecutionException {
+    InstanceConfigId instanceConfig = InstanceConfigId.of(config.gcpProjectId(), "emulator-config");
+    InstanceId instanceId = InstanceId.of(config.gcpProjectId(), config.instanceId());
     InstanceAdminClient insAdminClient = spanner.getInstanceAdminClient();
     insAdminClient
         .createInstance(
@@ -102,6 +95,12 @@ public class SpannerEmulatorContainerTestModule extends AbstractModule {
                 .setInstanceConfigId(instanceConfig)
                 .build())
         .get();
-    return instanceId;
+  }
+
+  private Database createDatabase(Spanner spanner) throws InterruptedException, ExecutionException {
+    DatabaseAdminClient dbAdminClient = spanner.getDatabaseAdminClient();
+    return dbAdminClient
+        .createDatabase(config.instanceId(), config.databaseName(), createTableStatements)
+        .get();
   }
 }

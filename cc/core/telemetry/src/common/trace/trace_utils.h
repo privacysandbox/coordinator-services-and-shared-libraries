@@ -19,10 +19,10 @@
 
 #include "opentelemetry/trace/trace_id.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 // Converts the TraceId from a Span to a std::string
 std::string GetTraceIdString(const opentelemetry::trace::TraceId& tid);
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_SRC_COMMON_TRACE_TRACE_UTILS_H_

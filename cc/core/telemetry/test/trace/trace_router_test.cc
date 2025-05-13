@@ -25,10 +25,8 @@
 #include "exporters/ostream/include/opentelemetry/exporters/ostream/span_exporter_factory.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
-
-using ::privacy_sandbox::pbs_common::MockConfigProvider;
 
 class TraceRouterTest : public ::testing::Test {
  protected:
@@ -62,13 +60,13 @@ class TraceRouterTest : public ::testing::Test {
                                      trace_sampling_ratio);
 
     // Create TraceRouter instance with default resource and config provider.
-    trace_router_ = std::make_unique<google::scp::core::TraceRouter>(
+    trace_router_ = std::make_unique<TraceRouter>(
         *mock_config_provider_,
         opentelemetry::sdk::resource::Resource::GetDefault(),
         std::move(exporter));
   }
 
-  std::unique_ptr<google::scp::core::TraceRouter> trace_router_;
+  std::unique_ptr<TraceRouter> trace_router_;
 };
 
 TEST_F(TraceRouterTest, TestCreateTracer) {
@@ -83,4 +81,4 @@ TEST_F(TraceRouterTest, TestCreateTracer) {
 }
 
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

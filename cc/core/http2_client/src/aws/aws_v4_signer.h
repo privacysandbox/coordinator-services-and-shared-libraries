@@ -42,7 +42,7 @@ class AwsV4Signer {
    * @return ExecutionResult SuccessExecutionResult if everything required are
    * valid. Otherwise failure.
    */
-  google::scp::core::ExecutionResult SignRequest(
+  ExecutionResult SignRequest(
       HttpRequest& http_request,
       std::vector<std::string>& headers_to_sign) noexcept;
 
@@ -55,8 +55,8 @@ class AwsV4Signer {
    * @return ExecutionResult SuccessExecutionResult if everything required are
    * valid. Otherwise failure.
    */
-  google::scp::core::ExecutionResult SignRequest(
-      HttpRequest& http_request, const std::string& headers_to_sign) noexcept;
+  ExecutionResult SignRequest(HttpRequest& http_request,
+                              const std::string& headers_to_sign) noexcept;
 
   /**
    * @brief Sign the request based on \a header_begin and \a header_end, which
@@ -69,9 +69,9 @@ class AwsV4Signer {
    * valid. Otherwise failure.
    */
   template <class HeadersIter>
-  google::scp::core::ExecutionResult SignRequest(
-      HttpRequest& http_request, HeadersIter header_begin,
-      HeadersIter header_end) noexcept {
+  ExecutionResult SignRequest(HttpRequest& http_request,
+                              HeadersIter header_begin,
+                              HeadersIter header_end) noexcept {
     std::vector<std::string> headers(header_begin, header_end);
     return SignRequest(http_request, headers);
   }
@@ -86,7 +86,7 @@ class AwsV4Signer {
    * @param signature The pre-calculated signature.
    * @return ExecutionResult
    */
-  google::scp::core::ExecutionResult SignRequestWithSignature(
+  ExecutionResult SignRequestWithSignature(
       HttpRequest& http_request, std::vector<std::string>& headers_to_sign,
       const std::string& x_amz_date, const std::string& signature) noexcept;
 
@@ -100,9 +100,10 @@ class AwsV4Signer {
    * @param x_amz_date[out] The date string, i.e. the x-amz-date header value.
    * @return ExecutionResult
    */
-  google::scp::core::ExecutionResult GetSignatureParts(
-      HttpRequest& http_request, std::vector<std::string>& headers_to_sign,
-      std::string& signature, std::string& x_amz_date) noexcept;
+  ExecutionResult GetSignatureParts(HttpRequest& http_request,
+                                    std::vector<std::string>& headers_to_sign,
+                                    std::string& signature,
+                                    std::string& x_amz_date) noexcept;
 
   /**
    * @brief Create Canonical Request from the http_request.
@@ -111,7 +112,7 @@ class AwsV4Signer {
    * @param[in] http_request The HTTP request to create canonical request from.
    * @return ExecutionResult
    */
-  google::scp::core::ExecutionResult CreateCanonicalRequest(
+  ExecutionResult CreateCanonicalRequest(
       std::string& canonical_request, HttpRequest& http_request,
       const std::vector<std::string>& headers_to_sign) noexcept;
 

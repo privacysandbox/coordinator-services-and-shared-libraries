@@ -25,7 +25,7 @@
 #include "opentelemetry/sdk/trace/exporter.h"
 #include "opentelemetry/sdk/trace/span_data.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief A mock implementation of the SpanExporter interface for testing
@@ -175,5 +175,5 @@ class SpanExporterFake : public opentelemetry::sdk::trace::SpanExporter {
       collected_spans_by_name_;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_MOCK_TRACE_TRACE_EXPORTER_FAKE_H_

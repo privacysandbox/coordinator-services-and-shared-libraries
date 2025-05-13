@@ -22,7 +22,7 @@
 #include "absl/types/span.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /*
  * Simplified overview of OpenTelemetry metric data structure
@@ -68,6 +68,6 @@ GetMetricAttributes(
     absl::string_view name,
     absl::Span<const opentelemetry::sdk::metrics::ResourceMetrics> data);
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 
 #endif

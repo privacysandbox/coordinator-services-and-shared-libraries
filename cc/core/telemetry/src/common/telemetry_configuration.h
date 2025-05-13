@@ -22,7 +22,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/core/interface/config_provider_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 // OTel metrics exporter config
 //
 // Supported values for `OTEL_METRICS_EXPORTER` are:
@@ -104,9 +104,8 @@ inline constexpr absl::string_view kOtelCredConfigKey =
 inline constexpr absl::string_view kOtelCredConfigValue = "";
 
 template <typename T>
-T GetConfigValue(
-    const std::string& key, const T& default_value,
-    privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider) {
+T GetConfigValue(const std::string& key, const T& default_value,
+                 ConfigProviderInterface& config_provider) {
   T result = default_value;
   auto execution_result = config_provider.Get(key, result);
   if (!execution_result.Successful()) {
@@ -114,4 +113,4 @@ T GetConfigValue(
   }
   return result;
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

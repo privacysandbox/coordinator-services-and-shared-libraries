@@ -28,12 +28,12 @@ import com.google.scp.operator.cpio.jobclient.JobValidatorModule;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueConfig;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueModule;
-import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbConfig;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbModule;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
 import com.google.scp.shared.clients.configclient.model.WorkerParameter;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 
 /** Guice module for binding the GCP job client functionality */
 public final class GcpJobHandlerModule extends JobHandlerModule {
@@ -85,7 +85,7 @@ public final class GcpJobHandlerModule extends JobHandlerModule {
 
   /** Provider for the GCP metadata DB configuration. */
   @Provides
-  SpannerMetadataDbConfig provideSpannerMetadataDbConfig(
+  SpannerDatabaseConfig provideSpannerMetadataDbConfig(
       GcpJobHandlerConfig config, ParameterClient parameterClient, @GcpProjectId String projectId)
       throws ParameterClientException {
     String spannerInstanceId =
@@ -97,10 +97,10 @@ public final class GcpJobHandlerModule extends JobHandlerModule {
             .getParameter(WorkerParameter.JOB_SPANNER_DB_NAME.name())
             .orElse(config.spannerDbName());
 
-    return SpannerMetadataDbConfig.builder()
+    return SpannerDatabaseConfig.builder()
         .setGcpProjectId(projectId)
-        .setSpannerInstanceId(spannerInstanceId)
-        .setSpannerDbName(spannerDbName)
+        .setInstanceId(spannerInstanceId)
+        .setDatabaseName(spannerDbName)
         .setEndpointUrl(config.spannerEndpoint())
         .build();
   }

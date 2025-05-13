@@ -27,7 +27,7 @@
 #include "opentelemetry/sdk/metrics/aggregation/histogram_aggregation.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 InMemoryMetricReader::InMemoryMetricReader(
     std::unique_ptr<InMemoryMetricExporter> exporter)
     : exporter_{std::move(exporter)} {}
@@ -63,4 +63,4 @@ std::vector<opentelemetry::sdk::metrics::ResourceMetrics>
 InMemoryMetricReader::GetExportedData() const {
   return exporter_->data();
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

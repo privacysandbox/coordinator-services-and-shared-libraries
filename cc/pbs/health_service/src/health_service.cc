@@ -33,30 +33,16 @@ using absl::SimpleAtoi;
 using absl::SkipEmpty;
 using absl::StrContains;
 using absl::StrSplit;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::kZeroUuid;
-using ::google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO;
-using ::google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_OPEN_MEMINFO_FILE;
-using ::google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_PARSE_MEMINFO_LINE;
-using ::google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO;
-using ::google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_HEALTHY_MEMORY_USAGE_THRESHOLD_EXCEEDED;
-using ::google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED;
-using ::google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
 using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHandler;
 using ::privacy_sandbox::pbs_common::HttpMethod;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using std::bind;
 using std::error_code;
 using std::getline;
@@ -81,7 +67,7 @@ static constexpr char kMemInfoLineSeparator[] = " ";
 static constexpr char kServiceName[] = "HealthCheckService";
 static constexpr char kVarLogDirectory[] = "/var/log";
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 // static
 void HealthService::ObserveMemoryUsageCallback(
@@ -135,10 +121,10 @@ ExecutionResult HealthService::Init() noexcept {
   meter_ = opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
       "HealthService");
   memory_usage_instrument_ = meter_->CreateInt64ObservableGauge(
-      google::scp::pbs::kMetricNameMemoryUsage, "Instance memory usage",
+      privacy_sandbox::pbs::kMetricNameMemoryUsage, "Instance memory usage",
       "percent");
   filesystem_storage_usage_instrument_ = meter_->CreateInt64ObservableGauge(
-      google::scp::pbs::kMetricNameFileSystemStorageUsage,
+      privacy_sandbox::pbs::kMetricNameFileSystemStorageUsage,
       "Instance file system storage usage", "percent");
 
   memory_usage_instrument_->AddCallback(
@@ -351,4 +337,4 @@ ExecutionResultOr<int> HealthService::GetFileSystemStorageUsagePercentage(
   return ComputePercentage(info_object.available, info_object.capacity);
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

@@ -26,10 +26,7 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "re2/re2.h"
 
-namespace google::scp::core::utils {
-using ::privacy_sandbox::pbs_common::HttpHeaders;
-using ::privacy_sandbox::pbs_common::HttpMethod;
-using ::privacy_sandbox::pbs_common::HttpRequest;
+namespace privacy_sandbox::pbs_common {
 
 constexpr std::string_view kUserAgentPrefix = "aggregation-service/";
 
@@ -45,8 +42,7 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
 
   CURL* curl_handle = curl_easy_init();
   if (!curl_handle) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_CORE_UTILS_CURL_INIT_ERROR);
+    return FailureExecutionResult(SC_CORE_UTILS_CURL_INIT_ERROR);
   }
 
   std::string escaped_query;
@@ -70,12 +66,10 @@ ExecutionResultOr<std::string> GetEscapedUriWithQuery(
 ExecutionResultOr<std::string> ExtractRequestClaimedIdentity(
     const HttpHeaders& request_headers) noexcept {
   // Find the claimed identity header.
-  auto header_iter =
-      request_headers.find(privacy_sandbox::pbs_common::kClaimedIdentityHeader);
+  auto header_iter = request_headers.find(kClaimedIdentityHeader);
 
   if (header_iter == request_headers.end()) {
-    return core::FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+    return FailureExecutionResult(SC_CORE_REQUEST_HEADER_NOT_FOUND);
   }
   return header_iter->second;
 }
@@ -83,23 +77,21 @@ ExecutionResultOr<std::string> ExtractRequestClaimedIdentity(
 ExecutionResultOr<std::string> ExtractUserAgent(
     const HttpHeaders& request_headers) noexcept {
   // Find the User-Agent header.
-  auto header_iter =
-      request_headers.find(privacy_sandbox::pbs_common::kUserAgentHeader);
+  auto header_iter = request_headers.find(kUserAgentHeader);
   if (header_iter == request_headers.end()) {
-    return core::FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_CORE_REQUEST_HEADER_NOT_FOUND);
+    return FailureExecutionResult(SC_CORE_REQUEST_HEADER_NOT_FOUND);
   }
 
   const std::string& user_agent = header_iter->second;
   if (user_agent.empty() || !absl::StartsWith(user_agent, kUserAgentPrefix)) {
-    return std::string(privacy_sandbox::pbs_common::kUnknownValue);
+    return std::string(kUnknownValue);
   }
 
   // Search for the regex pattern in the User-Agent string.
   std::string_view match;
   if (!RE2::PartialMatch(std::string_view(&user_agent[kUserAgentPrefix.size()]),
                          *kVersionRegex, &match)) {
-    return std::string(privacy_sandbox::pbs_common::kUnknownValue);
+    return std::string(kUnknownValue);
   }
   return absl::StrCat(kUserAgentPrefix, match);
 }
@@ -118,4 +110,4 @@ std::string HttpMethodToString(HttpMethod method) {
   return "UNKNOWN";
 }
 
-}  // namespace google::scp::core::utils
+}  // namespace privacy_sandbox::pbs_common

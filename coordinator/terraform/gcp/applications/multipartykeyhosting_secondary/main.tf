@@ -110,9 +110,12 @@ module "keystorageservice" {
   aws_key_sync_keydb_table_name = var.aws_key_sync_keydb_table_name
 
   # Cloud Armor vars
-  enable_security_policy            = var.enable_security_policy
-  use_adaptive_protection           = var.use_adaptive_protection
-  key_storage_security_policy_rules = var.key_storage_security_policy_rules
+  enable_security_policy              = var.enable_security_policy
+  use_adaptive_protection             = var.use_adaptive_protection
+  key_storage_security_policy_rules   = var.key_storage_security_policy_rules
+  enable_cloud_armor_alerts           = var.enable_cloud_armor_alerts
+  enable_cloud_armor_notifications    = var.enable_cloud_armor_notifications
+  cloud_armor_notification_channel_id = var.cloud_armor_notification_channel_id
 }
 
 module "encryptionkeyservice" {
@@ -149,6 +152,9 @@ module "encryptionkeyservice" {
   enable_security_policy               = var.enable_security_policy
   use_adaptive_protection              = var.use_adaptive_protection
   encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
+  enable_cloud_armor_alerts            = var.enable_cloud_armor_alerts
+  enable_cloud_armor_notifications     = var.enable_cloud_armor_notifications
+  cloud_armor_notification_channel_id  = var.cloud_armor_notification_channel_id
 }
 
 module "domain_a_records" {

@@ -18,7 +18,7 @@
 
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 GrpcAuthConfig::GrpcAuthConfig(std::string service_account,
                                std::string audience,
                                std::string cred_config /* = "" */)
@@ -26,8 +26,7 @@ GrpcAuthConfig::GrpcAuthConfig(std::string service_account,
       audience_(std::move(audience)),
       cred_config_(std::move(cred_config)) {}
 
-GrpcAuthConfig::GrpcAuthConfig(
-    privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider) {
+GrpcAuthConfig::GrpcAuthConfig(ConfigProviderInterface& config_provider) {
   service_account_ =
       GetConfigValue(std::string(kOtelServiceAccountKey),
                      std::string(kOtelServiceAccountValue), config_provider);
@@ -56,4 +55,4 @@ bool GrpcAuthConfig::IsValid() const {
   }
   return true;
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

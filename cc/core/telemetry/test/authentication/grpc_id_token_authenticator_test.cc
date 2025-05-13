@@ -19,7 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
 inline constexpr std::string_view kExpectedToken = "default_token";
 
@@ -134,4 +134,4 @@ TEST_F(GrpcIdTokenAuthenticatorTest, IsExpired_ChecksTokenExpiryCorrectly) {
   EXPECT_TRUE(authenticator->IsExpired());
 }
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

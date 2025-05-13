@@ -35,17 +35,17 @@
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/version.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 class InMemoryMetricReader : public opentelemetry::sdk::metrics::MetricReader {
  public:
   explicit InMemoryMetricReader(
-      std::unique_ptr<core::InMemoryMetricExporter> exporter);
+      std::unique_ptr<InMemoryMetricExporter> exporter);
 
   opentelemetry::sdk::metrics::AggregationTemporality GetAggregationTemporality(
       opentelemetry::sdk::metrics::InstrumentType instrument_type)
       const noexcept override;
 
-  core::InMemoryMetricExporter& exporter() const;
+  InMemoryMetricExporter& exporter() const;
   std::vector<opentelemetry::sdk::metrics::ResourceMetrics> GetExportedData()
       const;
 
@@ -56,6 +56,6 @@ class InMemoryMetricReader : public opentelemetry::sdk::metrics::MetricReader {
 
   void OnInitialized() noexcept override;
 
-  std::unique_ptr<core::InMemoryMetricExporter> exporter_;
+  std::unique_ptr<InMemoryMetricExporter> exporter_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

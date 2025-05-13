@@ -28,9 +28,8 @@
 #include "opentelemetry/sdk/trace/tracer_provider_factory.h"
 #include "opentelemetry/trace/provider.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
-using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
 
 /**
  * @brief Creates a SpanProcessor based on configuration and SpanExporter.
@@ -87,7 +86,7 @@ std::unique_ptr<opentelemetry::sdk::trace::Sampler> CreateSpanSampler(
       GetConfigValue(std::string(kOtelTraceSamplingRatioKey),
                      kOtelTraceSamplingRatioValue, config_provider);
 
-  return std::make_unique<google::scp::core::TraceSampler>(sampling_ratio);
+  return std::make_unique<TraceSampler>(sampling_ratio);
 }
 }  // namespace
 
@@ -111,4 +110,4 @@ void TraceRouter::SetupTraceRouter(
   opentelemetry::trace::Provider::SetTracerProvider(std::move(trace_provider));
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

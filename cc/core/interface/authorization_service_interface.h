@@ -51,7 +51,7 @@ class AuthorizationServiceInterface : public ServiceInterface {
    * @param authorization_context The context of the authorization operation.
    * @return ExecutionResult The execution result of the operation.
    */
-  virtual google::scp::core::ExecutionResult Authorize(
+  virtual ExecutionResult Authorize(
       AsyncContext<AuthorizationRequest, AuthorizationResponse>&
           authorization_context) noexcept = 0;
 };

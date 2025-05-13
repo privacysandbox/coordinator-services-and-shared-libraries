@@ -35,26 +35,24 @@
 #include "google/cloud/status_or.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
 using ::absl_testing::IsOk;
+using ::google::cloud::StatusOr;
 using ::google::cloud::spanner_admin::DatabaseAdminClient;
 using ::google::cloud::spanner_admin::InstanceAdminClient;
 using ::google::cloud::spanner_admin::MakeDatabaseAdminConnection;
+using ::google::cloud::spanner_admin::MakeInstanceAdminConnection;
 using ::google::protobuf::TextFormat;
 using ::google::protobuf::json::MessageToJsonString;
-using ::google::scp::core::test::CreateNetwork;
-using ::google::scp::core::test::GetIpAddress;
-using ::google::scp::core::test::LoadImage;
-using ::google::scp::core::test::RemoveNetwork;
-using ::google::scp::core::test::StartContainer;
-using ::google::scp::core::test::StopContainer;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::Byte;
+using ::privacy_sandbox::pbs_common::CreateNetwork;
+using ::privacy_sandbox::pbs_common::GetIpAddress;
 using ::privacy_sandbox::pbs_common::HttpClient;
 using ::privacy_sandbox::pbs_common::HttpClientOptions;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
@@ -62,8 +60,12 @@ using ::privacy_sandbox::pbs_common::HttpMethod;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kDefaultMaxConnectionsPerHost;
+using ::privacy_sandbox::pbs_common::LoadImage;
+using ::privacy_sandbox::pbs_common::RemoveNetwork;
 using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
 using ::privacy_sandbox::pbs_common::RetryStrategyType;
+using ::privacy_sandbox::pbs_common::StartContainer;
+using ::privacy_sandbox::pbs_common::StopContainer;
 using ::privacy_sandbox::pbs_common::TimeDuration;
 using ::privacy_sandbox::pbs_common::ToString;
 using ::privacy_sandbox::pbs_common::Uuid;
@@ -102,13 +104,12 @@ constexpr size_t kHTTPClientMaxRetries = 6;
 constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 5;
 
 InstanceAdminClient CreateSpannerInstanceAdminClient() {
-  auto instance_admin_connection =
-      google::cloud::spanner_admin::MakeInstanceAdminConnection();
+  auto instance_admin_connection = MakeInstanceAdminConnection();
   return InstanceAdminClient(instance_admin_connection);
 }
 
-google::cloud::StatusOr<google::spanner::admin::instance::v1::Instance>
-CreateSpannerInstance(InstanceAdminClient& client) {
+StatusOr<google::spanner::admin::instance::v1::Instance> CreateSpannerInstance(
+    InstanceAdminClient& client) {
   google::spanner::admin::instance::v1::Instance spanner_instance;
   spanner_instance.set_node_count(1);
   auto create_instance_future = client.CreateInstance(
@@ -122,17 +123,16 @@ DatabaseAdminClient CreateDatabaseAdminClient() {
   return DatabaseAdminClient(spanner_admin_connection_);
 }
 
-google::cloud::StatusOr<google::spanner::admin::database::v1::Database>
-CreateDatabase(const google::spanner::admin::instance::v1::Instance& instance,
-               DatabaseAdminClient& client) {
+StatusOr<google::spanner::admin::database::v1::Database> CreateDatabase(
+    const google::spanner::admin::instance::v1::Instance& instance,
+    DatabaseAdminClient& client) {
   auto database_future = client.CreateDatabase(
       instance.name(),
       absl::StrCat("CREATE DATABASE ", std::string(kSpannerDatabaseName)));
   return database_future.get();
 }
 
-google::cloud::StatusOr<
-    google::spanner::admin::database::v1::UpdateDatabaseDdlMetadata>
+StatusOr<google::spanner::admin::database::v1::UpdateDatabaseDdlMetadata>
 AddProtoTypeColumns(
     const google::spanner::admin::database::v1::Database& database,
     DatabaseAdminClient& client) {
@@ -162,14 +162,14 @@ void SetupSpannerDatabase(absl::string_view ip_address) {
   InstanceAdminClient instance_admin_client =
       CreateSpannerInstanceAdminClient();
 
-  google::cloud::StatusOr<google::spanner::admin::instance::v1::Instance>
-      spanner_instance = CreateSpannerInstance(instance_admin_client);
+  StatusOr<google::spanner::admin::instance::v1::Instance> spanner_instance =
+      CreateSpannerInstance(instance_admin_client);
   ASSERT_TRUE(spanner_instance.status().ok()) << spanner_instance.status();
 
   DatabaseAdminClient database_admin_client = CreateDatabaseAdminClient();
 
-  google::cloud::StatusOr<google::spanner::admin::database::v1::Database>
-      database = CreateDatabase(*spanner_instance, database_admin_client);
+  StatusOr<google::spanner::admin::database::v1::Database> database =
+      CreateDatabase(*spanner_instance, database_admin_client);
   ASSERT_TRUE(database.status().ok()) << database.status();
 
   AddProtoTypeColumns(*database, database_admin_client);
@@ -452,4 +452,4 @@ TEST_F(PBSIntegrationTest, ConsumeBudgetV2TwoPhases) {
 }
 
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

@@ -25,63 +25,31 @@ resource "google_compute_region_network_endpoint_group" "public_key_service_clou
   }
 }
 
-# Security policy for external load balancer
-resource "google_compute_security_policy" "public_key_service_security_policy" {
-  project     = var.project_id
-  name        = "${var.environment}-public-key-service-security-policy"
-  description = "Security policy with for Public Key Service LB"
-  type        = "CLOUD_ARMOR"
+module "public_key_service_security_policy" {
+  source = "../shared/cloudarmor_security_policy"
 
-  adaptive_protection_config {
-    layer_7_ddos_defense_config {
-      enable = var.use_adaptive_protection
-    }
-  }
+  project_id                  = var.project_id
+  security_policy_name        = "${var.environment}-public-key-service-security-policy"
+  security_policy_description = "Security policy for Public Key Service LB"
+  use_adaptive_protection     = var.use_adaptive_protection
+  security_policy_rules       = var.public_key_security_policy_rules
+}
+moved {
+  from = google_compute_security_policy.public_key_service_security_policy
+  to   = module.public_key_service_security_policy.google_compute_security_policy.security_policy
+}
 
-  rule {
-    description = "Default allow all rule"
-    action      = "allow"
-    priority    = "2147483647"
+# Monitoring alerts and notifications for Cloud Armor security policies.
+module "public_key_service_cloudarmor_alarms" {
+  count  = var.enable_cloud_armor_alerts ? 1 : 0
+  source = "../shared/cloudarmor_alarms"
 
-    match {
-      versioned_expr = "SRC_IPS_V1"
-
-      config {
-        src_ip_ranges = ["*"]
-      }
-    }
-  }
-
-  dynamic "rule" {
-    for_each = var.public_key_security_policy_rules
-    content {
-      description = rule.value.description
-      action      = rule.value.action
-      priority    = rule.value.priority
-      preview     = rule.value.preview
-
-      match {
-        # Basic rules handle IP addresses/ranges only and require both
-        # versioned_expr and config be defined.
-        versioned_expr = rule.value.match.versioned_expr
-
-        dynamic "config" {
-          for_each = rule.value.match.expr == null ? [1] : []
-          content {
-            src_ip_ranges = rule.value.match.config.src_ip_ranges
-          }
-        }
-
-        # Advanced rules handle CEL expressions and require expr to be defined.
-        dynamic "expr" {
-          for_each = rule.value.match.expr != null ? [1] : []
-          content {
-            expression = rule.value.match.expr.expression
-          }
-        }
-      }
-    }
-  }
+  project_id              = var.project_id
+  environment             = var.environment
+  notifications_enabled   = var.enable_cloud_armor_notifications
+  notification_channel_id = var.cloud_armor_notification_channel_id
+  security_policy_name    = module.public_key_service_security_policy.security_policy.name
+  service_prefix          = "${var.environment} Public Key Service"
 }
 
 # Backend service that groups network endpoint groups to Cloud Run for Load
@@ -119,7 +87,7 @@ resource "google_compute_backend_service" "public_key_service_cloud_run" {
     enable = var.public_key_load_balancer_logs_enabled
   }
 
-  security_policy = var.enable_security_policy ? google_compute_security_policy.public_key_service_security_policy.id : null
+  security_policy = var.enable_security_policy ? module.public_key_service_security_policy.security_policy.id : null
 }
 
 # URL Map creates Load balancer to Cloud Run

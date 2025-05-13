@@ -18,7 +18,7 @@
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 
 // Convenience macro for shortening this pattern:
 //
@@ -131,4 +131,4 @@ namespace google::scp::core::test {
                    field3, matcher3, field4, matcher4, field5, matcher5);      \
   __EXPECT_STRUCT1(lhs, class_name, field6, matcher6)
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

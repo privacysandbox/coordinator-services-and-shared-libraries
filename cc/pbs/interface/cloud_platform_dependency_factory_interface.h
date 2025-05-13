@@ -24,19 +24,18 @@
 #include "cc/core/telemetry/src/metric/metric_router.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 /// @brief Callbacks originating from the providers should have a higher
 /// priority than the regular tasks because they are time-sensitive.
-static constexpr privacy_sandbox::pbs_common::AsyncPriority
-    kDefaultAsyncPriorityForCallbackExecution =
-        privacy_sandbox::pbs_common::AsyncPriority::High;
+static constexpr pbs_common::AsyncPriority
+    kDefaultAsyncPriorityForCallbackExecution = pbs_common::AsyncPriority::High;
 
 /// @brief Blocking tasks are scheduled with a normal priority are can be
 /// starved by a higher/urgent priority tasks.
-static constexpr privacy_sandbox::pbs_common::AsyncPriority
+static constexpr pbs_common::AsyncPriority
     kDefaultAsyncPriorityForBlockingIOTaskExecution =
-        privacy_sandbox::pbs_common::AsyncPriority::Normal;
+        pbs_common::AsyncPriority::Normal;
 
 /**
  * @brief Platform specific factory interface to provide platform specific
@@ -44,7 +43,7 @@ static constexpr privacy_sandbox::pbs_common::AsyncPriority
  *
  */
 class CloudPlatformDependencyFactoryInterface
-    : public privacy_sandbox::pbs_common::InitializableInterface {
+    : public pbs_common::InitializableInterface {
  public:
   virtual ~CloudPlatformDependencyFactoryInterface() = default;
 
@@ -54,40 +53,35 @@ class CloudPlatformDependencyFactoryInterface
    *
    * @param async_executor
    * @param http_client
-   * @return std::unique_ptr<core::AuthorizationProxyInterface>
+   * @return std::unique_ptr<AuthorizationProxyInterface>
    */
-  virtual std::unique_ptr<
-      privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+  virtual std::unique_ptr<pbs_common::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor,
-      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+      std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<pbs_common::HttpClientInterface>
           http_client) noexcept = 0;
 
   // Constructs an AWS Client to talk to the authentication endpoint. This is
   // only used on GCP to authenticate requests that come from AWS PBS to GCP PBS
   // via DNS.
-  virtual std::unique_ptr<
-      privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+  virtual std::unique_ptr<pbs_common::AuthorizationProxyInterface>
   ConstructAwsAuthorizationProxyClient(
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor,
-      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
+      std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<pbs_common::HttpClientInterface>
           http_client) noexcept = 0;
 
   virtual std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
-      privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor,
-      privacy_sandbox::pbs_common::AsyncExecutorInterface*
-          io_async_executor) noexcept = 0;
+      pbs_common::AsyncExecutorInterface* async_executor,
+      pbs_common::AsyncExecutorInterface* io_async_executor) noexcept = 0;
 
   /**
    * @brief Construct Metric Router for Otel metrics collection
    * @param Optional instance_client_provider
-   * @return std::unique_ptr<core::MetricRouter>
+   * @return std::unique_ptr<pbs_common::MetricRouter>
    */
-  virtual std::unique_ptr<core::MetricRouter>
+  virtual std::unique_ptr<pbs_common::MetricRouter>
   ConstructMetricRouter() noexcept = 0;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

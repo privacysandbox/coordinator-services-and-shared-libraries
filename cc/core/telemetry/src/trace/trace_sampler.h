@@ -22,7 +22,7 @@
 #include "opentelemetry/sdk/trace/sampler.h"
 #include "opentelemetry/trace/span.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief TraceSampler class for custom sampling of traces.
@@ -108,5 +108,5 @@ class TraceSampler : public opentelemetry::sdk::trace::Sampler {
   std::string description_;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_SRC_TRACE_TRACE_SAMPLER_H_

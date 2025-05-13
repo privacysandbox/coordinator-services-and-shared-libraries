@@ -19,6 +19,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/authorization_proxy/src/error_codes.h"
 #include "cc/core/interface/async_context.h"
@@ -27,23 +29,9 @@
 #include "cc/core/test/utils/conditional_wait.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 namespace {
-using ::privacy_sandbox::pbs_common::AsyncContext;
-using ::privacy_sandbox::pbs_common::AsyncExecutor;
-using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
-using ::privacy_sandbox::pbs_common::AuthorizationMetadata;
-using ::privacy_sandbox::pbs_common::AuthorizationProxyRequest;
-using ::privacy_sandbox::pbs_common::AuthorizationProxyResponse;
-using ::privacy_sandbox::pbs_common::AuthorizedMetadata;
-using ::privacy_sandbox::pbs_common::HttpClientInterface;
-using ::privacy_sandbox::pbs_common::HttpRequest;
-using ::privacy_sandbox::pbs_common::
-    HttpRequestResponseAuthInterceptorInterface;
-using ::privacy_sandbox::pbs_common::HttpResponse;
-using ::privacy_sandbox::pbs_common::WaitUntil;
-using std::make_shared;
-using std::shared_ptr;
+
 using ::testing::_;
 using ::testing::Return;
 
@@ -70,9 +58,9 @@ class HttpClientMock : public HttpClientInterface {
 class AuthorizationProxyTest : public testing::Test {
  protected:
   AuthorizationProxyTest()
-      : mock_http_client_(make_shared<HttpClientMock>()),
-        async_executor_(
-            make_shared<AsyncExecutor>(4, 1000, true /* drop tasks on stop */)),
+      : mock_http_client_(std::make_shared<HttpClientMock>()),
+        async_executor_(std::make_shared<AsyncExecutor>(
+            4, 1000, true /* drop tasks on stop */)),
         server_endpoint_("http://auth.google.com:8080/submit") {
     EXPECT_SUCCESS(async_executor_->Init());
     EXPECT_SUCCESS(async_executor_->Run());
@@ -103,8 +91,7 @@ TEST_F(AuthorizationProxyTest, InvalidServiceEndpointURI) {
                            std::move(authorization_http_helper));
   EXPECT_THAT(
       proxy.Init(),
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_INVALID_CONFIG)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_PROXY_INVALID_CONFIG)));
 }
 
 TEST_F(AuthorizationProxyTest, ValidServiceEndpointURI) {
@@ -127,31 +114,31 @@ TEST_F(AuthorizationProxyTest, AuthorizeWithInvalidAuthorizationMetadata) {
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request1;
-  authorization_request1.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request1.request =
+      std::make_shared<AuthorizationProxyRequest>();
   EXPECT_THAT(
       proxy.Authorize(authorization_request1),
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request2;
-  authorization_request2.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request2.request =
+      std::make_shared<AuthorizationProxyRequest>();
   authorization_request2.request->authorization_metadata.claimed_identity =
       "claimed_id";
   EXPECT_THAT(
       proxy.Authorize(authorization_request2),
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request3;
-  authorization_request3.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request3.request =
+      std::make_shared<AuthorizationProxyRequest>();
   authorization_request3.request->authorization_metadata.authorization_token =
       "auth_token";
   EXPECT_THAT(
       proxy.Authorize(authorization_request3),
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -172,14 +159,13 @@ TEST_F(AuthorizationProxyTest,
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request;
-  authorization_request.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request.request = std::make_shared<AuthorizationProxyRequest>();
   authorization_request.request->authorization_metadata =
       authorization_metadata_;
 
   EXPECT_THAT(
       proxy.Authorize(authorization_request),
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_PROXY_BAD_REQUEST)));
 }
 
 TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
@@ -202,14 +188,13 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request;
-  authorization_request.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request.request = std::make_shared<AuthorizationProxyRequest>();
   authorization_request.request->authorization_metadata =
       authorization_metadata_;
 
   EXPECT_THAT(proxy.Authorize(authorization_request),
               ResultIs(RetryExecutionResult(
-                  privacy_sandbox::pbs_common::
-                      SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE)));
+                  SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -239,7 +224,7 @@ TEST_F(AuthorizationProxyTest,
   std::atomic<bool> request_finished(false);
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request;
-  authorization_request.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request.request = std::make_shared<AuthorizationProxyRequest>();
   authorization_request.request->authorization_metadata =
       authorization_metadata_;
   authorization_request.callback = [&](auto context) {
@@ -271,7 +256,8 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
 
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request1;
-  authorization_request1.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request1.request =
+      std::make_shared<AuthorizationProxyRequest>();
   authorization_request1.request->authorization_metadata =
       authorization_metadata_;
 
@@ -280,26 +266,26 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryIfRequestInProgress) {
   // Request attempt 2.
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request2;
-  authorization_request2.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request2.request =
+      std::make_shared<AuthorizationProxyRequest>();
   authorization_request2.request->authorization_metadata =
       authorization_metadata_;
 
   EXPECT_THAT(proxy.Authorize(authorization_request2),
               ResultIs(RetryExecutionResult(
-                  privacy_sandbox::pbs_common::
-                      SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
+                  SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
 
   // Request attempt 3.
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_request3;
-  authorization_request3.request = make_shared<AuthorizationProxyRequest>();
+  authorization_request3.request =
+      std::make_shared<AuthorizationProxyRequest>();
   authorization_request3.request->authorization_metadata =
       authorization_metadata_;
 
   EXPECT_THAT(proxy.Authorize(authorization_request3),
               ResultIs(RetryExecutionResult(
-                  privacy_sandbox::pbs_common::
-                      SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
+                  SC_AUTHORIZATION_PROXY_AUTH_REQUEST_INPROGRESS)));
 }
 
 TEST_F(AuthorizationProxyTest,
@@ -344,7 +330,8 @@ TEST_F(AuthorizationProxyTest,
     std::atomic<bool> request_finished(false);
     AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
         authorization_request;
-    authorization_request.request = make_shared<AuthorizationProxyRequest>();
+    authorization_request.request =
+        std::make_shared<AuthorizationProxyRequest>();
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
@@ -364,7 +351,8 @@ TEST_F(AuthorizationProxyTest,
     std::atomic<bool> request_finished(false);
     AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
         authorization_request;
-    authorization_request.request = make_shared<AuthorizationProxyRequest>();
+    authorization_request.request =
+        std::make_shared<AuthorizationProxyRequest>();
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
@@ -424,7 +412,8 @@ TEST_F(AuthorizationProxyTest,
     std::atomic<bool> request_finished(false);
     AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
         authorization_request;
-    authorization_request.request = make_shared<AuthorizationProxyRequest>();
+    authorization_request.request =
+        std::make_shared<AuthorizationProxyRequest>();
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
@@ -441,7 +430,8 @@ TEST_F(AuthorizationProxyTest,
     std::atomic<bool> request_finished(false);
     AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
         authorization_request;
-    authorization_request.request = make_shared<AuthorizationProxyRequest>();
+    authorization_request.request =
+        std::make_shared<AuthorizationProxyRequest>();
     authorization_request.request->authorization_metadata =
         authorization_metadata_;
     authorization_request.callback = [&](auto context) {
@@ -454,4 +444,4 @@ TEST_F(AuthorizationProxyTest,
   }
 }
 }  // namespace
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

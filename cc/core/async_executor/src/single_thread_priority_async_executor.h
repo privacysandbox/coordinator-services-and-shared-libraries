@@ -46,22 +46,22 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
         drop_tasks_on_stop_(drop_tasks_on_stop),
         affinity_cpu_number_(affinity_cpu_number) {}
 
-  google::scp::core::ExecutionResult Init() noexcept override;
+  ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
   /**
    * @brief Schedules a task to be executed at a certain time.
    *
    * @param work The task that needs to be scheduled.
    * @param timestamp The timestamp to the task to be executed.
-   * @return google::scp::core::ExecutionResult The result of the execution
-   * with possible error code.
+   * @return ExecutionResult The result of the
+   * execution with possible error code.
    */
-  google::scp::core::ExecutionResult ScheduleFor(
-      const AsyncOperation& work, Timestamp timestamp) noexcept;
+  ExecutionResult ScheduleFor(const AsyncOperation& work,
+                              Timestamp timestamp) noexcept;
 
   /**
    * @brief Schedules a task to be executed at a certain time.
@@ -70,10 +70,10 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
    * @param timestamp The timestamp to the task to be executed.
    * @param cancellation_callback The callback to be used for cancelling the
    * scheduled work.
-   * @return google::scp::core::ExecutionResult result of the execution with
-   * possible error code.
+   * @return ExecutionResult result of the
+   * execution with possible error code.
    */
-  google::scp::core::ExecutionResult ScheduleFor(
+  ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       std::function<bool()>& cancellation_callback) noexcept;
 
@@ -81,7 +81,7 @@ class SingleThreadPriorityAsyncExecutor : ServiceInterface {
    * @brief Returns the ID of the spawned thread object to enable looking it up
    * via thread IDs later. Will only be populated after Run() is called.
    */
-  google::scp::core::ExecutionResultOr<std::thread::id> GetThreadId() const;
+  ExecutionResultOr<std::thread::id> GetThreadId() const;
 
  private:
   /// Starts the internal worker thread.

@@ -16,15 +16,28 @@
 
 package com.google.scp.shared.otel;
 
-import java.util.Arrays;
-import java.util.List;
+import com.google.common.collect.ImmutableList;
 
 public class OTelSemConMetrics {
   private OTelSemConMetrics() {}
 
   public static final String HTTP_SERVER_REQUEST_DURATION = "http.server.request.duration";
 
-  public static final List<Double> LATENCY_BUCKETS =
-      Arrays.asList(
-          0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.0, 5.0, 7.5, 10.0);
+  private static final double LATENCY_HISTOGRAM_BOUNDARIES_POWER_BASE = Math.pow(10.0, 0.1);
+  private static final double LATENCY_HISTOGRAM_BOUNDARIES_SCALE_FACTOR = 0.0001; // 100µs
+  private static final int LATENCY_HISTOGRAM_BOUNDARIES_NUM_BUCKETS = 76; // 1.1h
+
+  private static ImmutableList<Double> makeLatencyHistogramBoundaries() {
+    ImmutableList.Builder<Double> boundaries = ImmutableList.builder();
+    for (int i = 0; i <= LATENCY_HISTOGRAM_BOUNDARIES_NUM_BUCKETS; i++) {
+      double boundary =
+          Math.pow(LATENCY_HISTOGRAM_BOUNDARIES_POWER_BASE, i)
+              * LATENCY_HISTOGRAM_BOUNDARIES_SCALE_FACTOR;
+      boundaries.add(boundary);
+    }
+    return boundaries.build();
+  }
+
+  public static final ImmutableList<Double> LATENCY_HISTOGRAM_BOUNDARIES =
+      makeLatencyHistogramBoundaries();
 }

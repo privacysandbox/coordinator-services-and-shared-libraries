@@ -28,7 +28,7 @@
 #include "opentelemetry/trace/scope.h"
 #include "opentelemetry/trace/tracer.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief TraceRouter class for handling OpenTelemetry traces.
@@ -50,7 +50,7 @@ namespace google::scp::core {
 class TraceRouter {
  public:
   explicit TraceRouter(
-      privacy_sandbox::pbs_common::ConfigProviderInterface& config_provider,
+      ConfigProviderInterface& config_provider,
       const opentelemetry::sdk::resource::Resource& resource,
       std::unique_ptr<opentelemetry::sdk::trace::SpanExporter> span_exporter);
 
@@ -72,5 +72,5 @@ class TraceRouter {
       std::unique_ptr<opentelemetry::sdk::trace::Sampler> span_sampler);
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_SRC_TRACE_TRACE_ROUTER_H_

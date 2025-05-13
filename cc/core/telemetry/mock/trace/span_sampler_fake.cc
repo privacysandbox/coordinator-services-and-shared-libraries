@@ -14,7 +14,7 @@
 
 #include "cc/core/telemetry/mock/trace/span_sampler_fake.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 opentelemetry::sdk::trace::SamplingResult SpanSamplerFake::ShouldSample(
     const opentelemetry::trace::SpanContext& /*parent_context*/,
@@ -32,4 +32,4 @@ opentelemetry::nostd::string_view SpanSamplerFake::GetDescription()
     const noexcept {
   return description_;
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

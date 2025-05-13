@@ -30,28 +30,28 @@
 #include "google/cloud/spanner/results.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 // A class that implements BudgetConsumer for numerical budgets to consume
 // privacy budgets for a given list of privacy budget keys by reading from HTTP
 // request body.
 class BinaryBudgetConsumer : public BudgetConsumer {
  public:
-  BinaryBudgetConsumer(
-      privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider);
+  explicit BinaryBudgetConsumer(
+      pbs_common::ConfigProviderInterface* config_provider);
 
   ~BinaryBudgetConsumer() override = default;
 
   [[deprecated(
       "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-  google::scp::core::ExecutionResult ParseTransactionRequest(
-      const privacy_sandbox::pbs_common::AuthContext& auth_context,
-      const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
+  pbs_common::ExecutionResult ParseTransactionRequest(
+      const pbs_common::AuthContext& auth_context,
+      const pbs_common::HttpHeaders& request_headers,
       const nlohmann::json& request_body) override;
 
-  core::ExecutionResult ParseTransactionRequest(
-      const privacy_sandbox::pbs_common::AuthContext& auth_context,
-      const privacy_sandbox::pbs_common::HttpHeaders& request_headers,
+  pbs_common::ExecutionResult ParseTransactionRequest(
+      const pbs_common::AuthContext& auth_context,
+      const pbs_common::HttpHeaders& request_headers,
       const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
           request_proto) override;
 
@@ -65,8 +65,8 @@ class BinaryBudgetConsumer : public BudgetConsumer {
 
   std::vector<std::string> DebugKeyList() override;
 
-  google::scp::core::ExecutionResultOr<std::vector<std::string>>
-  GetReadColumns() override;
+  pbs_common::ExecutionResultOr<std::vector<std::string>> GetReadColumns()
+      override;
 
  private:
   class PbsPrimaryKey {
@@ -110,10 +110,10 @@ class BinaryBudgetConsumer : public BudgetConsumer {
     std::array<int8_t, /*token_count=*/24> budget_state{};
   };
 
-  google::scp::core::ExecutionResult ParseRequestBodyV1(
+  pbs_common::ExecutionResult ParseRequestBodyV1(
       absl::string_view transaction_origin, const nlohmann::json& request_body);
 
-  google::scp::core::ExecutionResult ParseRequestBodyV2(
+  pbs_common::ExecutionResult ParseRequestBodyV2(
       absl::string_view authorized_domain, const nlohmann::json& request_body);
 
   template <typename TokenMetadataType>
@@ -129,7 +129,7 @@ class BinaryBudgetConsumer : public BudgetConsumer {
       absl::string_view table_name);
 
   absl::flat_hash_map<PbsPrimaryKey, ConsumptionState> metadata_;
-  privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider_;
+  pbs_common::ConfigProviderInterface* config_provider_;
   size_t key_count_ = 0;
 
   bool enable_write_to_value_column_ = false;
@@ -138,6 +138,6 @@ class BinaryBudgetConsumer : public BudgetConsumer {
   bool stop_serving_v1_request_ = false;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs
 
 #endif  // CC_PBS_CONSUME_BUDGET_SRC_BINARY_BUDGET_CONSUMER_H_

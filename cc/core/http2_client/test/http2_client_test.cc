@@ -39,18 +39,9 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using ::google::scp::core::ExecutionStatus;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::GetMetricPointData;
-using ::google::scp::core::InMemoryMetricRouter;
-using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
-using ::privacy_sandbox::pbs_common::RetryStrategyType;
-using ::google::scp::core::test::IsSuccessful;
-using ::google::scp::core::test::ResultIs;
 using ::nghttp2::asio_http2::server::http2;
 using ::nghttp2::asio_http2::server::request;
 using ::nghttp2::asio_http2::server::response;
-using ::privacy_sandbox::pbs_common::WaitUntil;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using std::placeholders::_3;
@@ -181,7 +172,6 @@ TEST(HttpClientTest, FailedToConnect) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
-
                         SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
         finished.store(true);
       });
@@ -303,7 +293,6 @@ TEST_F(HttpClientTestII, FailedToGetResponse) {
       [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
-
                         SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND)));
         done.set_value();
       });
@@ -422,7 +411,6 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
           EXPECT_THAT(
               context.result,
               ResultIs(FailureExecutionResult(
-
                   SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION)));
           done.set_value();
         });

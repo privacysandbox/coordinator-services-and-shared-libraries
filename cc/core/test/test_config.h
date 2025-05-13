@@ -16,11 +16,11 @@
 
 #include <chrono>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 /// Type of duration in milliseconds.
 using DurationMs = std::chrono::duration<int64_t, std::milli>;
 /// Timeout for all the unit tests in ms.
 #define UNIT_TEST_TIME_OUT_MS std::chrono::milliseconds(5000)
 /// Short sleep for all the unit tests in ms.
 #define UNIT_TEST_SHORT_SLEEP_MS std::chrono::milliseconds(100)
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

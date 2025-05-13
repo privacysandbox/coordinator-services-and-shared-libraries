@@ -30,7 +30,7 @@
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/version.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 class InMemoryMetricExporter final
     : public opentelemetry::sdk::metrics::PushMetricExporter {
@@ -77,4 +77,4 @@ class InMemoryMetricExporter final
       o_stream_metric_exporter_;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

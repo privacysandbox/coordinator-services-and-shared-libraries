@@ -25,8 +25,6 @@
 namespace privacy_sandbox::pbs_common {
 namespace {
 
-using ::google::scp::core::ExecutionResult;
-
 absl::Duration ComputePercentile(absl::Span<const absl::Duration> duration_list,
                                  float percentile) {
   if (duration_list.empty()) {

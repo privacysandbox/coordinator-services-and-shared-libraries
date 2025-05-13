@@ -27,9 +27,6 @@
 #include "http2_utils.h"
 
 namespace privacy_sandbox::pbs_common {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
 using std::bind;
 using std::copy;
 using std::make_shared;

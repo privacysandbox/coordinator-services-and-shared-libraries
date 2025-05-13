@@ -26,10 +26,6 @@
 #include "typedef.h"
 
 namespace privacy_sandbox::pbs_common {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
 using std::atomic;
 using std::is_same_v;
 using std::make_shared;

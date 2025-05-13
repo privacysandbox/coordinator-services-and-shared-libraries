@@ -33,8 +33,7 @@
 #include "opentelemetry/sdk/metrics/view/view_factory.h"
 #include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 
-namespace google::scp::core {
-using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+namespace privacy_sandbox::pbs_common {
 
 inline constexpr absl::string_view kMetricRouter = "MetricRouter";
 
@@ -173,11 +172,11 @@ ExecutionResult MetricRouter::CreateViewForInstrument(
   } else {
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_METER_PROVIDER_NOT_INITIALIZED);
-    SCP_ERROR(kMetricRouter, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result, "[OTLP Metric Router] Meter Provider is NOOP.");
+    SCP_ERROR(kMetricRouter, kZeroUuid, execution_result,
+              "[OTLP Metric Router] Meter Provider is NOOP.");
     return execution_result;
   }
   return SuccessExecutionResult();
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

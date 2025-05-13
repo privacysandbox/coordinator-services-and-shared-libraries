@@ -21,35 +21,33 @@
 
 #include "cc/core/interface/authorization_proxy_interface.h"
 
-namespace google::scp::pbs {
-class LocalAuthorizationProxy
-    : public privacy_sandbox::pbs_common::AuthorizationProxyInterface {
+namespace privacy_sandbox::pbs {
+class LocalAuthorizationProxy : public pbs_common::AuthorizationProxyInterface {
  public:
-  core::ExecutionResult Init() noexcept override {
-    return core::SuccessExecutionResult();
+  pbs_common::ExecutionResult Init() noexcept override {
+    return pbs_common::SuccessExecutionResult();
   }
 
-  core::ExecutionResult Run() noexcept override {
-    return core::SuccessExecutionResult();
+  pbs_common::ExecutionResult Run() noexcept override {
+    return pbs_common::SuccessExecutionResult();
   }
 
-  core::ExecutionResult Stop() noexcept override {
-    return core::SuccessExecutionResult();
+  pbs_common::ExecutionResult Stop() noexcept override {
+    return pbs_common::SuccessExecutionResult();
   }
 
-  core::ExecutionResult Authorize(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::AuthorizationProxyRequest,
-          privacy_sandbox::pbs_common::AuthorizationProxyResponse>&
+  pbs_common::ExecutionResult Authorize(
+      pbs_common::AsyncContext<pbs_common::AuthorizationProxyRequest,
+                               pbs_common::AuthorizationProxyResponse>&
           context) noexcept override {
-    context.result = core::SuccessExecutionResult();
-    context.response = std::make_shared<
-        privacy_sandbox::pbs_common::AuthorizationProxyResponse>();
+    context.result = pbs_common::SuccessExecutionResult();
+    context.response =
+        std::make_shared<pbs_common::AuthorizationProxyResponse>();
     context.response->authorized_metadata.authorized_domain =
         std::make_shared<std::string>(
             context.request->authorization_metadata.claimed_identity);
     context.Finish();
-    return core::SuccessExecutionResult();
+    return pbs_common::SuccessExecutionResult();
   }
 };
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

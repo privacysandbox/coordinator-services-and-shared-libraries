@@ -31,24 +31,21 @@ namespace privacy_sandbox::pbs_common {
 
 struct HttpClientOptions {
   HttpClientOptions()
-      : retry_strategy_options(
-            privacy_sandbox::pbs_common::RetryStrategyOptions(
-                privacy_sandbox::pbs_common::RetryStrategyType::Exponential,
-                kDefaultRetryStrategyDelayInMs,
-                kDefaultRetryStrategyMaxRetries)),
+      : retry_strategy_options(RetryStrategyOptions(
+            RetryStrategyType::Exponential, kDefaultRetryStrategyDelayInMs,
+            kDefaultRetryStrategyMaxRetries)),
         max_connections_per_host(kDefaultMaxConnectionsPerHost),
         http2_read_timeout_in_sec(kDefaultHttp2ReadTimeoutInSeconds) {}
 
-  HttpClientOptions(
-      privacy_sandbox::pbs_common::RetryStrategyOptions retry_strategy_options,
-      size_t max_connections_per_host, TimeDuration http2_read_timeout_in_sec)
+  HttpClientOptions(RetryStrategyOptions retry_strategy_options,
+                    size_t max_connections_per_host,
+                    TimeDuration http2_read_timeout_in_sec)
       : retry_strategy_options(retry_strategy_options),
         max_connections_per_host(max_connections_per_host),
         http2_read_timeout_in_sec(http2_read_timeout_in_sec) {}
 
   /// Retry strategy options.
-  const privacy_sandbox::pbs_common::RetryStrategyOptions
-      retry_strategy_options;
+  const RetryStrategyOptions retry_strategy_options;
   /// Max http connections per host.
   const size_t max_connections_per_host;
   /// nghttp client read timeout.
@@ -72,16 +69,15 @@ class HttpClient : public HttpClientInterface {
    * @param metric_router An optional pointer to a MetricRouter object used for
    * creating HTTP client metrics. Defaults to nullptr if not provided.
    */
-  explicit HttpClient(
-      std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      HttpClientOptions options = HttpClientOptions(),
-      absl::Nullable<google::scp::core::MetricRouter*> metric_router = nullptr);
+  explicit HttpClient(std::shared_ptr<AsyncExecutorInterface>& async_executor,
+                      HttpClientOptions options = HttpClientOptions(),
+                      absl::Nullable<MetricRouter*> metric_router = nullptr);
 
-  google::scp::core::ExecutionResult Init() noexcept override;
-  google::scp::core::ExecutionResult Run() noexcept override;
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Init() noexcept override;
+  ExecutionResult Run() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
-  google::scp::core::ExecutionResult PerformRequest(
+  ExecutionResult PerformRequest(
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept override;
 
  private:
@@ -95,10 +91,10 @@ class HttpClient : public HttpClientInterface {
   std::unique_ptr<HttpConnectionPool> http_connection_pool_;
 
   // Operation dispatcher
-  privacy_sandbox::pbs_common::OperationDispatcher operation_dispatcher_;
+  OperationDispatcher operation_dispatcher_;
 
   // An instance of metric router which will provide APIs to create metrics.
-  google::scp::core::MetricRouter* metric_router_;
+  MetricRouter* metric_router_;
 
   // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;

@@ -20,9 +20,9 @@
 
 using google::protobuf::Timestamp;
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 void ExpectTimestampEquals(const Timestamp& target, const Timestamp& expected) {
   EXPECT_EQ(target.seconds(), expected.seconds());
   EXPECT_EQ(target.nanos(), expected.nanos());
 }
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

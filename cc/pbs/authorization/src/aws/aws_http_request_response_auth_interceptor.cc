@@ -31,21 +31,23 @@
 #include "cc/core/utils/src/base64.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::utils::Base64Decode;
-using ::google::scp::core::utils::PadBase64Encoding;
 using ::privacy_sandbox::pbs_common::AuthorizationMetadata;
 using ::privacy_sandbox::pbs_common::AuthorizedDomain;
 using ::privacy_sandbox::pbs_common::AuthorizedMetadata;
 using ::privacy_sandbox::pbs_common::AwsV4Signer;
+using ::privacy_sandbox::pbs_common::Base64Decode;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
+using ::privacy_sandbox::pbs_common::PadBase64Encoding;
+using ::privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
 using std::make_shared;
 using std::string;
 using json = nlohmann::json;
@@ -63,13 +65,11 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
     const AuthorizationMetadata& authorization_metadata,
     HttpRequest& http_request) {
   if (authorization_metadata.authorization_token.length() == 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   if (authorization_metadata.claimed_identity.length() == 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   // Padding (if needed) is done so that decode works
@@ -82,22 +82,19 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
   string token;
   auto execution_result = Base64Decode(*padded_token_or, token);
   if (!execution_result) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   json json_token;
   try {
     json_token = json::parse(token);
   } catch (...) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
   // Check if all the required fields are present
   if (!json_token.contains(kAccessKey) || !json_token.contains(kSignature) ||
       !json_token.contains(kAmzDate)) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
   const string& access_key = json_token[kAccessKey].get<string>();
   const string& signature = json_token[kSignature].get<string>();
@@ -120,7 +117,7 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
                                          amz_date, signature);
 }
 
-core::ExecutionResultOr<AuthorizedMetadata>
+ExecutionResultOr<AuthorizedMetadata>
 AwsHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     const AuthorizationMetadata&, const HttpResponse& http_response) {
   string body_str = http_response.body.ToString();
@@ -131,12 +128,11 @@ AwsHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     parse_fail = false;
   } catch (...) {}
   if (parse_fail || !body_json.contains(kAuthorizedDomain)) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
+    return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
   return AuthorizedMetadata{.authorized_domain = make_shared<AuthorizedDomain>(
                                 body_json[kAuthorizedDomain].get<string>())};
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

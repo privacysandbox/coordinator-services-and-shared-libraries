@@ -48,13 +48,6 @@ using ::boost::asio::ip::tcp;
 using ::boost::asio::ssl::context;
 using ::boost::posix_time::seconds;
 using ::boost::system::error_code;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::MetricRouter;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
-using ::google::scp::core::utils::GetEscapedUriWithQuery;
 using ::nghttp2::asio_http2::header_map;
 using ::nghttp2::asio_http2::client::configure_tls_context;
 using ::nghttp2::asio_http2::client::response;
@@ -64,7 +57,6 @@ using ::opentelemetry::sdk::resource::SemanticConventions::
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerAddress;
 using ::opentelemetry::sdk::resource::SemanticConventions::kServerPort;
 using ::opentelemetry::sdk::resource::SemanticConventions::kUrlScheme;
-using ::privacy_sandbox::pbs_common::Uuid;
 
 static constexpr char kContentLengthHeader[] = "content-length";
 static constexpr char kHttp2Client[] = "Http2Client";
@@ -120,7 +112,6 @@ ExecutionResult HttpConnection::Init() noexcept {
     return SuccessExecutionResult();
   } catch (...) {
     auto result = FailureExecutionResult(
-
         SC_HTTP2_CLIENT_CONNECTION_INITIALIZATION_FAILED);
     SCP_ERROR(kHttp2Client, kZeroUuid, result, "Failed to initialize.");
     return result;
@@ -621,47 +612,35 @@ ExecutionResult HttpConnection::ConvertHttpStatusCodeToExecutionResult(
       return SuccessExecutionResult();
     case HttpStatusCode::MULTIPLE_CHOICES:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_MULTIPLE_CHOICES);
     case HttpStatusCode::MOVED_PERMANENTLY:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_MOVED_PERMANENTLY);
     case HttpStatusCode::FOUND:
       return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_FOUND);
     case HttpStatusCode::SEE_OTHER:
       return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_SEE_OTHER);
     case HttpStatusCode::NOT_MODIFIED:
-      return FailureExecutionResult(
-
-          SC_HTTP2_CLIENT_HTTP_STATUS_NOT_MODIFIED);
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_NOT_MODIFIED);
     case HttpStatusCode::TEMPORARY_REDIRECT:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_TEMPORARY_REDIRECT);
     case HttpStatusCode::PERMANENT_REDIRECT:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_PERMANENT_REDIRECT);
     case HttpStatusCode::BAD_REQUEST:
-      return FailureExecutionResult(
-
-          SC_HTTP2_CLIENT_HTTP_STATUS_BAD_REQUEST);
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_BAD_REQUEST);
     case HttpStatusCode::UNAUTHORIZED:
-      return FailureExecutionResult(
-
-          SC_HTTP2_CLIENT_HTTP_STATUS_UNAUTHORIZED);
+      return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_UNAUTHORIZED);
     case HttpStatusCode::FORBIDDEN:
       return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_FORBIDDEN);
     case HttpStatusCode::NOT_FOUND:
       return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND);
     case HttpStatusCode::METHOD_NOT_ALLOWED:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_METHOD_NOT_ALLOWED);
     case HttpStatusCode::REQUEST_TIMEOUT:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_TIMEOUT);
     case HttpStatusCode::CONFLICT:
       return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_CONFLICT);
@@ -669,63 +648,47 @@ ExecutionResult HttpConnection::ConvertHttpStatusCodeToExecutionResult(
       return FailureExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_GONE);
     case HttpStatusCode::LENGTH_REQUIRED:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_LENGTH_REQUIRED);
     case HttpStatusCode::PRECONDITION_FAILED:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_PRECONDITION_FAILED);
     case HttpStatusCode::REQUEST_ENTITY_TOO_LARGE:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE);
     case HttpStatusCode::REQUEST_URI_TOO_LONG:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_URI_TOO_LONG);
     case HttpStatusCode::UNSUPPORTED_MEDIA_TYPE:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE);
     case HttpStatusCode::REQUEST_RANGE_NOT_SATISFIABLE:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_REQUEST_RANGE_NOT_SATISFIABLE);
     case HttpStatusCode::MISDIRECTED_REQUEST:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_MISDIRECTED_REQUEST);
     case HttpStatusCode::TOO_MANY_REQUESTS:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_TOO_MANY_REQUESTS);
     case HttpStatusCode::INTERNAL_SERVER_ERROR:
       return RetryExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_INTERNAL_SERVER_ERROR);
     case HttpStatusCode::NOT_IMPLEMENTED:
-      return RetryExecutionResult(
-
-          SC_HTTP2_CLIENT_HTTP_STATUS_NOT_IMPLEMENTED);
+      return RetryExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_NOT_IMPLEMENTED);
     case HttpStatusCode::BAD_GATEWAY:
       return RetryExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_BAD_GATEWAY);
     case HttpStatusCode::SERVICE_UNAVAILABLE:
       return RetryExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_SERVICE_UNAVAILABLE);
     case HttpStatusCode::GATEWAY_TIMEOUT:
-      return RetryExecutionResult(
-
-          SC_HTTP2_CLIENT_HTTP_STATUS_GATEWAY_TIMEOUT);
+      return RetryExecutionResult(SC_HTTP2_CLIENT_HTTP_STATUS_GATEWAY_TIMEOUT);
     case HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED:
       return RetryExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
     case HttpStatusCode::UNKNOWN:
       return FailureExecutionResult(SC_UNKNOWN);
     default:
       return FailureExecutionResult(
-
           SC_HTTP2_CLIENT_HTTP_REQUEST_RESPONSE_STATUS_UNKNOWN);
   }
 }

@@ -21,12 +21,8 @@
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 namespace {
-
-using ::privacy_sandbox::pbs_common::AsyncExecutor;
-using ::privacy_sandbox::pbs_common::AsyncOperation;
-using ::privacy_sandbox::pbs_common::AsyncPriority;
 
 // Benchmarking 1: SpinLock counter increment.
 void BM_SpinLockIncrement(benchmark::State& state) {
@@ -113,7 +109,7 @@ BENCHMARK(BM_OtelCounterIncrement)->ThreadRange(1, 64);
 BENCHMARK(BM_OTelCounterAsyncIncrement)->ThreadRange(1, 64);
 
 }  // namespace
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common
 
 // Run the benchmark.
 BENCHMARK_MAIN();

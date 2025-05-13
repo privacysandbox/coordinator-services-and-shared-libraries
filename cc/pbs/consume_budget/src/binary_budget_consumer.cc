@@ -31,6 +31,7 @@
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/http_types.h"
 #include "cc/pbs/budget_key_timeframe_manager/src/budget_key_timeframe_utils.h"
+#include "cc/pbs/budget_key_timeframe_manager/src/error_codes.h"
 #include "cc/pbs/consume_budget/src/budget_consumer.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
@@ -38,26 +39,20 @@
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::kZeroUuid;
-using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
-using ::google::scp::pbs::errors::
-    SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
+
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AuthContext;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
-namespace spanner = ::google::cloud::spanner;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
+namespace spanner = google::cloud::spanner;
 
 constexpr absl::string_view kBinaryBudgetConsumer = "BinaryBudgetConsumer";
 constexpr absl::string_view kVersion1 = "1.0";
@@ -123,12 +118,12 @@ ExecutionResultOr<TimeBucket> ReportingTimeToTimeBucket(
   return static_cast<uint64_t>(reporting_time_nanoseconds.count());
 }
 
-std::tuple<cloud::Status, ExecutionResult> VerifyLaplaceProto(
+std::tuple<google::cloud::Status, ExecutionResult> VerifyLaplaceProto(
     const privacy_sandbox_pbs::BudgetValue& spanner_value) {
   if (!spanner_value.has_laplace_dp_budgets()) {
     return std::make_tuple(
-        cloud::Status(cloud::StatusCode::kInvalidArgument,
-                      "Proto does not have LaplaceDpBudgets"),
+        google::cloud::Status(google::cloud::StatusCode::kInvalidArgument,
+                              "Proto does not have LaplaceDpBudgets"),
         FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
   }
 
@@ -136,14 +131,15 @@ std::tuple<cloud::Status, ExecutionResult> VerifyLaplaceProto(
       spanner_value.laplace_dp_budgets();
   if (dp_budgets.budgets_size() != kDefaultTokenCountSize) {
     return std::make_tuple(
-        cloud::Status(cloud::StatusCode::kInvalidArgument,
-                      absl::StrFormat(
-                          "LaplaceDpBudgets have %d tokens, expected %d tokens",
-                          dp_budgets.budgets_size(), kDefaultTokenCountSize)),
+        google::cloud::Status(
+            google::cloud::StatusCode::kInvalidArgument,
+            absl::StrFormat(
+                "LaplaceDpBudgets have %d tokens, expected %d tokens",
+                dp_budgets.budgets_size(), kDefaultTokenCountSize)),
         FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
   }
 
-  return std::make_tuple(cloud::Status(), SuccessExecutionResult());
+  return std::make_tuple(google::cloud::Status(), SuccessExecutionResult());
 }
 
 ExecutionResult DeserializeHourTokensInTimeGroup(
@@ -170,7 +166,7 @@ ExecutionResult DeserializeHourTokensInTimeGroup(
   return SuccessExecutionResult();
 }
 
-std::tuple<cloud::Status, ExecutionResult,
+std::tuple<google::cloud::Status, ExecutionResult,
            std::array<int8_t, kDefaultTokenCountSize>>
 ParseSpannerJson(const spanner::Json& spanner_json) {
   std::array<int8_t, kDefaultTokenCountSize> result;
@@ -180,17 +176,18 @@ ParseSpannerJson(const spanner::Json& spanner_json) {
     json_value = nlohmann::json::parse(std::string(spanner_json));
   } catch (...) {
     return std::make_tuple(
-        cloud::Status(cloud::StatusCode::kInvalidArgument,
-                      "Failed to parse Value JSON column while reading "
-                      "from BudgetKey table"),
+        google::cloud::Status(google::cloud::StatusCode::kInvalidArgument,
+                              "Failed to parse Value JSON column while reading "
+                              "from BudgetKey table"),
         FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR), result);
   }
 
   if (!json_value.contains(std::string(kTokenCountJsonField))) {
     return std::make_tuple(
-        cloud::Status(cloud::StatusCode::kInvalidArgument,
-                      "The json in Value column does not contain TokenCount "
-                      "json field"),
+        google::cloud::Status(
+            google::cloud::StatusCode::kInvalidArgument,
+            "The json in Value column does not contain TokenCount "
+            "json field"),
         FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR), result);
   }
 
@@ -198,14 +195,15 @@ ParseSpannerJson(const spanner::Json& spanner_json) {
           json_value[std::string(kTokenCountJsonField)], result);
       !execution_result.Successful()) {
     return std::make_tuple(
-        cloud::Status(
-            cloud::StatusCode::kInvalidArgument,
+        google::cloud::Status(
+            google::cloud::StatusCode::kInvalidArgument,
             absl::StrCat(
                 "Unable to DeserializeHourTokensInTimeGroup. Json value: ",
                 std::string(json_value[std::string(kTokenCountJsonField)]))),
         FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR), result);
   }
-  return std::make_tuple(cloud::Status(), SuccessExecutionResult(), result);
+  return std::make_tuple(google::cloud::Status(), SuccessExecutionResult(),
+                         result);
 }
 
 spanner::ProtoMessage<privacy_sandbox_pbs::BudgetValue> CreateLaplaceProto(
@@ -243,7 +241,7 @@ spanner::Json CreateSpannerJson(
 }  // namespace
 
 BinaryBudgetConsumer::BinaryBudgetConsumer(
-    privacy_sandbox::pbs_common::ConfigProviderInterface* config_provider)
+    ConfigProviderInterface* config_provider)
     : config_provider_(config_provider) {
   std::string pbs_value_column_migration_phase;
   ExecutionResult execution_result = config_provider_->Get(
@@ -322,10 +320,8 @@ ExecutionResult BinaryBudgetConsumer::ParseRequestBodyV1(
       return time_bucket_or.result();
     }
 
-    auto time_group =
-        budget_key_timeframe_manager::Utils::GetTimeGroup(*time_bucket_or);
-    auto time_bucket =
-        budget_key_timeframe_manager::Utils::GetTimeBucket(*time_bucket_or);
+    auto time_group = Utils::GetTimeGroup(*time_bucket_or);
+    auto time_bucket = Utils::GetTimeBucket(*time_bucket_or);
 
     auto visited_str = budget_key + "_" + std::to_string(time_group) + "_" +
                        std::to_string(time_bucket);
@@ -397,10 +393,8 @@ ExecutionResult BinaryBudgetConsumer::ParseRequestBodyV2(
       return reporting_timestamp.result();
     }
 
-    TimeGroup time_group =
-        budget_key_timeframe_manager::Utils::GetTimeGroup(*reporting_timestamp);
-    TimeBucket time_bucket = budget_key_timeframe_manager::Utils::GetTimeBucket(
-        *reporting_timestamp);
+    TimeGroup time_group = Utils::GetTimeGroup(*reporting_timestamp);
+    TimeBucket time_bucket = Utils::GetTimeBucket(*reporting_timestamp);
 
     std::string visited_key =
         absl::StrCat(budget_key, "_", time_group, "_", time_bucket);
@@ -554,10 +548,8 @@ ExecutionResult BinaryBudgetConsumer::ParseTransactionRequest(
       return reporting_timestamp.result();
     }
 
-    TimeGroup time_group =
-        budget_key_timeframe_manager::Utils::GetTimeGroup(*reporting_timestamp);
-    TimeBucket time_bucket = budget_key_timeframe_manager::Utils::GetTimeBucket(
-        *reporting_timestamp);
+    TimeGroup time_group = Utils::GetTimeGroup(*reporting_timestamp);
+    TimeBucket time_bucket = Utils::GetTimeBucket(*reporting_timestamp);
 
     std::string visited_key =
         absl::StrCat(budget_key, "_", time_group, "_", time_bucket);
@@ -658,23 +650,24 @@ BinaryBudgetConsumer::MutateConsumptionStateForKeysPresentInDatabase(
   using RowType = std::tuple<std::string, std::string, ValueColumnType>;
 
   SpannerMutationsResult spanner_mutations_result{
-      .status = cloud::Status(),
+      .status = google::cloud::Status(),
       .execution_result = SuccessExecutionResult(),
       .budget_exhausted_indices = std::vector<size_t>(),
       .mutations = spanner::Mutations(),
   };
 
-  for (const auto& row : cloud::spanner::StreamOf<RowType>(row_stream)) {
+  for (const auto& row :
+       google::cloud::spanner::StreamOf<RowType>(row_stream)) {
     if (!row) {
-      spanner_mutations_result.status = cloud::Status(
-          cloud::StatusCode::kInvalidArgument,
+      spanner_mutations_result.status = google::cloud::Status(
+          google::cloud::StatusCode::kInvalidArgument,
           absl::StrFormat("Error reading rows from the database. Reason: %s",
                           row.status().message()));
       spanner_mutations_result.execution_result =
           FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR);
       return spanner_mutations_result;
     }
-    if (row.status().code() == cloud::StatusCode::kNotFound) {
+    if (row.status().code() == google::cloud::StatusCode::kNotFound) {
       continue;
     }
 
@@ -697,8 +690,8 @@ BinaryBudgetConsumer::MutateConsumptionStateForKeysPresentInDatabase(
           ParseSpannerJson(std::get<2>(*row));
 
       if (!spanner_mutations_result.execution_result.Successful()) {
-        spanner_mutations_result.status = cloud::Status(
-            cloud::StatusCode::kInvalidArgument,
+        spanner_mutations_result.status = google::cloud::Status(
+            google::cloud::StatusCode::kInvalidArgument,
             absl::StrFormat(
                 "Failed to parse spanner json string. Spanner JSON %s",
                 std::string(std::get<2>(*row))));
@@ -720,8 +713,8 @@ BinaryBudgetConsumer::MutateConsumptionStateForKeysPresentInDatabase(
         const int32_t budget = budget_value.laplace_dp_budgets().budgets(i);
         if (budget != kEmptyBudgetCount &&
             budget != kDefaultLaplaceDpBudgetCount) {
-          spanner_mutations_result.status = cloud::Status(
-              cloud::StatusCode::kInvalidArgument,
+          spanner_mutations_result.status = google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
               absl::StrFormat("LaplaceDpBudgets value should be "
                               "either %d (full) or %d (empty), found %d",
                               kDefaultLaplaceDpBudgetCount, kEmptyBudgetCount,
@@ -749,8 +742,8 @@ BinaryBudgetConsumer::MutateConsumptionStateForKeysPresentInDatabase(
     // To maintain backward compatibility
     std::sort(spanner_mutations_result.budget_exhausted_indices.begin(),
               spanner_mutations_result.budget_exhausted_indices.end());
-    spanner_mutations_result.status = cloud::Status(
-        cloud::StatusCode::kInvalidArgument, "Not enough budget.");
+    spanner_mutations_result.status = google::cloud::Status(
+        google::cloud::StatusCode::kInvalidArgument, "Not enough budget.");
     spanner_mutations_result.execution_result =
         FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED);
     return spanner_mutations_result;
@@ -811,7 +804,7 @@ spanner::Mutations BinaryBudgetConsumer::GenerateSpannerMutations(
 SpannerMutationsResult BinaryBudgetConsumer::ConsumeBudget(
     spanner::RowStream& row_stream, absl::string_view table_name) {
   SpannerMutationsResult spanner_mutations_result{
-      .status = cloud::Status(),
+      .status = google::cloud::Status(),
       .execution_result = SuccessExecutionResult(),
       .budget_exhausted_indices = std::vector<size_t>(),
       .mutations = spanner::Mutations(),
@@ -856,4 +849,4 @@ std::vector<std::string> BinaryBudgetConsumer::DebugKeyList() {
   return result;
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

@@ -16,7 +16,7 @@
 
 #pragma once
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 /**
  * @brief
@@ -70,4 +70,4 @@ static constexpr char kMetricNameBudgetKeyUnloads[] =
 static constexpr char kMetricLabelBudgetKeyLoadSuccess[] = "load_success";
 static constexpr char kMetricLabelBudgetKeyUnloadSuccess[] = "unload_success";
 
-};  // namespace google::scp::pbs
+};  // namespace privacy_sandbox::pbs

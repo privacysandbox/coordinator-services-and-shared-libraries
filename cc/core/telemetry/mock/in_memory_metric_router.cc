@@ -31,7 +31,7 @@
 #include "opentelemetry/sdk/metrics/meter_provider_factory.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 inline constexpr absl::string_view kInMemoryMetricRouter =
     "InMemoryMetricRouter";
 
@@ -57,7 +57,7 @@ InMemoryMetricReader& InMemoryMetricRouter::GetMetricReader() const {
   return *metric_reader_;
 }
 
-core::InMemoryMetricExporter& InMemoryMetricRouter::GetMetricExporter() const {
+InMemoryMetricExporter& InMemoryMetricRouter::GetMetricExporter() const {
   return GetMetricReader().exporter();
 }
 
@@ -68,11 +68,11 @@ InMemoryMetricRouter::GetExportedData() const {
   } else {
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_FAKE_COULD_NOT_EXPORT_DATA);
-    SCP_ERROR(kInMemoryMetricRouter, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result, "[Telmetry Fake] Could force flush the data");
+    SCP_ERROR(kInMemoryMetricRouter, kZeroUuid, execution_result,
+              "[Telmetry Fake] Could force flush the data");
 
     return {};
   }
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

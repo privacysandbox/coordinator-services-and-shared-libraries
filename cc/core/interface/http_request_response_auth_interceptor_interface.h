@@ -38,15 +38,15 @@ class HttpRequestResponseAuthInterceptorInterface {
    *
    * @return ExecutionResult
    */
-  virtual google::scp::core::ExecutionResult PrepareRequest(
-      const AuthorizationMetadata&, HttpRequest&) = 0;
+  virtual ExecutionResult PrepareRequest(const AuthorizationMetadata&,
+                                         HttpRequest&) = 0;
 
   /**
    * @brief Parse response to obtain authorization related data
    *
    * @return ExecutionResultOr<AuthorizedMetadata>
    */
-  virtual google::scp::core::ExecutionResultOr<AuthorizedMetadata>
+  virtual ExecutionResultOr<AuthorizedMetadata>
   ObtainAuthorizedMetadataFromResponse(const AuthorizationMetadata&,
                                        const HttpResponse&) = 0;
 };

@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Demo main.tf
-#
-# This file is meant to show an example of what necessary environment-specific
-# configuration is necessary in each environment. Terraform backend
-# configuration cannot reference Terraform variables so this file must be
-# customized for each environment.
+locals {
+  domain_name = "<your-domain-name>"
+}
 
-terraform {
-  # Note: the following lines should be uncommented in order to store Terraform
-  # state in a remote backend.
-
-  # backend "gcs" {
-  #   bucket = "<bucket name goes here, recommended suffix -mp-secondary>"
-  #   prefix = "domainrecordsetup-secondary-tfstate"
-  # }
-
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = ">= 6.29.0"
-    }
-  }
+module "setupresources" {
+  source = "../../../applications/setupresources"
+  # Must be updated
+  project     = "<project-id>"
+  domain_name = local.domain_name
 }

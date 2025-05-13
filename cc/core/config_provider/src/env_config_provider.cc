@@ -25,11 +25,6 @@ using std::list;
 using std::string;
 
 namespace privacy_sandbox::pbs_common {
-namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-}  // namespace
 
 ExecutionResult EnvConfigProvider::Init() noexcept {
   return SuccessExecutionResult();

@@ -26,9 +26,6 @@
 #include "cc/core/logger/interface/log_provider_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
-using ::google::scp::core::ExecutionResult;
-using ::privacy_sandbox::pbs_common::Uuid;
-using ::privacy_sandbox::pbs_common::LogLevel;
 using std::string;
 using std::string_view;
 using std::stringstream;

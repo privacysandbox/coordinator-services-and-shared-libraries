@@ -138,3 +138,21 @@ variable "encryption_key_security_policy_rules" {
     })
   }))
 }
+
+variable "enable_cloud_armor_alerts" {
+  description = "Enable alerts and incidents for Cloud Armor."
+  type        = bool
+  default     = false
+}
+
+variable "enable_cloud_armor_notifications" {
+  description = "Enable alert notifications for Cloud Armor to cloud_armor_notification_channel_id."
+  type        = bool
+  default     = false
+}
+
+variable "cloud_armor_notification_channel_id" {
+  description = "Notification channel to send Cloud Armor alert notifications to."
+  type        = string
+  default     = null
+}

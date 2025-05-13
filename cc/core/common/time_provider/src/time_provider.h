@@ -36,8 +36,7 @@ class TimeProvider {
    *
    * @return Timestamp The timestamp in nanoseconds in ticks format
    */
-  static privacy_sandbox::pbs_common::Timestamp
-  GetWallTimestampInNanosecondsAsClockTicks() {
+  static Timestamp GetWallTimestampInNanosecondsAsClockTicks() {
     return GetWallTimestampInNanoseconds().count();
   }
 
@@ -57,8 +56,7 @@ class TimeProvider {
    *
    * @return Timestamp The timestamp in nanoseconds in ticks format
    */
-  static privacy_sandbox::pbs_common::Timestamp
-  GetSteadyTimestampInNanosecondsAsClockTicks() {
+  static Timestamp GetSteadyTimestampInNanosecondsAsClockTicks() {
     return GetSteadyTimestampInNanoseconds().count();
   }
 

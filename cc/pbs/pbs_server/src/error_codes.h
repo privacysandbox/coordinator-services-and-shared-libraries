@@ -15,23 +15,22 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs {
 
 /// Registers component code as 0x010A for the PBS server.
 REGISTER_COMPONENT_CODE(SC_PBS_SERVER, 0x010A)
 
-DEFINE_ERROR_CODE(
-    SC_PBS_SERVER_CRASHED, SC_PBS_SERVER, 0x0001, "PBS server crashed.",
-    ::privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_PBS_SERVER_CRASHED, SC_PBS_SERVER, 0x0001,
+                  "PBS server crashed.",
+                  pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_PBS_SERVER_CHILD_SIGNALLED, SC_PBS_SERVER, 0x0002,
-    "PBS server's child signalled.",
-    ::privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_PBS_SERVER_CHILD_SIGNALLED, SC_PBS_SERVER, 0x0002,
+                  "PBS server's child signalled.",
+                  pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(
     INVALID_ENVIROMENT, SC_PBS_SERVER, 0x0003,
     "A specific environment is being depended on that isn't present.",
-    ::privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+    pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core::errors
+}  // namespace privacy_sandbox::pbs

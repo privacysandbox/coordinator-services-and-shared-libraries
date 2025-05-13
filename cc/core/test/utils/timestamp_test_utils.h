@@ -18,7 +18,7 @@
 
 #include <google/protobuf/timestamp.pb.h>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Expect timestamps equal.
  *
@@ -27,4 +27,4 @@ namespace google::scp::core::test {
  */
 void ExpectTimestampEquals(const google::protobuf::Timestamp& target,
                            const google::protobuf::Timestamp& expected);
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

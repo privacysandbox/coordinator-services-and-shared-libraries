@@ -62,7 +62,7 @@ GetMetricPointDataAttrsArr(
 
 }  // namespace
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /*
  * Sample exported data
@@ -134,4 +134,4 @@ GetMetricAttributes(
   return point_data_attrs[0].attributes;
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

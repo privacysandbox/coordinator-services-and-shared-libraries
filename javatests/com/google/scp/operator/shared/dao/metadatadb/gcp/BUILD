@@ -77,6 +77,7 @@ java_library(
     deps = [
         "//java/com/google/scp/operator/shared/dao/metadatadb/common",
         "//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
+        "//java/com/google/scp/shared/gcp/util",
         "//java/com/google/scp/shared/mapper",
         "//java/external:acai",
         "//java/external:gcp_core",

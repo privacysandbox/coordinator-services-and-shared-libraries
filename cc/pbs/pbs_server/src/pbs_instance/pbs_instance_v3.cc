@@ -31,22 +31,20 @@
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_logging.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::PassThruAuthorizationProxy;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::kZeroUuid;
-using ::google::scp::core::errors::SC_PBS_SERVICE_INITIALIZATION_ERROR;
-using ::google::scp::pbs::FrontEndServiceV2;
-using ::google::scp::pbs::HealthService;
+namespace privacy_sandbox::pbs {
+
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::Http2Server;
 using ::privacy_sandbox::pbs_common::Http2ServerOptions;
 using ::privacy_sandbox::pbs_common::HttpClient;
 using ::privacy_sandbox::pbs_common::HttpClientOptions;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::PassThruAuthorizationProxy;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 
 PBSInstanceV3::PBSInstanceV3(
     std::shared_ptr<ConfigProviderInterface> config_provider,
@@ -56,7 +54,7 @@ PBSInstanceV3::PBSInstanceV3(
       cloud_platform_dependency_factory_(
           std::move(cloud_platform_dependency_factory)) {
   auto execution_result =
-      config_provider_->Get(google::scp::pbs::kContainerType, container_type_);
+      config_provider_->Get(kContainerType, container_type_);
   if (!execution_result.Successful()) {
     container_type_ = kComputeEngine;
     SCP_INFO(kPBSInstance, kZeroUuid,
@@ -219,4 +217,4 @@ ExecutionResult PBSInstanceV3::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

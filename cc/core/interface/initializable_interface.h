@@ -32,6 +32,6 @@ class InitializableInterface {
    * @return ExecutionResult the result of the execution with possible error
    * code.
    */
-  virtual google::scp::core::ExecutionResult Init() noexcept = 0;
+  virtual ExecutionResult Init() noexcept = 0;
 };
 }  // namespace privacy_sandbox::pbs_common

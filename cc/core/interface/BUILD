@@ -36,8 +36,9 @@ cc_library(
         ":async_context_lib",
         ":service_interface_lib",
         "//cc/core/common/concurrent_map/src:concurrent_map_lib",
-        "//cc/core/common/proto:core_common_proto_lib",
         "//cc/core/common/uuid/src:uuid_lib",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/time",
     ],
 )
 
@@ -76,7 +77,6 @@ cc_library(
         "type_def.h",
     ],
     deps = [
-        "//cc/core/common/proto:core_common_proto_lib",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/strings",
     ],

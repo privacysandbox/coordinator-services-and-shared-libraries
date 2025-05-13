@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -25,7 +26,7 @@
 
 #include "error_codes.h"
 
-namespace google::scp::process_launcher {
+namespace privacy_sandbox::pbs_common {
 struct ExecutableArgument {
   std::string executable_name;
   std::vector<std::string> command_line_args;
@@ -45,25 +46,22 @@ struct ExecutableArgument {
 template <class T>
 class JsonArgParser {
  public:
-  const google::scp::core::ExecutionResult Parse(std::string json_string,
-                                                 T& parsed_value) noexcept {
-    return google::scp::core::FailureExecutionResult(
-        privacy_sandbox::pbs_common::ARGUMENT_PARSER_UNKNOWN_TYPE);
+  const ExecutionResult Parse(std::string json_string,
+                              T& parsed_value) noexcept {
+    return FailureExecutionResult(ARGUMENT_PARSER_UNKNOWN_TYPE);
   };
 };
 
 template <>
 class JsonArgParser<ExecutableArgument> {
  public:
-  const google::scp::core::ExecutionResult Parse(
-      std::string json_string, ExecutableArgument& parsed_value) noexcept {
+  const ExecutionResult Parse(std::string json_string,
+                              ExecutableArgument& parsed_value) noexcept {
     try {
       auto parsed = nlohmann::json::parse(json_string);
 
       if (!parsed.contains("executable_name")) {
-        return google::scp::core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::
-                ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON);
+        return FailureExecutionResult(ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON);
       }
 
       parsed_value.executable_name =
@@ -79,11 +77,10 @@ class JsonArgParser<ExecutableArgument> {
       std::cerr << "Failed parsing json with: " << e.what() << std::endl;
       parsed_value.executable_name = std::string();
       parsed_value.command_line_args.clear();
-      return google::scp::core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::ARGUMENT_PARSER_INVALID_JSON);
+      return FailureExecutionResult(ARGUMENT_PARSER_INVALID_JSON);
     }
 
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 };
-}  // namespace google::scp::process_launcher
+}  // namespace privacy_sandbox::pbs_common

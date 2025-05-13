@@ -16,19 +16,18 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_PBS_TRACE_MOCK, 0x0530)
 
-DEFINE_ERROR_CODE(
-    SC_TRACE_MOCK_COULD_NOT_EXPORT_DATA, SC_PBS_TRACE_MOCK, 0x0001,
-    "Trace exporter could not export/force-flush the data",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TRACE_MOCK_COULD_NOT_EXPORT_DATA, SC_PBS_TRACE_MOCK,
+                  0x0001,
+                  "Trace exporter could not export/force-flush the data",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_SPAN_PROCESSOR_COULD_NOT_EXPORT_DATA, SC_PBS_TRACE_MOCK, 0x0002,
-    "SpanProcessor could not export the data",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_SPAN_PROCESSOR_COULD_NOT_EXPORT_DATA, SC_PBS_TRACE_MOCK,
+                  0x0002, "SpanProcessor could not export the data",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_MOCK_TRACE_ERROR_CODES_H_

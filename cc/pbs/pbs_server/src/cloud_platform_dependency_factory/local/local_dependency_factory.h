@@ -20,45 +20,41 @@
 
 #include "cc/pbs/interface/cloud_platform_dependency_factory_interface.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 class LocalDependencyFactory : public CloudPlatformDependencyFactoryInterface {
  public:
   LocalDependencyFactory(
-      const std::shared_ptr<
-          privacy_sandbox::pbs_common::ConfigProviderInterface>&
+      const std::shared_ptr<pbs_common::ConfigProviderInterface>&
           config_provider)
       : config_provider_(config_provider) {}
 
-  core::ExecutionResult Init() noexcept override;
+  pbs_common::ExecutionResult Init() noexcept override;
 
-  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+  std::unique_ptr<pbs_common::AuthorizationProxyInterface>
   ConstructAuthorizationProxyClient(
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor,
-      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
-          http_client) noexcept override;
+      std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<pbs_common::HttpClientInterface> http_client) noexcept
+      override;
 
-  std::unique_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+  std::unique_ptr<pbs_common::AuthorizationProxyInterface>
   ConstructAwsAuthorizationProxyClient(
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor,
-      std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
-          http_client) noexcept override;
+      std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor,
+      std::shared_ptr<pbs_common::HttpClientInterface> http_client) noexcept
+      override;
 
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
   ConstructBudgetConsumptionHelper(
-      privacy_sandbox::pbs_common::AsyncExecutorInterface* async_executor,
-      privacy_sandbox::pbs_common::AsyncExecutorInterface*
-          io_async_executor) noexcept override;
+      pbs_common::AsyncExecutorInterface* async_executor,
+      pbs_common::AsyncExecutorInterface* io_async_executor) noexcept override;
 
-  std::unique_ptr<core::MetricRouter> ConstructMetricRouter() noexcept override;
+  std::unique_ptr<pbs_common::MetricRouter> ConstructMetricRouter() noexcept
+      override;
 
  private:
-  core::ExecutionResult ReadConfigurations();
+  pbs_common::ExecutionResult ReadConfigurations();
 
-  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-      config_provider_;
+  std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider_;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

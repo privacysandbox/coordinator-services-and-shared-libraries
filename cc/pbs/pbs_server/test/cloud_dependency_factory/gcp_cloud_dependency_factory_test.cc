@@ -29,19 +29,19 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::pbs::test {
+namespace privacy_sandbox::pbs {
 namespace {
-using google::scp::core::ExecutionResult;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::test::ResultIs;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
 using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 using ::privacy_sandbox::pbs_common::kGcpProjectId;
 using ::privacy_sandbox::pbs_common::kSpannerDatabase;
 using ::privacy_sandbox::pbs_common::kSpannerInstance;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::privacy_sandbox::pbs_common::MockHttpClient;
+using ::privacy_sandbox::pbs_common::ResultIs;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using std::make_shared;
 using std::shared_ptr;
 
@@ -109,4 +109,4 @@ TEST_F(GcpCloudDependencyFactoryTest, ConstructBudgetConsumptionHelper) {
   EXPECT_THAT(helper->Stop(), ResultIs(SuccessExecutionResult()));
 }
 }  // namespace
-}  // namespace google::scp::pbs::test
+}  // namespace privacy_sandbox::pbs

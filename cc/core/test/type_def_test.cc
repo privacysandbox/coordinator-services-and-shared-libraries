@@ -18,10 +18,8 @@
 
 #include <gtest/gtest.h>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 namespace {
-using ::privacy_sandbox::pbs_common::Byte;
-using ::privacy_sandbox::pbs_common::BytesBuffer;
 
 TEST(TypeDefTest, BytesBufferStringConstructor) {
   constexpr size_t str_len = 5;
@@ -60,4 +58,4 @@ TEST(TypeDefTest, BytesBufferToString) {
 }
 
 }  // namespace
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

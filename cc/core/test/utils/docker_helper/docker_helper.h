@@ -17,7 +17,7 @@
 #include <map>
 #include <string>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 
 std::string PortMapToSelf(std::string port);
 
@@ -63,4 +63,4 @@ std::string BuildStartContainerCmd(
 std::string GetIpAddress(const std::string& network_name,
                          const std::string& container_name);
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

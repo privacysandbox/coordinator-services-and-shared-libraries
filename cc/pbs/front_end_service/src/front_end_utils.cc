@@ -42,33 +42,24 @@
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 namespace {
 
 using ::google::protobuf::util::JsonPrintOptions;
 using ::google::protobuf::util::MessageToJsonString;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_INVALID_RESPONSE_BODY;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_REPORTING_ORIGIN_NOT_BELONG_TO_SITE;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetResponse;
 using ::privacy_sandbox::pbs_common::Byte;
 using ::privacy_sandbox::pbs_common::BytesBuffer;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
 using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::privacy_sandbox::pbs_common::Uuid;
 
 constexpr absl::string_view kFrontEndUtils = "FrontEndUtils";
@@ -161,10 +152,10 @@ ExecutionResult ParseBeginTransactionRequestBodyV1(
       // commands belong to the same reporting hour to execute within the
       // same transaction. The proper solution is to move this logic to
       // the transaction commands.
-      auto time_group = budget_key_timeframe_manager::Utils::GetTimeGroup(
-          consume_budget_metadata.time_bucket);
-      auto time_bucket = budget_key_timeframe_manager::Utils::GetTimeBucket(
-          consume_budget_metadata.time_bucket);
+      auto time_group =
+          Utils::GetTimeGroup(consume_budget_metadata.time_bucket);
+      auto time_bucket =
+          Utils::GetTimeBucket(consume_budget_metadata.time_bucket);
 
       auto visited_str = *consume_budget_metadata.budget_key_name + "_" +
                          std::to_string(time_group) + "_" +
@@ -184,7 +175,7 @@ ExecutionResult ParseBeginTransactionRequestBodyV1(
         SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
 
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
 // V2 Request Example:
@@ -299,11 +290,8 @@ ExecutionResult ParseBeginTransactionRequestBodyV2(
         return reporting_timestamp.result();
       }
 
-      TimeGroup time_group = budget_key_timeframe_manager::Utils::GetTimeGroup(
-          *reporting_timestamp);
-      TimeBucket time_bucket =
-          budget_key_timeframe_manager::Utils::GetTimeBucket(
-              *reporting_timestamp);
+      TimeGroup time_group = Utils::GetTimeGroup(*reporting_timestamp);
+      TimeBucket time_bucket = Utils::GetTimeBucket(*reporting_timestamp);
       std::string visited_key =
           absl::StrCat(*budget_key_name, "_", time_group, "_", time_bucket);
       if (visited.find(visited_key) != visited.end()) {
@@ -316,7 +304,7 @@ ExecutionResult ParseBeginTransactionRequestBodyV2(
     }
   }
 
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
 }  // namespace
@@ -360,7 +348,7 @@ ExecutionResult SerializeTransactionFailedCommandIndicesResponse(
   response_body.length = serialized.size();
   response_body.capacity = serialized.size();
 
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
 ExecutionResult ExtractTransactionIdFromHTTPHeaders(
@@ -368,7 +356,8 @@ ExecutionResult ExtractTransactionIdFromHTTPHeaders(
   auto header_iter = request_headers->find(kTransactionIdHeader);
   if (header_iter == request_headers->end()) {
     return FailureExecutionResult(
-        core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
+        privacy_sandbox::pbs::
+            SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
   }
 
   return FromString(header_iter->second, uuid);
@@ -379,16 +368,18 @@ ExecutionResult ExtractRequestClaimedIdentity(
     std::string& claimed_identity) {
   if (!request_headers) {
     return FailureExecutionResult(
-        core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
+        privacy_sandbox::pbs::
+            SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
   }
   auto header_iter = request_headers->find(std::string(kClaimedIdentityHeader));
   if (header_iter == request_headers->end()) {
     return FailureExecutionResult(
-        core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
+        privacy_sandbox::pbs::
+            SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
   }
 
   claimed_identity = header_iter->second;
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
 std::string GetReportingOriginMetricLabel() {
@@ -400,7 +391,8 @@ ExecutionResultOr<std::string> ExtractTransactionOrigin(
   auto header_iter = request_headers.find(kTransactionOriginHeader);
   if (header_iter == request_headers.end()) {
     return FailureExecutionResult(
-        core::errors::SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
+        privacy_sandbox::pbs::
+            SC_PBS_FRONT_END_SERVICE_REQUEST_HEADER_NOT_FOUND);
   }
   return header_iter->second;
 }
@@ -453,7 +445,8 @@ ExecutionResultOr<std::string> TransformReportingOriginToSite(
       psl_registrable_domain(psl, reporting_origin.c_str());
   if (private_suffix_part_start == nullptr) {
     return FailureExecutionResult(
-        core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN);
+        privacy_sandbox::pbs::
+            SC_PBS_FRONT_END_SERVICE_INVALID_REPORTING_ORIGIN);
   }
   std::string private_suffix_part = std::string(private_suffix_part_start);
   // Extract port number after the address portion (skipping protocol scheme).
@@ -651,7 +644,7 @@ ExecutionResult ParseCommonV2TransactionRequestBody(
       ++key_index;
     }
   }
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
 ExecutionResultOr<ConsumePrivacyBudgetRequest::PrivacyBudgetKey::BudgetType>
@@ -753,7 +746,7 @@ ExecutionResult ParseCommonV2TransactionRequestProto(
       ++key_index;
     }
   }
-  return core::SuccessExecutionResult();
+  return SuccessExecutionResult();
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

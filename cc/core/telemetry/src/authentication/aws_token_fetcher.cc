@@ -14,14 +14,24 @@
 
 #include "aws_token_fetcher.h"
 
+#include <memory>
+#include <string>
+
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
-#include "cc/core/telemetry/src/authentication/error_codes.h"
+#include "cc/core/interface/errors.h"
 #include "google/cloud/credentials.h"
 
 #include "token_fetcher_utils.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
+
+using ::google::cloud::MakeExternalAccountCredentials;
+using ::google::cloud::Options;
+using ::google::cloud::UnifiedCredentialsOption;
+using ::google::cloud::iam_credentials_v1::IAMCredentialsClient;
+using ::google::cloud::iam_credentials_v1::IAMCredentialsConnection;
+using ::google::cloud::iam_credentials_v1::MakeIAMCredentialsConnection;
 
 inline constexpr absl::string_view kAwsTokenFetcher = "AwsTokenFetcher";
 
@@ -37,34 +47,24 @@ ExecutionResultOr<std::string> AwsTokenFetcher::FetchIdToken(
 
   auto execution_result = FetchIdTokenInternal(*iam_client_, auth_config);
   if (!execution_result.Successful()) {
-    SCP_ERROR(kAwsTokenFetcher, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result.result(),
+    SCP_ERROR(kAwsTokenFetcher, kZeroUuid, execution_result.result(),
               "[Aws Token Fetch] Id token fetch failed: %s",
-              privacy_sandbox::pbs_common::GetErrorMessage(
-                  execution_result.result().status_code));
+              GetErrorMessage(execution_result.result().status_code));
   }
   return execution_result;
 }
 
 void AwsTokenFetcher::CreateIamClient(const GrpcAuthConfig& auth_config) {
-  std::shared_ptr<google::cloud::iam_credentials_v1::IAMCredentialsConnection>
-      credentials_connection;
+  std::shared_ptr<IAMCredentialsConnection> credentials_connection;
 
   if (auth_config.cred_config().empty()) {
-    credentials_connection =
-        cloud::iam_credentials_v1::MakeIAMCredentialsConnection(
-            google::cloud::Options());
+    credentials_connection = MakeIAMCredentialsConnection(Options());
   } else {
-    credentials_connection =
-        cloud::iam_credentials_v1::MakeIAMCredentialsConnection(
-            google::cloud::Options()
-                .set<google::cloud::UnifiedCredentialsOption>(
-                    google::cloud::MakeExternalAccountCredentials(
-                        std::string(auth_config.cred_config()))));
+    credentials_connection = MakeIAMCredentialsConnection(
+        Options().set<UnifiedCredentialsOption>(MakeExternalAccountCredentials(
+            std::string(auth_config.cred_config()))));
   }
 
-  iam_client_ =
-      std::make_unique<cloud::iam_credentials_v1::IAMCredentialsClient>(
-          credentials_connection);
+  iam_client_ = std::make_unique<IAMCredentialsClient>(credentials_connection);
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

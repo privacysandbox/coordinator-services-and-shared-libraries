@@ -1,1 +1,0 @@
-../../shared/operator_wipp/operator_wipp_variables.tf

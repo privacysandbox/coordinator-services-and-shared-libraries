@@ -22,10 +22,8 @@
 #include "include/gtest/gtest.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
-
-using ::privacy_sandbox::pbs_common::MockConfigProvider;
 
 class OtlpGrpcAuthedExporterMetricTest : public testing::Test {
  protected:
@@ -94,4 +92,4 @@ TEST_F(OtlpGrpcAuthedExporterMetricTest, ForceFlushShouldAlwaysReturnTrue) {
   EXPECT_TRUE(exporter->ForceFlush(std::chrono::microseconds::max()));
 }
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

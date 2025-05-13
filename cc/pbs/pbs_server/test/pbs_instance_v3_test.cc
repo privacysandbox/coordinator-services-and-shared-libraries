@@ -23,10 +23,9 @@
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
-using ::google::scp::pbs::LocalDependencyFactory;
 using ::privacy_sandbox::pbs_common::EnvConfigProvider;
 using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 
@@ -57,4 +56,4 @@ TEST(PBSInstanceV3Test, TestInitRunAndStopWithLocalDependencyFactory) {
 }
 
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

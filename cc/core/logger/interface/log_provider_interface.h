@@ -49,10 +49,8 @@ class LogProviderInterface : public ServiceInterface {
    * @param message The message that gets logged.
    * @param ... A set of strings to be formatted into the message.
    */
-  virtual void Log(const LogLevel& level,
-                   const privacy_sandbox::pbs_common::Uuid& parent_activity_id,
-                   const privacy_sandbox::pbs_common::Uuid& activity_id,
-                   const privacy_sandbox::pbs_common::Uuid& correlation_id,
+  virtual void Log(const LogLevel& level, const Uuid& parent_activity_id,
+                   const Uuid& activity_id, const Uuid& correlation_id,
                    const std::string_view& component_name,
                    const std::string_view& machine_name,
                    const std::string_view& cluster_name,

@@ -108,7 +108,7 @@ class MockNgHttp2RequestWithOverrides : public NgHttp2Request {
   /// @brief User supplied callback that will be invoked. Empty callback to
   /// begin with.
   RequestBodyDataReceivedCallback on_request_body_received_ =
-      [](google::scp::core::ExecutionResult) {};
+      [](ExecutionResult) {};
 
   /// @brief Expected size of the data to be recevied.
   size_t expected_request_body_length_to_receive_;

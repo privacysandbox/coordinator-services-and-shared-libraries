@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 
@@ -25,11 +24,6 @@ proto_library(
             "*.proto",
         ],
     ),
-)
-
-cc_proto_library(
-    name = "core_common_proto_lib",
-    deps = [":core_common_proto"],
 )
 
 ##########################################

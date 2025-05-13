@@ -18,7 +18,7 @@
 
 #include "include/gtest/gtest.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
 
 class GrpcAuthConfigTest : public ::testing::Test {
@@ -35,4 +35,4 @@ TEST_F(GrpcAuthConfigTest, DefaultConfigIsInvalid) {
   EXPECT_TRUE(auth_config_->IsValid());
 }
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

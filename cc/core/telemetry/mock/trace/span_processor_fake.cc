@@ -20,7 +20,7 @@
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/telemetry/mock/trace/error_codes.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 inline constexpr absl::string_view kTraceRouterMock = "TraceRouterFake";
 
@@ -49,8 +49,7 @@ void SpanProcessorFake::OnEnd(
       opentelemetry::sdk::common::ExportResult::kFailure) {
     auto execution_result =
         FailureExecutionResult(SC_SPAN_PROCESSOR_COULD_NOT_EXPORT_DATA);
-    SCP_ERROR(kTraceRouterMock, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result,
+    SCP_ERROR(kTraceRouterMock, kZeroUuid, execution_result,
               "[Trace Router Mock] Could not force flush the data");
   }
 }
@@ -78,4 +77,4 @@ void SpanProcessorFake::Reset() noexcept {
   shutdown_latch_.clear(std::memory_order_release);
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

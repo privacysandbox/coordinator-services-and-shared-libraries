@@ -48,28 +48,28 @@ class SingleThreadAsyncExecutor : ServiceInterface {
 #endif
   }
 
-  google::scp::core::ExecutionResult Init() noexcept override;
+  ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
   /**
    * @brief Schedules a task with certain priority to be execute immediately or
    * deferred.
    * @param work the task that needs to be scheduled.
    * @param priority the priority of the task. Either normal or medium.
-   * @return google::scp::core::ExecutionResult result of the execution with
-   * possible error code.
+   * @return ExecutionResult result of the
+   * execution with possible error code.
    */
-  google::scp::core::ExecutionResult Schedule(const AsyncOperation& work,
-                                              AsyncPriority priority) noexcept;
+  ExecutionResult Schedule(const AsyncOperation& work,
+                           AsyncPriority priority) noexcept;
 
   /**
    * @brief Returns the ID of the spawned thread object to enable looking it up
    * via thread IDs later. Will only be populated after Run() is called.
    */
-  google::scp::core::ExecutionResultOr<std::thread::id> GetThreadId() const;
+  ExecutionResultOr<std::thread::id> GetThreadId() const;
 
   /**
    * @brief Returns the scheduling latencies for all AsyncOperation scheduled by

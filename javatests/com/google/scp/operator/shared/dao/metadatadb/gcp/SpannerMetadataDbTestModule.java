@@ -28,6 +28,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataDbClient;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import com.google.scp.shared.mapper.TimeObjectMapper;
 import com.google.scp.shared.testutils.gcp.SpannerEmulatorContainerTestModule;
 import com.google.scp.shared.testutils.gcp.SpannerLocalService;
@@ -81,12 +82,15 @@ public final class SpannerMetadataDbTestModule extends AbstractModule {
   @Override
   public void configure() {
     bind(ObjectMapper.class).toInstance(new TimeObjectMapper());
-    install(
-        new SpannerEmulatorContainerTestModule(
-            GCP_TEST_PROJECT_ID,
-            SPANNER_TEST_INSTANCE_ID,
-            SPANNER_TEST_DB_NAME,
-            CREATE_TABLE_STATEMENTS));
+
+    SpannerDatabaseConfig spannerConfig =
+        SpannerDatabaseConfig.builder()
+            .setGcpProjectId(GCP_TEST_PROJECT_ID)
+            .setInstanceId(SPANNER_TEST_INSTANCE_ID)
+            .setDatabaseName(SPANNER_TEST_DB_NAME)
+            .build();
+    install(new SpannerEmulatorContainerTestModule(spannerConfig, CREATE_TABLE_STATEMENTS));
+
     install(TestingServiceModule.forServices(SpannerLocalService.class));
   }
 }

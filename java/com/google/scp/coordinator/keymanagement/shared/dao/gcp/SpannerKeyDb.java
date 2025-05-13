@@ -68,18 +68,15 @@ public final class SpannerKeyDb implements KeyDb {
   private static final String CREATED_AT_COLUMN = "CreatedAt";
   private static final String UPDATED_AT_COLUMN = "UpdatedAt";
   private static final String TABLE_NAME = "KeySets";
-  private static final int EXPIRATION_TIME_CEILING_SECOND = 1;
   private static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
   private static final JsonFormat.Parser JSON_PARSER = JsonFormat.parser();
   private static final Logger LOGGER = LoggerFactory.getLogger(SpannerKeyDb.class);
 
   private final DatabaseClient dbClient;
-  private final Integer readStalenessSeconds;
 
   @Inject
-  public SpannerKeyDb(@KeyDbClient DatabaseClient dbClient, SpannerKeyDbConfig config) {
+  public SpannerKeyDb(@KeyDbClient DatabaseClient dbClient) {
     this.dbClient = dbClient;
-    this.readStalenessSeconds = config.readStalenessSeconds();
   }
 
   @Override

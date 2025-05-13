@@ -28,7 +28,7 @@
 #include "opentelemetry/sdk/metrics/instruments.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 namespace {
 
@@ -188,4 +188,4 @@ TEST(SimpleTest, GetMetricAttributesMismatchTest) {
 
 }  // namespace
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

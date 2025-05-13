@@ -40,27 +40,22 @@
 #include "google/cloud/spanner/client.h"
 #include "google/cloud/spanner/mutations.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::pbs::budget_key_timeframe_manager::Serialization;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_INITIALIZATION_ERROR;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::AsyncPriority;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::GetErrorMessage;
 using ::privacy_sandbox::pbs_common::kGcpProjectId;
 using ::privacy_sandbox::pbs_common::kSpannerDatabase;
 using ::privacy_sandbox::pbs_common::kSpannerEndpointOverride;
 using ::privacy_sandbox::pbs_common::kSpannerInstance;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 namespace spanner = ::google::cloud::spanner;
 
 constexpr absl::string_view kComponentName = "BudgetConsumptionHelper";
@@ -136,24 +131,26 @@ class PbsBudgetKeyMutation {
     token_count_.assign(kDefaultTokenCountSize, kDefaultPrivacyBudgetCount);
   }
 
-  std::tuple<cloud::Status, ExecutionResult> ResetFromSpannerValue(
+  std::tuple<google::cloud::Status, ExecutionResult> ResetFromSpannerValue(
       const spanner::Json& spanner_json) {
     nlohmann::json json_value;
     try {
       json_value = nlohmann::json::parse(std::string(spanner_json));
     } catch (...) {
       return std::make_tuple(
-          cloud::Status(cloud::StatusCode::kInvalidArgument,
-                        "Failed to parse Value JSON column while reading "
-                        "from BudgetKey table"),
+          google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
+              "Failed to parse Value JSON column while reading "
+              "from BudgetKey table"),
           FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
     }
 
     if (!json_value.contains(std::string(kTokenCountJsonField))) {
       return std::make_tuple(
-          cloud::Status(cloud::StatusCode::kInvalidArgument,
-                        "The json in Value column does not contain TokenCount "
-                        "json field"),
+          google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
+              "The json in Value column does not contain TokenCount "
+              "json field"),
           FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
     }
 
@@ -162,22 +159,22 @@ class PbsBudgetKeyMutation {
             json_value[std::string(kTokenCountJsonField)], token_count_);
         !execution_result.Successful()) {
       return std::make_tuple(
-          cloud::Status(
-              cloud::StatusCode::kInvalidArgument,
+          google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
               absl::StrCat(
                   "Unable to DeserializeHourTokensInTimeGroup. Json value: ",
                   std::string(json_value[std::string(kTokenCountJsonField)]))),
           FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
     }
-    return std::make_tuple(cloud::Status(), SuccessExecutionResult());
+    return std::make_tuple(google::cloud::Status(), SuccessExecutionResult());
   }
 
-  std::tuple<cloud::Status, ExecutionResult> ResetFromSpannerValue(
+  std::tuple<google::cloud::Status, ExecutionResult> ResetFromSpannerValue(
       const privacy_sandbox_pbs::BudgetValue& spanner_value) {
     if (!spanner_value.has_laplace_dp_budgets()) {
       return std::make_tuple(
-          cloud::Status(cloud::StatusCode::kInvalidArgument,
-                        "Proto does not have LaplaceDpBudgets"),
+          google::cloud::Status(google::cloud::StatusCode::kInvalidArgument,
+                                "Proto does not have LaplaceDpBudgets"),
           FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
     }
 
@@ -185,8 +182,8 @@ class PbsBudgetKeyMutation {
         spanner_value.laplace_dp_budgets();
     if (dp_budgets.budgets_size() != kDefaultTokenCountSize) {
       return std::make_tuple(
-          cloud::Status(
-              cloud::StatusCode::kInvalidArgument,
+          google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
               absl::StrFormat(
                   "LaplaceDpBudgets have %d tokens, expected %d tokens",
                   dp_budgets.budgets_size(), kDefaultTokenCountSize)),
@@ -200,8 +197,8 @@ class PbsBudgetKeyMutation {
       if (budget != kEmptyBudgetCount &&
           budget != kDefaultLaplaceDpBudgetCount) {
         return std::make_tuple(
-            cloud::Status(
-                cloud::StatusCode::kInvalidArgument,
+            google::cloud::Status(
+                google::cloud::StatusCode::kInvalidArgument,
                 absl::StrFormat("LaplaceDpBudgets value should be "
                                 "either %d (full) or %d (empty), found %d",
                                 kDefaultLaplaceDpBudgetCount, kEmptyBudgetCount,
@@ -212,10 +209,11 @@ class PbsBudgetKeyMutation {
                             ? kDefaultPrivacyBudgetCount
                             : kEmptyBudgetCount;
     }
-    return std::make_tuple(cloud::Status(), SuccessExecutionResult());
+    return std::make_tuple(google::cloud::Status(), SuccessExecutionResult());
   }
 
-  std::tuple<cloud::Status, ExecutionResult, privacy_sandbox_pbs::BudgetValue>
+  std::tuple<google::cloud::Status, ExecutionResult,
+             privacy_sandbox_pbs::BudgetValue>
   ToBudgetValue() const {
     privacy_sandbox_pbs::BudgetValue budget_value;
     budget_value.mutable_laplace_dp_budgets()->mutable_budgets()->Reserve(
@@ -228,19 +226,19 @@ class PbsBudgetKeyMutation {
                                   ? kDefaultLaplaceDpBudgetCount
                                   : kEmptyBudgetCount);
     }
-    return std::make_tuple(cloud::Status(), SuccessExecutionResult(),
+    return std::make_tuple(google::cloud::Status(), SuccessExecutionResult(),
                            budget_value);
   }
 
-  std::tuple<cloud::Status, ExecutionResult, spanner::Json> ToSpannerJson()
-      const {
+  std::tuple<google::cloud::Status, ExecutionResult, spanner::Json>
+  ToSpannerJson() const {
     std::string serialized_token_count;
     if (auto execution_result = Serialization::SerializeHourTokensInTimeGroup(
             token_count_, serialized_token_count);
         !execution_result.Successful()) {
       return std::make_tuple(
-          cloud::Status(
-              cloud::StatusCode::kInvalidArgument,
+          google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
               absl::StrCat(
                   "Unable to SerializeHourTokensInTimeGroup. message: ",
                   GetErrorMessage(execution_result.status_code))),
@@ -250,7 +248,7 @@ class PbsBudgetKeyMutation {
 
     nlohmann::json json_value;
     json_value[std::string(kTokenCountJsonField)] = serialized_token_count;
-    return std::make_tuple(cloud::Status(), SuccessExecutionResult(),
+    return std::make_tuple(google::cloud::Status(), SuccessExecutionResult(),
                            spanner::Json(json_value.dump()));
   }
 
@@ -276,8 +274,7 @@ spanner::KeySet CreateSpannerKeySet(
   for (const ConsumeBudgetMetadata& metadata : budgets_metadata) {
     spanner_key_set.AddKey(spanner::MakeKey(
         *metadata.budget_key_name,
-        absl::StrCat(budget_key_timeframe_manager::Utils::GetTimeGroup(
-            metadata.time_bucket))));
+        absl::StrCat(Utils::GetTimeGroup(metadata.time_bucket))));
   }
   return spanner_key_set;
 }
@@ -285,9 +282,9 @@ spanner::KeySet CreateSpannerKeySet(
 template <typename TokenMetadataType>
   requires(std::is_same_v<TokenMetadataType, spanner::Json> ||
            std::is_same_v<TokenMetadataType, privacy_sandbox_pbs::BudgetValue>)
-std::tuple<cloud::Status, ExecutionResult> ReadPrivacyBudgetsForKeys(
-    cloud::spanner::Client client, cloud::spanner::Transaction txn,
-    const std::string& table_name, const cloud::spanner::KeySet& key_set,
+std::tuple<google::cloud::Status, ExecutionResult> ReadPrivacyBudgetsForKeys(
+    spanner::Client client, spanner::Transaction txn,
+    const std::string& table_name, const spanner::KeySet& key_set,
     absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>& pbs_mutations) {
   std::vector<std::string> columns = {std::string(kBudgetKeySpannerColumnName),
                                       std::string(kTimeframeSpannerColumnName)};
@@ -307,23 +304,24 @@ std::tuple<cloud::Status, ExecutionResult> ReadPrivacyBudgetsForKeys(
   spanner::RowStream returned_rows =
       client.Read(std::move(txn), table_name, std::move(key_set), columns);
 
-  for (const auto& row : cloud::spanner::StreamOf<RowType>(returned_rows)) {
+  for (const auto& row : spanner::StreamOf<RowType>(returned_rows)) {
     if (!row) {
       return std::make_tuple(
-          cloud::Status(cloud::StatusCode::kInvalidArgument,
-                        absl::StrFormat(
-                            "Error reading rows from the database. Reason: %s",
-                            row.status().message())),
+          google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
+              absl::StrFormat(
+                  "Error reading rows from the database. Reason: %s",
+                  row.status().message())),
           FailureExecutionResult(SC_CONSUME_BUDGET_PARSING_ERROR));
     }
-    if (row.status().code() == cloud::StatusCode::kNotFound) {
+    if (row.status().code() == google::cloud::StatusCode::kNotFound) {
       continue;
     }
 
     PbsBudgetKeyMutation& pbs_mutation =
         pbs_mutations[PbsPrimaryKey{std::get<0>(*row), std::get<1>(*row)}];
 
-    std::tuple<cloud::Status, ExecutionResult> result;
+    std::tuple<google::cloud::Status, ExecutionResult> result;
     if constexpr (std::is_same_v<TokenMetadataTypeBaseT, spanner::Json>) {
       result = pbs_mutation.ResetFromSpannerValue(std::get<2>(*row));
     } else {
@@ -334,10 +332,10 @@ std::tuple<cloud::Status, ExecutionResult> ReadPrivacyBudgetsForKeys(
       return result;
     }
   }
-  return std::make_tuple(cloud::Status(), SuccessExecutionResult());
+  return std::make_tuple(google::cloud::Status(), SuccessExecutionResult());
 }
 
-std::tuple<cloud::Status, ExecutionResult, std::vector<size_t>>
+std::tuple<google::cloud::Status, ExecutionResult, std::vector<size_t>>
 UpdatePbsMutationsToConsumeBudgetsOrNotifyBudgetExhausted(
     const std::vector<ConsumeBudgetMetadata>& budgets_metadata,
     absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>& pbs_mutations) {
@@ -347,8 +345,7 @@ UpdatePbsMutationsToConsumeBudgetsOrNotifyBudgetExhausted(
     // GetTimeGroup returns the number of days since epoch
     PbsPrimaryKey primary_key{
         *metadata.budget_key_name,
-        absl::StrCat(budget_key_timeframe_manager::Utils::GetTimeGroup(
-            metadata.time_bucket))};
+        absl::StrCat(Utils::GetTimeGroup(metadata.time_bucket))};
 
     auto [pbs_mutation, inserted] =
         pbs_mutations.insert({primary_key, PbsBudgetKeyMutation()});
@@ -357,9 +354,7 @@ UpdatePbsMutationsToConsumeBudgetsOrNotifyBudgetExhausted(
       pbs_mutation->second.SetIsInsertion(true);
     }
 
-    TimeBucket hours_of_the_day =
-        budget_key_timeframe_manager::Utils::GetTimeBucket(
-            metadata.time_bucket);
+    TimeBucket hours_of_the_day = Utils::GetTimeBucket(metadata.time_bucket);
     TokenCount current_token_count =
         pbs_mutation->second.GetTokenCount(hours_of_the_day);
 
@@ -375,16 +370,17 @@ UpdatePbsMutationsToConsumeBudgetsOrNotifyBudgetExhausted(
 
   if (!budget_exhausted_indices.empty()) {
     pbs_mutations.clear();
-    return std::make_tuple(cloud::Status(cloud::StatusCode::kInvalidArgument,
-                                         "Not enough budget."),
-                           FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED),
-                           budget_exhausted_indices);
+    return std::make_tuple(
+        google::cloud::Status(google::cloud::StatusCode::kInvalidArgument,
+                              "Not enough budget."),
+        FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED),
+        budget_exhausted_indices);
   }
-  return std::make_tuple(cloud::Status(), SuccessExecutionResult(),
+  return std::make_tuple(google::cloud::Status(), SuccessExecutionResult(),
                          budget_exhausted_indices);
 }
 
-std::tuple<cloud::Status, ExecutionResult> CreateSpannerMutations(
+std::tuple<google::cloud::Status, ExecutionResult> CreateSpannerMutations(
     const absl::flat_hash_map<PbsPrimaryKey, PbsBudgetKeyMutation>&
         pbs_mutations,
     absl::string_view table_name, bool enable_write_to_value_column,
@@ -441,7 +437,7 @@ std::tuple<cloud::Status, ExecutionResult> CreateSpannerMutations(
   if (has_update) {
     mutations.push_back(update_builder.Build());
   }
-  return std::make_tuple(cloud::Status(), SuccessExecutionResult());
+  return std::make_tuple(google::cloud::Status(), SuccessExecutionResult());
 }
 }  // namespace
 
@@ -456,7 +452,7 @@ BudgetConsumptionHelper::BudgetConsumptionHelper(
       spanner_connection_(std::move(spanner_connection)),
       should_enable_budget_consumer_(false) {}
 
-ExecutionResultOr<std::shared_ptr<cloud::spanner::Connection>>
+ExecutionResultOr<std::shared_ptr<spanner::Connection>>
 BudgetConsumptionHelper::MakeSpannerConnectionForProd(
     ConfigProviderInterface& config_provider) {
   std::string project;
@@ -581,8 +577,9 @@ BudgetConsumptionHelper::ConsumeBudgetsSyncWithoutBudgetConsumer(
   spanner::Client client(spanner_connection_);
   ExecutionResult captured_execution_result = SuccessExecutionResult();
   std::vector<size_t> captured_budget_exhausted_indices;
-  auto commit_result = client.Commit(
-      [&](spanner::Transaction txn) -> cloud::StatusOr<spanner::Mutations> {
+  auto commit_result =
+      client.Commit([&](spanner::Transaction txn)
+                        -> google::cloud::StatusOr<spanner::Mutations> {
         spanner::KeySet spanner_key_set =
             CreateSpannerKeySet(consume_budgets_context.request->budgets);
 
@@ -648,8 +645,7 @@ BudgetConsumptionHelper::ConsumeBudgetsSyncWithoutBudgetConsumer(
                           "final_execution_result: %s",
                           commit_result.status().code(),
                           commit_result.status().message(),
-                          privacy_sandbox::pbs_common::GetErrorMessage(
-                              final_execution_result.status_code)));
+                          GetErrorMessage(final_execution_result.status_code)));
     } else {
       SCP_ERROR_CONTEXT(
           kComponentName, consume_budgets_context, final_execution_result,
@@ -668,8 +664,9 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSyncWithBudgetConsumer(
   spanner::Client client(spanner_connection_);
   ExecutionResult captured_execution_result = SuccessExecutionResult();
 
-  auto commit_result = client.Commit(
-      [&](spanner::Transaction txn) -> cloud::StatusOr<spanner::Mutations> {
+  auto commit_result =
+      client.Commit([&](spanner::Transaction txn)
+                        -> google::cloud::StatusOr<spanner::Mutations> {
         BudgetConsumer& budget_consumer =
             *consume_budgets_context.request->budget_consumer;
         spanner::KeySet spanner_key_set = budget_consumer.GetSpannerKeySet();
@@ -678,8 +675,9 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSyncWithBudgetConsumer(
         if (!columns.Successful()) {
           captured_execution_result =
               FailureExecutionResult(SC_CONSUME_BUDGET_INITIALIZATION_ERROR);
-          return cloud::Status(cloud::StatusCode::kInvalidArgument,
-                               "Cannot fetch the columns to read");
+          return google::cloud::Status(
+              google::cloud::StatusCode::kInvalidArgument,
+              "Cannot fetch the columns to read");
         }
 
         spanner::RowStream row_stream =
@@ -713,8 +711,7 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSyncWithBudgetConsumer(
                           "final_execution_result: %s",
                           commit_result.status().code(),
                           commit_result.status().message(),
-                          privacy_sandbox::pbs_common::GetErrorMessage(
-                              final_execution_result.status_code)));
+                          GetErrorMessage(final_execution_result.status_code)));
     } else {
       SCP_ERROR_CONTEXT(
           kComponentName, consume_budgets_context, final_execution_result,
@@ -726,4 +723,4 @@ ExecutionResult BudgetConsumptionHelper::ConsumeBudgetsSyncWithBudgetConsumer(
   }
   return SuccessExecutionResult();
 }
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

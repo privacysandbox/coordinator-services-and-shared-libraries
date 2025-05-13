@@ -30,44 +30,34 @@
 #include "cc/pbs/pbs_server/src/pbs_instance/pbs_instance_configuration.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
-class PBSInstanceV3 : public privacy_sandbox::pbs_common::ServiceInterface {
+class PBSInstanceV3 : public pbs_common::ServiceInterface {
  public:
   PBSInstanceV3(
-      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-          config_provider,
+      std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider,
       std::unique_ptr<CloudPlatformDependencyFactoryInterface>
           cloud_platform_dependency_factory);
 
-  core::ExecutionResult Init() noexcept override;
-  core::ExecutionResult Run() noexcept override;
-  core::ExecutionResult Stop() noexcept override;
+  pbs_common::ExecutionResult Init() noexcept override;
+  pbs_common::ExecutionResult Run() noexcept override;
+  pbs_common::ExecutionResult Stop() noexcept override;
 
  private:
-  core::ExecutionResult CreateComponents() noexcept;
+  pbs_common::ExecutionResult CreateComponents() noexcept;
 
-  std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-      config_provider_;
+  std::shared_ptr<pbs_common::ConfigProviderInterface> config_provider_;
 
-  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-      async_executor_;
-  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-      io_async_executor_;
-  std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
-      http1_client_;
-  std::shared_ptr<privacy_sandbox::pbs_common::HttpClientInterface>
-      http2_client_;
-  std::shared_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
-      authorization_proxy_;
-  std::shared_ptr<privacy_sandbox::pbs_common::AuthorizationProxyInterface>
+  std::shared_ptr<pbs_common::AsyncExecutorInterface> async_executor_;
+  std::shared_ptr<pbs_common::AsyncExecutorInterface> io_async_executor_;
+  std::shared_ptr<pbs_common::HttpClientInterface> http1_client_;
+  std::shared_ptr<pbs_common::HttpClientInterface> http2_client_;
+  std::shared_ptr<pbs_common::AuthorizationProxyInterface> authorization_proxy_;
+  std::shared_ptr<pbs_common::AuthorizationProxyInterface>
       pass_thru_authorization_proxy_;
-  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
-      http_server_;
-  std::shared_ptr<privacy_sandbox::pbs_common::HttpServerInterface>
-      health_http_server_;
-  std::shared_ptr<privacy_sandbox::pbs_common::ServiceInterface>
-      health_service_;
+  std::shared_ptr<pbs_common::HttpServerInterface> http_server_;
+  std::shared_ptr<pbs_common::HttpServerInterface> health_http_server_;
+  std::shared_ptr<pbs_common::ServiceInterface> health_service_;
   std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
       budget_consumption_helper_;
   std::shared_ptr<pbs::FrontEndServiceInterface> front_end_service_;
@@ -77,10 +67,10 @@ class PBSInstanceV3 : public privacy_sandbox::pbs_common::ServiceInterface {
   std::unique_ptr<CloudPlatformDependencyFactoryInterface>
       cloud_platform_dependency_factory_;
 
-  std::unique_ptr<core::MetricRouter> metric_router_;
+  std::unique_ptr<pbs_common::MetricRouter> metric_router_;
   std::string container_type_;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs
 
 #endif  // CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3

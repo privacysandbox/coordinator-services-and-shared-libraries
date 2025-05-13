@@ -25,14 +25,10 @@
 
 namespace privacy_sandbox::pbs_common {
 
-using ::privacy_sandbox::pbs_common::LogLevel;
-using ::privacy_sandbox::pbs_common::MockLogger;
-using ::privacy_sandbox::pbs_common::ToString;
-using ::privacy_sandbox::pbs_common::Uuid;
 using std::string;
 using std::vector;
 
-class LoggerTests : public google::scp::core::test::ScpTestBase {
+class LoggerTests : public ScpTestBase {
  protected:
   void SetUp() override {
     uuid = Uuid::GenerateUuid();

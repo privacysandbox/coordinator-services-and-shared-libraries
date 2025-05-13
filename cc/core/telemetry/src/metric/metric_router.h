@@ -18,6 +18,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/functional/any_invocable.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
@@ -38,7 +41,7 @@
  * The MetricRouter class is responsible for managing an OpenTelemetry
  * MeterProvider and provides access to it.
  */
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 class MetricRouter {
  public:
@@ -51,8 +54,7 @@ class MetricRouter {
    * @param exporter Unique pointer to the push metric exporter
    */
   explicit MetricRouter(
-      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-          config_provider,
+      std::shared_ptr<ConfigProviderInterface> config_provider,
       opentelemetry::sdk::resource::Resource resource,
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
@@ -200,8 +202,7 @@ class MetricRouter {
    */
   static std::shared_ptr<opentelemetry::sdk::metrics::MetricReader>
   CreatePeriodicReader(
-      std::shared_ptr<privacy_sandbox::pbs_common::ConfigProviderInterface>
-          config_provider,
+      std::shared_ptr<ConfigProviderInterface> config_provider,
       std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter>
           exporter);
 
@@ -220,4 +221,4 @@ class MetricRouter {
   mutable absl::Mutex metric_mutex_;
 };
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

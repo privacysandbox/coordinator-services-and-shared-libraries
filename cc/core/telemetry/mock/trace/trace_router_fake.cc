@@ -24,7 +24,7 @@
 #include "cc/core/telemetry/mock/trace/span_processor_fake.h"
 #include "cc/core/telemetry/mock/trace/span_sampler_fake.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
 inline constexpr absl::string_view kTraceRouterMock = "TraceRouterFake";
 
@@ -100,4 +100,4 @@ TraceRouterFake::GetSpansForSpanName(absl::string_view span_name) const {
   return {};
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

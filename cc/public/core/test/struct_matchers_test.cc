@@ -25,7 +25,7 @@ using testing::Gt;
 using testing::HasSubstr;
 using testing::Pointee;
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 
 struct S {
   int x, y, z;
@@ -107,4 +107,4 @@ TEST(StructMatchersTest, SixPair) {
                 ElementsAre(s.x, s.y));
 }
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

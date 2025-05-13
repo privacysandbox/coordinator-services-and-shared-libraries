@@ -40,11 +40,11 @@
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 namespace {
-using ::google::scp::core::ExecutionResult;
 using ::privacy_sandbox::pbs_common::AsyncContext;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 }  // namespace
@@ -98,27 +98,22 @@ class FrontEndServiceV2Peer {
 
 namespace {
 
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::MockConfigProvider;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT;
-using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST;
-using ::google::scp::core::errors::
-    SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY;
-using ::google::scp::core::errors::SC_PBS_FRONT_END_SERVICE_NO_KEYS_AVAILABLE;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::Byte;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::GetErrorMessage;
+using ::privacy_sandbox::pbs_common::GetMetricPointData;
 using ::privacy_sandbox::pbs_common::HttpHandler;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpMethod;
 using ::privacy_sandbox::pbs_common::HttpServerInterface;
+using ::privacy_sandbox::pbs_common::InMemoryMetricRouter;
 using ::privacy_sandbox::pbs_common::MockAsyncExecutor;
+using ::privacy_sandbox::pbs_common::MockConfigProvider;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::testing::_;
 using ::testing::Invoke;
 using ::testing::NiceMock;
@@ -177,7 +172,7 @@ class MockHttpServerInterface : public NiceMock<HttpServerInterface> {
 
 struct FrontEndServiceV2PeerOptions {
   BudgetConsumptionHelperInterface* budget_consumption_helper = nullptr;
-  core::InMemoryMetricRouter* metric_router = nullptr;
+  InMemoryMetricRouter* metric_router = nullptr;
   std::shared_ptr<MockConfigProvider> mock_config_provider = nullptr;
   std::shared_ptr<MockHttpServerInterface> http2_server = nullptr;
 };
@@ -221,7 +216,7 @@ class FrontEndServiceV2LifecycleTest
     mock_config_provider_->SetBool(kEnableRequestResponseProtoMigration,
                                    ShouldUseRequestResponseProto());
 
-    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
+    metric_router_ = std::make_unique<InMemoryMetricRouter>();
     budget_consumption_helper_ =
         std::make_unique<MockBudgetConsumptionHelper>();
 
@@ -247,7 +242,7 @@ class FrontEndServiceV2LifecycleTest
 
   std::shared_ptr<MockHttpServerInterface> http2_server_;
   std::shared_ptr<MockConfigProvider> mock_config_provider_;
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
+  std::unique_ptr<InMemoryMetricRouter> metric_router_;
   std::unique_ptr<MockBudgetConsumptionHelper> budget_consumption_helper_;
   std::unique_ptr<FrontEndServiceV2Peer> front_end_service_v2_peer_;
 };
@@ -422,10 +417,10 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransaction) {
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+      keys_per_transaction_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
-      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+      successful_budget_consumed_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
 
@@ -581,14 +576,14 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransactionBudgetExhausted) {
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+      keys_per_transaction_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
-      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+      successful_budget_consumed_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
   std::optional<opentelemetry::sdk::metrics::PointType>
-      budget_exhausted_metric_point_data = core::GetMetricPointData(
+      budget_exhausted_metric_point_data = GetMetricPointData(
           "google.scp.pbs.consume_budget.budget_exhausted", dimensions, data);
 
   ASSERT_TRUE(keys_per_transaction_metric_point_data.has_value());
@@ -666,7 +661,7 @@ TEST_P(FrontEndServiceV2LifecycleTest,
       .WillOnce([&](AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse>
                         context) {
         context.result =
-            FailureExecutionResult(errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
+            FailureExecutionResult(SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
         context.response->budget_exhausted_indices.push_back(0);
         context.Finish();
         captured_consume_budgets_context = context;
@@ -689,10 +684,10 @@ TEST_P(FrontEndServiceV2LifecycleTest,
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+      keys_per_transaction_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
-      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+      successful_budget_consumed_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
 
@@ -714,7 +709,7 @@ TEST_P(FrontEndServiceV2LifecycleTest,
   ASSERT_TRUE(has_captured);
   EXPECT_FALSE(captured_http_context.result);
   EXPECT_EQ(captured_http_context.result.status_code,
-            errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
+            SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
 }
 
 TEST_P(FrontEndServiceV2LifecycleTest,
@@ -792,10 +787,10 @@ TEST_P(FrontEndServiceV2LifecycleTest,
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+      keys_per_transaction_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
-      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+      successful_budget_consumed_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
 
@@ -858,10 +853,10 @@ TEST_P(FrontEndServiceV2LifecycleTest,
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+      keys_per_transaction_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
-      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+      successful_budget_consumed_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
 
@@ -931,10 +926,10 @@ TEST_P(FrontEndServiceV2LifecycleTest,
           std::map<std::string, std::string>>(prepare_transaction_label_kv)));
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      keys_per_transaction_metric_point_data = core::GetMetricPointData(
+      keys_per_transaction_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.keys_per_transaction", dimensions, data);
   std::optional<opentelemetry::sdk::metrics::PointType>
-      successful_budget_consumed_metric_point_data = core::GetMetricPointData(
+      successful_budget_consumed_metric_point_data = GetMetricPointData(
           "google.scp.pbs.frontend.successful_budget_consumed", dimensions,
           data);
 
@@ -1035,4 +1030,4 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestGetTransactionStatusReturns404) {
 }
 
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

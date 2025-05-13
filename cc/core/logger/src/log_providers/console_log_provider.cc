@@ -26,11 +26,6 @@
 
 namespace privacy_sandbox::pbs_common {
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::LogLevel;
-using ::privacy_sandbox::pbs_common::TimeProvider;
-using ::privacy_sandbox::pbs_common::Uuid;
 using std::cout;
 using std::endl;
 using std::string;

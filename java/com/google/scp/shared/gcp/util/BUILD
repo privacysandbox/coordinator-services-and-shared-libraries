@@ -28,6 +28,8 @@ java_library(
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",
         "//java/external:apache_httpcore5",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
         "//java/external:gcp_cloud_function",
         "//java/external:gcp_cloud_monitoring",
         "//java/external:gcp_monitoring_v3",

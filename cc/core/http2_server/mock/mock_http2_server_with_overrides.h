@@ -31,7 +31,7 @@ class MockHttp2ServerWithOverrides : public Http2Server {
       std::shared_ptr<AuthorizationProxyInterface> authorization_proxy,
       std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
       const std::shared_ptr<ConfigProviderInterface>& config_provider = nullptr,
-      google::scp::core::MetricRouter* metric_router = nullptr)
+      MetricRouter* metric_router = nullptr)
       : Http2Server(host_address, port, 2 /* thread_pool_size */,
                     async_executor, authorization_proxy,
                     aws_authorization_proxy, config_provider,
@@ -49,7 +49,7 @@ class MockHttp2ServerWithOverrides : public Http2Server {
   void OnAuthorizationCallback(
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context,
-      privacy_sandbox::pbs_common::Uuid& request_id,
+      Uuid& request_id,
       const std::shared_ptr<Http2SynchronizationContext>& sync_context) noexcept
       override {
     Http2Server::OnAuthorizationCallback(authorization_context, request_id,
@@ -65,9 +65,8 @@ class MockHttp2ServerWithOverrides : public Http2Server {
     return Http2Server::HandleHttp2Request(http2_context, http_handler);
   }
 
-  void OnHttp2PendingCallback(
-      google::scp::core::ExecutionResult execution_result,
-      const privacy_sandbox::pbs_common::Uuid& request_id) noexcept override {
+  void OnHttp2PendingCallback(ExecutionResult execution_result,
+                              const Uuid& request_id) noexcept override {
     Http2Server::OnHttp2PendingCallback(execution_result, request_id);
   }
 
@@ -82,9 +81,8 @@ class MockHttp2ServerWithOverrides : public Http2Server {
     return resource_handlers_;
   }
 
-  ConcurrentMap<privacy_sandbox::pbs_common::Uuid,
-                std::shared_ptr<Http2SynchronizationContext>,
-                privacy_sandbox::pbs_common::UuidCompare>&
+  ConcurrentMap<Uuid, std::shared_ptr<Http2SynchronizationContext>,
+                UuidCompare>&
   GetActiveRequests() {
     return active_requests_;
   }

@@ -25,7 +25,7 @@
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
 
 class MetricRouterInMemoryIntegrationTest : public ::testing::Test {
@@ -153,4 +153,4 @@ TEST_F(MetricRouterInMemoryIntegrationTest,
                             {{"attribute1", "value1"}, {"attribute2", 42}}));
 }
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

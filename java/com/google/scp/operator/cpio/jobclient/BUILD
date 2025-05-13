@@ -129,6 +129,7 @@ java_library(
         "//java/com/google/scp/shared/clients/configclient",
         "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/com/google/scp/shared/clients/configclient:model",
+        "//java/com/google/scp/shared/gcp/util",
         "//java/com/google/scp/shared/proto",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",

@@ -23,6 +23,7 @@ java_library(
         "//java/com/google/scp/operator/shared/dao/asginstancesdb/common",
         "//java/com/google/scp/operator/shared/dao/metadatadb/common",
         "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/shared/gcp/util",
         "//java/com/google/scp/shared/proto",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",

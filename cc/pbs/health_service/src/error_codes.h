@@ -16,44 +16,43 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core::errors {
+namespace privacy_sandbox::pbs {
 REGISTER_COMPONENT_CODE(SC_PBS_HEALTH_SERVICE, 0x0910)
 DEFINE_ERROR_CODE(
     SC_PBS_HEALTH_SERVICE_COULD_NOT_OPEN_MEMINFO_FILE, SC_PBS_HEALTH_SERVICE,
     0x0001,
     "The health service could not open the meminfo file to check memory usage.",
-    privacy_sandbox::pbs_common::HttpStatusCode::NOT_FOUND)
+    pbs_common::HttpStatusCode::NOT_FOUND)
 
 DEFINE_ERROR_CODE(
     SC_PBS_HEALTH_SERVICE_COULD_NOT_PARSE_MEMINFO_LINE, SC_PBS_HEALTH_SERVICE,
     0x0002,
     "The line read from the meminfo file was not in the expected format.",
-    privacy_sandbox::pbs_common::HttpStatusCode::PRECONDITION_FAILED)
+    pbs_common::HttpStatusCode::PRECONDITION_FAILED)
 
-DEFINE_ERROR_CODE(
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO, SC_PBS_HEALTH_SERVICE,
-    0x0003, "The meminfo file did not contain the expected items.",
-    privacy_sandbox::pbs_common::HttpStatusCode::PRECONDITION_FAILED)
+DEFINE_ERROR_CODE(SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO,
+                  SC_PBS_HEALTH_SERVICE, 0x0003,
+                  "The meminfo file did not contain the expected items.",
+                  pbs_common::HttpStatusCode::PRECONDITION_FAILED)
 
-DEFINE_ERROR_CODE(
-    SC_PBS_HEALTH_SERVICE_HEALTHY_MEMORY_USAGE_THRESHOLD_EXCEEDED,
-    SC_PBS_HEALTH_SERVICE, 0x0004,
-    "The healthy memory usage threshold has been exceeded.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_PBS_HEALTH_SERVICE_HEALTHY_MEMORY_USAGE_THRESHOLD_EXCEEDED,
+                  SC_PBS_HEALTH_SERVICE, 0x0004,
+                  "The healthy memory usage threshold has been exceeded.",
+                  pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(
     SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO, SC_PBS_HEALTH_SERVICE,
     0x0005, "The health service could not read the filesystem information.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+    pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO, SC_PBS_HEALTH_SERVICE,
-    0x0006, "The health service read invalid filesystem info.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO,
+                  SC_PBS_HEALTH_SERVICE, 0x0006,
+                  "The health service read invalid filesystem info.",
+                  pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(
     SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED,
     SC_PBS_HEALTH_SERVICE, 0x0007,
     "The healthy storage usage threshold has been exceeded.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
-}  // namespace google::scp::core::errors
+    pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+}  // namespace privacy_sandbox::pbs

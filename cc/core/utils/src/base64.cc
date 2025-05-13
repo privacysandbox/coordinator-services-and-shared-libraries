@@ -23,65 +23,56 @@
 
 #include "error_codes.h"
 
-using std::make_unique;
-using std::string;
-
-namespace google::scp::core::utils {
-ExecutionResult Base64Decode(const string& encoded, string& decoded) {
+namespace privacy_sandbox::pbs_common {
+ExecutionResult Base64Decode(const std::string& encoded, std::string& decoded) {
   if ((encoded.length() % 4) != 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::
-            SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
+    return FailureExecutionResult(SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
   }
   size_t required_len = 0;
   if (EVP_DecodedLength(&required_len, encoded.length()) == 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(SC_CORE_UTILS_INVALID_INPUT);
   }
-  auto buffer = make_unique<uint8_t[]>(required_len);
+  auto buffer = std::make_unique<uint8_t[]>(required_len);
 
   size_t output_len = 0;
   int ret = EVP_DecodeBase64(buffer.get(), &output_len, required_len,
                              reinterpret_cast<const uint8_t*>(encoded.data()),
                              encoded.length());
   if (ret == 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(SC_CORE_UTILS_INVALID_INPUT);
   }
-  decoded = string(reinterpret_cast<char*>(buffer.get()), output_len);
+  decoded = std::string(reinterpret_cast<char*>(buffer.get()), output_len);
   return SuccessExecutionResult();
 }
 
-ExecutionResult Base64Encode(const string& decoded, string& encoded) {
+ExecutionResult Base64Encode(const std::string& decoded, std::string& encoded) {
   size_t required_len = 0;
   if (EVP_EncodedLength(&required_len, decoded.length()) == 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(SC_CORE_UTILS_INVALID_INPUT);
   }
-  auto buffer = make_unique<uint8_t[]>(required_len);
+  auto buffer = std::make_unique<uint8_t[]>(required_len);
 
   int ret = EVP_EncodeBlock(buffer.get(),
                             reinterpret_cast<const uint8_t*>(decoded.data()),
                             decoded.length());
   if (ret == 0) {
-    return FailureExecutionResult(
-        privacy_sandbox::pbs_common::SC_CORE_UTILS_INVALID_INPUT);
+    return FailureExecutionResult(SC_CORE_UTILS_INVALID_INPUT);
   }
-  encoded = string(reinterpret_cast<char*>(buffer.get()), ret);
+  encoded = std::string(reinterpret_cast<char*>(buffer.get()), ret);
   return SuccessExecutionResult();
 }
 
-ExecutionResultOr<string> PadBase64Encoding(const string& encoded) {
-  ExecutionResultOr<string> ret_val;
+ExecutionResultOr<std::string> PadBase64Encoding(const std::string& encoded) {
+  ExecutionResultOr<std::string> ret_val;
   switch (encoded.length() % 4) {
     case 0:
-      ret_val.emplace<string>(encoded);
+      ret_val.emplace<std::string>(encoded);
       break;
     case 2:
-      ret_val.emplace<string>(encoded + "==");
+      ret_val.emplace<std::string>(encoded + "==");
       break;
     case 3:
-      ret_val.emplace<string>(encoded + "=");
+      ret_val.emplace<std::string>(encoded + "=");
       break;
     case 1:
     default:
@@ -90,11 +81,10 @@ ExecutionResultOr<string> PadBase64Encoding(const string& encoded) {
       // 6-bit and is not enough in size to represent a decoded character of 8
       // bits.
       ret_val = FailureExecutionResult(
-          privacy_sandbox::pbs_common::
-              SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
+          SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
       break;
   }
   return ret_val;
 }
 
-}  // namespace google::scp::core::utils
+}  // namespace privacy_sandbox::pbs_common

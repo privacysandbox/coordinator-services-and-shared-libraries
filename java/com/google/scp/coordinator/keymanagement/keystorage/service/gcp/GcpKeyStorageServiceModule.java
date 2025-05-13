@@ -26,9 +26,9 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignData
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyWithSyncTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpSignDataKeyTask;
-import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
 import com.google.scp.coordinator.keymanagement.shared.util.GcpAeadProvider;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import java.util.Map;
 import java.util.Optional;
 
@@ -38,18 +38,12 @@ import java.util.Optional;
  */
 public class GcpKeyStorageServiceModule extends AbstractModule {
   private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
-  private static final String READ_STALENESS_SEC_ENV_VAR = "READ_STALENESS_SEC";
   private static final String SPANNER_INSTANCE_ENV_VAR = "SPANNER_INSTANCE";
   private static final String SPANNER_DATABASE_ENV_VAR = "SPANNER_DATABASE";
   private static final String SPANNER_ENDPOINT_ENV_VAR = "SPANNER_ENDPOINT";
   private static final String GCP_KMS_URI_ENV_VAR = "GCP_KMS_URI";
   private static final String AWS_XC_ENABLED_ENV_VAR = "AWS_XC_ENABLED";
   private static final String AWS_KEY_SYNC_ENABLED_ENV_VAR = "AWS_KEY_SYNC_ENABLED";
-
-  /** Returns ReadStalenessSeconds as Integer from environment variables. Default value of 15 */
-  private Integer getReadStalenessSeconds(Map<String, String> env) {
-    return Integer.valueOf(env.getOrDefault(READ_STALENESS_SEC_ENV_VAR, "15"));
-  }
 
   private static Boolean getBooleanEnvVariable(Map<String, String> env, String paramName) {
     return env.getOrDefault(paramName, "false").equalsIgnoreCase("true");
@@ -92,15 +86,14 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
     bind(Aead.class).annotatedWith(CoordinatorKeyAead.class).toInstance(gcpAead);
 
     // Data layer bindings
-    SpannerKeyDbConfig config =
-        SpannerKeyDbConfig.builder()
+    SpannerDatabaseConfig config =
+        SpannerDatabaseConfig.builder()
             .setGcpProjectId(projectId)
-            .setSpannerInstanceId(spannerInstanceId)
-            .setSpannerDbName(spannerDatabaseId)
-            .setReadStalenessSeconds(getReadStalenessSeconds(env))
+            .setInstanceId(spannerInstanceId)
+            .setDatabaseName(spannerDatabaseId)
             .setEndpointUrl(Optional.ofNullable(spannerEndpoint))
             .build();
-    bind(SpannerKeyDbConfig.class).toInstance(config);
+    bind(SpannerDatabaseConfig.class).toInstance(config);
     install(new SpannerKeyDbModule());
   }
 }

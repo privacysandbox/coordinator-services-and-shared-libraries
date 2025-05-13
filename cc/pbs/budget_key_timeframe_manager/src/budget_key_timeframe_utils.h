@@ -20,7 +20,7 @@
 
 #include "cc/pbs/interface/type_def.h"
 
-namespace google::scp::pbs::budget_key_timeframe_manager {
+namespace privacy_sandbox::pbs {
 
 class Utils {
   using days = std::chrono::duration<int64_t, std::ratio<86400>>;
@@ -32,8 +32,7 @@ class Utils {
    * @param timestamp The timestamp to calculate the time bucket from.
    * @return TimeBucket The time bucket from the timestamp.
    */
-  static TimeBucket GetTimeBucket(
-      privacy_sandbox::pbs_common::Timestamp timestamp) noexcept {
+  static TimeBucket GetTimeBucket(pbs_common::Timestamp timestamp) noexcept {
     auto days_since_epoch = GetTimeGroup(timestamp);
     std::chrono::nanoseconds bucket_time_nano_seconds(timestamp);
     std::chrono::nanoseconds days_since_epoch_nano_seconds =
@@ -50,8 +49,7 @@ class Utils {
    * @param timestamp The timestamp to calculate the time bucket from.
    * @return TimeBucket The time group from the timestamp.
    */
-  static TimeGroup GetTimeGroup(
-      privacy_sandbox::pbs_common::Timestamp timestamp) noexcept {
+  static TimeGroup GetTimeGroup(pbs_common::Timestamp timestamp) noexcept {
     auto date_time = std::chrono::nanoseconds(timestamp);
     std::chrono::system_clock::time_point converted_time_bucket(date_time);
     auto days_since_epoch = std::chrono::duration_cast<days>(
@@ -60,4 +58,4 @@ class Utils {
     return days_since_epoch;
   }
 };
-};  // namespace google::scp::pbs::budget_key_timeframe_manager
+};  // namespace privacy_sandbox::pbs

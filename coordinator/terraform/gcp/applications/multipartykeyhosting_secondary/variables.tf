@@ -113,7 +113,7 @@ variable "enable_domain_management" {
 variable "parent_domain_name" {
   description = <<-EOT
     Custom domain name to register and use with key hosting APIs.
-    Default to null so it does not have to be populated when enable_domain_management = false".
+    Default to null so it does not have to be populated when enable_domain_management = false.
   EOT
   type        = string
   default     = null
@@ -122,7 +122,7 @@ variable "parent_domain_name" {
 variable "parent_domain_name_project" {
   description = <<-EOT
     Project ID where custom domain name hosted zone is located.
-    Default to null so it does not have to be populated when enable_domain_management = false".
+    Default to null so it does not have to be populated when enable_domain_management = false.
   EOT
   type        = string
   default     = null
@@ -385,4 +385,39 @@ variable "key_storage_security_policy_rules" {
     })
   }))
   default = []
+}
+
+variable "enable_cloud_armor_alerts" {
+  description = <<-EOT
+    Enable alerts and incidents for Cloud Armor.
+
+    This turns on alerts and incidents for Cloud Armor in the Cloud
+    Monitoring dashboards, but does not turn on alert notification messages.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "enable_cloud_armor_notifications" {
+  description = <<-EOT
+    Enable alert notifications for Cloud Armor Alerts.
+
+    This turns on notification messages when Cloud Armor alerts fire. Note
+    alerts can only fire when enable_cloud_armor_alerts is true, and it
+    requires cloud_armor_notification_channel_id to be set.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "cloud_armor_notification_channel_id" {
+  description = <<-EOT
+    Notification channel to send Cloud Armor alert notifications to.
+
+    This only needs to be set when enable_cloud_armor_alerts and
+    enable_cloud_armor_notifications are both true, and must be set to a valid
+    google_monitoring_notification_channel resource id.
+  EOT
+  type        = string
+  default     = null
 }

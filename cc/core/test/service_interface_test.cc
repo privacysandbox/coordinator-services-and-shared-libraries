@@ -18,9 +18,9 @@
 
 #include <memory>
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 
-class DummyService : public privacy_sandbox::pbs_common::ServiceInterface {
+class DummyService : public ServiceInterface {
  public:
   DummyService() : state_(State::kBad) {}
 
@@ -54,4 +54,4 @@ TEST(ServiceInterface, DummyService) {
   auto p = std::make_shared<DummyService>();
 }
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

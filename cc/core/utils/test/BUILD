@@ -20,10 +20,7 @@ cc_test(
     size = "small",
     srcs = [
         "base64_test.cc",
-        "error_utils_test.cc",
-        "hashing_test.cc",
         "http_test.cc",
-        "string_util_test.cc",
     ],
     deps = [
         "//cc/core/interface:interface_lib",

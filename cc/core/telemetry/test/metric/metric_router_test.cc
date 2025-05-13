@@ -24,10 +24,8 @@
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 namespace {
-
-using ::privacy_sandbox::pbs_common::MockConfigProvider;
 
 class MetricRouterTest : public testing::Test {
  protected:
@@ -51,7 +49,7 @@ class MetricRouterTest : public testing::Test {
   }
 
   std::shared_ptr<MockConfigProvider> mock_config_provider_;
-  std::unique_ptr<google::scp::core::MetricRouter> metric_router_;
+  std::unique_ptr<MetricRouter> metric_router_;
   std::unique_ptr<InMemoryMetricExporter> exporter_;
   std::shared_ptr<InMemoryMetricReader> reader_;
 };
@@ -444,4 +442,4 @@ TEST_F(MetricRouterTest,
 }
 
 }  // namespace
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

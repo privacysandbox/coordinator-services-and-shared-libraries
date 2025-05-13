@@ -43,8 +43,8 @@ import com.google.scp.operator.protos.shared.backend.metadatadb.JobMetadataProto
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueConfig;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueModule;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.MetadataDbSpannerTtlDays;
-import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbConfig;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbModule;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import com.google.scp.shared.mapper.TimeObjectMapper;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -107,12 +107,12 @@ public final class GcpFrontendServiceModule extends AbstractModule {
     install(new GcpTasksModule());
 
     // Data layer bindings
-    bind(SpannerMetadataDbConfig.class)
+    bind(SpannerDatabaseConfig.class)
         .toInstance(
-            SpannerMetadataDbConfig.builder()
+            SpannerDatabaseConfig.builder()
                 .setGcpProjectId(projectId)
-                .setSpannerInstanceId(instanceId)
-                .setSpannerDbName(databaseId)
+                .setInstanceId(instanceId)
+                .setDatabaseName(databaseId)
                 .build());
     install(new SpannerMetadataDbModule());
     bind(PubSubJobQueueConfig.class)

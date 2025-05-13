@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,33 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:mappings.bzl", "pkg_files", "pkg_mklink")
+load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:public"])
 
 pkg_files(
     name = "operator_wipp_demo",
     srcs = [
-        "demo.auto.tfvars",
         "main.tf",
+        "outputs.tf",
+        "terraform.tf",
     ],
     prefix = "operator_wipp",
-)
-
-pkg_mklink(
-    name = "operator_wipp_link",
-    link_name = "operator_wipp/operator_wipp.tf",
-    target = "../../shared/operator_wipp/operator_wipp.tf",
-)
-
-pkg_mklink(
-    name = "operator_wipp_variables_link",
-    link_name = "operator_wipp/operator_wipp_variables.tf",
-    target = "../../shared/operator_wipp/operator_wipp_variables.tf",
-)
-
-pkg_mklink(
-    name = "operator_wipp_outputs_link",
-    link_name = "operator_wipp/operator_wipp_outputs.tf",
-    target = "../../shared/operator_wipp/operator_wipp_outputs.tf",
 )

@@ -83,7 +83,7 @@ class HttpConnectionPool : public ServiceInterface {
    */
   explicit HttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      absl::Nullable<google::scp::core::MetricRouter*> metric_router,
+      absl::Nullable<MetricRouter*> metric_router,
       size_t max_connections_per_host = kDefaultMaxConnectionsPerHost,
       TimeDuration http2_read_timeout_in_sec =
           kDefaultHttp2ReadTimeoutInSeconds)
@@ -95,9 +95,9 @@ class HttpConnectionPool : public ServiceInterface {
 
   ~HttpConnectionPool();
 
-  google::scp::core::ExecutionResult Init() noexcept;
-  google::scp::core::ExecutionResult Run() noexcept;
-  google::scp::core::ExecutionResult Stop() noexcept;
+  ExecutionResult Init() noexcept;
+  ExecutionResult Run() noexcept;
+  ExecutionResult Stop() noexcept;
 
   /**
    * @brief Gets a connection for the provided uri.
@@ -106,7 +106,7 @@ class HttpConnectionPool : public ServiceInterface {
    * @param connection The created/cached connection.
    * @return ExecutionResult The execution result of the operation.
    */
-  google::scp::core::ExecutionResult GetConnection(
+  ExecutionResult GetConnection(
       const std::shared_ptr<Uri>& uri,
       std::shared_ptr<HttpConnection>& connection) noexcept;
 
@@ -151,7 +151,7 @@ class HttpConnectionPool : public ServiceInterface {
   std::mutex connection_lock_;
 
   /// An instance of metric router which will provide APIs to create metrics.
-  google::scp::core::MetricRouter* metric_router_;
+  MetricRouter* metric_router_;
 
   /// OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;

@@ -31,7 +31,7 @@ class MockHttpConnectionPool : public HttpConnectionPool {
  public:
   MockHttpConnectionPool(
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
-      absl::Nullable<google::scp::core::MetricRouter*> metric_router,
+      absl::Nullable<MetricRouter*> metric_router,
       size_t max_connection_per_host)
       : HttpConnectionPool(async_executor, metric_router,
                            max_connection_per_host) {}

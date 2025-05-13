@@ -19,8 +19,8 @@ package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
-import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,7 +31,6 @@ import java.util.Optional;
 public final class GcpKeyServiceModule extends AbstractModule {
 
   private static final String KEY_LIMIT_ENV_VAR = "KEY_LIMIT";
-  private static final String READ_STALENESS_SEC_ENV_VAR = "READ_STALENESS_SEC";
   private static final String SPANNER_INSTANCE_ENV_VAR = "SPANNER_INSTANCE";
   private static final String SPANNER_DATABASE_ENV_VAR = "SPANNER_DATABASE";
   private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
@@ -42,12 +41,6 @@ public final class GcpKeyServiceModule extends AbstractModule {
   private Integer getKeyLimit() {
     Map<String, String> env = System.getenv();
     return Integer.valueOf(env.getOrDefault(KEY_LIMIT_ENV_VAR, "5"));
-  }
-
-  /** Returns ReadStalenessSeconds as Integer from environment variables. Default value of 15 */
-  private Integer getReadStalenessSeconds() {
-    Map<String, String> env = System.getenv();
-    return Integer.valueOf(env.getOrDefault(READ_STALENESS_SEC_ENV_VAR, "15"));
   }
 
   /**
@@ -74,15 +67,14 @@ public final class GcpKeyServiceModule extends AbstractModule {
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(getKeyLimit());
 
     // Data layer bindings
-    SpannerKeyDbConfig config =
-        SpannerKeyDbConfig.builder()
+    SpannerDatabaseConfig config =
+        SpannerDatabaseConfig.builder()
             .setGcpProjectId(projectId)
-            .setSpannerInstanceId(spannerInstanceId)
-            .setSpannerDbName(spannerDatabaseId)
-            .setReadStalenessSeconds(getReadStalenessSeconds())
+            .setInstanceId(spannerInstanceId)
+            .setDatabaseName(spannerDatabaseId)
             .setEndpointUrl(Optional.ofNullable(spannerEndpoint))
             .build();
-    bind(SpannerKeyDbConfig.class).toInstance(config);
+    bind(SpannerDatabaseConfig.class).toInstance(config);
     install(new SpannerKeyDbModule());
   }
 }

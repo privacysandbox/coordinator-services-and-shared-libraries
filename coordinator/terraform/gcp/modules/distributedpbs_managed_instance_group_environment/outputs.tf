@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "pbs_instance_group_url" {
-  description = "The URL of the instance group created by the manager."
-  value       = google_compute_region_instance_group_manager.pbs_instance_group.instance_group
-}
-
 output "pbs_cloud_run_name" {
   description = "The name of the Cloud Run PBS"
-  value       = var.deploy_pbs_cloud_run ? google_cloud_run_v2_service.pbs_instance[0].name : ""
+  value       = google_cloud_run_v2_service.pbs_instance.name
 }

@@ -27,8 +27,6 @@
 #include "cc/core/config_provider/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::test::ResultIs;
 using std::list;
 using std::move;
 using std::string;
@@ -99,13 +97,11 @@ TEST(ConfigProviderTest, GetConfigsFailed) {
 
   EXPECT_THAT(
       config.Get("server-name", out_string),
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
+      ResultIs(FailureExecutionResult(SC_CONFIG_PROVIDER_KEY_NOT_FOUND)));
 
   EXPECT_THAT(
       config.Get("buffer-length", out_string),
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
+      ResultIs(FailureExecutionResult(SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR)));
 }
 
 TEST(ConfigProviderTest, InitFailed) {
@@ -115,10 +111,8 @@ TEST(ConfigProviderTest, InitFailed) {
 
   ConfigProvider config(full_path);
 
-  EXPECT_THAT(config.Init(),
-              ResultIs(FailureExecutionResult(
-                  privacy_sandbox::pbs_common::
-                      SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE)));
+  EXPECT_THAT(config.Init(), ResultIs(FailureExecutionResult(
+                                 SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE)));
 }
 
 TEST(ConfigProviderTest, ShowErrorInfo) {
@@ -130,8 +124,7 @@ TEST(ConfigProviderTest, ShowErrorInfo) {
 
   auto status_code = config.Init().status_code;
 
-  string status_description =
-      privacy_sandbox::pbs_common::GetErrorMessage(status_code);
+  string status_description = GetErrorMessage(status_code);
 
   EXPECT_EQ(status_description, "Config provider cannot load config file");
 }

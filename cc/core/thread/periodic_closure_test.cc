@@ -33,7 +33,7 @@ class PeriodicClosurePeer {
  public:
   static PeriodicClosure GetPeriodicClosure(
       absl::Duration interval, absl::AnyInvocable<void()> closure,
-      std::shared_ptr<internal::Clock> clock,
+      std::shared_ptr<Clock> clock,
       absl::Duration startup_delay = absl::ZeroDuration()) {
     return PeriodicClosure(std::move(interval), std::move(closure),
                            std::move(clock), std::move(startup_delay));
@@ -56,7 +56,7 @@ TEST(PeriodicClosureTest, IsRunning) {
 }
 
 TEST(PeriodicClosureTest, StartNow) {
-  auto clock = std::make_shared<internal::SimulatedClock>();
+  auto clock = std::make_shared<SimulatedClock>();
 
   absl::Notification notification;
   const absl::Time start = clock->Now();
@@ -81,7 +81,7 @@ TEST(PeriodicClosureTest, StartNow) {
 }
 
 TEST(PeriodicClosureTest, StartDelayed) {
-  auto clock = std::make_shared<internal::SimulatedClock>();
+  auto clock = std::make_shared<SimulatedClock>();
 
   absl::Notification notification;
   const absl::Time start = clock->Now();
@@ -142,7 +142,7 @@ TEST(PeriodicClosureTest, StartAfterStopped) {
 }
 
 TEST(PeriodicClosureTest, StartupDelayAndInterval) {
-  auto clock = std::make_shared<internal::SimulatedClock>();
+  auto clock = std::make_shared<SimulatedClock>();
 
   absl::Notification notification;
   absl::Time first_execution;
@@ -180,7 +180,7 @@ TEST(PeriodicClosureTest, StartupDelayAndInterval) {
 }
 
 TEST(PeriodicClosureTest, LongRunningClosure) {
-  auto clock = std::make_shared<internal::SimulatedClock>();
+  auto clock = std::make_shared<SimulatedClock>();
 
   absl::Notification notification;
   absl::Time first_execution;

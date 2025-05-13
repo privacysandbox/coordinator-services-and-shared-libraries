@@ -35,11 +35,11 @@ class Logger : public LoggerInterface {
   explicit Logger(std::unique_ptr<LogProviderInterface> log_provider)
       : log_provider_(std::move(log_provider)) {}
 
-  google::scp::core::ExecutionResult Init() noexcept override;
+  ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
   void Info(const std::string_view& component_name, const Uuid& correlation_id,
             const Uuid& parent_activity_id, const Uuid& activity_id,

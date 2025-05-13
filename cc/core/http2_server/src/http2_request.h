@@ -33,18 +33,16 @@ class NgHttp2Request : public HttpRequest {
  public:
   explicit NgHttp2Request(
       const nghttp2::asio_http2::server::request& ng2_request)
-      : id(privacy_sandbox::pbs_common::Uuid::GenerateUuid()),
-        ng2_request_(ng2_request) {}
+      : id(Uuid::GenerateUuid()), ng2_request_(ng2_request) {}
 
-  using RequestBodyDataReceivedCallback =
-      std::function<void(google::scp::core::ExecutionResult)>;
+  using RequestBodyDataReceivedCallback = std::function<void(ExecutionResult)>;
 
   /**
    * @brief Unwraps the ngHttp2 request and update the current object.
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  google::scp::core::ExecutionResult UnwrapNgHttp2Request() noexcept;
+  ExecutionResult UnwrapNgHttp2Request() noexcept;
 
   /// Path of the handler in the URI.
   /// Example: https://www.foo.com/handler/path, '/handler/path' is the
@@ -52,7 +50,7 @@ class NgHttp2Request : public HttpRequest {
   std::string handler_path;
 
   /// The auto-generated id of the request.
-  const privacy_sandbox::pbs_common::Uuid id;
+  const Uuid id;
 
   /**
    * @brief Set callback to be invoked when the request body is completely
@@ -70,21 +68,21 @@ class NgHttp2Request : public HttpRequest {
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  google::scp::core::ExecutionResult ReadUri() noexcept;
+  ExecutionResult ReadUri() noexcept;
 
   /**
    * @brief Reads the http method from the ngHttp2Request object.
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  google::scp::core::ExecutionResult ReadMethod() noexcept;
+  ExecutionResult ReadMethod() noexcept;
 
   /**
    * @brief Reads the http headers from the ngHttp2Request object.
    *
    * @return ExecutionResult The execution result of the operation.
    */
-  google::scp::core::ExecutionResult ReadHeaders() noexcept;
+  ExecutionResult ReadHeaders() noexcept;
 
   /**
    * @brief Is called when there is a body on the request.

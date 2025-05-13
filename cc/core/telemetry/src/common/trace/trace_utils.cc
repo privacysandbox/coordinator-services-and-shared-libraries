@@ -18,7 +18,7 @@
 
 #include "opentelemetry/trace/trace_id.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 std::string GetTraceIdString(const opentelemetry::trace::TraceId& tid) {
   char trace_id[opentelemetry::trace::TraceId::kSize * 2] = {0};
@@ -26,4 +26,4 @@ std::string GetTraceIdString(const opentelemetry::trace::TraceId& tid) {
   return std::string(trace_id, opentelemetry::trace::TraceId::kSize * 2);
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -1,0 +1,10 @@
+---
+databaseChangeLog:
+  - changeSet:
+      id: 0001_create_keysets_table
+      author: unknown
+      changes:
+        - sqlFile:
+            path: changesets/0001_create_keysets_table.sql
+        - tagDatabase:
+            tag: 1

@@ -26,18 +26,18 @@
 #include "opentelemetry/sdk/resource/resource_detector.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 
-namespace google::scp::pbs {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::InMemoryMetricExporter;
-using ::google::scp::core::MetricRouter;
-using ::google::scp::core::SuccessExecutionResult;
+namespace privacy_sandbox::pbs {
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::AuthorizationProxyInterface;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpClientInterface;
+using ::privacy_sandbox::pbs_common::InMemoryMetricExporter;
 using ::privacy_sandbox::pbs_common::kZeroUuid;
+using ::privacy_sandbox::pbs_common::MetricRouter;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::privacy_sandbox::pbs_common::Uuid;
 
 static constexpr char kLocalDependencyProvider[] = "kLocalDependencyProvider";
@@ -72,7 +72,7 @@ std::unique_ptr<pbs::BudgetConsumptionHelperInterface>
 LocalDependencyFactory::ConstructBudgetConsumptionHelper(
     AsyncExecutorInterface* async_executor,
     AsyncExecutorInterface* io_async_executor) noexcept {
-  ExecutionResultOr<std::shared_ptr<cloud::spanner::Connection>>
+  ExecutionResultOr<std::shared_ptr<google::cloud::spanner::Connection>>
       spanner_connection =
           BudgetConsumptionHelper::MakeSpannerConnectionForProd(
               *config_provider_);
@@ -84,7 +84,7 @@ LocalDependencyFactory::ConstructBudgetConsumptionHelper(
       std::move(*spanner_connection));
 }
 
-std::unique_ptr<core::MetricRouter>
+std::unique_ptr<MetricRouter>
 LocalDependencyFactory::ConstructMetricRouter() noexcept {
   bool is_otel_print_data_to_console_enabled = false;
   config_provider_->Get(kOtelPrintDataToConsoleEnabled,
@@ -110,4 +110,4 @@ LocalDependencyFactory::ConstructMetricRouter() noexcept {
                                         std::move(metric_exporter));
 }
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

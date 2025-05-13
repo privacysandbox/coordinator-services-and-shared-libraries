@@ -15,6 +15,5 @@
 package(default_visibility = ["//cc:pbs_visibility"])
 
 exports_files([
-    "errors.cc",
     "execution_result.cc",
 ])

@@ -22,24 +22,21 @@
 #include <type_traits>
 
 #include "absl/strings/str_format.h"
-#include "cc/core/common/proto/common.pb.h"
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::test {
-namespace internal {
+namespace privacy_sandbox::pbs_common {
 std::string ToString(ExecutionStatus status);
-}  // namespace internal
 
 // Macro for shortening this pattern:
 // EXPECT_THAT(execution_result, IsSuccessful())
 #define EXPECT_SUCCESS(expression) \
-  EXPECT_THAT(expression, ::google::scp::core::test::IsSuccessful())
+  EXPECT_THAT(expression, ::privacy_sandbox::pbs_common::IsSuccessful())
 
 // Macro for shortening this pattern:
 // ASSERT_THAT(execution_result, IsSuccessful())
 #define ASSERT_SUCCESS(expression) \
-  ASSERT_THAT(expression, ::google::scp::core::test::IsSuccessful())
+  ASSERT_THAT(expression, ::privacy_sandbox::pbs_common::IsSuccessful())
 
 // Macro for shortening this pattern:
 // ASSERT_SUCCESS(execution_result_or);
@@ -76,14 +73,12 @@ MATCHER_P(ResultIs, expected_result, "") {
         "ExecutionStatus: %s\n\t"
         "StatusCode: %d\n\t"
         "ErrorMessage: \"%s\"\n",
-        internal::ToString(result.status), result.status_code,
+        ToString(result.status), result.status_code,
         privacy_sandbox::pbs_common::GetErrorMessage(result.status_code));
   };
-  constexpr bool is_proto = std::is_base_of_v<
-      google::scp::core::common::proto::ExecutionResult,
-      std::remove_cv_t<std::remove_reference_t<decltype(arg)>>>;
+
   if constexpr (std::is_base_of_v<
-                    google::scp::core::ExecutionResult,
+                    ExecutionResult,
                     std::remove_cv_t<std::remove_reference_t<decltype(arg)>>>) {
     // If arg is an ExecutionResult - directly compare.
     if (arg != expected_result) {
@@ -92,19 +87,6 @@ MATCHER_P(ResultIs, expected_result, "") {
           "Actual result has:\n\t%s",
           execution_result_to_str(expected_result),
           execution_result_to_str(arg));
-      return false;
-    }
-  } else if constexpr (is_proto) {
-    // If arg is an ExecutionResult proto, convert and compare.
-    google::scp::core::ExecutionResult non_proto_execution_result(arg);
-    if (non_proto_execution_result != expected_result) {
-      *result_listener << absl::StrFormat(
-          "\nExpected result to have:\n\t%s"
-          "Actual result has:\n\t%s"
-          "Actual result as a proto:\n%s",
-          execution_result_to_str(expected_result),
-          execution_result_to_str(non_proto_execution_result),
-          arg.DebugString());
       return false;
     }
   } else {
@@ -151,4 +133,4 @@ MATCHER_P(IsSuccessfulAndHolds, inner_matcher, "") {
                                        result_listener);
 }
 
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

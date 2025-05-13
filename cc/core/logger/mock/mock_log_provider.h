@@ -25,17 +25,11 @@
 namespace privacy_sandbox::pbs_common {
 class MockLogProvider : public ConsoleLogProvider {
  public:
-  google::scp::core::ExecutionResult Init() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Run() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Stop() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); }
 
   void Print(const std::string& output) noexcept override {
     messages_.push_back(output);

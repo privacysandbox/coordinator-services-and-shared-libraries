@@ -15,32 +15,27 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_PBS_TELEMETRY, 0x0234)
 
-DEFINE_ERROR_CODE(
-    SC_TELEMETRY_COULD_NOT_PARSE_URL, SC_PBS_TELEMETRY, 0x0001,
-    "Exporter could not parse the url from the options",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TELEMETRY_COULD_NOT_PARSE_URL, SC_PBS_TELEMETRY, 0x0001,
+                  "Exporter could not parse the url from the options",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_TELEMETRY_EXPORTER_SHUTDOWN, SC_PBS_TELEMETRY, 0x0002,
-    "Exporter is shut down",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TELEMETRY_EXPORTER_SHUTDOWN, SC_PBS_TELEMETRY, 0x0002,
+                  "Exporter is shut down",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_TELEMETRY_EXPORT_FAILED, SC_PBS_TELEMETRY, 0x0003, "Export failed",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TELEMETRY_EXPORT_FAILED, SC_PBS_TELEMETRY, 0x0003,
+                  "Export failed", HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_TELEMETRY_GRPC_CHANNEL_CREATION_FAILED, SC_PBS_TELEMETRY, 0x0005,
-    "Grpc channel creation failed",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TELEMETRY_GRPC_CHANNEL_CREATION_FAILED, SC_PBS_TELEMETRY,
+                  0x0005, "Grpc channel creation failed",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_TELEMETRY_METER_PROVIDER_NOT_INITIALIZED, SC_PBS_TELEMETRY, 0x0006,
-    "Meter Provider is not initialized",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TELEMETRY_METER_PROVIDER_NOT_INITIALIZED, SC_PBS_TELEMETRY,
+                  0x0006, "Meter Provider is not initialized",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

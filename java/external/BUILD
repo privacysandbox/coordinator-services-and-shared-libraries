@@ -543,6 +543,11 @@ alias(
 )
 
 alias(
+    name = "gcp_liquibase_spanner",
+    actual = "@maven//:com_google_cloudspannerecosystem_liquibase_spanner",
+)
+
+alias(
     name = "gcp_secretmanager",
     actual = "@maven//:com_google_cloud_google_cloud_secretmanager",
 )
@@ -751,4 +756,24 @@ alias(
 alias(
     name = "assertj_core",
     actual = "@maven//:org_assertj_assertj_core",
+)
+
+alias(
+    name = "picocli",
+    actual = "@maven//:info_picocli_picocli",
+)
+
+alias(
+    name = "liquibase_core",
+    actual = "@maven//:org_liquibase_liquibase_core",
+)
+
+java_binary(
+    name = "liquibase",
+    main_class = "liquibase.integration.commandline.LiquibaseCommandLine",
+    runtime_deps = [
+        "//java/external:gcp_liquibase_spanner",
+        "//java/external:liquibase_core",
+        "//java/external:picocli",
+    ],
 )

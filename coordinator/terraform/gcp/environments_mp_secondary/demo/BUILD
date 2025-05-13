@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,33 +20,12 @@ pkg_filegroup(
     name = "mp_secondary_coordinator_demo",
     srcs = [
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/allowedoperatorgroup:allowedoperatorgroup_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/allowedoperatorgroup:allowedoperatorgroup_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/allowedoperatorgroup:allowedoperatorgroup_outputs_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/allowedoperatorgroup:allowedoperatorgroup_variables_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_outputs_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_application:distributedpbs_application_variables_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_base:distributedpbs_base_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_base:distributedpbs_base_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_base:distributedpbs_base_outputs_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/distributedpbs_base:distributedpbs_base_variables_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/domainrecordsetup:domainrecordsetup_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/domainrecordsetup:domainrecordsetup_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/domainrecordsetup:domainrecordsetup_outputs_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/domainrecordsetup:domainrecordsetup_variables_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/mpkhs_secondary:mpkhs_secondary_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/mpkhs_secondary:mpkhs_secondary_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/mpkhs_secondary:mpkhs_secondary_outputs_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/mpkhs_secondary:mpkhs_secondary_variables_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/operator_wipp:operator_wipp_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/operator_wipp:operator_wipp_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/operator_wipp:operator_wipp_outputs_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/operator_wipp:operator_wipp_variables_link",
         "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_demo",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_outputs_link",
-        "//coordinator/terraform/gcp/environments_mp_secondary/demo/xc_resources_aws:xc_resources_aws_variables_link",
     ],
     prefix = "environments_mp_secondary/demo",
 )

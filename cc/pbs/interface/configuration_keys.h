@@ -16,7 +16,7 @@
 
 #pragma once
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 static constexpr char kTotalHttp2ServerThreadsCount[] =
     "google_scp_core_http2server_threads_count";
 static constexpr char kBudgetKeyTableName[] =
@@ -85,4 +85,4 @@ static constexpr char kEnableRequestResponseProtoMigration[] =
 // Stop servering requests with JSON request version 1.0
 static constexpr char kEnableStopServingV1Request[] =
     "google_pbs_stop_serving_v1_request";
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

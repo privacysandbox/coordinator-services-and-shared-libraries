@@ -22,7 +22,7 @@
 #include "opentelemetry/context/context.h"
 #include "opentelemetry/metrics/meter.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 template <typename T>
 class MockCounter : public opentelemetry::metrics::Counter<T> {
@@ -77,6 +77,6 @@ class MockUpDownCounter : public opentelemetry::metrics::UpDownCounter<T> {
                const opentelemetry::context::Context& context),
               (noexcept, override));
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 
 #endif  // CC_CORE_TELEMETRY_MOCK_INSTRUMENT_MOCK

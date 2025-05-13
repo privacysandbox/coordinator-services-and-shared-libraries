@@ -21,7 +21,7 @@
 using std::map;
 using std::string;
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 TEST(DockerHelper, PortMapToSelf) {
   EXPECT_EQ(PortMapToSelf("8080"), "8080:8080");
 }
@@ -79,4 +79,4 @@ TEST(DockerHelper, BuildStopContainerCmd) {
   EXPECT_EQ(BuildStopContainerCmd("container_name"),
             "docker rm -f container_name");
 }
-}  // namespace google::scp::core::test
+}  // namespace privacy_sandbox::pbs_common

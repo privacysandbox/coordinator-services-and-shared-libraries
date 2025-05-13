@@ -28,7 +28,7 @@
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "opentelemetry/ext/http/common/url_parser.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 inline constexpr absl::string_view kOtlpGrpcAuthedExporter =
     "OtlpGrpcAuthedExporter";
 
@@ -51,8 +51,7 @@ OtlpGrpcAuthedMetricExporter::MakeChannel(
   if (!url.success_) {
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_COULD_NOT_PARSE_URL);
-    SCP_ERROR(kOtlpGrpcAuthedExporter, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result,
+    SCP_ERROR(kOtlpGrpcAuthedExporter, kZeroUuid, execution_result,
               absl::StrFormat("[OTLP GRPC Client] invalid endpoint: %s",
                               options.endpoint.c_str()),
               options.endpoint.c_str());
@@ -103,8 +102,7 @@ OtlpGrpcAuthedMetricExporter::MakeMetricsServiceStub(
   if (!channel.Successful()) {
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_GRPC_CHANNEL_CREATION_FAILED);
-    SCP_ERROR(kOtlpGrpcAuthedExporter, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result,
+    SCP_ERROR(kOtlpGrpcAuthedExporter, kZeroUuid, execution_result,
               "[OTLP METRIC GRPC Exporter] Grpc channel creation failed! Could "
               "not create a metric service stub!");
     return FailureExecutionResult(SC_TELEMETRY_GRPC_CHANNEL_CREATION_FAILED);
@@ -142,8 +140,7 @@ opentelemetry::sdk::common::ExportResult OtlpGrpcAuthedMetricExporter::Export(
   if (IsShutdown()) {
     auto execution_result =
         FailureExecutionResult(SC_TELEMETRY_EXPORTER_SHUTDOWN);
-    SCP_ERROR(kOtlpGrpcAuthedExporter, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result,
+    SCP_ERROR(kOtlpGrpcAuthedExporter, kZeroUuid, execution_result,
               absl::StrFormat(
                   "[OTLP METRIC GRPC Exporter] Exporting %zu metric(s) failed, "
                   "exporter is shutdown",
@@ -170,8 +167,7 @@ opentelemetry::sdk::common::ExportResult OtlpGrpcAuthedMetricExporter::Export(
 
   if (metrics_service_stub_ == nullptr) {
     auto execution_result = FailureExecutionResult(SC_TELEMETRY_EXPORT_FAILED);
-    SCP_ERROR(kOtlpGrpcAuthedExporter, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result,
+    SCP_ERROR(kOtlpGrpcAuthedExporter, kZeroUuid, execution_result,
               "[OTLP METRIC GRPC Exporter] Export() failed because metric "
               "service stub is not properly set");
 
@@ -195,8 +191,7 @@ opentelemetry::sdk::common::ExportResult OtlpGrpcAuthedMetricExporter::Export(
 
   if (!status.ok()) {
     auto execution_result = FailureExecutionResult(SC_TELEMETRY_EXPORT_FAILED);
-    SCP_ERROR(kOtlpGrpcAuthedExporter, privacy_sandbox::pbs_common::kZeroUuid,
-              execution_result,
+    SCP_ERROR(kOtlpGrpcAuthedExporter, kZeroUuid, execution_result,
               absl::StrFormat("[OTLP METRIC GRPC Exporter] Export() failed: %s",
                               status.error_message().c_str()),
               status.error_message().c_str());
@@ -231,4 +226,4 @@ OtlpGrpcAuthedMetricExporter::GetOptions() const {
   return options_;
 }
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

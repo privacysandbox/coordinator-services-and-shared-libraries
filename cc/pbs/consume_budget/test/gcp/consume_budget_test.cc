@@ -42,27 +42,24 @@
 #include "google/protobuf/text_format.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
 using ::google::protobuf::TextFormat;
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::pbs::kBudgetKeyTableName;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_EXHAUSTED;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_FAIL_TO_COMMIT;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_INITIALIZATION_ERROR;
-using ::google::scp::pbs::errors::SC_CONSUME_BUDGET_PARSING_ERROR;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::AuthContext;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
+using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
+using ::privacy_sandbox::pbs_common::ResultIs;
 using ::privacy_sandbox::pbs_common::SC_ASYNC_EXECUTOR_NOT_RUNNING;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::testing::_;
 using ::testing::AllOf;
 using ::testing::ByMove;
@@ -158,8 +155,7 @@ absl::string_view BudgetKeyTableMetadata(absl::string_view migration_phase) {
 
 std::unique_ptr<spanner_mocks::MockResultSetSource>
 CreatePbsMockResultSetSource(absl::string_view migration_phase) {
-  auto source =
-      std::make_unique<google::cloud::spanner_mocks::MockResultSetSource>();
+  auto source = std::make_unique<spanner_mocks::MockResultSetSource>();
 
   google::spanner::v1::ResultSetMetadata metadata;
   EXPECT_TRUE(TextFormat::ParseFromString(
@@ -228,17 +224,17 @@ TEST_F(BudgetConsumptionHelperTest, ExecutorNotYetRunShouldFail) {
 
 class MockBudgetConsumer : public BudgetConsumer {
  public:
-  MOCK_METHOD(core::ExecutionResult, ParseTransactionRequest,
+  MOCK_METHOD(ExecutionResult, ParseTransactionRequest,
               (const AuthContext&, const HttpHeaders&, const nlohmann::json&),
               (override));
-  MOCK_METHOD(core::ExecutionResult, ParseTransactionRequest,
+  MOCK_METHOD(ExecutionResult, ParseTransactionRequest,
               (const AuthContext&, const HttpHeaders&,
                const ConsumePrivacyBudgetRequest&),
               (override));
   MOCK_METHOD(spanner::KeySet, GetSpannerKeySet, (), (override));
   MOCK_METHOD(size_t, GetKeyCount, (), (override));
-  MOCK_METHOD(core::ExecutionResultOr<std::vector<std::string>>, GetReadColumns,
-              (), (override));
+  MOCK_METHOD(ExecutionResultOr<std::vector<std::string>>, GetReadColumns, (),
+              (override));
   MOCK_METHOD(std::vector<std::string>, DebugKeyList, (), (override));
   MOCK_METHOD(SpannerMutationsResult, ConsumeBudget,
               (spanner::RowStream&, absl::string_view), (override));
@@ -427,10 +423,10 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
   std::vector<int64_t> token_count = {1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                       1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
-  spanner::Mutation m = cloud::spanner::InsertMutationBuilder(
-                            std::string(kTableName), GetTableColumns())
-                            .AddRow(GetTableValues(token_count))
-                            .Build();
+  spanner::Mutation m =
+      spanner::InsertMutationBuilder(std::string(kTableName), GetTableColumns())
+          .AddRow(GetTableValues(token_count))
+          .Build();
   EXPECT_CALL(*mock_connection_,
               Commit(FieldsAre(_, UnorderedElementsAre(m), _)))
       .WillOnce(Return(spanner::CommitResult{}));
@@ -488,8 +484,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
 
   token_count[1] = 0;  // Consuming budget for the concerned hour
   spanner::Mutation expected_mutation =
-      cloud::spanner::UpdateMutationBuilder(std::string(kTableName),
-                                            GetTableColumns())
+      spanner::UpdateMutationBuilder(std::string(kTableName), GetTableColumns())
           .AddRow(GetTableValues(token_count))
           .Build();
   EXPECT_CALL(*mock_connection_,
@@ -565,7 +560,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
            {std::string(kValueSpannerColumnName),
             spanner::Value(
                 spanner::Json(R"({"TokenCount": Invalid JSON format")"))}})))
-      .WillRepeatedly(Return(google::cloud::spanner::Row()));
+      .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
   expected_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
@@ -614,7 +609,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
            {std::string(kValueSpannerColumnName),
             spanner::Value(spanner::Json(
                 R"({"TokenCountFake": "No TokenCount field"})"))}})))
-      .WillRepeatedly(Return(google::cloud::spanner::Row()));
+      .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
   expected_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
@@ -663,11 +658,10 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
            {std::string(kValueSpannerColumnName),
             spanner::Value(spanner::Json(
                 R"({"TokenCount": "Invalid TokenCount field"})"))}})))
-      .WillRepeatedly(Return(google::cloud::spanner::Row()));
+      .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
-  expected_key_set.AddKey(
-      cloud::spanner::MakeKey(std::string(kFakeKeyName), "0"));
+  expected_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
   EXPECT_CALL(
       *mock_connection_,
       Read(AllOf(
@@ -714,11 +708,10 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
             spanner::Value(
                 spanner::ProtoMessage<privacy_sandbox_pbs::BudgetValue>(
                     privacy_sandbox_pbs::BudgetValue()))}})))
-      .WillRepeatedly(Return(google::cloud::spanner::Row()));
+      .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
-  expected_key_set.AddKey(
-      cloud::spanner::MakeKey(std::string(kFakeKeyName), "0"));
+  expected_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
   EXPECT_CALL(
       *mock_connection_,
       Read(AllOf(
@@ -765,11 +758,10 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
             spanner::Value(
                 spanner::ProtoMessage<privacy_sandbox_pbs::BudgetValue>(
                     GetProtoValueWithInvalidTokens({1, 1, 1})))}})))
-      .WillRepeatedly(Return(google::cloud::spanner::Row()));
+      .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
-  expected_key_set.AddKey(
-      cloud::spanner::MakeKey(std::string(kFakeKeyName), "0"));
+  expected_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
   EXPECT_CALL(
       *mock_connection_,
       Read(AllOf(
@@ -820,11 +812,10 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithoutBudgetConsumer,
             spanner::Value(
                 spanner::ProtoMessage<privacy_sandbox_pbs::BudgetValue>(
                     GetProtoValueWithInvalidTokens(token_count)))}})))
-      .WillRepeatedly(Return(google::cloud::spanner::Row()));
+      .WillRepeatedly(Return(spanner::Row()));
 
   spanner::KeySet expected_key_set;
-  expected_key_set.AddKey(
-      cloud::spanner::MakeKey(std::string(kFakeKeyName), "0"));
+  expected_key_set.AddKey(spanner::MakeKey(std::string(kFakeKeyName), "0"));
   EXPECT_CALL(
       *mock_connection_,
       Read(AllOf(
@@ -886,8 +877,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
 
   token_count[0] = kEmptyBudgetCount;
   spanner::Mutation mock_mutation =
-      cloud::spanner::UpdateMutationBuilder(std::string(kTableName),
-                                            GetTableColumns())
+      spanner::UpdateMutationBuilder(std::string(kTableName), GetTableColumns())
           .AddRow(GetTableValues(token_count))
           .Build();
 
@@ -895,7 +885,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
   EXPECT_CALL(*mock_budget_consumer_, ConsumeBudget(_, Eq(kTableName)))
       .Times(1)
       .WillOnce(Return(SpannerMutationsResult{
-          .status = cloud::Status(),
+          .status = google::cloud::Status(),
           .execution_result = SuccessExecutionResult(),
           .budget_exhausted_indices = std::vector<size_t>(),
           .mutations = spanner::Mutations{mock_mutation},
@@ -949,8 +939,9 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
   EXPECT_CALL(*mock_budget_consumer_, ConsumeBudget(_, Eq(kTableName)))
       .Times(1)
       .WillOnce(Return(SpannerMutationsResult{
-          .status = cloud::Status(cloud::StatusCode::kInvalidArgument,
-                                  "Not enough budget."),
+          .status =
+              google::cloud::Status(google::cloud::StatusCode::kInvalidArgument,
+                                    "Not enough budget."),
           .execution_result =
               FailureExecutionResult(SC_CONSUME_BUDGET_EXHAUSTED),
           .budget_exhausted_indices = {1, 3, 7},
@@ -1006,8 +997,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
 
   token_count[0] = kEmptyBudgetCount;
   spanner::Mutation mock_mutation =
-      cloud::spanner::UpdateMutationBuilder(std::string(kTableName),
-                                            GetTableColumns())
+      spanner::UpdateMutationBuilder(std::string(kTableName), GetTableColumns())
           .AddRow(GetTableValues(token_count))
           .Build();
 
@@ -1015,7 +1005,7 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
   EXPECT_CALL(*mock_budget_consumer_, ConsumeBudget(_, Eq(kTableName)))
       .Times(1)
       .WillOnce(Return(SpannerMutationsResult{
-          .status = cloud::Status(),
+          .status = google::cloud::Status(),
           .execution_result = SuccessExecutionResult(),
           .budget_exhausted_indices = std::vector<size_t>(),
           .mutations = spanner::Mutations{mock_mutation},
@@ -1023,8 +1013,8 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
 
   EXPECT_CALL(*mock_connection_,
               Commit(FieldsAre(_, UnorderedElementsAre(mock_mutation), _)))
-      .WillOnce(Return(cloud::Status(cloud::StatusCode::kPermissionDenied,
-                                     "PermissionDenied")));
+      .WillOnce(Return(google::cloud::Status(
+          google::cloud::StatusCode::kPermissionDenied, "PermissionDenied")));
 
   AsyncContext<ConsumeBudgetsRequest, ConsumeBudgetsResponse> context;
   context.request = std::make_shared<ConsumeBudgetsRequest>();
@@ -1047,4 +1037,4 @@ TEST_P(BudgetConsumptionHelperWithLifecycleTestWithBudgetConsumer,
   EXPECT_TRUE(result_context.response->budget_exhausted_indices.empty());
 }
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

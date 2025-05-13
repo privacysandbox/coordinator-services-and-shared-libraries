@@ -23,7 +23,7 @@
 #include "cc/core/telemetry/src/authentication/error_codes.h"
 #include "cc/core/telemetry/src/authentication/grpc_auth_config.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 inline constexpr absl::string_view kFetchIdTokenInternal =
     "FetchIdTokenInternal";
@@ -42,13 +42,12 @@ ExecutionResultOr<std::string> FetchIdTokenInternal(
                    std::string(auth_config.service_account()));
   const std::vector<std::string> delegates;
   const std::string audience(auth_config.audience());
-  cloud::StatusOr<google::iam::credentials::v1::GenerateIdTokenResponse>
+  google::cloud::StatusOr<google::iam::credentials::v1::GenerateIdTokenResponse>
       response =
           iam_client.GenerateIdToken(request_name, delegates, audience, true);
   if (!response) {
     SCP_ERROR(
-        kFetchIdTokenInternal, privacy_sandbox::pbs_common::kZeroUuid,
-        ExecutionResult(),
+        kFetchIdTokenInternal, kZeroUuid, ExecutionResult(),
         "FetchIdTokenInternal() iam_client.GenerateIdToken(\"%s\", delegates, "
         "\"%s\") failed: %s: %s",
         request_name.c_str(), audience.c_str(),
@@ -59,4 +58,4 @@ ExecutionResultOr<std::string> FetchIdTokenInternal(
   }
   return response->token();
 }
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

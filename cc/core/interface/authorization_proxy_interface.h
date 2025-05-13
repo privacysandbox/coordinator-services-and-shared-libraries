@@ -98,7 +98,7 @@ class AuthorizationProxyInterface : public ServiceInterface {
    *
    * @return ExecutionResult
    */
-  virtual google::scp::core::ExecutionResult Authorize(
+  virtual ExecutionResult Authorize(
       AsyncContext<AuthorizationProxyRequest,
                    AuthorizationProxyResponse>&) noexcept = 0;
 };

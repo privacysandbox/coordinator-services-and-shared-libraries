@@ -23,7 +23,7 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "google/cloud/iam/credentials/v1/iam_credentials_client.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * AwsTokenFetcher is a concrete implementation of the TokenFetcher interface,
@@ -51,4 +51,4 @@ class AwsTokenFetcher : public TokenFetcher {
       iam_client_;
   void CreateIamClient(const GrpcAuthConfig& auth_config);
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

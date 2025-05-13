@@ -17,34 +17,25 @@
 
 #include "cc/core/interface/errors.h"
 
-namespace google::scp::pbs::errors {
+namespace privacy_sandbox::pbs {
 REGISTER_COMPONENT_CODE(SC_PBS_CONSUME_BUDGET, 0x0157)
 
-DEFINE_ERROR_CODE(
-    SC_CONSUME_BUDGET_INITIALIZATION_ERROR, SC_PBS_CONSUME_BUDGET, 0x0001,
-    "Failed to initialize BudgetConsumptionHelper.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_CONSUME_BUDGET_INITIALIZATION_ERROR, SC_PBS_CONSUME_BUDGET,
+                  0x0001, "Failed to initialize BudgetConsumptionHelper.",
+                  pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_CONSUME_BUDGET_PARSING_ERROR, SC_PBS_CONSUME_BUDGET, 0x0002,
-    "Failed parse value in database.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_CONSUME_BUDGET_PARSING_ERROR, SC_PBS_CONSUME_BUDGET,
+                  0x0002, "Failed parse value in database.",
+                  pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-DEFINE_ERROR_CODE(
-    SC_CONSUME_BUDGET_FAIL_TO_COMMIT, SC_PBS_CONSUME_BUDGET, 0x0003,
-    "Failed commit to database.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_CONSUME_BUDGET_FAIL_TO_COMMIT, SC_PBS_CONSUME_BUDGET,
+                  0x0003, "Failed commit to database.",
+                  pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
 
 DEFINE_ERROR_CODE(SC_CONSUME_BUDGET_EXHAUSTED, SC_PBS_CONSUME_BUDGET, 0x0004,
                   "Failed to consume budget because budget is exhausted.",
-                  privacy_sandbox::pbs_common::HttpStatusCode::CONFLICT)
+                  pbs_common::HttpStatusCode::CONFLICT)
 
-DEFINE_ERROR_CODE(
-    SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA,
-    SC_PBS_CONSUME_BUDGET, 0x0005,
-    "The budget key timeframe data is corrupted.",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
-
-}  // namespace google::scp::pbs::errors
+}  // namespace privacy_sandbox::pbs
 
 #endif  // CC_PBS_CONSUME_BUDGET_SRC_GCP_ERROR_CODES_H_

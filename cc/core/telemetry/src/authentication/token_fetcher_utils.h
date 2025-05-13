@@ -22,12 +22,12 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "google/cloud/iam/credentials/v1/iam_credentials_client.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 ExecutionResultOr<std::string> FetchIdTokenInternal(
     google::cloud::iam_credentials_v1::IAMCredentialsClient& iam_client,
     const GrpcAuthConfig& auth_config);
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 
 #endif

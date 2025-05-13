@@ -28,7 +28,7 @@
 
 #include "error_codes.h"
 
-namespace google::scp::pbs::budget_key_timeframe_manager {
+namespace privacy_sandbox::pbs {
 static constexpr TimeBucket kHoursPerDay = 24;
 
 class Serialization {
@@ -39,14 +39,14 @@ class Serialization {
    * @param hour_tokens A vector with size of 24. Each index represents the
    * amount of tokens available in a hour.
    * @param hour_token_in_time_group The serialized buffer of the vector.
-   * @return core::ExecutionResult The execution result of the operation.
+   * @return ExecutionResult The execution result of the operation.
    */
-  static core::ExecutionResult SerializeHourTokensInTimeGroup(
+  static pbs_common::ExecutionResult SerializeHourTokensInTimeGroup(
       const std::vector<TokenCount>& hour_tokens,
       std::string& hour_token_in_time_group) {
     if (hour_tokens.size() != kHoursPerDay) {
-      return core::FailureExecutionResult(
-          core::errors::SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
+      return pbs_common::FailureExecutionResult(
+          SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
     }
 
     hour_token_in_time_group.clear();
@@ -57,7 +57,7 @@ class Serialization {
       }
     }
 
-    return core::SuccessExecutionResult();
+    return pbs_common::SuccessExecutionResult();
   }
 
   /**
@@ -67,17 +67,17 @@ class Serialization {
    * @param hour_token_in_time_group The serialized buffer of the vector.
    * @param hour_tokens A vector with size of 24. Each index represents the
    * amount of tokens available in a hour.
-   * @return core::ExecutionResult The execution result of the operation.
+   * @return ExecutionResult The execution result of the operation.
    */
-  static core::ExecutionResult DeserializeHourTokensInTimeGroup(
+  static pbs_common::ExecutionResult DeserializeHourTokensInTimeGroup(
       const std::string& hour_token_in_time_group,
       std::vector<TokenCount>& hour_tokens) {
     std::vector<absl::string_view> tokens_per_hour =
         absl::StrSplit(hour_token_in_time_group, " ");
 
     if (tokens_per_hour.size() != kHoursPerDay) {
-      return core::FailureExecutionResult(
-          core::errors::SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
+      return pbs_common::FailureExecutionResult(
+          SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
     }
 
     if (hour_tokens.size() != kHoursPerDay) {
@@ -86,14 +86,13 @@ class Serialization {
     for (int i = 0; i < kHoursPerDay; ++i) {
       int32_t value;
       if (!absl::SimpleAtoi(tokens_per_hour[i], &value)) {
-        return core::FailureExecutionResult(
-            core::errors::
-                SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
+        return pbs_common::FailureExecutionResult(
+            SC_BUDGET_KEY_TIMEFRAME_MANAGER_CORRUPTED_KEY_METADATA);
       }
       hour_tokens[i] = value;
     }
 
-    return core::SuccessExecutionResult();
+    return pbs_common::SuccessExecutionResult();
   }
 };
-}  // namespace google::scp::pbs::budget_key_timeframe_manager
+}  // namespace privacy_sandbox::pbs

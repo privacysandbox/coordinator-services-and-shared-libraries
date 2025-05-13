@@ -37,34 +37,23 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
-using google::scp::core::ExecutionResult;
-using google::scp::core::ExecutionResultOr;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
-using google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_FIND_MEMORY_INFO;
-using google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_OPEN_MEMINFO_FILE;
-using google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_PARSE_MEMINFO_LINE;
-using google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO;
-using google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_HEALTHY_MEMORY_USAGE_THRESHOLD_EXCEEDED;
-using google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_HEALTHY_STORAGE_USAGE_THRESHOLD_EXCEEDED;
-using google::scp::core::errors::
-    SC_PBS_HEALTH_SERVICE_INVALID_READ_FILESYSTEM_INFO;
-using ::google::scp::core::test::ResultIs;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::AsyncExecutor;
 using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::ConfigKey;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
+using ::privacy_sandbox::pbs_common::GetMetricPointData;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::HttpServerInterface;
+using ::privacy_sandbox::pbs_common::InMemoryMetricRouter;
+using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::MockHttp2Server;
+using ::privacy_sandbox::pbs_common::ResultIs;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using std::list;
 using std::make_shared;
 using std::shared_ptr;
@@ -76,7 +65,7 @@ using testing::NiceMock;
 using testing::Return;
 using testing::SetArgReferee;
 
-namespace google::scp::pbs::test {
+namespace privacy_sandbox::pbs {
 
 class ConfigProviderMock : public ConfigProviderInterface {
  public:
@@ -191,7 +180,7 @@ class HealthServiceTest : public ::testing::Test {
     EXPECT_SUCCESS(async_executor_->Run());
 
     // Initialize OTel for testing
-    metric_router_ = std::make_unique<core::InMemoryMetricRouter>();
+    metric_router_ = std::make_unique<InMemoryMetricRouter>();
 
     // Make memory and storage checking enabled by default
     ON_CALL(*dynamic_cast<ConfigProviderMock*>(config_provider_mock_.get()),
@@ -220,7 +209,7 @@ class HealthServiceTest : public ::testing::Test {
   shared_ptr<ConfigProviderInterface> config_provider_mock_;
   shared_ptr<AsyncExecutorInterface> async_executor_;
   // For testing OTel metrics
-  std::unique_ptr<core::InMemoryMetricRouter> metric_router_;
+  std::unique_ptr<InMemoryMetricRouter> metric_router_;
 };
 
 TEST_F(HealthServiceTest,
@@ -442,8 +431,8 @@ TEST_F(HealthServiceTest, OTelReturnsCorrectMemoryUsageInfo) {
       metric_router_->GetExportedData();
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      memory_usage_metric_point_data = core::GetMetricPointData(
-          google::scp::pbs::kMetricNameMemoryUsage, {}, data);
+      memory_usage_metric_point_data = GetMetricPointData(
+          privacy_sandbox::pbs::kMetricNameMemoryUsage, {}, data);
   ASSERT_TRUE(memory_usage_metric_point_data.has_value());
 
   auto memory_usage_last_value_point_data =
@@ -465,8 +454,8 @@ TEST_F(HealthServiceTest,
       metric_router_->GetExportedData();
 
   std::optional<opentelemetry::sdk::metrics::PointType>
-      filesystem_storage_usage_metric_point_data = core::GetMetricPointData(
-          google::scp::pbs::kMetricNameFileSystemStorageUsage, {}, data);
+      filesystem_storage_usage_metric_point_data = GetMetricPointData(
+          privacy_sandbox::pbs::kMetricNameFileSystemStorageUsage, {}, data);
   ASSERT_TRUE(filesystem_storage_usage_metric_point_data.has_value());
 
   auto filesystem_storage_usage_last_value_point_data =
@@ -481,4 +470,4 @@ TEST_F(HealthServiceTest,
          "(int64_t)";
 }
 
-}  // namespace google::scp::pbs::test
+}  // namespace privacy_sandbox::pbs

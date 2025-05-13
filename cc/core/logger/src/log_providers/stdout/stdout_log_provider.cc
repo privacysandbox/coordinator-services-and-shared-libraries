@@ -23,15 +23,11 @@
 #include <nlohmann/json.hpp>
 
 #include "absl/log/check.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "cc/core/common/uuid/src/uuid.h"
 
 namespace privacy_sandbox::pbs_common {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::LogLevel;
-using ::privacy_sandbox::pbs_common::ToString;
-using ::privacy_sandbox::pbs_common::Uuid;
 
 ExecutionResult StdoutLogProvider::Init() noexcept {
   return SuccessExecutionResult();

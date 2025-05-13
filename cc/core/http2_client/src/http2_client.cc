@@ -24,13 +24,6 @@
 #include "opentelemetry/metrics/provider.h"
 
 namespace privacy_sandbox::pbs_common {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::MetricRouter;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::RetryStrategy;
-using ::google::scp::core::utils::GetClaimedIdentityOrUnknownValue;
 using std::make_unique;
 using std::shared_ptr;
 

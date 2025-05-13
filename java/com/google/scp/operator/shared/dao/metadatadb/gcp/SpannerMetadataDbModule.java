@@ -29,6 +29,7 @@ import com.google.inject.Singleton;
 import com.google.scp.operator.shared.dao.asginstancesdb.common.AsgInstancesDao;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataDbClient;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 
 /** Module for Spanner metadata DB. */
 public final class SpannerMetadataDbModule extends AbstractModule {
@@ -38,7 +39,7 @@ public final class SpannerMetadataDbModule extends AbstractModule {
   /**
    * Creates a new instance of the {@code SpannerMetadataDbModule} class.
    *
-   * <p>Caller is expected to bind {@link SpannerMetadataDbConfig}.
+   * <p>Caller is expected to bind {@link SpannerDatabaseConfig}.
    */
   public SpannerMetadataDbModule() {}
 
@@ -46,12 +47,12 @@ public final class SpannerMetadataDbModule extends AbstractModule {
   @Provides
   @Singleton
   @JobMetadataDbClient
-  public DatabaseClient getDatabaseClient(SpannerMetadataDbConfig config) throws Exception {
+  public DatabaseClient getDatabaseClient(SpannerDatabaseConfig config) throws Exception {
     if (config.endpointUrl().isPresent()) {
       return getDatabaseClientByEndpointUrl(config);
     }
     DatabaseId dbId =
-        DatabaseId.of(config.gcpProjectId(), config.spannerInstanceId(), config.spannerDbName());
+        DatabaseId.of(config.gcpProjectId(), config.instanceId(), config.databaseName());
     return SPANNER_INITIALIZER.get().getDatabaseClient(dbId);
   }
 
@@ -65,7 +66,7 @@ public final class SpannerMetadataDbModule extends AbstractModule {
     bind(AsgInstancesDao.class).to(SpannerAsgInstancesDao.class);
   }
 
-  private static DatabaseClient getDatabaseClientByEndpointUrl(SpannerMetadataDbConfig config) {
+  private static DatabaseClient getDatabaseClientByEndpointUrl(SpannerDatabaseConfig config) {
     String endpointUrl = config.endpointUrl().get();
     SpannerOptions.Builder spannerOptions =
         SpannerOptions.newBuilder().setProjectId(config.gcpProjectId());
@@ -75,8 +76,8 @@ public final class SpannerMetadataDbModule extends AbstractModule {
       spannerOptions.setHost(endpointUrl);
     }
     Spanner spanner = spannerOptions.build().getService();
-    InstanceId instanceId = InstanceId.of(config.gcpProjectId(), config.spannerInstanceId());
-    DatabaseId databaseId = DatabaseId.of(instanceId, config.spannerDbName());
+    InstanceId instanceId = InstanceId.of(config.gcpProjectId(), config.instanceId());
+    DatabaseId databaseId = DatabaseId.of(instanceId, config.databaseName());
     return spanner.getDatabaseClient(databaseId);
   }
 

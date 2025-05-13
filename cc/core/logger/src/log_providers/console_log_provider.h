@@ -29,16 +29,14 @@ namespace privacy_sandbox::pbs_common {
  */
 class ConsoleLogProvider : public LogProviderInterface {
  public:
-  google::scp::core::ExecutionResult Init() noexcept override;
+  ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
-  void Log(const LogLevel& level,
-           const privacy_sandbox::pbs_common::Uuid& correlation_id,
-           const privacy_sandbox::pbs_common::Uuid& parent_activity_id,
-           const privacy_sandbox::pbs_common::Uuid& activity_id,
+  void Log(const LogLevel& level, const Uuid& correlation_id,
+           const Uuid& parent_activity_id, const Uuid& activity_id,
            const std::string_view& component_name,
            const std::string_view& machine_name,
            const std::string_view& cluster_name,

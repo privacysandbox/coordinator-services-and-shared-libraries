@@ -141,9 +141,9 @@ class PeriodicClosure {
   //            in a background thread.
   //   startup_delay: Optional delay before the first execution. Must be
   //                  non-negative. Defaults to zero (no delay).
-  //   clock: A custom clock that implements the internal::Clock interface.
+  //   clock: A custom clock that implements the Clock interface.
   PeriodicClosure(absl::Duration interval, absl::AnyInvocable<void()> closure,
-                  std::shared_ptr<internal::Clock> clock,
+                  std::shared_ptr<Clock> clock,
                   absl::Duration startup_delay = absl::ZeroDuration());
 
   // Internal implementation of Start() that handles the actual thread creation.
@@ -169,7 +169,7 @@ class PeriodicClosure {
   mutable absl::Mutex mutex_;
 
   // Clock used for timing and sleeping. Allows to use custom clock for testing.
-  std::shared_ptr<internal::Clock> clock_;
+  std::shared_ptr<Clock> clock_;
 };
 
 }  // namespace privacy_sandbox::pbs_common

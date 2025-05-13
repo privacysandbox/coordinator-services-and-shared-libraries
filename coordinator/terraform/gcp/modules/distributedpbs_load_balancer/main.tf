@@ -45,11 +45,11 @@ resource "random_id" "pbs_cert_manager" {
   prefix      = "${var.environment}-pbs-cert-manager-"
 }
 
-# Setup the firewall rule for health-check and LB incoming traffic
+# Setup the firewall rule for LB incoming traffic
 resource "google_compute_firewall" "load_balancer_firewall" {
   project     = var.project_id
   name        = "${var.environment}-pbs-lb-firewall"
-  description = "Firewall rule to allow the health check and main service ports for PBS environment ${var.environment}"
+  description = "Firewall rule to allow main service ports for PBS environment ${var.environment}"
   network     = var.pbs_vpc_network_id
 
   # Allow requests from these IP address ranges
@@ -59,34 +59,10 @@ resource "google_compute_firewall" "load_balancer_firewall" {
     var.pbs_ip_address
   ]
 
-  # Only allow requests to instances that contain this target tag
-  # The instance or instance template must have this tag added
-  target_tags = [var.pbs_instance_target_tag]
-
-  # Allow the health check and main service port
+  # Allow the main service port
   allow {
     protocol = "tcp"
-    ports    = [var.pbs_health_check_port, var.pbs_main_port]
-  }
-}
-
-resource "google_compute_firewall" "ssh_firewall" {
-  count   = var.pbs_instance_allow_ssh ? 1 : 0
-  project = var.project_id
-  name    = "${var.environment}-allow-ssh"
-  network = var.pbs_vpc_network_id
-
-  source_ranges = [
-    "0.0.0.0/0"
-  ]
-
-  # Only allow requests to instances that contain this target tag
-  # The instance or instance template must have this tag added
-  target_tags = [var.pbs_instance_target_tag]
-
-  allow {
-    protocol = "tcp"
-    ports    = [22]
+    ports    = [var.pbs_main_port]
   }
 }
 
@@ -101,63 +77,31 @@ resource "google_compute_region_network_endpoint_group" "pbs_auth_network_endpoi
   }
 }
 
-# Security policy for external load balancer
-resource "google_compute_security_policy" "pbs_security_policy" {
-  project     = var.project_id
-  name        = "${var.environment}-pbs-security-policy"
-  description = "Security policy with for PBS LB"
-  type        = "CLOUD_ARMOR"
+module "pbs_security_policy" {
+  source = "../shared/cloudarmor_security_policy"
 
-  adaptive_protection_config {
-    layer_7_ddos_defense_config {
-      enable = var.use_adaptive_protection
-    }
-  }
+  project_id                  = var.project_id
+  security_policy_name        = "${var.environment}-pbs-security-policy"
+  security_policy_description = "Security policy for PBS LB"
+  use_adaptive_protection     = var.use_adaptive_protection
+  security_policy_rules       = var.pbs_security_policy_rules
+}
+moved {
+  from = google_compute_security_policy.pbs_security_policy
+  to   = module.pbs_security_policy.google_compute_security_policy.security_policy
+}
 
-  rule {
-    description = "Default allow all rule"
-    action      = "allow"
-    priority    = "2147483647"
+# Monitoring alerts and notifications for Cloud Armor security policies.
+module "pbs_cloudarmor_alarms" {
+  count  = var.enable_cloud_armor_alerts ? 1 : 0
+  source = "../shared/cloudarmor_alarms"
 
-    match {
-      versioned_expr = "SRC_IPS_V1"
-
-      config {
-        src_ip_ranges = ["*"]
-      }
-    }
-  }
-
-  dynamic "rule" {
-    for_each = var.pbs_security_policy_rules
-    content {
-      description = rule.value.description
-      action      = rule.value.action
-      priority    = rule.value.priority
-      preview     = rule.value.preview
-
-      match {
-        # Basic rules handle IP addresses/ranges only and require both
-        # versioned_expr and config be defined.
-        versioned_expr = rule.value.match.versioned_expr
-
-        dynamic "config" {
-          for_each = rule.value.match.expr == null ? [1] : []
-          content {
-            src_ip_ranges = rule.value.match.config.src_ip_ranges
-          }
-        }
-
-        # Advanced rules handle CEL expressions and require expr to be defined.
-        dynamic "expr" {
-          for_each = rule.value.match.expr != null ? [1] : []
-          content {
-            expression = rule.value.match.expr.expression
-          }
-        }
-      }
-    }
-  }
+  project_id              = var.project_id
+  environment             = var.environment
+  notifications_enabled   = var.enable_cloud_armor_notifications
+  notification_channel_id = var.cloud_armor_notification_channel_id
+  security_policy_name    = module.pbs_security_policy.security_policy.name
+  service_prefix          = "${var.environment} PBS"
 }
 
 # Backend service that maps to the auth cloud function for the load balancer to use
@@ -181,50 +125,19 @@ resource "google_compute_backend_service" "pbs_auth_loadbalancer_backend" {
   }
 }
 
-# Backend service that maps to the PBS managed instance group for the load balancer to use
-resource "google_compute_backend_service" "pbs_backend_service" {
-  name                            = "${var.environment}-pbs-backend"
-  project                         = var.project_id
-  description                     = "Backend service to point to PBS managed instance group"
-  enable_cdn                      = false
-  protocol                        = var.enable_domain_management ? "HTTP2" : "TCP"
-  port_name                       = var.pbs_named_port
-  timeout_sec                     = 3600
-  connection_draining_timeout_sec = 30
-  health_checks                   = [google_compute_health_check.pbs_health_check.id]
-  load_balancing_scheme           = "EXTERNAL_MANAGED"
-
-  backend {
-    description    = var.environment
-    group          = var.pbs_managed_instance_group_url
-    balancing_mode = "UTILIZATION"
-  }
-
-  log_config {
-    enable = true
-  }
-
-  security_policy = var.enable_security_policy ? google_compute_security_policy.pbs_security_policy.id : null
-}
-
 # Network Endpoint Group to route to Cloud Run PBS
 resource "google_compute_region_network_endpoint_group" "pbs_network_endpoint_group" {
-  count                 = var.deploy_pbs_cloud_run ? 1 : 0
   name                  = "${var.environment}-${var.region}-pbs"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
 
-  dynamic "cloud_run" {
-    for_each = var.deploy_pbs_cloud_run ? ["true"] : []
-    content {
-      service = var.pbs_cloud_run_name
-    }
+  cloud_run {
+    service = var.pbs_cloud_run_name
   }
 }
 
 # Backend service that maps to the PBS Network Endpoint Groups for the load balancer to use
 resource "google_compute_backend_service" "pbs_cloud_run_backend_service" {
-  count                           = var.deploy_pbs_cloud_run ? 1 : 0
   name                            = "${var.environment}-pbs-cloud-run-backend"
   project                         = var.project_id
   description                     = "Backend service to point to Cloud Run PBS"
@@ -233,51 +146,17 @@ resource "google_compute_backend_service" "pbs_cloud_run_backend_service" {
   connection_draining_timeout_sec = 30
   load_balancing_scheme           = "EXTERNAL_MANAGED"
 
-  dynamic "backend" {
-    for_each = var.deploy_pbs_cloud_run ? ["true"] : []
-    content {
-      description    = var.environment
-      group          = google_compute_region_network_endpoint_group.pbs_network_endpoint_group[0].id
-      balancing_mode = "UTILIZATION"
-    }
+  backend {
+    description    = var.environment
+    group          = google_compute_region_network_endpoint_group.pbs_network_endpoint_group.id
+    balancing_mode = "UTILIZATION"
   }
 
   log_config {
     enable = true
   }
 
-  security_policy = var.enable_security_policy ? google_compute_security_policy.pbs_security_policy.id : null
-}
-
-resource "google_compute_health_check" "pbs_health_check" {
-  name    = "${var.environment}-pbs-health-check"
-  project = var.project_id
-
-  check_interval_sec  = 10
-  timeout_sec         = 10
-  unhealthy_threshold = 5
-
-  # Enable when domain management is enabled
-  dynamic "http2_health_check" {
-    for_each = var.enable_domain_management ? [1] : []
-    content {
-      request_path       = "/health"
-      port               = var.pbs_health_check_port
-      port_specification = "USE_FIXED_PORT"
-      proxy_header       = "NONE"
-      host               = var.pbs_ip_address
-    }
-  }
-
-  # Enabled when domain management is NOT enabled
-  dynamic "tcp_health_check" {
-    for_each = var.enable_domain_management ? [] : [1]
-    content {
-      port               = var.pbs_health_check_port
-      port_specification = "USE_FIXED_PORT"
-      proxy_header       = "NONE"
-    }
-  }
+  security_policy = var.enable_security_policy ? module.pbs_security_policy.security_policy.id : null
 }
 
 # The URL map creates the HTTP(S) LB
@@ -320,14 +199,8 @@ resource "google_compute_url_map" "pbs_load_balancer_managed" {
         "/v1/transactions:status"
       ]
       route_action {
-        dynamic "weighted_backend_services" {
-          for_each = var.enable_pbs_cloud_run ? ["true"] : []
-          content {
-            backend_service = google_compute_backend_service.pbs_cloud_run_backend_service[0].id
-            weight          = var.pbs_cloud_run_traffic_percentage
-          }
-        }
       }
+      service = google_compute_backend_service.pbs_cloud_run_backend_service.id
     }
     path_rule {
       paths = [
@@ -343,7 +216,7 @@ resource "google_compute_target_tcp_proxy" "pbs_loadbalancer_proxy_managed" {
   project         = var.project_id
   count           = var.enable_domain_management ? 0 : 1
   name            = "${var.environment}-pbs-proxy"
-  backend_service = google_compute_backend_service.pbs_backend_service.id
+  backend_service = google_compute_backend_service.pbs_cloud_run_backend_service.id
 }
 
 # Proxy to loadbalancer. HTTPS with custom domain

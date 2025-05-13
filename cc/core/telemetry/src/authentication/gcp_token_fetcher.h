@@ -23,7 +23,7 @@
 #include "cc/core/telemetry/src/authentication/token_fetcher.h"
 #include "google/cloud/iam/credentials/v1/iam_credentials_client.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * GcpTokenFetcher is a concrete implementation of the TokenFetcher interface,
@@ -48,5 +48,5 @@ class GcpTokenFetcher : public TokenFetcher {
       iam_client_;
   void CreateIamClient();
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif

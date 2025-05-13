@@ -14,7 +14,7 @@
 
 #pragma once
 
-namespace google::scp::core::test {
+namespace privacy_sandbox::pbs_common {
 
 class TestLoggingUtils {
  public:
@@ -31,4 +31,4 @@ class TestLoggingUtils {
   static void EnableLogOutputToSyslog();
 };
 
-};  // namespace google::scp::core::test
+};  // namespace privacy_sandbox::pbs_common

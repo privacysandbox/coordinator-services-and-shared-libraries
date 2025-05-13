@@ -24,7 +24,7 @@
 #include "cc/core/interface/service_interface.h"
 #include "cc/pbs/interface/type_def.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 
 /// Represents metadata collection for a consume budget operation.
 struct ConsumeBudgetMetadata {
@@ -45,7 +45,7 @@ struct ConsumeBudgetMetadata {
 /// Represents consume budget transaction request object.
 struct ConsumeBudgetTransactionRequest {
   /// Id of the transaction.
-  privacy_sandbox::pbs_common::Uuid transaction_id;
+  pbs_common::Uuid transaction_id;
   /// In the case of remote transaction, the transaction secret will provide
   /// other participants to inquiry or update the state of a transaction.
   std::shared_ptr<std::string> transaction_secret;
@@ -57,7 +57,7 @@ struct ConsumeBudgetTransactionRequest {
 struct ConsumeBudgetTransactionResponse {
   /// The last execution time stamp of any phases of a transaction. This will
   /// provide optimistic concurrency behavior for the transaction execution.
-  privacy_sandbox::pbs_common::Timestamp last_execution_timestamp;
+  pbs_common::Timestamp last_execution_timestamp;
 };
 
 /**
@@ -65,10 +65,9 @@ struct ConsumeBudgetTransactionResponse {
  * Front end layer is responsible to accept the traffic, validate the requests,
  * and then execute operations on behalf of the caller.
  */
-class FrontEndServiceInterface
-    : public privacy_sandbox::pbs_common::ServiceInterface {
+class FrontEndServiceInterface : public pbs_common::ServiceInterface {
  public:
   virtual ~FrontEndServiceInterface() = default;
 };
 
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

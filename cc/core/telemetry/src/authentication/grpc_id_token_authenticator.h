@@ -23,7 +23,7 @@
 #include "cc/core/telemetry/src/authentication/token_fetcher.h"
 #include "grpcpp/security/credentials.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Periodically refreshes authentication tokens for gRPC metadata.
  *
@@ -72,4 +72,4 @@ class GrpcIdTokenAuthenticator : public grpc::MetadataCredentialsPlugin {
   std::string id_token_;
   std::chrono::system_clock::time_point expiry_time_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -67,7 +67,6 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotati
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpSplitKeyGenerationTasksModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbRegion;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;
-import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
@@ -79,6 +78,7 @@ import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZoneOverrid
 import com.google.scp.shared.clients.configclient.gcp.DefaultParameterModule;
 import com.google.scp.shared.clients.configclient.gcp.GcpParameterModule;
 import com.google.scp.shared.clients.configclient.model.ErrorReason;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import java.util.Optional;
 
 /** Module for Key Generation Application. */
@@ -132,7 +132,7 @@ public final class KeyGenerationModule extends AbstractModule {
 
   @Provides
   @Singleton
-  SpannerKeyDbConfig providerSpannerKeyDbConfig(
+  SpannerDatabaseConfig providerSpannerKeyDbConfig(
       @GcpProjectId String projectId, ParameterClient parameterClient)
       throws ParameterClientException {
     String spannerInstanceIdParam =
@@ -140,11 +140,10 @@ public final class KeyGenerationModule extends AbstractModule {
     String spannerDbNameParam =
         parameterClient.getParameter(KEY_DB_NAME).orElse(args.getDatabaseId());
 
-    return SpannerKeyDbConfig.builder()
+    return SpannerDatabaseConfig.builder()
         .setGcpProjectId(projectId)
-        .setSpannerInstanceId(spannerInstanceIdParam)
-        .setSpannerDbName(spannerDbNameParam)
-        .setReadStalenessSeconds(15)
+        .setInstanceId(spannerInstanceIdParam)
+        .setDatabaseName(spannerDbNameParam)
         .setEndpointUrl(args.getSpannerEndpoint())
         .build();
   }

@@ -70,7 +70,7 @@ import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataDbClient;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.MetadataDbSpannerTtlDays;
-import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbConfig;
+import com.google.scp.shared.gcp.util.SpannerDatabaseConfig;
 import com.google.scp.shared.mapper.TimeObjectMapper;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -79,11 +79,11 @@ import java.util.concurrent.ExecutionException;
 
 /** Module for frontend service integration test */
 public class FrontendServiceTestModule extends AbstractModule {
-  private static final SpannerMetadataDbConfig DB_CONFIG =
-      SpannerMetadataDbConfig.builder()
+  private static final SpannerDatabaseConfig DB_CONFIG =
+      SpannerDatabaseConfig.builder()
           .setGcpProjectId(GCP_TEST_PROJECT_ID)
-          .setSpannerInstanceId(SPANNER_TEST_INSTANCE_ID)
-          .setSpannerDbName(SPANNER_TEST_DB_NAME)
+          .setInstanceId(SPANNER_TEST_INSTANCE_ID)
+          .setDatabaseName(SPANNER_TEST_DB_NAME)
           .build();
 
   @Provides
@@ -141,8 +141,8 @@ public class FrontendServiceTestModule extends AbstractModule {
             .setCredentials(NoCredentials.getInstance())
             .setProjectId(DB_CONFIG.gcpProjectId())
             .build();
-    InstanceId instanceId = InstanceId.of(DB_CONFIG.gcpProjectId(), DB_CONFIG.spannerInstanceId());
-    DatabaseId databaseId = DatabaseId.of(instanceId, DB_CONFIG.spannerDbName());
+    InstanceId instanceId = InstanceId.of(DB_CONFIG.gcpProjectId(), DB_CONFIG.instanceId());
+    DatabaseId databaseId = DatabaseId.of(instanceId, DB_CONFIG.databaseName());
     return options.getService().getDatabaseClient(databaseId);
   }
 

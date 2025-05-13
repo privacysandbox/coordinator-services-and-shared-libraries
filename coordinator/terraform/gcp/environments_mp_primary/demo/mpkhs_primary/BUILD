@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,33 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:mappings.bzl", "pkg_files", "pkg_mklink")
+load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:public"])
 
 pkg_files(
     name = "mpkhs_primary_demo",
     srcs = [
-        "demo.auto.tfvars",
         "main.tf",
+        "outputs.tf",
+        "terraform.tf",
     ],
     prefix = "mpkhs_primary",
-)
-
-pkg_mklink(
-    name = "mpkhs_primary_link",
-    link_name = "mpkhs_primary/mpkhs_primary.tf",
-    target = "../../shared/mpkhs_primary/mpkhs_primary.tf",
-)
-
-pkg_mklink(
-    name = "mpkhs_primary_variables_link",
-    link_name = "mpkhs_primary/mpkhs_primary_variables.tf",
-    target = "../../shared/mpkhs_primary/mpkhs_primary_variables.tf",
-)
-
-pkg_mklink(
-    name = "mpkhs_primary_outputs_link",
-    link_name = "mpkhs_primary/mpkhs_primary_outputs.tf",
-    target = "../../shared/mpkhs_primary/mpkhs_primary_outputs.tf",
 )

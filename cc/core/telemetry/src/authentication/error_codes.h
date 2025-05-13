@@ -16,13 +16,13 @@
 #include "cc/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 REGISTER_COMPONENT_CODE(SC_PBS_TELEMETRY_AUTHENTICATION, 0x0235)
 
-DEFINE_ERROR_CODE(
-    SC_TELEMETRY_AUTHENTICATION_ID_TOKEN_FETCH_FAILED,
-    SC_PBS_TELEMETRY_AUTHENTICATION, 0x0001, "Id token fetch failed",
-    privacy_sandbox::pbs_common::HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_TELEMETRY_AUTHENTICATION_ID_TOKEN_FETCH_FAILED,
+                  SC_PBS_TELEMETRY_AUTHENTICATION, 0x0001,
+                  "Id token fetch failed",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
 
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

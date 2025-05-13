@@ -19,36 +19,9 @@
 
 #include <map>
 
-#include "cc/core/common/proto/common.pb.h"
-
 using std::map;
 
-namespace google::scp::core {
-map<core::common::proto::ExecutionStatus, ExecutionStatus> ReverseMap(
-    const map<ExecutionStatus, core::common::proto::ExecutionStatus>& m) {
-  map<core::common::proto::ExecutionStatus, ExecutionStatus> r;
-  for (const auto& kv : m) {
-    r[kv.second] = kv.first;
-  }
-  return r;
-}
-
-const map<ExecutionStatus, core::common::proto::ExecutionStatus>
-    kExecutionStatusToProtoMap = {
-        {ExecutionStatus::Success,
-         core::common::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS},
-        {ExecutionStatus::Failure,
-         core::common::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE},
-        {ExecutionStatus::Retry,
-         core::common::proto::ExecutionStatus::EXECUTION_STATUS_RETRY}};
-
-const std::map<core::common::proto::ExecutionStatus, ExecutionStatus>
-    kProtoToExecutionStatusMap = ReverseMap(kExecutionStatusToProtoMap);
-
-core::common::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status) {
-  return kExecutionStatusToProtoMap.at(status);
-}
-
+namespace privacy_sandbox::pbs_common {
 std::string ExecutionStatusToString(const ExecutionStatus& status) {
   switch (status) {
     case ExecutionStatus::Success:
@@ -61,23 +34,4 @@ std::string ExecutionStatusToString(const ExecutionStatus& status) {
       return "Unknown";
   }
 }
-
-core::common::proto::ExecutionResult ExecutionResult::ToProto() {
-  core::common::proto::ExecutionResult result_proto;
-  result_proto.set_status(ToStatusProto(status));
-  result_proto.set_status_code(status_code);
-  return result_proto;
-}
-
-ExecutionResult::ExecutionResult(
-    const core::common::proto::ExecutionResult result_proto) {
-  auto mapped_status = ExecutionStatus::Failure;
-  // Handle proto status UNKNOWN
-  if (kProtoToExecutionStatusMap.find(result_proto.status()) !=
-      kProtoToExecutionStatusMap.end()) {
-    mapped_status = kProtoToExecutionStatusMap.at(result_proto.status());
-  }
-  status = mapped_status;
-  status_code = result_proto.status_code();
-}
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

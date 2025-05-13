@@ -28,5 +28,6 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
         "@com_github_nlohmann_json//:singleheader-json",
+        "@com_google_absl//absl/strings",
     ],
 )

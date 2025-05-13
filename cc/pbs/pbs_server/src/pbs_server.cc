@@ -41,20 +41,20 @@
 
 namespace {
 
-using ::google::scp::core::ExecutionResultOr;
-using ::google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::kZeroUuid;
-using ::google::scp::pbs::CloudPlatformDependencyFactoryInterface;
-using ::google::scp::pbs::PBSInstanceV3;
+using ::privacy_sandbox::pbs::CloudPlatformDependencyFactoryInterface;
+using ::privacy_sandbox::pbs::PBSInstanceV3;
 using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
 using ::privacy_sandbox::pbs_common::EnvConfigProvider;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
 using ::privacy_sandbox::pbs_common::GlobalLogger;
+using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::privacy_sandbox::pbs_common::Logger;
 using ::privacy_sandbox::pbs_common::LoggerInterface;
 using ::privacy_sandbox::pbs_common::LogLevel;
 using ::privacy_sandbox::pbs_common::LogLevelFromString;
 using ::privacy_sandbox::pbs_common::ServiceInterface;
 using ::privacy_sandbox::pbs_common::StdoutLogProvider;
+using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::privacy_sandbox::pbs_common::SyslogLogProvider;
 
 std::shared_ptr<ConfigProviderInterface> config_provider;
@@ -69,11 +69,11 @@ GetEnvironmentSpecificFactory(const std::shared_ptr<ConfigProviderInterface>&
                                   config_provider_for_factory) {
 #if defined(PBS_GCP)
   SCP_INFO(kPBSServer, kZeroUuid, "Running GCP PBS.");
-  return std::make_unique<google::scp::pbs::GcpDependencyFactory>(
+  return std::make_unique<privacy_sandbox::pbs::GcpDependencyFactory>(
       config_provider_for_factory);
 #elif defined(PBS_LOCAL)
   SCP_INFO(kPBSServer, kZeroUuid, "Running Local PBS.");
-  return std::make_unique<google::scp::pbs::LocalDependencyFactory>(
+  return std::make_unique<privacy_sandbox::pbs::LocalDependencyFactory>(
       config_provider_for_factory);
 #else
   SCP_INFO(kPBSServer, kZeroUuid, "Environment not found.");
@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   std::list<std::string> enabled_log_levels;
   std::unordered_set<LogLevel> log_levels;
   if (config_provider
-          ->Get(google::scp::pbs::kEnabledLogLevels, enabled_log_levels)
+          ->Get(privacy_sandbox::pbs::kEnabledLogLevels, enabled_log_levels)
           .Successful()) {
     for (auto enabled_log_level : enabled_log_levels) {
       log_levels.emplace(LogLevelFromString(enabled_log_level));
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<LoggerInterface> logger_ptr;
   if (std::string log_provider;
-      config_provider->Get(google::scp::pbs::kLogProvider, log_provider)
+      config_provider->Get(privacy_sandbox::pbs::kLogProvider, log_provider)
           .Successful() &&
       log_provider == kStdoutLogProvider) {
     logger_ptr =

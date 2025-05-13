@@ -41,6 +41,8 @@ pkg_filegroup(
 pkg_filegroup(
     name = "multipartykeyhosting_modules_shared_pkg",
     srcs = [
+        "//coordinator/terraform/gcp/modules/shared/cloudarmor_alarms",
+        "//coordinator/terraform/gcp/modules/shared/cloudarmor_security_policy",
         "//coordinator/terraform/gcp/modules/shared/cloudfunction_alarms",
         "//coordinator/terraform/gcp/modules/shared/cloudfunction_dashboards",
         "//coordinator/terraform/gcp/modules/shared/loadbalancer_alarms",

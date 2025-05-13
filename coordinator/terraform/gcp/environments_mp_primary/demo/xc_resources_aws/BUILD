@@ -1,4 +1,4 @@
-# Copyright 2024 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:mappings.bzl", "pkg_files", "pkg_mklink")
+load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -20,26 +20,10 @@ pkg_files(
     name = "xc_resources_aws_demo",
     srcs = [
         "README.md",
-        "demo.auto.tfvars",
         "main.tf",
+        "outputs.tf",
+        "provider.tf",
+        "terraform.tf",
     ],
     prefix = "xc_resources_aws",
-)
-
-pkg_mklink(
-    name = "xc_resources_aws_link",
-    link_name = "xc_resources_aws/xc_resources_aws.tf",
-    target = "../../shared/xc_resources_aws/xc_resources_aws.tf",
-)
-
-pkg_mklink(
-    name = "xc_resources_aws_variables_link",
-    link_name = "xc_resources_aws/xc_resources_aws_variables.tf",
-    target = "../../shared/xc_resources_aws/xc_resources_aws_variables.tf",
-)
-
-pkg_mklink(
-    name = "xc_resources_aws_outputs_link",
-    link_name = "xc_resources_aws/xc_resources_aws_outputs.tf",
-    target = "../../shared/xc_resources_aws/xc_resources_aws_outputs.tf",
 )

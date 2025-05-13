@@ -21,14 +21,13 @@
 
 #include "cc/core/interface/authorization_proxy_interface.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 
 /**
  * @brief Simple synchronous authorizer that completes a context with
  * success.
  */
-class PassThruAuthorizationProxy
-    : public privacy_sandbox::pbs_common::AuthorizationProxyInterface {
+class PassThruAuthorizationProxy : public AuthorizationProxyInterface {
  public:
   ExecutionResult Init() noexcept override { return SuccessExecutionResult(); };
 
@@ -37,12 +36,10 @@ class PassThruAuthorizationProxy
   ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); };
 
   ExecutionResult Authorize(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::AuthorizationProxyRequest,
-          privacy_sandbox::pbs_common::AuthorizationProxyResponse>&
+      AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context) noexcept override {
-    authorization_context.response = std::make_shared<
-        privacy_sandbox::pbs_common::AuthorizationProxyResponse>();
+    authorization_context.response =
+        std::make_shared<AuthorizationProxyResponse>();
     // Return the requested domain as authorized.
     authorization_context.response->authorized_metadata
         .authorized_domain = std::make_shared<std::string>(
@@ -57,12 +54,10 @@ class PassThruAuthorizationProxy
  * @brief PassThruAuthorizationProxyAsync
  * This is helpful if the user wants to mimic async completion of context.
  */
-class PassThruAuthorizationProxyAsync
-    : public privacy_sandbox::pbs_common::AuthorizationProxyInterface {
+class PassThruAuthorizationProxyAsync : public AuthorizationProxyInterface {
  public:
   PassThruAuthorizationProxyAsync(
-      std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-          async_executor)
+      std::shared_ptr<AsyncExecutorInterface> async_executor)
       : async_executor_(async_executor) {}
 
   ExecutionResult Init() noexcept override { return SuccessExecutionResult(); };
@@ -72,12 +67,10 @@ class PassThruAuthorizationProxyAsync
   ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); };
 
   ExecutionResult Authorize(
-      privacy_sandbox::pbs_common::AsyncContext<
-          privacy_sandbox::pbs_common::AuthorizationProxyRequest,
-          privacy_sandbox::pbs_common::AuthorizationProxyResponse>&
+      AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context) noexcept override {
-    authorization_context.response = std::make_shared<
-        privacy_sandbox::pbs_common::AuthorizationProxyResponse>();
+    authorization_context.response =
+        std::make_shared<AuthorizationProxyResponse>();
     // Return the requested domain as authorized.
     authorization_context.response->authorized_metadata
         .authorized_domain = std::make_shared<std::string>(
@@ -88,7 +81,6 @@ class PassThruAuthorizationProxyAsync
   }
 
  private:
-  std::shared_ptr<privacy_sandbox::pbs_common::AsyncExecutorInterface>
-      async_executor_;
+  std::shared_ptr<AsyncExecutorInterface> async_executor_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -28,13 +28,6 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::GetMetricPointData;
-using ::google::scp::core::InMemoryMetricRouter;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::test::ResultIs;
-using ::privacy_sandbox::pbs_common::WaitUntil;
 using ::testing::IsEmpty;
 
 class HttpConnectionPoolTest : public testing::Test {

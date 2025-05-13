@@ -26,13 +26,6 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::ScpTestBase;
-using ::privacy_sandbox::pbs_common::ConcurrentQueue;
-
 using std::atomic;
 using std::thread;
 using std::vector;
@@ -56,8 +49,7 @@ TEST_F(ConcurrentQueueTests, ErrorOnMaxSize) {
 
   EXPECT_THAT(
       result,
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE)));
+      ResultIs(FailureExecutionResult(SC_CONCURRENT_QUEUE_CANNOT_ENQUEUE)));
 }
 
 TEST_F(ConcurrentQueueTests, ErrorOnNoElement) {
@@ -68,8 +60,7 @@ TEST_F(ConcurrentQueueTests, ErrorOnNoElement) {
 
   EXPECT_THAT(
       result,
-      ResultIs(FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE)));
+      ResultIs(FailureExecutionResult(SC_CONCURRENT_QUEUE_CANNOT_DEQUEUE)));
 }
 
 TEST_F(ConcurrentQueueTests, MultiThreadedEnqueue) {

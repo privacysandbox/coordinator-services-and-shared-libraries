@@ -24,18 +24,7 @@
 
 #include "error_codes.h"
 
-using google::scp::core::ExecutionResult;
-using google::scp::core::FailureExecutionResult;
-using google::scp::core::SuccessExecutionResult;
-using ::privacy_sandbox::pbs_common::GetErrorMessage;
-
-using ::privacy_sandbox::pbs_common::DAEMONIZER_FAILED_PARSING_INPUT;
-using ::privacy_sandbox::pbs_common::
-    DAEMONIZER_FAILED_WAITING_FOR_LAUNCHED_PROCESSES;
-using ::privacy_sandbox::pbs_common::DAEMONIZER_INVALID_INPUT;
-using ::privacy_sandbox::pbs_common::DAEMONIZER_UNKNOWN_ERROR;
-
-namespace google::scp::process_launcher {
+namespace privacy_sandbox::pbs_common {
 ExecutionResult Daemonizer::Run() noexcept {
   if (executable_count_ < 1) {
     return FailureExecutionResult(DAEMONIZER_INVALID_INPUT);
@@ -167,4 +156,4 @@ ExecutionResult Daemonizer::GetExecutableArgs() noexcept {
 bool Daemonizer::ShouldStopRestartingProcesses() noexcept {
   return false;
 }
-}  // namespace google::scp::process_launcher
+}  // namespace privacy_sandbox::pbs_common

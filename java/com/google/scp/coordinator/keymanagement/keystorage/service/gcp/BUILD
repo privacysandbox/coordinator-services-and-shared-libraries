@@ -34,6 +34,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/aws/credsprovider",
+        "//java/com/google/scp/shared/gcp/util",
         "//java/external:aws_apache_http",
         "//java/external:aws_dynamodb",
         "//java/external:aws_dynamodb_enhanced",

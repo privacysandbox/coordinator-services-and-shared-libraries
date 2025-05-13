@@ -22,16 +22,7 @@
 #include "cc/process_launcher/argument_parser/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using google::scp::core::FailureExecutionResult;
-using ::privacy_sandbox::pbs_common::ARGUMENT_PARSER_INVALID_EXEC_ARG_JSON;
-using ::privacy_sandbox::pbs_common::ARGUMENT_PARSER_INVALID_JSON;
-using ::privacy_sandbox::pbs_common::ARGUMENT_PARSER_UNKNOWN_TYPE;
-using google::scp::core::test::ResultIs;
-using google::scp::core::test::ScpTestBase;
-using google::scp::process_launcher::ExecutableArgument;
-using google::scp::process_launcher::JsonArgParser;
-
-namespace google::scp::process_launcher::test {
+namespace privacy_sandbox::pbs_common {
 class JsonArgParserTest : public ScpTestBase {};
 
 TEST_F(JsonArgParserTest,
@@ -167,4 +158,4 @@ TEST_F(JsonArgParserTest, SucceedWithFalseShouldRecoverFailuresFlag) {
   EXPECT_EQ(0, parsed_value.command_line_args.size());
   EXPECT_FALSE(parsed_value.restart);
 }
-}  // namespace google::scp::process_launcher::test
+}  // namespace privacy_sandbox::pbs_common

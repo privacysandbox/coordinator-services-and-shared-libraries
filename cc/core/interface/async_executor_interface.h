@@ -119,14 +119,14 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @param priority the priority of the task.
    * @return ExecutionResult result of the execution with possible error code.
    */
-  virtual google::scp::core::ExecutionResult Schedule(
-      const AsyncOperation& work, AsyncPriority priority) noexcept = 0;
+  virtual ExecutionResult Schedule(const AsyncOperation& work,
+                                   AsyncPriority priority) noexcept = 0;
 
   /**
    * @brief Same as above but with the given affinity setting.
    * @param affinity the affinity with which to schedule the work.
    */
-  virtual google::scp::core::ExecutionResult Schedule(
+  virtual ExecutionResult Schedule(
       const AsyncOperation& work, AsyncPriority priority,
       AsyncExecutorAffinitySetting affinity) noexcept = 0;
 
@@ -139,14 +139,14 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @param timestamp the timestamp to the task to be executed.
    * @return ExecutionResult result of the execution with possible error code.
    */
-  virtual google::scp::core::ExecutionResult ScheduleFor(
-      const AsyncOperation& work, Timestamp timestamp) noexcept = 0;
+  virtual ExecutionResult ScheduleFor(const AsyncOperation& work,
+                                      Timestamp timestamp) noexcept = 0;
 
   /**
    * @brief Same as above but with the given affinity setting.
    * @param affinity the affinity with which to schedule the work.
    */
-  virtual google::scp::core::ExecutionResult ScheduleFor(
+  virtual ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       AsyncExecutorAffinitySetting affinity) noexcept = 0;
 
@@ -160,7 +160,7 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @param cancellation_callback the cancellation callback to cancel the work.
    * @return ExecutionResult result of the execution with possible error code.
    */
-  virtual google::scp::core::ExecutionResult ScheduleFor(
+  virtual ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback) noexcept = 0;
 
@@ -168,7 +168,7 @@ class AsyncExecutorInterface : public ServiceInterface {
    * @brief Same as above but with the given affinity setting.
    * @param affinity the affinity with which to schedule the work.
    */
-  virtual google::scp::core::ExecutionResult ScheduleFor(
+  virtual ExecutionResult ScheduleFor(
       const AsyncOperation& work, Timestamp timestamp,
       TaskCancellationLambda& cancellation_callback,
       AsyncExecutorAffinitySetting affinity) noexcept = 0;

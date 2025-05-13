@@ -21,7 +21,7 @@
 
 #include "cc/core/interface/type_def.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 typedef uint8_t TokenCount;
 typedef std::string BudgetKeyName;
 typedef ::privacy_sandbox::pbs_common::Timestamp TimeGroup;
@@ -73,4 +73,4 @@ static constexpr char kMetricLabelValueCoordinator[] = "COORDINATOR";
 static constexpr char kMetricLabelKeyReportingOrigin[] = "reporting_origin";
 static constexpr char kMetricLabelTransactionPhase[] = "transaction_phase";
 inline constexpr absl::string_view kErrorReasonLabel = "pbs.error_reason";
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

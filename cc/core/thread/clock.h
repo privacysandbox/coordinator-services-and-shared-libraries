@@ -18,7 +18,7 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 
-namespace privacy_sandbox::pbs_common::internal {
+namespace privacy_sandbox::pbs_common {
 
 // Provides an interface for time-related operations, allowing to test with
 // simulated time. This base class uses the real system clock and standard
@@ -151,6 +151,6 @@ class SimulatedClock : public Clock {
   mutable absl::Mutex mutex_;
 };
 
-}  // namespace privacy_sandbox::pbs_common::internal
+}  // namespace privacy_sandbox::pbs_common
 
 #endif  // CC_CORE_THREAD_CLOCK_H_

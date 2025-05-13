@@ -24,21 +24,20 @@ namespace privacy_sandbox::pbs_common {
 class AsyncExecutorUtils {
  public:
   /// Sets the affinity of the current thread to that cpu number.
-  static inline google::scp::core::ExecutionResult SetAffinity(
-      size_t cpu_number) noexcept {
+  static inline ExecutionResult SetAffinity(size_t cpu_number) noexcept {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(cpu_number, &cpuset);
     int rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
     if (rc != 0) {
-      auto result = google::scp::core::FailureExecutionResult(
-          SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY);
+      auto result =
+          FailureExecutionResult(SC_ASYNC_EXECUTOR_UNABLE_TO_SET_AFFINITY);
       SCP_ERROR(kAsyncExecutorUtils, kZeroUuid, result,
                 absl::StrFormat("SetAffinity pthread_setaffinity_np failed: %s",
                                 strerror(rc)));
       return result;
     }
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
  private:

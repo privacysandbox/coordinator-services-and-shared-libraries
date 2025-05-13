@@ -51,14 +51,13 @@ class HttpConnection : public ServiceInterface {
    */
   HttpConnection(const std::shared_ptr<AsyncExecutorInterface>& async_executor,
                  const std::string& host, const std::string& service,
-                 bool is_https,
-                 absl::Nullable<google::scp::core::MetricRouter*> metric_router,
+                 bool is_https, absl::Nullable<MetricRouter*> metric_router,
                  TimeDuration http2_read_timeout_in_sec =
                      kDefaultHttp2ReadTimeoutInSeconds);
 
-  google::scp::core::ExecutionResult Init() noexcept override;
-  google::scp::core::ExecutionResult Run() noexcept override;
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Init() noexcept override;
+  ExecutionResult Run() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
   /**
    * @brief Executes the http request and processes the response.
@@ -66,7 +65,7 @@ class HttpConnection : public ServiceInterface {
    * @param http_context The context of the http operation.
    * @return ExecutionResult The execution result of the operation.
    */
-  google::scp::core::ExecutionResult Execute(
+  ExecutionResult Execute(
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept;
 
   /**
@@ -104,7 +103,7 @@ class HttpConnection : public ServiceInterface {
    * @param http_context The http context of the operation.
    */
   void SendHttpRequest(
-      privacy_sandbox::pbs_common::Uuid& request_id,
+      Uuid& request_id,
       AsyncContext<HttpRequest, HttpResponse>& http_context) noexcept;
 
   /**
@@ -117,8 +116,7 @@ class HttpConnection : public ServiceInterface {
    * @param error_code The error code of the stream closure operation.
    */
   void OnRequestResponseClosed(
-      privacy_sandbox::pbs_common::Uuid& request_id,
-      AsyncContext<HttpRequest, HttpResponse>& http_context,
+      Uuid& request_id, AsyncContext<HttpRequest, HttpResponse>& http_context,
       uint32_t error_code,
       std::chrono::time_point<std::chrono::steady_clock>
           submit_request_time) noexcept;
@@ -168,7 +166,7 @@ class HttpConnection : public ServiceInterface {
    * @param http_status_code The http status code.
    * @return ExecutionResult The execution result.
    */
-  google::scp::core::ExecutionResult ConvertHttpStatusCodeToExecutionResult(
+  ExecutionResult ConvertHttpStatusCodeToExecutionResult(
       const HttpStatusCode http_status_code) noexcept;
 
   /**
@@ -278,9 +276,7 @@ class HttpConnection : public ServiceInterface {
 
   // Indicates if the connection is dropped.
   std::atomic<bool> is_dropped_;
-  ConcurrentMap<privacy_sandbox::pbs_common::Uuid,
-                AsyncContext<HttpRequest, HttpResponse>,
-                privacy_sandbox::pbs_common::UuidCompare>
+  ConcurrentMap<Uuid, AsyncContext<HttpRequest, HttpResponse>, UuidCompare>
       pending_network_calls_;
 
  private:
@@ -288,9 +284,9 @@ class HttpConnection : public ServiceInterface {
    * Initializes the metrics.
    * @return ExecutionResult The execution result.
    */
-  google::scp::core::ExecutionResult MetricInit() noexcept;
+  ExecutionResult MetricInit() noexcept;
   // An instance of metric router which will provide APIs to create metrics.
-  google::scp::core::MetricRouter* metric_router_;
+  MetricRouter* metric_router_;
 
   // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;

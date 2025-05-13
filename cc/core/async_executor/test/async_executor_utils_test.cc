@@ -23,9 +23,6 @@
 namespace privacy_sandbox::pbs_common {
 namespace {
 
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::test::ResultIs;
-
 TEST(AsyncExecutorUtilsTest, BasicTests) {
   EXPECT_SUCCESS(AsyncExecutorUtils::SetAffinity(1));
   cpu_set_t cpuset;

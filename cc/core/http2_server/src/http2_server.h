@@ -86,7 +86,7 @@ class Http2Server : public HttpServerInterface {
       std::shared_ptr<AuthorizationProxyInterface> aws_authorization_proxy,
       const std::shared_ptr<ConfigProviderInterface>& config_provider = nullptr,
       Http2ServerOptions options = Http2ServerOptions(),
-      google::scp::core::MetricRouter* metric_router = nullptr)
+      MetricRouter* metric_router = nullptr)
       : host_address_(host_address),
         port_(port),
         thread_pool_size_(thread_pool_size),
@@ -106,13 +106,13 @@ class Http2Server : public HttpServerInterface {
 
   ~Http2Server();
 
-  google::scp::core::ExecutionResult Init() noexcept override;
+  ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
-  google::scp::core::ExecutionResult RegisterResourceHandler(
+  ExecutionResult RegisterResourceHandler(
       HttpMethod http_method, std::string& path,
       HttpHandler& handler) noexcept override;
 
@@ -219,7 +219,7 @@ class Http2Server : public HttpServerInterface {
   virtual void OnAuthorizationCallback(
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context,
-      privacy_sandbox::pbs_common::Uuid& request_id,
+      Uuid& request_id,
       const std::shared_ptr<Http2SynchronizationContext>&
           sync_context) noexcept;
 
@@ -236,9 +236,8 @@ class Http2Server : public HttpServerInterface {
    * @param execution_result The execution result of the callback.
    * @param request_id The request id associated with the operation.
    */
-  virtual void OnHttp2PendingCallback(
-      google::scp::core::ExecutionResult execution_result,
-      const privacy_sandbox::pbs_common::Uuid& request_id) noexcept;
+  virtual void OnHttp2PendingCallback(ExecutionResult execution_result,
+                                      const Uuid& request_id) noexcept;
 
   // The host address to run the http server on.
   std::string host_address_;
@@ -258,9 +257,7 @@ class Http2Server : public HttpServerInterface {
       resource_handlers_;
 
   // Registry of all the active requests.
-  ConcurrentMap<privacy_sandbox::pbs_common::Uuid,
-                std::shared_ptr<Http2SynchronizationContext>,
-                privacy_sandbox::pbs_common::UuidCompare>
+  ConcurrentMap<Uuid, std::shared_ptr<Http2SynchronizationContext>, UuidCompare>
       active_requests_;
 
   // Indicates whether the http server is running.
@@ -315,7 +312,7 @@ class Http2Server : public HttpServerInterface {
    *
    * @noexcept This function guarantees not to throw exceptions.
    */
-  google::scp::core::ExecutionResult OtelMetricInit() noexcept;
+  ExecutionResult OtelMetricInit() noexcept;
 
   /**
    * Records the server latency for a given activity and request. It measures
@@ -373,7 +370,7 @@ class Http2Server : public HttpServerInterface {
       const AsyncContext<NgHttp2Request, NgHttp2Response>& http_context);
 
   // An instance of metric router which will provide APIs to create metrics.
-  google::scp::core::MetricRouter* metric_router_;
+  MetricRouter* metric_router_;
 
   // OpenTelemetry Meter used for creating and managing metrics.
   std::shared_ptr<opentelemetry::metrics::Meter> meter_;

@@ -89,7 +89,7 @@ public abstract class CloudFunctionServiceBase implements HttpFunction {
     this.httpServerDurationHistogram =
         OTel.getMeter(this.getClass().getName())
             .histogramBuilder(OTelSemConMetrics.HTTP_SERVER_REQUEST_DURATION)
-            .setExplicitBucketBoundariesAdvice(OTelSemConMetrics.LATENCY_BUCKETS)
+            .setExplicitBucketBoundariesAdvice(OTelSemConMetrics.LATENCY_HISTOGRAM_BOUNDARIES)
             .build();
   }
 

@@ -32,16 +32,6 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::RetryExecutionResult;
-using ::google::scp::core::SuccessExecutionResult;
-using ::google::scp::core::test::ResultIs;
-using ::privacy_sandbox::pbs_common::AsyncContext;
-using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
-using ::privacy_sandbox::pbs_common::MockAsyncExecutor;
-using ::privacy_sandbox::pbs_common::OperationDispatcher;
-using ::privacy_sandbox::pbs_common::WaitUntil;
 
 TEST(OperationDispatcherTests, SuccessfulOperation) {
   std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
@@ -104,8 +94,7 @@ TEST(OperationDispatcherTests, RetryOperation) {
   context.callback = [&](AsyncContext<std::string, std::string>& context) {
     EXPECT_THAT(
         context.result,
-        ResultIs(FailureExecutionResult(
-            privacy_sandbox::pbs_common::SC_DISPATCHER_EXHAUSTED_RETRIES)));
+        ResultIs(FailureExecutionResult(SC_DISPATCHER_EXHAUSTED_RETRIES)));
     EXPECT_EQ(context.retry_count, 5);
     condition = true;
   };
@@ -135,8 +124,7 @@ TEST(OperationDispatcherTests, OperationExpiration) {
   context.callback = [&](AsyncContext<std::string, std::string>& context) {
     EXPECT_THAT(
         context.result,
-        ResultIs(FailureExecutionResult(
-            privacy_sandbox::pbs_common::SC_DISPATCHER_OPERATION_EXPIRED)));
+        ResultIs(FailureExecutionResult(SC_DISPATCHER_OPERATION_EXPIRED)));
     EXPECT_EQ(context.retry_count, 4);
     condition = true;
   };
@@ -191,8 +179,7 @@ TEST(OperationDispatcherTests, RetryOnAcceptance) {
   context.callback = [&](AsyncContext<std::string, std::string>& context) {
     EXPECT_THAT(
         context.result,
-        ResultIs(FailureExecutionResult(
-            privacy_sandbox::pbs_common::SC_DISPATCHER_EXHAUSTED_RETRIES)));
+        ResultIs(FailureExecutionResult(SC_DISPATCHER_EXHAUSTED_RETRIES)));
     condition = true;
   };
 

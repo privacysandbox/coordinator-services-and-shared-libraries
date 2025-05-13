@@ -18,7 +18,7 @@
 
 #include "opentelemetry/trace/trace_id.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
 TEST(TraceUtilsTest, GetTraceIdStringForValidTraceId) {
   // Define a test TraceId (128-bit, represented as 16 bytes).
@@ -41,4 +41,4 @@ TEST(TraceUtilsTest, GetTraceIdStringForEmptyTraceId) {
   EXPECT_EQ(GetTraceIdString(trace_id), "00000000000000000000000000000000");
 }
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

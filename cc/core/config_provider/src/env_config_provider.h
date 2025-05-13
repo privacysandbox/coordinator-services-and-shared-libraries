@@ -22,8 +22,8 @@
 #include <string>
 #include <type_traits>
 
+#include "absl/strings/str_split.h"
 #include "cc/core/interface/config_provider_interface.h"
-#include "cc/core/utils/src/string_util.h"
 #include "cc/public/core/interface/execution_result.h"
 
 #include "error_codes.h"
@@ -34,60 +34,43 @@ static constexpr char kCommaDelimiter[] = ",";
 
 /*! @copydoc ConfigProviderInterface
  */
-class EnvConfigProvider
-    : public privacy_sandbox::pbs_common::ConfigProviderInterface {
+class EnvConfigProvider : public ConfigProviderInterface {
  public:
-  google::scp::core::ExecutionResult Init() noexcept override;
+  ExecutionResult Init() noexcept override;
 
-  google::scp::core::ExecutionResult Run() noexcept override;
+  ExecutionResult Run() noexcept override;
 
-  google::scp::core::ExecutionResult Stop() noexcept override;
+  ExecutionResult Stop() noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      std::string& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key, std::string& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      int32_t& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key, int32_t& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      size_t& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key, size_t& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      bool& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key, bool& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      std::list<std::string>& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key,
+                      std::list<std::string>& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      std::list<int32_t>& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key,
+                      std::list<int32_t>& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      std::list<size_t>& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key,
+                      std::list<size_t>& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      std::list<bool>& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key,
+                      std::list<bool>& out) noexcept override;
 
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      double& out) noexcept override;
+  ExecutionResult Get(const ConfigKey& key, double& out) noexcept override;
 
  private:
   template <typename T>
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key, T& out) noexcept {
+  ExecutionResult Get(const ConfigKey& key, T& out) noexcept {
     const char* var_value = std::getenv(key.c_str());
 
     if (var_value == NULL) {
-      return google::scp::core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
+      return FailureExecutionResult(SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
 
     const std::string var_value_string(var_value);
@@ -96,7 +79,7 @@ class EnvConfigProvider
       return result;
     }
 
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
   /**
@@ -114,25 +97,17 @@ class EnvConfigProvider
    * does not exist.
    */
   template <typename T>
-  google::scp::core::ExecutionResult Get(
-      const privacy_sandbox::pbs_common::ConfigKey& key,
-      std::list<T>& out) noexcept {
+  ExecutionResult Get(const ConfigKey& key, std::list<T>& out) noexcept {
     const char* var_value = std::getenv(key.c_str());
 
     if (var_value == NULL) {
-      return google::scp::core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
+      return FailureExecutionResult(SC_CONFIG_PROVIDER_KEY_NOT_FOUND);
     }
 
-    std::list<std::string> parts;
-    const std::string value(var_value);
-    const std::string delimiter(kCommaDelimiter);
-    google::scp::core::utils::SplitStringByDelimiter(value, delimiter, parts);
-
-    for (const auto& part : parts) {
+    for (auto part : absl::StrSplit(var_value, kCommaDelimiter)) {
       T out_part;
 
-      auto result = StringToType(part, out_part);
+      auto result = StringToType(std::string(part), out_part);
       if (!result.Successful()) {
         return result;
       }
@@ -140,7 +115,7 @@ class EnvConfigProvider
       out.push_back(out_part);
     }
 
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 
   /**
@@ -152,10 +127,9 @@ class EnvConfigProvider
    * @return ExecutionResult failure if the conversion failed.
    */
   template <typename T>
-  google::scp::core::ExecutionResult StringToType(const std::string& str,
-                                                  T& out) {
+  ExecutionResult StringToType(const std::string& str, T& out) {
     std::stringstream string_stream;
-    if (std::is_same<T, bool>::value) {
+    if (std::is_same_v<T, bool>) {
       string_stream << std::boolalpha << str;
       string_stream >> std::boolalpha >> out;
     } else {
@@ -163,7 +137,7 @@ class EnvConfigProvider
       string_stream >> out;
     }
 
-    if (std::is_same<T, std::string>::value && str.empty()) {
+    if (std::is_same_v<T, std::string> && str.empty()) {
       // We only allow an empty value for the string type.
       // For other types, we let the stringstream mark
       // the operation as a failure.
@@ -171,11 +145,10 @@ class EnvConfigProvider
     }
 
     if (string_stream.fail()) {
-      return google::scp::core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
+      return FailureExecutionResult(SC_CONFIG_PROVIDER_VALUE_TYPE_ERROR);
     }
 
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 };
 }  // namespace privacy_sandbox::pbs_common

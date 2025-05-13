@@ -26,7 +26,7 @@
 #include "opentelemetry/trace/trace_flags.h"
 #include "opentelemetry/trace/tracer.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 namespace {
 
 using ::opentelemetry::common::AttributeValue;
@@ -615,4 +615,4 @@ TEST_F(TraceRouterInMemoryIntegrationTest,
 }
 
 }  // namespace
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common

@@ -156,8 +156,3 @@ class LoggerInterface : public ServiceInterface {
                          const std::string_view& message, ...) noexcept = 0;
 };
 }  // namespace privacy_sandbox::pbs_common
-
-namespace google::scp::core {
-using LogLevel = privacy_sandbox::pbs_common::LogLevel;
-using LoggerInterface = privacy_sandbox::pbs_common::LoggerInterface;
-}  // namespace google::scp::core

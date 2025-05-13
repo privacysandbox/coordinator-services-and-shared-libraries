@@ -41,22 +41,23 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-namespace google::scp::pbs {
+namespace privacy_sandbox::pbs {
 namespace {
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::test::IsSuccessful;
-using ::google::scp::core::test::IsSuccessfulAndHolds;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::utils::Base64Encode;
 using ::privacy_sandbox::pbs_common::AuthorizationMetadata;
+using ::privacy_sandbox::pbs_common::Base64Encode;
 using ::privacy_sandbox::pbs_common::BytesBuffer;
+using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
+using ::privacy_sandbox::pbs_common::IsSuccessful;
+using ::privacy_sandbox::pbs_common::IsSuccessfulAndHolds;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
+using ::privacy_sandbox::pbs_common::ResultIs;
+using ::privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
 using ::std::make_shared;
 using ::std::string;
 using ::testing::ContainsRegex;
@@ -165,14 +166,12 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
   AuthorizationMetadata bad_metadata;
   EXPECT_THAT(
       subject_.PrepareRequest(bad_metadata, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 
   bad_metadata.authorization_token = "some_token";
   EXPECT_THAT(
       subject_.PrepareRequest(bad_metadata, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
@@ -185,15 +184,13 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
                 IsSuccessful());
     EXPECT_THAT(
         subject_.PrepareRequest(authorization_metadata_, http_request_),
-        ResultIs(core::FailureExecutionResult(
-            privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+        ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
   }
 
   authorization_metadata_.authorization_token = "bad_json";
   EXPECT_THAT(
       subject_.PrepareRequest(authorization_metadata_, http_request_),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 TEST_F(AwsHttpRequestResponseAuthInterceptorTest, ObtainAuthorizedMetadata) {
@@ -221,9 +218,8 @@ TEST_F(AwsHttpRequestResponseAuthInterceptorTest,
   EXPECT_THAT(
       subject_.ObtainAuthorizedMetadataFromResponse(request_auth_metadata,
                                                     http_response),
-      ResultIs(core::FailureExecutionResult(
-          privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
+      ResultIs(FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN)));
 }
 
 }  // namespace
-}  // namespace google::scp::pbs
+}  // namespace privacy_sandbox::pbs

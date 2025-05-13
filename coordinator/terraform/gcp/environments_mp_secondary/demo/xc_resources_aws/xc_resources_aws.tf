@@ -1,1 +1,0 @@
-../../shared/xc_resources_aws/xc_resources_aws.tf

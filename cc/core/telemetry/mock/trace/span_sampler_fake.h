@@ -19,7 +19,7 @@
 #include "opentelemetry/sdk/trace/sampler.h"
 #include "opentelemetry/trace/span.h"
 
-namespace google::scp::core {
+namespace privacy_sandbox::pbs_common {
 class SpanSamplerFake : public opentelemetry::sdk::trace::Sampler {
  public:
   // Constructor initializes the sampler with a default description.
@@ -44,5 +44,5 @@ class SpanSamplerFake : public opentelemetry::sdk::trace::Sampler {
   // Sampler description for debugging.
   std::string description_;
 };
-}  // namespace google::scp::core
+}  // namespace privacy_sandbox::pbs_common
 #endif  // CC_CORE_TELEMETRY_MOCK_TRACE_TRACE_SAMPLER_FAKE_H_

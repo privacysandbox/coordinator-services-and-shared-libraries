@@ -26,14 +26,6 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using ::google::scp::core::ExecutionResult;
-using ::google::scp::core::FailureExecutionResult;
-using ::google::scp::core::test::ResultIs;
-using ::google::scp::core::test::ScpTestBase;
-using ::privacy_sandbox::pbs_common::ConcurrentMap;
-using ::privacy_sandbox::pbs_common::Uuid;
-using ::privacy_sandbox::pbs_common::UuidCompare;
-
 namespace privacy_sandbox::pbs_common {
 
 class ConcurrentMapTests : public ScpTestBase {};
@@ -55,9 +47,9 @@ TEST_F(ConcurrentMapTests, InsertExistingElement) {
   auto result = map.Insert(std::make_pair(1, 1), i);
   result = map.Insert(std::make_pair(1, 1), i);
 
-  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          privacy_sandbox::pbs_common::
-                              SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+  EXPECT_THAT(
+      result,
+      ResultIs(FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 }
 
 TEST_F(ConcurrentMapTests, DeleteExistingElement) {
@@ -70,18 +62,18 @@ TEST_F(ConcurrentMapTests, DeleteExistingElement) {
   EXPECT_SUCCESS(result);
 
   result = map.Find(key, val);
-  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          privacy_sandbox::pbs_common::
-                              SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+  EXPECT_THAT(
+      result,
+      ResultIs(FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(ConcurrentMapTests, DeleteNonExistingElement) {
   ConcurrentMap<int, int> map;
   int i = 0;
   auto result = map.Erase(i);
-  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
-                          privacy_sandbox::pbs_common::
-                              SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
+  EXPECT_THAT(
+      result,
+      ResultIs(FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST)));
 }
 
 TEST_F(ConcurrentMapTests, FindAnExistingElement) {

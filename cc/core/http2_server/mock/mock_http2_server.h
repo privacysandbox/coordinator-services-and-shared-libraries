@@ -26,22 +26,16 @@ class MockHttp2Server : public HttpServerInterface {
  public:
   MockHttp2Server() {}
 
-  google::scp::core::ExecutionResult Init() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Run() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult Stop() noexcept override {
-    return google::scp::core::SuccessExecutionResult();
-  }
+  ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); }
 
-  google::scp::core::ExecutionResult RegisterResourceHandler(
+  ExecutionResult RegisterResourceHandler(
       HttpMethod http_method, std::string& resource_path,
       HttpHandler& handler) noexcept override {
-    return google::scp::core::SuccessExecutionResult();
+    return SuccessExecutionResult();
   }
 };
 }  // namespace privacy_sandbox::pbs_common

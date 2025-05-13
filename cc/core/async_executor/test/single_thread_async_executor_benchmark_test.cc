@@ -23,8 +23,6 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using ::google::scp::core::ExecutionResult;
-using ::privacy_sandbox::pbs_common::TimeProvider;
 using std::atomic;
 using std::cout;
 using std::endl;

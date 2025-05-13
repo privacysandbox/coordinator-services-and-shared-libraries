@@ -20,7 +20,7 @@
 
 #include "cc/public/core/interface/execution_result.h"
 
-namespace google::scp::core::utils {
+namespace privacy_sandbox::pbs_common {
 /**
  * @brief Decode \a encoded as base64 encoded string, output to \a decoded.
  *
@@ -51,4 +51,4 @@ ExecutionResult Base64Encode(const std::string& decoded, std::string& encoded);
  */
 ExecutionResultOr<std::string> PadBase64Encoding(const std::string& encoded);
 
-}  // namespace google::scp::core::utils
+}  // namespace privacy_sandbox::pbs_common

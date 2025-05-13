@@ -35,9 +35,6 @@ locals {
   pbs_service_endpoint                  = var.enable_domain_management ? "https://${local.pbs_domain}" : "https://${local.pbs_ip_address}"
   pbs_ip_address                        = google_compute_global_address.pbs_ip_address.address
   pbs_cidr                              = "10.125.0.0/20"
-  pbs_main_port_name                    = "${var.environment}-pbs-main-port"
-  pbs_health_port_name                  = "${var.environment}-pbs-health-port"
-  pbs_health_port                       = 9000
 }
 
 # Reserve IP address for PBS.
@@ -126,33 +123,17 @@ module "pbs_managed_instance_group_environment" {
   pbs_spanner_budget_key_table_name     = module.pbs_storage.pbs_spanner_budget_key_table_name
   pbs_spanner_partition_lock_table_name = module.pbs_storage.pbs_spanner_partition_lock_table_name
 
-  machine_type           = var.machine_type
-  root_volume_size_gb    = var.root_volume_size_gb
-  pbs_autoscaling_policy = var.pbs_autoscaling_policy
-
-  pbs_cloud_logging_enabled    = var.pbs_cloud_logging_enabled
-  pbs_cloud_monitoring_enabled = var.pbs_cloud_monitoring_enabled
-
   pbs_application_environment_variables = var.pbs_application_environment_variables
   pbs_auth_audience_url                 = module.pbs_auth.pbs_auth_audience_url
   pbs_service_account_email             = var.pbs_service_account_email
   enable_domain_management              = var.enable_domain_management
   pbs_domain                            = "https://${local.pbs_domain}"
 
-  vpc_network_id           = google_compute_network.vpc_default_network.self_link
-  vpc_subnet_id            = google_compute_subnetwork.mig_subnetwork.self_link
-  network_target_tag       = local.pbs_instance_target_tag
-  pbs_custom_vm_tags       = var.pbs_custom_vm_tags
-  named_ports              = [{ name = "${local.pbs_main_port_name}", port = var.pbs_main_port }, { name = "${local.pbs_health_port_name}", port = local.pbs_health_port }]
-  main_port                = var.pbs_main_port
-  health_check_port        = local.pbs_health_port
-  enable_health_check      = var.enable_health_check
-  enable_public_ip_address = var.enable_public_ip_address
+  main_port = var.pbs_main_port
 
   pbs_cloud_run_min_instances   = var.pbs_cloud_run_min_instances
   pbs_cloud_run_max_instances   = var.pbs_cloud_run_max_instances
   pbs_cloud_run_max_concurrency = var.pbs_cloud_run_max_concurrency
-  deploy_pbs_cloud_run          = var.deploy_pbs_cloud_run
 }
 
 module "pbs_lb" {
@@ -162,27 +143,23 @@ module "pbs_lb" {
   region      = var.region
   project_id  = var.project
 
-  enable_domain_management         = var.enable_domain_management
-  pbs_domain                       = local.pbs_domain
-  parent_domain_name               = var.parent_domain_name
-  parent_domain_project            = var.parent_domain_project
-  pbs_ip_address                   = local.pbs_ip_address
-  pbs_auth_cloudfunction_name      = module.pbs_auth.pbs_auth_cloudfunction_name
-  pbs_cloud_run_name               = module.pbs_managed_instance_group_environment.pbs_cloud_run_name
-  pbs_managed_instance_group_url   = module.pbs_managed_instance_group_environment.pbs_instance_group_url
-  pbs_named_port                   = local.pbs_main_port_name
-  pbs_main_port                    = var.pbs_main_port
-  pbs_health_check_port            = local.pbs_health_port
-  pbs_vpc_network_id               = google_compute_network.vpc_default_network.self_link
-  pbs_instance_target_tag          = local.pbs_instance_target_tag
-  pbs_instance_allow_ssh           = var.pbs_instance_allow_ssh
-  pbs_tls_alternate_names          = var.pbs_tls_alternate_names
-  pbs_cloud_run_traffic_percentage = var.pbs_cloud_run_traffic_percentage
-  deploy_pbs_cloud_run             = var.deploy_pbs_cloud_run
-  enable_pbs_cloud_run             = var.enable_pbs_cloud_run
-  enable_security_policy           = var.enable_security_policy
-  use_adaptive_protection          = var.use_adaptive_protection
-  pbs_security_policy_rules        = var.pbs_security_policy_rules
+  enable_domain_management    = var.enable_domain_management
+  pbs_domain                  = local.pbs_domain
+  parent_domain_name          = var.parent_domain_name
+  parent_domain_project       = var.parent_domain_project
+  pbs_ip_address              = local.pbs_ip_address
+  pbs_auth_cloudfunction_name = module.pbs_auth.pbs_auth_cloudfunction_name
+  pbs_cloud_run_name          = module.pbs_managed_instance_group_environment.pbs_cloud_run_name
+  pbs_main_port               = var.pbs_main_port
+  pbs_vpc_network_id          = google_compute_network.vpc_default_network.self_link
+  pbs_tls_alternate_names     = var.pbs_tls_alternate_names
+
+  enable_security_policy              = var.enable_security_policy
+  use_adaptive_protection             = var.use_adaptive_protection
+  pbs_security_policy_rules           = var.pbs_security_policy_rules
+  enable_cloud_armor_alerts           = var.enable_cloud_armor_alerts
+  enable_cloud_armor_notifications    = var.enable_cloud_armor_notifications
+  cloud_armor_notification_channel_id = var.cloud_armor_notification_channel_id
 
   depends_on = [
     module.pbs_a_record,
@@ -261,7 +238,7 @@ resource "google_compute_firewall" "ingress_instance_firewall" {
 
   allow {
     protocol = "tcp"
-    ports    = ["${var.pbs_main_port}"]
+    ports    = [var.pbs_main_port]
   }
 
   allow {
