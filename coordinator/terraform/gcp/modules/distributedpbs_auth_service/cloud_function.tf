@@ -106,6 +106,7 @@ resource "google_cloudfunctions2_function" "pbs_auth_cloudfunction" {
 
 # IAM entry for cloud function service account to read from the database
 resource "google_spanner_database_iam_member" "pbs_auth_spannerdb_iam_policy" {
+  project  = var.project_id
   instance = var.pbs_auth_spanner_instance_name
   database = var.pbs_auth_spanner_database_name
   role     = "roles/spanner.databaseReader"

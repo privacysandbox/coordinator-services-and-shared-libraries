@@ -27,6 +27,7 @@ public class OTelSemConMetricsTest {
   public void latencyHistogramBoundaries() {
     ImmutableList<Double> expected =
         ImmutableList.of(
+            0.0,
             0.0001,
             0.00012589254117941674,
             0.00015848931924611136,

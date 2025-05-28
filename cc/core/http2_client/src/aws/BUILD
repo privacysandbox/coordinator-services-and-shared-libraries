@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "artifact_registry_repository_name" {
-  value = module.distributedpbs_base.artifact_registry_repository_name
-}
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
-output "pbs_service_account_email" {
-  description = "The email of the service account to be used for the PBS instances."
-  value       = module.distributedpbs_base.pbs_service_account_email
-}
+package(default_visibility = ["//cc:pbs_visibility"])
 
-output "project_id" {
-  description = "The project ID of this deployment."
-  value       = module.distributedpbs_base.project_id
-}
+cc_library(
+    name = "aws_v4_signer",
+    srcs = ["aws_v4_signer.cc"],
+    hdrs = ["aws_v4_signer.h"],
+    deps = [
+        "//cc/core/http2_client/src:error_codes",
+        "@boost//:algorithm",
+        "@boost//:asio_ssl",
+    ],
+)

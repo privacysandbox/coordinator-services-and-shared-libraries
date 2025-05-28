@@ -236,6 +236,12 @@ variable "key_storage_service_custom_audiences" {
   default     = []
 }
 
+variable "private_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Private Key Service."
+  type        = number
+  default     = 100
+}
+
 ################################################################################
 # Workload Identity Pool Provider Variables.
 ################################################################################
@@ -345,6 +351,28 @@ variable "use_adaptive_protection" {
   description = "Whether Cloud Armor Adaptive Protection is being used or not."
   type        = bool
   default     = false
+}
+
+variable "encryption_key_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for Encryption Key Service."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
+  default = null
+}
+
+variable "key_storage_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for Key Storage Service."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
+  default = null
 }
 
 variable "encryption_key_security_policy_rules" {

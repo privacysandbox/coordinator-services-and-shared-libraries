@@ -12,30 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "public_key_service_loadbalancer_ip" {
-  value = module.multipartykeyhosting_primary.public_key_service_loadbalancer_ip
+output "workload_identity_pool_provider_name" {
+  value = module.operator_workloadidentitypoolprovider.workload_identity_pool_provider_name
 }
 
-output "public_key_base_url" {
-  value = module.multipartykeyhosting_primary.public_key_base_url
+output "wip_allowed_service_account" {
+  value = module.operator_workloadidentitypoolprovider.wip_allowed_service_account
 }
 
-output "encryption_key_service_loadbalancer_ip" {
-  value = module.multipartykeyhosting_primary.encryption_key_service_loadbalancer_ip
-}
-
-output "encryption_key_base_url" {
-  value = module.multipartykeyhosting_primary.encryption_key_base_url
-}
-
-output "key_encryption_key_id" {
-  value = module.multipartykeyhosting_primary.key_encryption_key_id
-}
-
-output "key_generation_service_account" {
-  value = module.multipartykeyhosting_primary.key_generation_service_account
-}
-
-output "key_generation_service_account_unique_id" {
-  value = module.multipartykeyhosting_primary.key_generation_service_account_unique_id
+output "wip_verified_service_account" {
+  value = module.operator_workloadidentitypoolprovider.wip_verified_service_account
 }

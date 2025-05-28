@@ -32,6 +32,16 @@ variable "use_adaptive_protection" {
   type        = bool
 }
 
+variable "ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
+}
+
 variable "security_policy_rules" {
   description = "Set of objects to define as security policy rules."
   type = set(object({

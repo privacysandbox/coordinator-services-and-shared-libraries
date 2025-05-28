@@ -39,6 +39,8 @@ static constexpr size_t kMaxRequestBodySize = 1 * 1024 * 1024 * 1024;  // 100MB
 
 ExecutionResult NgHttp2Request::ReadUri() noexcept {
   handler_path = ng2_request_.uri().path;
+  // We should also fill NgHttp2Request::query here from
+  // ng2_request_.uri().raw_query
   return SuccessExecutionResult();
 }
 

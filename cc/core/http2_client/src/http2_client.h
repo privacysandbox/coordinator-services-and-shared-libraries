@@ -20,6 +20,7 @@
 
 #include "cc/core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "cc/core/http2_client/src/http_connection_pool.h"
+#include "cc/core/http2_client/src/http_options.h"
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/http_client_interface.h"
@@ -28,29 +29,6 @@
 #include "opentelemetry/metrics/meter.h"
 
 namespace privacy_sandbox::pbs_common {
-
-struct HttpClientOptions {
-  HttpClientOptions()
-      : retry_strategy_options(RetryStrategyOptions(
-            RetryStrategyType::Exponential, kDefaultRetryStrategyDelayInMs,
-            kDefaultRetryStrategyMaxRetries)),
-        max_connections_per_host(kDefaultMaxConnectionsPerHost),
-        http2_read_timeout_in_sec(kDefaultHttp2ReadTimeoutInSeconds) {}
-
-  HttpClientOptions(RetryStrategyOptions retry_strategy_options,
-                    size_t max_connections_per_host,
-                    TimeDuration http2_read_timeout_in_sec)
-      : retry_strategy_options(retry_strategy_options),
-        max_connections_per_host(max_connections_per_host),
-        http2_read_timeout_in_sec(http2_read_timeout_in_sec) {}
-
-  /// Retry strategy options.
-  const RetryStrategyOptions retry_strategy_options;
-  /// Max http connections per host.
-  const size_t max_connections_per_host;
-  /// nghttp client read timeout.
-  const TimeDuration http2_read_timeout_in_sec;
-};
 
 /*! @copydoc HttpClientInterface
  */

@@ -187,6 +187,16 @@ variable "use_adaptive_protection" {
   type        = bool
 }
 
+variable "key_storage_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for Key Storage Service."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
+}
+
 variable "key_storage_security_policy_rules" {
   description = "Set of objects to define as security policy rules for Key Storage Service."
   type = set(object({

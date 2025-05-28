@@ -236,6 +236,12 @@ variable "key_storage_service_custom_audiences" {
   default     = []
 }
 
+variable "private_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Private Key Service."
+  type        = number
+  default     = 100
+}
+
 ################################################################################
 # Workload Identity Pool Provider Variables.
 ################################################################################

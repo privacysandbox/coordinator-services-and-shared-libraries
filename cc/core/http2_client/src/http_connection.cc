@@ -179,11 +179,6 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
   // Otel metrics setup.
   meter_ = metric_router_->GetOrCreateMeter(kHttpConnectionMeter);
 
-  // Client-Server Latency View Setup.
-  static std::vector<double> kClientServerLatencyBoundaries = {
-      0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25,
-      0.5,   0.75, 1,     2.5,  5,     7.5, 10};
-
   metric_router_->CreateViewForInstrument(
       /*meter_name=*/kHttpConnectionMeter,
       /*instrument_name=*/kClientServerLatencyMetric,
@@ -191,15 +186,10 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
       opentelemetry::sdk::metrics::InstrumentType::kHistogram,
       /*aggregation_type=*/
       opentelemetry::sdk::metrics::AggregationType::kHistogram,
-      /*boundaries=*/kClientServerLatencyBoundaries,
+      /*boundaries=*/MakeLatencyHistogramBoundaries(),
       /*version=*/"", /*schema=*/"",
       /*view_description=*/"Client Server Latency histogram",
       /*unit=*/kSecondUnit);
-
-  // Client Request Duration View Setup.
-  static std::vector<double> kClientRequestDurationBoundaries = {
-      0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25,
-      0.5,   0.75, 1,     2.5,  5,     7.5, 10};
 
   metric_router_->CreateViewForInstrument(
       /*meter_name=*/kHttpConnectionMeter,
@@ -208,14 +198,10 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
       opentelemetry::sdk::metrics::InstrumentType::kHistogram,
       /*aggregation_type=*/
       opentelemetry::sdk::metrics::AggregationType::kHistogram,
-      /*boundaries=*/kClientRequestDurationBoundaries,
+      /*boundaries=*/MakeLatencyHistogramBoundaries(),
       /*version=*/"", /*schema=*/"",
       /*view_description=*/"Client Request Duration histogram",
       /*unit=*/kSecondUnit);
-
-  // Client-Connection Duration View Setup.
-  static std::vector<double> kClientConnectionDurationBoundaries = {
-      0.1, 0.5, 1, 2, 5, 10, 20, 30, 60};
 
   metric_router_->CreateViewForInstrument(
       /*meter_name=*/kHttpConnectionMeter,
@@ -224,7 +210,7 @@ ExecutionResult HttpConnection::MetricInit() noexcept {
       opentelemetry::sdk::metrics::InstrumentType::kHistogram,
       /*aggregation_type=*/
       opentelemetry::sdk::metrics::AggregationType::kHistogram,
-      /*boundaries=*/kClientConnectionDurationBoundaries,
+      /*boundaries=*/MakeLatencyHistogramBoundaries(),
       /*version=*/"", /*schema=*/"",
       /*view_description=*/"Connection duration histogram",
       /*unit=*/kSecondUnit);

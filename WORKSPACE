@@ -3,15 +3,19 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file"
 ################################################################################
 # Rules JVM External: Begin
 ################################################################################
-RULES_JVM_EXTERNAL_TAG = "6.6"
+# TODO: Use tag instead of specific commit hash once
+# https://github.com/bazel-contrib/rules_jvm_external/pull/1323 is available in a tagged release.
+RULES_JVM_EXTERNAL_COMMIT_HASH = "6f1a4e5f430de55dce5ae0e1a70f212cc9e029e4"
 
-RULES_JVM_EXTERNAL_SHA = "3afe5195069bd379373528899c03a3072f568d33bd96fe037bd43b1f590535e7"
+RULES_JVM_EXTERNAL_SHA = "89b9d17c6779f0fce33c5198f0bef50d85e042aa4ba34fd19c16cb99bf385c15"
 
 http_archive(
     name = "rules_jvm_external",
     sha256 = RULES_JVM_EXTERNAL_SHA,
-    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
-    url = "https://github.com/bazel-contrib/rules_jvm_external/releases/download/%s/rules_jvm_external-%s.tar.gz" % (RULES_JVM_EXTERNAL_TAG, RULES_JVM_EXTERNAL_TAG),
+    strip_prefix = "rules_jvm_external-" + RULES_JVM_EXTERNAL_COMMIT_HASH,
+    urls = [
+        "https://github.com/bazel-contrib/rules_jvm_external/archive/" + RULES_JVM_EXTERNAL_COMMIT_HASH + ".tar.gz",
+    ],
 )
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")

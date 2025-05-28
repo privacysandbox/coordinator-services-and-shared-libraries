@@ -66,6 +66,18 @@ archive_override(
     urls = "https://github.com/nelhage/rules_boost/archive/e3adfd8d6733c914d2b91a65fb7175af09602281.tar.gz",
 )
 
+# TODO: Remove the override once https://github.com/bazel-contrib/rules_jvm_external/pull/1323 is available in a tagged release.
+RULES_JVM_EXTERNAL_COMMIT_HASH = "6f1a4e5f430de55dce5ae0e1a70f212cc9e029e4"
+
+archive_override(
+    module_name = "rules_jvm_external",
+    integrity = "sha256-ibnRfGd58PzjPFGY8L71DYXgQqpLo0/RnBbLmb84XBU=",
+    strip_prefix = "rules_jvm_external-" + RULES_JVM_EXTERNAL_COMMIT_HASH,
+    urls = [
+        "https://github.com/bazel-contrib/rules_jvm_external/archive/" + RULES_JVM_EXTERNAL_COMMIT_HASH + ".tar.gz",
+    ],
+)
+
 non_module_boost_repositories = use_extension("@com_github_nelhage_rules_boost//:boost/repositories.bzl", "non_module_dependencies")
 use_repo(
     non_module_boost_repositories,

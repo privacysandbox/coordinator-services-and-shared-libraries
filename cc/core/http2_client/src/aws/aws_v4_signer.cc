@@ -29,7 +29,7 @@
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
-#include "../error_codes.h"
+#include "cc/core/http2_client/src/error_codes.h"
 
 using boost::algorithm::find_nth;
 using boost::algorithm::is_any_of;

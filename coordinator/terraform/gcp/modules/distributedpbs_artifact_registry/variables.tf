@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "project_id" {
+  description = "The GCP project name to use."
+  type        = string
+  nullable    = false
+}
+
 variable "environment" {
   type     = string
   nullable = false

@@ -21,11 +21,6 @@ terraform {
   }
 }
 
-provider "google" {
-  region  = var.region
-  project = var.project
-}
-
 locals {
   pbs_auth_allowed_principals           = var.pbs_remote_coordinator_service_account_email != null ? concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}", "serviceAccount:${var.pbs_remote_coordinator_service_account_email}"]) : concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}"])
   pbs_artifact_registry_repository_name = var.pbs_artifact_registry_repository_name != null ? var.pbs_artifact_registry_repository_name : "${var.environment}-scp-pbs-artifact-registry-repo"
@@ -58,6 +53,7 @@ module "pbs_a_record" {
 module "pbs_auth_storage" {
   source = "../../modules/distributedpbs_auth_db"
 
+  project_id                                    = var.project
   environment                                   = var.environment
   region                                        = var.region
   pbs_auth_spanner_instance_processing_units    = var.pbs_auth_spanner_instance_processing_units
@@ -96,6 +92,7 @@ module "pbs_auth" {
 module "pbs_storage" {
   source = "../../modules/distributedpbs_storage"
 
+  project_id                                     = var.project
   environment                                    = var.environment
   region                                         = var.region
   pbs_cloud_storage_journal_bucket_force_destroy = var.pbs_cloud_storage_journal_bucket_force_destroy
@@ -109,7 +106,7 @@ module "pbs_storage" {
 module "pbs_managed_instance_group_environment" {
   source = "../../modules/distributedpbs_managed_instance_group_environment"
 
-  project     = var.project
+  project_id  = var.project
   environment = var.environment
   region      = var.region
 
@@ -143,19 +140,21 @@ module "pbs_lb" {
   region      = var.region
   project_id  = var.project
 
-  enable_domain_management    = var.enable_domain_management
-  pbs_domain                  = local.pbs_domain
-  parent_domain_name          = var.parent_domain_name
-  parent_domain_project       = var.parent_domain_project
-  pbs_ip_address              = local.pbs_ip_address
-  pbs_auth_cloudfunction_name = module.pbs_auth.pbs_auth_cloudfunction_name
-  pbs_cloud_run_name          = module.pbs_managed_instance_group_environment.pbs_cloud_run_name
-  pbs_main_port               = var.pbs_main_port
-  pbs_vpc_network_id          = google_compute_network.vpc_default_network.self_link
-  pbs_tls_alternate_names     = var.pbs_tls_alternate_names
+  enable_domain_management       = var.enable_domain_management
+  pbs_domain                     = local.pbs_domain
+  parent_domain_name             = var.parent_domain_name
+  parent_domain_project          = var.parent_domain_project
+  pbs_ip_address                 = local.pbs_ip_address
+  pbs_auth_cloudfunction_name    = module.pbs_auth.pbs_auth_cloudfunction_name
+  pbs_cloud_run_name             = module.pbs_managed_instance_group_environment.pbs_cloud_run_name
+  pbs_main_port                  = var.pbs_main_port
+  pbs_vpc_network_id             = google_compute_network.vpc_default_network.self_link
+  pbs_tls_alternate_names        = var.pbs_tls_alternate_names
+  certificate_manager_has_prefix = var.certificate_manager_has_prefix
 
   enable_security_policy              = var.enable_security_policy
   use_adaptive_protection             = var.use_adaptive_protection
+  pbs_ddos_thresholds                 = var.pbs_ddos_thresholds
   pbs_security_policy_rules           = var.pbs_security_policy_rules
   enable_cloud_armor_alerts           = var.enable_cloud_armor_alerts
   enable_cloud_armor_notifications    = var.enable_cloud_armor_notifications
@@ -169,6 +168,7 @@ module "pbs_lb" {
 resource "google_compute_network" "vpc_default_network" {
   # Max 63 characters
   name                    = "${var.environment}-pbs-mig-vpc"
+  project                 = var.project
   description             = "VPC created for PBS environment ${var.environment}"
   auto_create_subnetworks = false
   mtu                     = 1500
@@ -176,6 +176,7 @@ resource "google_compute_network" "vpc_default_network" {
 
 resource "google_compute_subnetwork" "mig_subnetwork" {
   name                     = "${var.environment}-pbs-mig-hc-vpc-subnet"
+  project                  = var.project
   ip_cidr_range            = local.pbs_cidr
   network                  = google_compute_network.vpc_default_network.self_link
   region                   = var.region

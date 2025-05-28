@@ -1,5 +1,79 @@
 # Changelog
 
+## [1.25.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.24.0...v1.25.0) (2025-05-27)
+### Important Note
+**[GCP]**
+- Provider definitions have been removed from PBS Terraform. Ensure that the default project and region are set appropriately at the root module level
+- [Feature enabling] Update PBS to stop serving v1 request format.
+  - [To Enable] The feature is enabled by default. No action is required.
+  - [To Rollback] To rollback, add the following variable in the `auto.tfvars` for
+    `distributedpbs_application`:
+
+    ```
+    pbs_application_environment_variables = [
+      ...
+      {
+        name = "google_pbs_stop_serving_v1_request"
+        value = "false"
+      },
+    ]
+    ```
+- [Feature enabling] Option to enable security policies and adaptive protection on external load balancers for protection against DDoS attacks.
+  - [To Enable] Prior to enabling the Adaptive Protection feature flag, the billing account and project both need to be subscribed to Cloud Armor Enterprise.
+    - In the `auto.tfvars` of each service you want to enable:
+      - Set the flag `enable_security_policy` to `true`.
+      - Set the flag `use_adaptive_protection` to `true`.
+    - In the `auto.tfvars` for `distributedpbs_application`, define rules for PBS using the variable `pbs_security_policy_rules`
+    - In the `auto.tfvars` for `mpkhs`, define rules for each service using the following variables:
+      - Primary Coordinator:
+        - `public_key_security_policy_rules`
+        - `encryption_key_security_policy_rules`
+      - Secondary Coordinator:
+        - `encryption_key_security_policy_rules`
+        - `key_storage_security_policy_rules`
+    - In the `auto.tfvars` of each service with DoS protection enabled that you want alerts for:
+      - Set the flag `enable_cloud_armor_alerts` to `true`.
+      - If you also want notifications sent for alerts:
+        - Set the flag `enable_cloud_armor_notifications` to `true`.
+        - Set the flag `cloud_armor_notification_channel_id` to a valid `google_monitoring_notification_channel` resource id.
+    - Optionally configure the Adaptive Protection detection thresholds. In the `auto.tfvars` of each service you want to configure, define thresholds using the following variables:
+      - `pbs_ddos_thresholds`
+      - `public_key_ddos_thresholds`
+      - `encryption_key_ddos_thresholds`
+      - `key_storage_ddos_thresholds`
+  - [To Rollback] Remove or set the flags `enable_security_policy`, `use_adaptive_protection`, and `enable_cloud_armor_alerts` to `false`.
+- [Feature enabling] Create a certificate manager certificate for Public Key default domain
+  - [To Enable] The feature is enabled by default. No action is required.
+  - [To Rollback] To rollback, run the following cmd to remove the certificate map from the target proxy.
+    ```
+    gcloud compute target-https-proxies update \
+    a-public-key-service-cloud-run --clear-certificate-map \
+    --project <gcp_project_name>
+    ```
+
+### Changes
+- BUILD
+  - [CA] Update container dependencies
+- INFRA
+  - [GCP] Add Cloud Armor adaptive protection threshold configs
+  - [GCP] Remove missing output vars in demo environment
+- MPKGDS
+  - [GCP] Add configuration for Public key DNS cutover.
+  - [GCP] Create cert manager cert for the public key alternative domains, this is put behind a flag.
+  - [GCP] Migrate public key cert from compute SSL cert to cert manager managed cert to prepare for DNS migration
+  - [GCP] Remove the dependency of public key ssl cert in targe proxy with one flag, and clean up the ssl cert with another flag
+  - [GCP] Traffic splitting is now available for Public Key Service and Private Key Service. The variable `traffic_percent` can be configured to define the proportion of traffic routed to the revision with the updated configuration. When omitted, this variable defaults to 100%, indicating no traffic splitting occurs.
+- PBS
+  - [CA] Introduce SyncHttpClient
+  - [CA] Complete Binary Budget Consumer test in new GCP post-submit test
+  - [CA] Flip `google_pbs_stop_serving_v1_request` to true
+  - [CA] Introduce new post-submit framework for PBS
+  - [CA] Propagate `certificate_manager_has_prefix` variable to pbs application
+  - [CA] Update cert manager naming so that they are prefixed with env name
+  - [GCP] Add `project_id` output value to `distributedpbs_base`
+  - [GCP] Remove `region` variable from the `distributedpbs_alarms` terraform module
+  - [GCP] Remove provider definitions from PBS modules
+
 ## [1.24.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.23.0...v1.24.0) (2025-05-13)
 ### Important Note
 **[GCP]**

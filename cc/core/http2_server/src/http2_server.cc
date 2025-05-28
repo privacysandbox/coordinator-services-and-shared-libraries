@@ -177,11 +177,6 @@ ExecutionResult Http2Server::OtelMetricInit() noexcept {
 
   meter_ = metric_router_->GetOrCreateMeter(kHttp2ServerMeter);
 
-  // Server Duration View Setup.
-  static std::vector<double> kServerRequestDurationBoundaries = {
-      0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25,
-      0.5,   0.75, 1,     2.5,  5,     7.5, 10};
-
   metric_router_->CreateViewForInstrument(
       /*meter_name=*/kHttp2ServerMeter,
       /*instrument_name=*/kServerRequestDurationMetric,
@@ -189,7 +184,7 @@ ExecutionResult Http2Server::OtelMetricInit() noexcept {
       opentelemetry::sdk::metrics::InstrumentType::kHistogram,
       /*aggregation_type=*/
       opentelemetry::sdk::metrics::AggregationType::kHistogram,
-      /*boundaries=*/kServerRequestDurationBoundaries,
+      /*boundaries=*/MakeLatencyHistogramBoundaries(),
       /*version=*/"", /*schema=*/"",
       /*view_description=*/"Server Request Duration Histogram",
       /*unit=*/kSecondUnit);
@@ -202,7 +197,7 @@ ExecutionResult Http2Server::OtelMetricInit() noexcept {
                         opentelemetry::metrics::SynchronousInstrument> {
                 return meter_->CreateDoubleHistogram(
                     kServerRequestDurationMetric,
-                    "Duration of HTTP client requests.", kSecondUnit);
+                    "Duration of HTTP server requests.", kSecondUnit);
               }));
 
   active_requests_instrument_ = metric_router_->GetOrCreateObservableInstrument(

@@ -37,6 +37,7 @@ resource "random_id" "gcs_random_suffix" {
 
 # Note: name max length = 63
 resource "google_storage_bucket" "pbs_journal_bucket" {
+  project                     = var.project_id
   name                        = "${var.environment}_scp_pbs_journals_${random_id.gcs_random_suffix.hex}"
   location                    = var.region
   force_destroy               = var.pbs_cloud_storage_journal_bucket_force_destroy
@@ -68,6 +69,7 @@ resource "google_storage_bucket" "pbs_journal_bucket" {
 
 # Note: display_name max length = 30
 resource "google_spanner_instance" "pbs_spanner_instance" {
+  project          = var.project_id
   name             = "${var.environment}-pbsinst"
   display_name     = "${var.environment}-pbsinst"
   config           = local.spanner_config
@@ -97,6 +99,7 @@ resource "google_spanner_instance" "pbs_spanner_instance" {
 }
 
 resource "google_spanner_database" "pbs_spanner_database" {
+  project                  = var.project_id
   instance                 = google_spanner_instance.pbs_spanner_instance.name
   name                     = "${var.environment}-pbsdb"
   version_retention_period = var.pbs_spanner_database_retention_period

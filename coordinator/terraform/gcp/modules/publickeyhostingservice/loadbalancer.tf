@@ -12,6 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Get the hosted zone, this already exists as an variable for each project
+data "google_dns_managed_zone" "dns_zone" {
+  name    = replace(var.parent_domain_name, ".", "-")
+  project = var.project_id
+
+  lifecycle {
+    # Parent domain name should not be null
+    precondition {
+      condition     = var.parent_domain_name != null && var.project_id != null
+      error_message = "Domain management is enabled with an null parent_domain_name or project_id."
+    }
+  }
+}
+
+# A set representative of the public key alternative domains.
+locals {
+  alternative_domains_set = var.enable_public_key_alternative_domain ? toset(var.public_key_service_alternate_domain_names) : toset([])
+}
+
 # Network Endpoint Group to route to Cloud Run in each region
 resource "google_compute_region_network_endpoint_group" "public_key_service_cloud_run" {
   for_each = google_cloud_run_v2_service.public_key_service
@@ -25,6 +44,15 @@ resource "google_compute_region_network_endpoint_group" "public_key_service_clou
   }
 }
 
+# Generate random id in the name to solve name duplicate issue when reissuing the certificate
+resource "random_id" "public_key_default_cert_name" {
+  byte_length = 4
+  prefix      = "${var.environment}-public-key-cert-default-"
+  keepers = {
+    domain = var.public_key_domain
+  }
+}
+
 module "public_key_service_security_policy" {
   source = "../shared/cloudarmor_security_policy"
 
@@ -32,6 +60,7 @@ module "public_key_service_security_policy" {
   security_policy_name        = "${var.environment}-public-key-service-security-policy"
   security_policy_description = "Security policy for Public Key Service LB"
   use_adaptive_protection     = var.use_adaptive_protection
+  ddos_thresholds             = var.public_key_ddos_thresholds
   security_policy_rules       = var.public_key_security_policy_rules
 }
 moved {
@@ -114,9 +143,11 @@ resource "google_compute_target_https_proxy" "public_key_service_cloud_run" {
   name    = "${var.environment}-public-key-service-cloud-run"
   url_map = google_compute_url_map.public_key_service_cloud_run.id
 
-  ssl_certificates = [
+  ssl_certificates = var.disable_public_key_ssl_cert ? [] : [
     google_compute_managed_ssl_certificate.get_public_key_loadbalancer[0].id,
   ]
+
+  certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.public_key_cert_map[0].id}"
 }
 
 # Reserve IP address.
@@ -135,7 +166,7 @@ resource "google_compute_global_forwarding_rule" "public_key_service_cloud_run" 
 
   target = (
     var.enable_domain_management ?
-    google_compute_target_https_proxy.public_key_service_cloud_run[0].id :
+    google_compute_target_https_proxy.public_key_service_cloud_run[0].self_link :
     google_compute_target_http_proxy.public_key_service_cloud_run[0].id
   )
 }
@@ -145,7 +176,7 @@ resource "google_compute_global_forwarding_rule" "public_key_service_cloud_run" 
 # See console for status: https://console.cloud.google.com/loadbalancing/advanced/sslCertificates/list
 # Note: even if status of cert becomes 'Active', it can still take around 10 mins for requests to the domain to work.
 resource "google_compute_managed_ssl_certificate" "get_public_key_loadbalancer" {
-  count   = var.enable_domain_management ? 1 : 0
+  count   = var.enable_domain_management && !var.remove_public_key_ssl_cert ? 1 : 0
   project = var.project_id
   name    = "${var.environment}-public-key-cert"
 
@@ -153,3 +184,108 @@ resource "google_compute_managed_ssl_certificate" "get_public_key_loadbalancer" 
     domains = concat([var.public_key_domain], var.public_key_service_alternate_domain_names)
   }
 }
+
+# Mapping on all the public domains to its certificate.
+resource "google_certificate_manager_certificate_map" "public_key_cert_map" {
+  count       = var.enable_domain_management ? 1 : 0
+  project     = var.project_id
+  name        = "${var.project_id}-global-public-key-cert-map"
+  description = "Certificate map for public key"
+}
+
+# DNS auth for the public key default domain.
+resource "google_certificate_manager_dns_authorization" "public_key_dns_auth_default" {
+  count       = var.enable_domain_management ? 1 : 0
+  project     = var.project_id
+  name        = "${var.environment}-public-key-dns-auth-default"
+  description = "DNS authorization for GCP public key default domain validation"
+  domain      = var.public_key_domain
+}
+
+#  Add the default DNS auth record.
+resource "google_dns_record_set" "public_key_auth_record_default" {
+  count        = var.enable_domain_management ? 1 : 0
+  project      = var.project_id
+  name         = google_certificate_manager_dns_authorization.public_key_dns_auth_default[0].dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.public_key_dns_auth_default[0].dns_resource_record[0].type
+  ttl          = 60
+  managed_zone = data.google_dns_managed_zone.dns_zone.name
+  rrdatas      = [google_certificate_manager_dns_authorization.public_key_dns_auth_default[0].dns_resource_record[0].data]
+}
+
+# Cert for public key default record.
+resource "google_certificate_manager_certificate" "public_key_loadbalancer_cert_default" {
+  count       = var.enable_domain_management ? 1 : 0
+  project     = var.project_id
+  name        = random_id.public_key_default_cert_name.hex
+  description = "Cert manager cert for the default public key endpoint"
+
+  managed {
+    domains = compact([
+      google_certificate_manager_dns_authorization.public_key_dns_auth_default[0].domain,
+    ])
+    dns_authorizations = compact([
+      google_certificate_manager_dns_authorization.public_key_dns_auth_default[0].id,
+    ])
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Cert map entry for the public key default record.
+resource "google_certificate_manager_certificate_map_entry" "default" {
+  count        = var.enable_domain_management ? 1 : 0
+  project      = var.project_id
+  name         = "${var.project_id}-public-key-cert-map-entry-default"
+  description  = "PBS Certificate Map entry for the default domain"
+  map          = google_certificate_manager_certificate_map.public_key_cert_map[0].name
+  certificates = [google_certificate_manager_certificate.public_key_loadbalancer_cert_default[0].id]
+  matcher      = "PRIMARY"
+}
+
+# A random id as suffix of cert name to solve name duplicate issue when reissuing the certificate.
+resource "random_id" "alternative_cert_suffix" {
+  for_each    = local.alternative_domains_set
+  byte_length = 4
+}
+
+# Generate DNS auth for each alternative public key domains.
+resource "google_certificate_manager_dns_authorization" "alternative_authorization" {
+  for_each    = local.alternative_domains_set
+  project     = var.project_id
+  name        = "${var.environment}-public-key-alt-dns-auth-${random_id.alternative_cert_suffix[each.value].hex}"
+  description = "DNS authorization for GCP public key alternative domains validation"
+  domain      = each.value
+}
+
+# Create certificate for each alternative public key domains.
+resource "google_certificate_manager_certificate" "alternative_cert" {
+  for_each    = local.alternative_domains_set
+  project     = var.project_id
+  name        = "${var.environment}-public-key-alt-${random_id.alternative_cert_suffix[each.value].hex}"
+  description = "Google-managed cert for ${each.value}"
+
+  managed {
+    domains = [each.value]
+    dns_authorizations = [
+      google_certificate_manager_dns_authorization.alternative_authorization[each.value].id
+    ]
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "google_certificate_manager_certificate_map_entry" "alternative_entries" {
+  for_each = local.alternative_domains_set
+
+  project      = var.project_id
+  name         = "${var.project_id}-public-key-map-entry-alt-${random_id.alternative_cert_suffix[each.value].hex}"
+  description  = "PBS Certificate Map entry for the alternative domains"
+  map          = google_certificate_manager_certificate_map.public_key_cert_map[0].name
+  certificates = [google_certificate_manager_certificate.alternative_cert[each.value].id]
+  hostname     = each.value
+}
+

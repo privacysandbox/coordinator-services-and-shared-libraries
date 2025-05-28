@@ -23,6 +23,7 @@ cc_library(
     deps = [
         "//cc/core/authorization_service/src:core_authorization_service",
         "//cc/core/http2_client/src:http2_client_lib",
+        "//cc/core/http2_client/src/aws:aws_v4_signer",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",

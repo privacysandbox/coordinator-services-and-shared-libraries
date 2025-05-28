@@ -31,5 +31,4 @@ module "distributedpbs_alarms" {
   emergency_log_threshold   = var.emergency_log_threshold
   environment               = var.environment
   project                   = var.project
-  region                    = var.region
 }

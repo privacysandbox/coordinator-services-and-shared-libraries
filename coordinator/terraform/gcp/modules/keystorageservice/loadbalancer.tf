@@ -35,6 +35,7 @@ module "key_storage_service_security_policy" {
   security_policy_name        = "${var.environment}-key-storage-service-security-policy"
   security_policy_description = "Security policy for Key Storage Service LB"
   use_adaptive_protection     = var.use_adaptive_protection
+  ddos_thresholds             = var.key_storage_ddos_thresholds
   security_policy_rules       = var.key_storage_security_policy_rules
 }
 moved {

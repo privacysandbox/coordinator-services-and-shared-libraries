@@ -121,19 +121,24 @@ module "publickeyhostingservice" {
   application_name                           = var.application_name
 
   # Cloud Run vars
-  cloud_run_revision_force_replace = var.cloud_run_revision_force_replace
-  public_key_service_image         = var.public_key_service_image
+  cloud_run_revision_force_replace  = var.cloud_run_revision_force_replace
+  public_key_service_image          = var.public_key_service_image
+  public_key_service_canary_percent = var.public_key_service_canary_percent
 
   # Load balance vars
   enable_get_public_key_cdn                    = var.enable_get_public_key_cdn
   get_public_key_cloud_cdn_default_ttl_seconds = var.get_public_key_cloud_cdn_default_ttl_seconds
   get_public_key_cloud_cdn_max_ttl_seconds     = var.get_public_key_cloud_cdn_max_ttl_seconds
   public_key_load_balancer_logs_enabled        = var.public_key_load_balancer_logs_enabled
+  parent_domain_name                           = var.parent_domain_name
 
   # Domain Management
   enable_domain_management                  = var.enable_domain_management
   public_key_domain                         = local.public_key_domain
   public_key_service_alternate_domain_names = var.public_key_service_alternate_domain_names
+  enable_public_key_alternative_domain      = var.enable_public_key_alternative_domain
+  disable_public_key_ssl_cert               = var.disable_public_key_ssl_cert
+  remove_public_key_ssl_cert                = var.remove_public_key_ssl_cert
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
@@ -141,6 +146,7 @@ module "publickeyhostingservice" {
   # Cloud Armor vars
   enable_security_policy              = var.enable_security_policy
   use_adaptive_protection             = var.use_adaptive_protection
+  public_key_ddos_thresholds          = var.public_key_ddos_thresholds
   public_key_security_policy_rules    = var.public_key_security_policy_rules
   enable_cloud_armor_alerts           = var.enable_cloud_armor_alerts
   enable_cloud_armor_notifications    = var.enable_cloud_armor_notifications
@@ -169,6 +175,7 @@ module "encryptionkeyservice" {
   cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
   private_key_service_image            = var.private_key_service_image
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
+  private_key_service_canary_percent   = var.private_key_service_canary_percent
 
   # Domain Management
   enable_domain_management = var.enable_domain_management
@@ -180,6 +187,7 @@ module "encryptionkeyservice" {
   # Cloud Armor vars
   enable_security_policy               = var.enable_security_policy
   use_adaptive_protection              = var.use_adaptive_protection
+  encryption_key_ddos_thresholds       = var.encryption_key_ddos_thresholds
   encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
   enable_cloud_armor_alerts            = var.enable_cloud_armor_alerts
   enable_cloud_armor_notifications     = var.enable_cloud_armor_notifications

@@ -321,6 +321,24 @@ variable "encryption_key_service_subdomain" {
   default     = "privatekeyservice"
 }
 
+variable "enable_public_key_alternative_domain" {
+  description = "Set to true to enable the creation of alternative domain certificates and related resources."
+  type        = bool
+  default     = false
+}
+
+variable "disable_public_key_ssl_cert" {
+  description = "Disable the SSL certificate when all current certificates are migrated to cert manager cert"
+  type        = bool
+  default     = false
+}
+
+variable "remove_public_key_ssl_cert" {
+  description = "Remove the SSL certificate when all current certificates are migrated to cert manager cert"
+  type        = bool
+  default     = false
+}
+
 ################################################################################
 # Cloud Function Variables.
 ################################################################################
@@ -421,6 +439,18 @@ variable "private_key_service_custom_audiences" {
   description = "List of custom audiences for Private Key Service on Cloud Run."
   type        = list(string)
   default     = []
+}
+
+variable "public_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Public Key Service."
+  type        = number
+  default     = 100
+}
+
+variable "private_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Private Key Service."
+  type        = number
+  default     = 100
 }
 
 ################################################################################

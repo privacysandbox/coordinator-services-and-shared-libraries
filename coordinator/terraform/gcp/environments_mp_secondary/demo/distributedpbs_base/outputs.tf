@@ -20,3 +20,8 @@ output "pbs_service_account_email" {
   description = "The email of the service account to be used for the PBS instances."
   value       = module.distributedpbs_base.pbs_service_account_email
 }
+
+output "project_id" {
+  description = "The project ID of this deployment."
+  value       = module.distributedpbs_base.project_id
+}

@@ -39,3 +39,7 @@ output "key_generation_service_account" {
 output "key_generation_service_account_unique_id" {
   value = module.keygenerationservice.key_generation_service_account_unique_id
 }
+
+output "dns_authorization_cname_records_for_alternative_domains" {
+  value = module.publickeyhostingservice.dns_authorization_cname_records_for_alternative_domains
+}

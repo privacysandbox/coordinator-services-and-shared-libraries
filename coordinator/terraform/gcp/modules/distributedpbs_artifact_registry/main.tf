@@ -26,6 +26,7 @@ terraform {
 
 # Create Google Artifact Registry (AR) repository. Max id length is 64 chars.
 resource "google_artifact_registry_repository" "artifact_registry_repository" {
+  project       = var.project_id
   location      = var.region
   repository_id = "${var.environment}-scp-pbs-artifact-registry-repo"
   format        = "DOCKER"

@@ -26,9 +26,8 @@ cc_test(
     ],
     tags = ["manual"],
     deps = [
-        "//cc/core/async_executor/src:core_async_executor_lib",
         "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
-        "//cc/core/http2_client/src:http2_client_lib",
+        "//cc/core/http2_client/src:synchronous_http2_client",
         "//cc/core/test/utils/docker_helper:docker_helper_lib",
         "//cc/pbs/proto/storage:budget_value_cc_proto",
         "//cc/public/core/test/interface:execution_result_matchers",
@@ -36,6 +35,26 @@ cc_test(
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:storage",
         "@com_google_absl//absl/status:status_matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "postsubmit_gcp_integration_test",
+    size = "small",
+    srcs = ["postsubmit_gcp_integration_test.cc"],
+    tags = ["manual"],
+    deps = [
+        "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
+        "//cc/core/config_provider/src:config_provider_lib",
+        "//cc/core/http2_client/src:synchronous_http2_client",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/pbs/interface:pbs_interface_lib",
+        "//proto/pbs/api/v1:api_cc_proto",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status:status_matchers",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

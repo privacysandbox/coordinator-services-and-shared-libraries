@@ -318,6 +318,17 @@ variable "use_adaptive_protection" {
   default     = false
 }
 
+variable "pbs_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for PBS."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
+  default = null
+}
+
 variable "pbs_security_policy_rules" {
   description = "Set of objects to define as security policy rules for PBS."
   type = set(object({
@@ -371,4 +382,10 @@ variable "cloud_armor_notification_channel_id" {
   EOT
   type        = string
   default     = null
+}
+
+variable "certificate_manager_has_prefix" {
+  description = "If true, certificate manager resources will be prefixed with the environment name."
+  type        = bool
+  default     = false
 }

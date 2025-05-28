@@ -71,6 +71,7 @@ module "multipartykeyhosting_secondary" {
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
   key_storage_service_image            = var.key_storage_service_image
   key_storage_service_custom_audiences = var.key_storage_service_custom_audiences
+  private_key_service_canary_percent   = var.private_key_service_canary_percent
 
   aws_key_sync_enabled          = var.aws_key_sync_enabled
   aws_key_sync_role_arn         = var.aws_key_sync_role_arn

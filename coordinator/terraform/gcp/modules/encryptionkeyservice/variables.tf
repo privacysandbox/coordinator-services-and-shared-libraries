@@ -97,6 +97,16 @@ variable "private_key_service_custom_audiences" {
   type        = list(string)
 }
 
+variable "private_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Private Key Service."
+  type        = number
+
+  validation {
+    condition     = var.private_key_service_canary_percent >= 0 && var.private_key_service_canary_percent <= 100
+    error_message = "The traffic percent must be an integer between 0 and 100, inclusive."
+  }
+}
+
 ################################################################################
 # OpenTelemetry Variables
 ################################################################################
@@ -118,6 +128,16 @@ variable "enable_security_policy" {
 variable "use_adaptive_protection" {
   description = "Whether Cloud Armor Adaptive Protection is being used or not."
   type        = bool
+}
+
+variable "encryption_key_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for Encryption Key Service."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
 }
 
 variable "encryption_key_security_policy_rules" {

@@ -40,6 +40,9 @@ module "multipartykeyhosting_primary" {
   public_key_service_subdomain              = var.public_key_service_subdomain
   public_key_service_alternate_domain_names = var.public_key_service_alternate_domain_names
   encryption_key_service_subdomain          = var.encryption_key_service_subdomain
+  disable_public_key_ssl_cert               = var.disable_public_key_ssl_cert
+  remove_public_key_ssl_cert                = var.remove_public_key_ssl_cert
+  enable_public_key_alternative_domain      = var.enable_public_key_alternative_domain
 
   aws_xc_enabled                      = var.aws_xc_enabled
   aws_kms_key_encryption_key_arn      = var.aws_kms_key_encryption_key_arn
@@ -94,6 +97,8 @@ module "multipartykeyhosting_primary" {
   public_key_service_image             = var.public_key_service_image
   private_key_service_image            = var.private_key_service_image
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
+  public_key_service_canary_percent    = var.public_key_service_canary_percent
+  private_key_service_canary_percent   = var.private_key_service_canary_percent
 
   aws_key_sync_enabled          = var.aws_key_sync_enabled
   aws_key_sync_role_arn         = var.aws_key_sync_role_arn

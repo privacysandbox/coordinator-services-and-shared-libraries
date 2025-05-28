@@ -71,7 +71,7 @@ build:msan --linkopt=-fsanitize=memory
 build:lldb --compilation_mode=dbg
 build:lldb --dynamic_mode=off
 build:lldb --copt=-gpubnames
-build:lldb --linkopt=-Wl,--debug-names
+build:lldb --linkopt=-Wl
 
 build:kythe --keep_going
 build:kythe --experimental_extra_action_top_level_only

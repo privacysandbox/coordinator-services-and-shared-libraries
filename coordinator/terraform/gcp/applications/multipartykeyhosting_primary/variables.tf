@@ -320,6 +320,24 @@ variable "encryption_key_service_subdomain" {
   default     = "privatekeyservice"
 }
 
+variable "enable_public_key_alternative_domain" {
+  description = "Set to true to enable the creation of alternative domain certificates and related resources."
+  type        = bool
+  default     = false
+}
+
+variable "disable_public_key_ssl_cert" {
+  description = "Disable the SSL certificate when all current certificates are migrated to cert manager cert"
+  type        = bool
+  default     = false
+}
+
+variable "remove_public_key_ssl_cert" {
+  description = "Remove the SSL certificate when all current certificates are migrated to cert manager cert"
+  type        = bool
+  default     = false
+}
+
 ################################################################################
 # Cloud Function Variables.
 ################################################################################
@@ -422,6 +440,18 @@ variable "private_key_service_custom_audiences" {
   default     = []
 }
 
+variable "public_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Public Key Service."
+  type        = number
+  default     = 100
+}
+
+variable "private_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Private Key Service."
+  type        = number
+  default     = 100
+}
+
 ################################################################################
 # Key Management Variables.
 ################################################################################
@@ -502,6 +532,28 @@ variable "use_adaptive_protection" {
   description = "Whether Cloud Armor Adaptive Protection is being used or not."
   type        = bool
   default     = false
+}
+
+variable "encryption_key_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for Encryption Key Service."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
+  default = null
+}
+
+variable "public_key_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for Public Key Service."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
+  default = null
 }
 
 variable "encryption_key_security_policy_rules" {

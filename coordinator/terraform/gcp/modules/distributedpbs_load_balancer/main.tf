@@ -21,8 +21,10 @@
 locals {
   # IP CIDR ranges for the load balancer and health check services owned by Google
   # https://cloud.google.com/load-balancing/docs/https/setting-up-https#configuring_firewall_rules
-  lb_ip1 = "130.211.0.0/22"
-  lb_ip2 = "35.191.0.0/16"
+  lb_ip1                         = "130.211.0.0/22"
+  lb_ip2                         = "35.191.0.0/16"
+  enable_certificate_mananger_v1 = var.enable_domain_management && !var.certificate_manager_has_prefix
+  enable_certificate_mananger_v2 = var.enable_domain_management && var.certificate_manager_has_prefix
 }
 
 # Get the hosted zone. This must already exist.
@@ -84,6 +86,7 @@ module "pbs_security_policy" {
   security_policy_name        = "${var.environment}-pbs-security-policy"
   security_policy_description = "Security policy for PBS LB"
   use_adaptive_protection     = var.use_adaptive_protection
+  ddos_thresholds             = var.pbs_ddos_thresholds
   security_policy_rules       = var.pbs_security_policy_rules
 }
 moved {
@@ -198,8 +201,6 @@ resource "google_compute_url_map" "pbs_load_balancer_managed" {
         "/v1/transactions:end",
         "/v1/transactions:status"
       ]
-      route_action {
-      }
       service = google_compute_backend_service.pbs_cloud_run_backend_service.id
     }
     path_rule {
@@ -263,18 +264,17 @@ resource "google_compute_managed_ssl_certificate" "pbs_loadbalancer" {
 }
 
 resource "google_certificate_manager_certificate" "pbs_loadbalancer_cert" {
-  count       = var.enable_domain_management ? 1 : 0
+  count       = local.enable_certificate_mananger_v1 ? 1 : 0
   project     = var.project_id
   name        = random_id.pbs_cert_manager.hex
   description = "Certificate Manager cert for PBS"
   labels = {
-    env = "${var.environment}"
+    env = var.environment
   }
   managed {
     domains = compact([
       google_certificate_manager_dns_authorization.gcp_pbs_instance[0].domain,
     ])
-
     dns_authorizations = compact([
       google_certificate_manager_dns_authorization.gcp_pbs_instance[0].id,
     ])
@@ -284,14 +284,30 @@ resource "google_certificate_manager_certificate" "pbs_loadbalancer_cert" {
   }
 }
 
+resource "google_certificate_manager_certificate" "pbs_loadbalancer_cert_v2" {
+  count       = local.enable_certificate_mananger_v2 ? 1 : 0
+  project     = var.project_id
+  name        = random_id.pbs_cert_manager.hex
+  description = "Certificate Manager cert for PBS"
+  labels = {
+    env = var.environment
+  }
+  managed {
+    domains            = [google_certificate_manager_dns_authorization.gcp_pbs_instance_v2[0].domain]
+    dns_authorizations = [google_certificate_manager_dns_authorization.gcp_pbs_instance_v2[0].id]
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
+}
 
 resource "google_certificate_manager_certificate" "pbs_loadbalancer_alternate_cert" {
-  count       = (var.enable_domain_management == true && var.pbs_tls_alternate_names != null) ? 1 : 0
+  count       = (local.enable_certificate_mananger_v1 && var.pbs_tls_alternate_names != null) ? 1 : 0
   project     = var.project_id
   name        = "alternate-${random_id.pbs_cert_manager.hex}"
   description = "Certificate Manager cert for PBS alternate domains"
   labels = {
-    env = "${var.environment}"
+    env = var.environment
   }
 
   managed {
@@ -309,18 +325,51 @@ resource "google_certificate_manager_certificate" "pbs_loadbalancer_alternate_ce
   }
 }
 
+resource "google_certificate_manager_certificate" "pbs_loadbalancer_alternate_cert_v2" {
+  count       = (local.enable_certificate_mananger_v2 && var.pbs_tls_alternate_names != null) ? 1 : 0
+  project     = var.project_id
+  name        = "alternate-${random_id.pbs_cert_manager.hex}"
+  description = "Certificate Manager cert for PBS alternate domains"
+  labels = {
+    env = var.environment
+  }
+
+  managed {
+    domains            = [for index, _ in var.pbs_tls_alternate_names : google_certificate_manager_dns_authorization.pbs_alternate_instance_v2[index].domain]
+    dns_authorizations = [for index, _ in var.pbs_tls_alternate_names : google_certificate_manager_dns_authorization.pbs_alternate_instance_v2[index].id]
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "google_certificate_manager_dns_authorization" "gcp_pbs_instance" {
-  count       = var.enable_domain_management ? 1 : 0
+  count       = local.enable_certificate_mananger_v1 ? 1 : 0
   name        = "gcp-pbs-dns"
   description = "DNS Authorization for GCP PBS domain validation"
   domain      = var.pbs_domain
 }
 
+resource "google_certificate_manager_dns_authorization" "gcp_pbs_instance_v2" {
+  count       = local.enable_certificate_mananger_v2 ? 1 : 0
+  name        = "${var.environment}-pbs-dns-authz-${substr(sha256(var.pbs_domain), 0, 7)}"
+  description = "DNS Authorization for GCP PBS domain validation"
+  domain      = var.pbs_domain
+}
+
 resource "google_certificate_manager_dns_authorization" "pbs_alternate_instance" {
-  count       = (var.enable_domain_management == true && var.pbs_tls_alternate_names != null) ? length(var.pbs_tls_alternate_names) : 0
+  count       = (local.enable_certificate_mananger_v1 && var.pbs_tls_alternate_names != null) ? length(var.pbs_tls_alternate_names) : 0
   name        = "pbs-alternate-${count.index}-dns"
   description = "DNS Authorization for GCP PBS domain validation"
   domain      = var.pbs_tls_alternate_names[count.index]
+}
+
+resource "google_certificate_manager_dns_authorization" "pbs_alternate_instance_v2" {
+  for_each    = (local.enable_certificate_mananger_v2 && var.pbs_tls_alternate_names != null) ? toset(var.pbs_tls_alternate_names) : []
+  name        = "${var.environment}-pbs-alt-dns-authz-${substr(sha256(each.key), 0, 7)}"
+  description = "DNS Authorization for GCP PBS domain validation"
+  domain      = each.key
 }
 
 resource "google_certificate_manager_certificate_map" "pbs_loadbalancer_map" {
@@ -330,7 +379,7 @@ resource "google_certificate_manager_certificate_map" "pbs_loadbalancer_map" {
 }
 
 resource "google_certificate_manager_certificate_map_entry" "default" {
-  count        = var.enable_domain_management ? 1 : 0
+  count        = local.enable_certificate_mananger_v1 ? 1 : 0
   name         = "${random_id.pbs_cert_manager.hex}-map-entry"
   description  = "PBS Certificate Map entry"
   map          = google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].name
@@ -338,8 +387,17 @@ resource "google_certificate_manager_certificate_map_entry" "default" {
   matcher      = "PRIMARY"
 }
 
+resource "google_certificate_manager_certificate_map_entry" "default_v2" {
+  count        = local.enable_certificate_mananger_v2 ? 1 : 0
+  name         = "${random_id.pbs_cert_manager.hex}-map-entry"
+  description  = "PBS Certificate Map entry"
+  map          = google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].name
+  certificates = [google_certificate_manager_certificate.pbs_loadbalancer_cert_v2[0].id]
+  matcher      = "PRIMARY"
+}
+
 resource "google_certificate_manager_certificate_map_entry" "pbs_alternate_dns_map_entry" {
-  count        = (var.enable_domain_management == true && var.pbs_tls_alternate_names != null) ? length(var.pbs_tls_alternate_names) : 0
+  count        = (local.enable_certificate_mananger_v1 && var.pbs_tls_alternate_names != null) ? length(var.pbs_tls_alternate_names) : 0
   name         = "${random_id.pbs_cert_manager.hex}-${count.index}-map-entry"
   description  = "Alternate PBS Certificate Map entry"
   map          = google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].name
@@ -347,12 +405,31 @@ resource "google_certificate_manager_certificate_map_entry" "pbs_alternate_dns_m
   hostname     = var.pbs_tls_alternate_names[count.index]
 }
 
+resource "google_certificate_manager_certificate_map_entry" "pbs_alternate_dns_map_entry_v2" {
+  for_each     = (local.enable_certificate_mananger_v2 && var.pbs_tls_alternate_names != null) ? toset(var.pbs_tls_alternate_names) : []
+  name         = "${random_id.pbs_cert_manager.hex}-${substr(sha256(each.key), 0, 7)}-map-entry"
+  description  = "Alternate PBS Certificate Map entry"
+  map          = google_certificate_manager_certificate_map.pbs_loadbalancer_map[0].name
+  certificates = [google_certificate_manager_certificate.pbs_loadbalancer_alternate_cert_v2[0].id]
+  hostname     = each.key
+}
+
 resource "google_dns_record_set" "pbs_dns_auth_record_set" {
-  count        = var.enable_domain_management ? 1 : 0
+  count        = local.enable_certificate_mananger_v1 ? 1 : 0
   project      = var.parent_domain_project
-  name         = google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record.0.name
-  type         = google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record.0.type
+  name         = google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record[0].type
   ttl          = 60
   managed_zone = data.google_dns_managed_zone.dns_zone.name
-  rrdatas      = [google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record.0.data]
+  rrdatas      = [google_certificate_manager_dns_authorization.gcp_pbs_instance[0].dns_resource_record[0].data]
+}
+
+resource "google_dns_record_set" "pbs_dns_auth_record_set_v2" {
+  count        = local.enable_certificate_mananger_v2 ? 1 : 0
+  project      = var.parent_domain_project
+  name         = google_certificate_manager_dns_authorization.gcp_pbs_instance_v2[0].dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.gcp_pbs_instance_v2[0].dns_resource_record[0].type
+  ttl          = 60
+  managed_zone = data.google_dns_managed_zone.dns_zone.name
+  rrdatas      = [google_certificate_manager_dns_authorization.gcp_pbs_instance_v2[0].dns_resource_record[0].data]
 }

@@ -16,7 +16,7 @@
 # Global Variables.
 ################################################################################
 
-variable "project" {
+variable "project_id" {
   description = "The GCP project name to use."
   type        = string
   nullable    = false

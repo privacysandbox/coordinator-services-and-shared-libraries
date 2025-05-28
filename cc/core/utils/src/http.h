@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <array>
 #include <string>
 
 #include "cc/core/interface/async_context.h"
@@ -141,4 +142,30 @@ std::string GetUserAgentOrUnknownValue(
 
 // Function to convert HttpMethod enum to a string representation
 std::string HttpMethodToString(HttpMethod method);
+
+/**
+ * Generates set of boundaries for latency histograms.
+ *
+ * Constants used in the calculation are:
+ * - unit: s
+ * - power base: 10.0^0.1
+ * - scale factor: 0.0001 (min 0-100µs)
+ * - buckets: 78 (max 52.7m-1.1h)
+ *
+ * @return std::array<double, 78> OTel instrument boundaries.
+ */
+constexpr std::array<double, 78> MakeLatencyHistogramBoundaries() noexcept {
+  const double power_base = std::pow(10.0L, 0.1L);  // 1.2589254117941673
+  constexpr double scale_factor = 0.0001L;  // 100µs (0.0001s)
+
+  std::array<double, 78> boundaries;
+  boundaries[0] = 0.0L;  // Set the first element to 0
+
+  // Calculate boundaries from index 1 onwards.
+  for (std::size_t i = 1; i < boundaries.size(); i++) {
+    boundaries[i] = std::pow(power_base, /*exponent*/i - 1) * scale_factor;
+  }
+
+  return boundaries;
+}
 }  // namespace privacy_sandbox::pbs_common

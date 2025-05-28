@@ -31,6 +31,7 @@ locals {
 
 # Note: display_name max length = 30
 resource "google_spanner_instance" "pbs_auth_spanner_instance" {
+  project          = var.project_id
   name             = "${var.environment}-pbsauthinst"
   display_name     = "${var.environment}-pbsauthinst"
   config           = local.spanner_config
@@ -38,6 +39,7 @@ resource "google_spanner_instance" "pbs_auth_spanner_instance" {
 }
 
 resource "google_spanner_database" "pbs_auth_spanner_database" {
+  project                  = var.project_id
   instance                 = google_spanner_instance.pbs_auth_spanner_instance.name
   name                     = "${var.environment}-pbsauthdb"
   version_retention_period = var.pbs_auth_spanner_database_retention_period

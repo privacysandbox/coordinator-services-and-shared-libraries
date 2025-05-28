@@ -25,13 +25,15 @@ public class OTelSemConMetrics {
 
   private static final double LATENCY_HISTOGRAM_BOUNDARIES_POWER_BASE = Math.pow(10.0, 0.1);
   private static final double LATENCY_HISTOGRAM_BOUNDARIES_SCALE_FACTOR = 0.0001; // 100µs
-  private static final int LATENCY_HISTOGRAM_BOUNDARIES_NUM_BUCKETS = 76; // 1.1h
+  private static final int LATENCY_HISTOGRAM_BOUNDARIES_NUM_BUCKETS = 78; // 1.1h
 
   private static ImmutableList<Double> makeLatencyHistogramBoundaries() {
     ImmutableList.Builder<Double> boundaries = ImmutableList.builder();
-    for (int i = 0; i <= LATENCY_HISTOGRAM_BOUNDARIES_NUM_BUCKETS; i++) {
+    boundaries.add(0.0); // Set the first element to 0
+    // Calculate boundaries from index 1 onwards.
+    for (int i = 1; i < LATENCY_HISTOGRAM_BOUNDARIES_NUM_BUCKETS; i++) {
       double boundary =
-          Math.pow(LATENCY_HISTOGRAM_BOUNDARIES_POWER_BASE, i)
+          Math.pow(LATENCY_HISTOGRAM_BOUNDARIES_POWER_BASE, i - 1)
               * LATENCY_HISTOGRAM_BOUNDARIES_SCALE_FACTOR;
       boundaries.add(boundary);
     }

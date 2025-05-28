@@ -30,6 +30,7 @@ module "encryption_key_service_security_policy" {
   security_policy_name        = "${var.environment}-encryption-key-service-security-policy"
   security_policy_description = "Security policy for Encryption Key Service LB"
   use_adaptive_protection     = var.use_adaptive_protection
+  ddos_thresholds             = var.encryption_key_ddos_thresholds
   security_policy_rules       = var.encryption_key_security_policy_rules
 }
 moved {

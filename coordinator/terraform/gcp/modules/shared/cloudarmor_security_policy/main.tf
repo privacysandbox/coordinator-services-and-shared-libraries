@@ -21,6 +21,16 @@ resource "google_compute_security_policy" "security_policy" {
   adaptive_protection_config {
     layer_7_ddos_defense_config {
       enable = var.use_adaptive_protection
+
+      dynamic "threshold_configs" {
+        for_each = var.ddos_thresholds != null ? [1] : []
+        content {
+          name                               = var.ddos_thresholds.name
+          detection_load_threshold           = var.ddos_thresholds.detection_load_threshold
+          detection_absolute_qps             = var.ddos_thresholds.detection_absolute_qps
+          detection_relative_to_baseline_qps = var.ddos_thresholds.detection_relative_to_baseline_qps
+        }
+      }
     }
   }
 

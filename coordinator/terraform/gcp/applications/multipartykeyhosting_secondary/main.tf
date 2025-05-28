@@ -112,6 +112,7 @@ module "keystorageservice" {
   # Cloud Armor vars
   enable_security_policy              = var.enable_security_policy
   use_adaptive_protection             = var.use_adaptive_protection
+  key_storage_ddos_thresholds         = var.key_storage_ddos_thresholds
   key_storage_security_policy_rules   = var.key_storage_security_policy_rules
   enable_cloud_armor_alerts           = var.enable_cloud_armor_alerts
   enable_cloud_armor_notifications    = var.enable_cloud_armor_notifications
@@ -140,6 +141,7 @@ module "encryptionkeyservice" {
   cloud_run_revision_force_replace     = var.cloud_run_revision_force_replace
   private_key_service_image            = var.private_key_service_image
   private_key_service_custom_audiences = var.private_key_service_custom_audiences
+  private_key_service_canary_percent   = var.private_key_service_canary_percent
 
   # Domain Management
   enable_domain_management = var.enable_domain_management
@@ -151,6 +153,7 @@ module "encryptionkeyservice" {
   # Cloud Armor vars
   enable_security_policy               = var.enable_security_policy
   use_adaptive_protection              = var.use_adaptive_protection
+  encryption_key_ddos_thresholds       = var.encryption_key_ddos_thresholds
   encryption_key_security_policy_rules = var.encryption_key_security_policy_rules
   enable_cloud_armor_alerts            = var.enable_cloud_armor_alerts
   enable_cloud_armor_notifications     = var.enable_cloud_armor_notifications

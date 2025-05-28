@@ -32,3 +32,6 @@ typescript/node_modules
 
 #Ignore release notes file
 release_diff_*.txt
+
+# Ignored go binary
+go/budget_recovery/update_privacy_budget

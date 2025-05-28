@@ -24,6 +24,15 @@ module "multipartykeyhosting_primary" {
   parent_domain_name         = "<domain name from domainrecordsetup>"
   parent_domain_name_project = "<project_id from domainrecordsetup>"
 
+  # Alternative domains for the public key
+  public_key_service_alternate_domain_names = "<alternative domains list>"
+  # Whether Certifcate Manager certifcates will be issued to the alternative domains
+  enable_public_key_alternative_domain = false
+  # Whether the SSL certificate will be removed from the target proxy
+  disable_public_key_ssl_cert = false
+  # Whether the SSL certificate will be cleaned up
+  remove_public_key_ssl_cert = false
+
   get_public_key_cloudfunction_memory_mb         = 1024
   encryption_key_service_cloudfunction_memory_mb = 1024
 

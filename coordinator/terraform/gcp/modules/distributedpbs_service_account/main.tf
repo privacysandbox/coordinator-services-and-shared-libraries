@@ -22,6 +22,7 @@ terraform {
 }
 
 resource "google_service_account" "pbs_service_account" {
+  project = var.project_id
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-pbs-mig-sa"
   display_name = "The PBS service account of the managed instance group for ${var.environment}."

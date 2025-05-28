@@ -29,11 +29,6 @@ variable "project" {
   type        = string
 }
 
-variable "region" {
-  description = "Region where all resources will be created."
-  type        = string
-}
-
 variable "environment" {
   description = "Description for the environment, e.g. dev, staging, production."
   type        = string

@@ -38,8 +38,9 @@ variable "public_key_domain" {
 }
 
 variable "public_key_service_alternate_domain_names" {
-  description = "A list of alternate domain names for the public key service for which to add as a subject alternative name in the SSL certificate. Eg: [service-example.com]"
+  description = "A list of alternate domain names for the public key service for which to add as a cert manager cert. Eg: [service-example.com]"
   type        = list(string)
+  default     = []
 }
 
 variable "get_public_key_cloudfunction_memory_mb" {
@@ -117,6 +118,40 @@ variable "public_key_service_image" {
   type        = string
 }
 
+variable "public_key_service_canary_percent" {
+  description = "Target traffic percentage for the latest Cloud Run revision of Public Key Service."
+  type        = number
+
+  validation {
+    condition     = var.public_key_service_canary_percent >= 0 && var.public_key_service_canary_percent <= 100
+    error_message = "The traffic percent must be an integer between 0 and 100, inclusive."
+  }
+}
+
+variable "parent_domain_name" {
+  description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
+  type        = string
+  nullable    = false
+}
+
+variable "enable_public_key_alternative_domain" {
+  description = "Set to true to enable the creation of alternative public key domain certificates and related resources."
+  type        = bool
+  default     = false
+}
+
+variable "disable_public_key_ssl_cert" {
+  description = "Disable the SSL certificate when all current public key certificates are migrated to cert manager cert"
+  type        = bool
+  default     = false
+}
+
+variable "remove_public_key_ssl_cert" {
+  description = "Remove the SSL certificate when all current public key certificates are migrated to cert manager cert"
+  type        = bool
+  default     = false
+}
+
 ################################################################################
 # OpenTelemetry Variables
 ################################################################################
@@ -138,6 +173,16 @@ variable "enable_security_policy" {
 variable "use_adaptive_protection" {
   description = "Whether Cloud Armor Adaptive Protection is being used or not."
   type        = bool
+}
+
+variable "public_key_ddos_thresholds" {
+  description = "An object containing adaptive protection threshold configuration values for Public Key Service."
+  type = object({
+    name                               = string
+    detection_load_threshold           = number
+    detection_absolute_qps             = number
+    detection_relative_to_baseline_qps = number
+  })
 }
 
 variable "public_key_security_policy_rules" {

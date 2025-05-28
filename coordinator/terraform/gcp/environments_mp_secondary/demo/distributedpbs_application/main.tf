@@ -19,23 +19,6 @@
 # configuration cannot reference Terraform variables so this file must be
 # customized for each environment.
 
-terraform {
-  # Note: the following lines should be uncommented in order to store Terraform
-  # state in a remote backend.
-
-  # backend "gcs" {
-  #   bucket = "<bucket name goes here, recommended suffix -mp-secondary>"
-  #   prefix = "distributedpbs_application-secondary-tfstate"
-  # }
-
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = ">= 6.29.0"
-    }
-  }
-}
-
 module "distributedpbs_application" {
   source = "../../../applications/distributedpbs_application"
 

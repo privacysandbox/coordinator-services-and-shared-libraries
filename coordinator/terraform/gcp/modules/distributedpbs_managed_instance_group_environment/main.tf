@@ -25,9 +25,9 @@ locals {
   container_certificate_path = "/opt/google/ssl/self-signed-certs"
 
   pbs_auth_endpoint = var.enable_domain_management ? "${var.pbs_domain}/v1/auth" : var.pbs_auth_audience_url
-  pbs_image_cr      = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project}/${var.pbs_artifact_registry_repository_name}/pbs-cloud-run-image:${var.pbs_image_tag}"
+  pbs_image_cr      = var.pbs_image_override != null ? var.pbs_image_override : "${var.region}-docker.pkg.dev/${var.project_id}/${var.pbs_artifact_registry_repository_name}/pbs-cloud-run-image:${var.pbs_image_tag}"
   pbs_application_environment_variables_base = {
-    google_scp_gcp_project_id    = var.project,
+    google_scp_gcp_project_id    = var.project_id,
     google_scp_core_cloud_region = var.region,
     # This is required for Gcp Metric as the default aggregated metric interval
     # value is 1000, which exceeds Gcp custom metric quota limit (one data
@@ -58,6 +58,7 @@ locals {
     google_scp_otel_metric_export_timeout_msec                            = "50000",
     OTEL_METRICS_EXPORTER                                                 = "googlecloud",
     google_scp_pbs_enable_request_response_proto_migration                = "true",
+    google_pbs_stop_serving_v1_request                                    = "true",
   }
   pbs_cloud_run_environment_variables = {
     google_scp_pbs_http2_server_use_tls            = "false"
@@ -83,7 +84,7 @@ locals {
 }
 
 resource "google_artifact_registry_repository_iam_member" "pbs_artifact_registry_iam_read" {
-  project    = var.project
+  project    = var.project_id
   location   = var.region
   repository = var.pbs_artifact_registry_repository_name
   role       = "roles/artifactregistry.reader"
@@ -97,6 +98,7 @@ resource "google_storage_bucket_iam_member" "pbs_cloud_storage_iam_admin" {
 }
 
 resource "google_spanner_database_iam_member" "pbs_spanner_iam_user" {
+  project  = var.project_id
   instance = var.pbs_spanner_instance_name
   database = var.pbs_spanner_database_name
   role     = "roles/spanner.databaseUser"
@@ -104,25 +106,25 @@ resource "google_spanner_database_iam_member" "pbs_spanner_iam_user" {
 }
 
 resource "google_project_iam_member" "pbs_logging_iam_writer" {
-  project = var.project
+  project = var.project_id
   role    = "roles/logging.logWriter"
   member  = "serviceAccount:${var.pbs_service_account_email}"
 }
 
 resource "google_project_iam_member" "pbs_metric_iam_writer" {
-  project = var.project
+  project = var.project_id
   role    = "roles/monitoring.metricWriter"
   member  = "serviceAccount:${var.pbs_service_account_email}"
 }
 
 resource "google_project_iam_member" "pbs_compute_iam_viewer" {
-  project = var.project
+  project = var.project_id
   role    = "roles/compute.viewer"
   member  = "serviceAccount:${var.pbs_service_account_email}"
 }
 
 resource "google_project_iam_member" "pbs_tag_iam_viewer" {
-  project = var.project
+  project = var.project_id
   role    = "roles/resourcemanager.tagViewer"
   member  = "serviceAccount:${var.pbs_service_account_email}"
 }
