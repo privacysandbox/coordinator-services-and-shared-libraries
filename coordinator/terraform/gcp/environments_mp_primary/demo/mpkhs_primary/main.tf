@@ -28,6 +28,8 @@ module "multipartykeyhosting_primary" {
   public_key_service_alternate_domain_names = "<alternative domains list>"
   # Whether Certifcate Manager certifcates will be issued to the alternative domains
   enable_public_key_alternative_domain = false
+  # Whether the certificate map is used instead of the SSL certificate for public key domains
+  enable_public_key_certificate_map = false
   # Whether the SSL certificate will be removed from the target proxy
   disable_public_key_ssl_cert = false
   # Whether the SSL certificate will be cleaned up

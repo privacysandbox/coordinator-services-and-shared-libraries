@@ -147,7 +147,7 @@ resource "google_compute_target_https_proxy" "public_key_service_cloud_run" {
     google_compute_managed_ssl_certificate.get_public_key_loadbalancer[0].id,
   ]
 
-  certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.public_key_cert_map[0].id}"
+  certificate_map = var.enable_public_key_certificate_map ? "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.public_key_cert_map[0].id}" : null
 }
 
 # Reserve IP address.
@@ -238,7 +238,7 @@ resource "google_certificate_manager_certificate_map_entry" "default" {
   count        = var.enable_domain_management ? 1 : 0
   project      = var.project_id
   name         = "${var.project_id}-public-key-cert-map-entry-default"
-  description  = "PBS Certificate Map entry for the default domain"
+  description  = "Public key Certificate Map entry for the default domain"
   map          = google_certificate_manager_certificate_map.public_key_cert_map[0].name
   certificates = [google_certificate_manager_certificate.public_key_loadbalancer_cert_default[0].id]
   matcher      = "PRIMARY"
@@ -283,7 +283,7 @@ resource "google_certificate_manager_certificate_map_entry" "alternative_entries
 
   project      = var.project_id
   name         = "${var.project_id}-public-key-map-entry-alt-${random_id.alternative_cert_suffix[each.value].hex}"
-  description  = "PBS Certificate Map entry for the alternative domains"
+  description  = "Public key Certificate Map entry for the alternative domains"
   map          = google_certificate_manager_certificate_map.public_key_cert_map[0].name
   certificates = [google_certificate_manager_certificate.alternative_cert[each.value].id]
   hostname     = each.value

@@ -339,6 +339,12 @@ variable "remove_public_key_ssl_cert" {
   default     = false
 }
 
+variable "enable_public_key_certificate_map" {
+  description = "Associated the certificate manager certificate to the public key load balancer"
+  type        = bool
+  default     = false
+}
+
 ################################################################################
 # Cloud Function Variables.
 ################################################################################

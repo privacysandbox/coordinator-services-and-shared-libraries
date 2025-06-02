@@ -40,6 +40,7 @@ module "multipartykeyhosting_primary" {
   public_key_service_subdomain              = var.public_key_service_subdomain
   public_key_service_alternate_domain_names = var.public_key_service_alternate_domain_names
   encryption_key_service_subdomain          = var.encryption_key_service_subdomain
+  enable_public_key_certificate_map         = var.enable_public_key_certificate_map
   disable_public_key_ssl_cert               = var.disable_public_key_ssl_cert
   remove_public_key_ssl_cert                = var.remove_public_key_ssl_cert
   enable_public_key_alternative_domain      = var.enable_public_key_alternative_domain

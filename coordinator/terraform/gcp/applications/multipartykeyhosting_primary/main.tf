@@ -139,6 +139,7 @@ module "publickeyhostingservice" {
   enable_public_key_alternative_domain      = var.enable_public_key_alternative_domain
   disable_public_key_ssl_cert               = var.disable_public_key_ssl_cert
   remove_public_key_ssl_cert                = var.remove_public_key_ssl_cert
+  enable_public_key_certificate_map         = var.enable_public_key_certificate_map
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
