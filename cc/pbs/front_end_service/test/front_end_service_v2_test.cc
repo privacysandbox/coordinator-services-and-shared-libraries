@@ -26,8 +26,8 @@
 #include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/interface/async_context.h"
-#include "cc/core/interface/async_executor_interface.h"
 #include "cc/core/interface/config_provider_interface.h"
+#include "cc/core/interface/errors.h"
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/interface/http_types.h"
 #include "cc/core/telemetry/mock/in_memory_metric_router.h"
@@ -39,12 +39,15 @@
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
+#include "google/protobuf/text_format.h"
 
 namespace privacy_sandbox::pbs {
 
 namespace {
+using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AsyncContext;
 using ::privacy_sandbox::pbs_common::ExecutionResult;
+using ::privacy_sandbox::pbs_common::ExecutionResultOr;
 using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 }  // namespace
@@ -92,17 +95,20 @@ class FrontEndServiceV2Peer {
 
   ExecutionResult Init() { return front_end_service_v2_->Init(); }
 
+  ExecutionResultOr<std::unique_ptr<BudgetConsumer>> GetBudgetConsumer(
+      const ConsumePrivacyBudgetRequest& req) {
+    return front_end_service_v2_->GetBudgetConsumer(req);
+  }
+
  private:
   std::unique_ptr<FrontEndServiceV2> front_end_service_v2_;
 };
 
 namespace {
 
+using ::google::protobuf::TextFormat;
 using ::privacy_sandbox::pbs_common::AsyncContext;
-using ::privacy_sandbox::pbs_common::AsyncExecutorInterface;
 using ::privacy_sandbox::pbs_common::Byte;
-using ::privacy_sandbox::pbs_common::ConfigProviderInterface;
-using ::privacy_sandbox::pbs_common::ExecutionResultOr;
 using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::GetErrorMessage;
 using ::privacy_sandbox::pbs_common::GetMetricPointData;
@@ -115,7 +121,6 @@ using ::privacy_sandbox::pbs_common::MockAsyncExecutor;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 using ::testing::_;
-using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::UnorderedElementsAreArray;
@@ -126,7 +131,6 @@ constexpr absl::string_view kTransactionId =
 constexpr absl::string_view kTransactionSecret = "secret";
 constexpr absl::string_view kReportingOrigin = "https://fake.com";
 constexpr absl::string_view kClaimedIdentity = "https://origin.site.com";
-constexpr absl::string_view kClaimedIdentityInvalid = "123";
 constexpr absl::string_view kUserAgent = "aggregation-service/2.8.7";
 constexpr size_t k20191212DaysFromEpoch = 18242;
 constexpr size_t k20191012DaysFromEpoch = 18181;
@@ -1027,6 +1031,57 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestGetTransactionStatusReturns404) {
       front_end_service_v2_peer_->GetTransactionStatus(http_context)
           .status_code,
       SC_PBS_FRONT_END_SERVICE_GET_TRANSACTION_STATUS_RETURNS_404_BY_DEFAULT);
+}
+
+TEST(TestOneToOneMappingBetBudgetTypeAndBudgetConsumer,
+     TestOneToOneMappingBetBudgetTypeAndBudgetConsumer) {
+  auto budget_consumption_helper =
+      std::make_unique<MockBudgetConsumptionHelper>();
+  FrontEndServiceV2PeerOptions options;
+  options.budget_consumption_helper = budget_consumption_helper.get();
+  auto front_end_service_v2_peer = MakeFrontEndServiceV2Peer(options);
+  auto execution_result = front_end_service_v2_peer->Init();
+  ASSERT_TRUE(execution_result)
+      << GetErrorMessage(execution_result.status_code);
+
+  using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
+  std::string proto_string = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { budget_type: BUDGET_TYPE_BINARY_BUDGET }
+    }
+  )pb";
+
+  ConsumePrivacyBudgetRequest req;
+  ASSERT_TRUE(TextFormat::ParseFromString(proto_string, &req));
+
+  absl::flat_hash_set<std::string> returned_consumer_types;
+  const google::protobuf::EnumDescriptor* enum_descriptor =
+      PrivacyBudgetKey::BudgetType_descriptor();
+
+  // Do not test BUDGET_TYPE_UNSPECIFIED
+  for (int i = 1; i < enum_descriptor->value_count(); ++i) {
+    const google::protobuf::EnumValueDescriptor* value_descriptor =
+        enum_descriptor->value(i);
+    PrivacyBudgetKey::BudgetType budget_type =
+        static_cast<PrivacyBudgetKey::BudgetType>(value_descriptor->number());
+
+    req.mutable_data()->at(0).mutable_keys()->at(0).set_budget_type(
+        budget_type);
+    auto budget_consumer = front_end_service_v2_peer->GetBudgetConsumer(req);
+    ASSERT_TRUE(budget_consumer.has_value())
+        << GetErrorMessage(budget_consumer.result().status_code);
+    ASSERT_NE(budget_consumer->get(), nullptr);
+
+    // Ignore warning about deferencing the pointer
+#pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
+    std::string type_name = typeid(*budget_consumer->get()).name();
+
+    ASSERT_TRUE(returned_consumer_types.insert(type_name).second)
+        << "Duplicate consumer type returned for enum value " << budget_type
+        << ". Type: " << type_name << " was already returned by another enum.";
+  }
 }
 
 }  // namespace

@@ -216,6 +216,13 @@ http_file(
     urls = ["https://github.com/google/google-java-format/releases/download/v1.15.0/google-java-format-1.15.0-all-deps.jar"],
 )
 
+http_file(
+    name = "docker_compose",
+    downloaded_file_path = "docker-compose",
+    sha256 = "9040bd35b2cc0783ce6c5de491de7e52e24d4137dbfc5de8a524f718fc23556c",
+    url = "https://github.com/docker/compose/releases/download/v2.36.2/docker-compose-linux-x86_64",
+)
+
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(version = "1.23.0")
 

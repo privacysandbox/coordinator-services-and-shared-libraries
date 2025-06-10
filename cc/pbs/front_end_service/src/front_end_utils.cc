@@ -659,7 +659,7 @@ ValidateAndGetBudgetType(const ConsumePrivacyBudgetRequest& request_proto) {
 
   using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
   PrivacyBudgetKey::BudgetType budget_type =
-      PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET;
+      PrivacyBudgetKey::BUDGET_TYPE_UNSPECIFIED;
 
   for (const auto& data_body : request_proto.data()) {
     for (const auto& key_body : data_body.keys()) {
@@ -670,7 +670,9 @@ ValidateAndGetBudgetType(const ConsumePrivacyBudgetRequest& request_proto) {
       }
 
       // All keys should have the same budget type.
-      if (budget_type != key_budget_type) {
+      if (budget_type == PrivacyBudgetKey::BUDGET_TYPE_UNSPECIFIED) {
+        budget_type = key_budget_type;
+      } else if (budget_type != key_budget_type) {
         SCP_INFO(kFrontEndUtils, kZeroUuid,
                  absl::StrFormat(
                      "All keys should have the same budget type. "
@@ -679,12 +681,13 @@ ValidateAndGetBudgetType(const ConsumePrivacyBudgetRequest& request_proto) {
                      PrivacyBudgetKey::BudgetType_Name(key_budget_type)));
         return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
       }
-      budget_type = key_budget_type;
     }
   }
 
   // Default is binary budget consumer
-  return budget_type;
+  return budget_type == PrivacyBudgetKey::BUDGET_TYPE_UNSPECIFIED
+             ? PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET
+             : budget_type;
 }
 
 ExecutionResult ParseCommonV2TransactionRequestProto(

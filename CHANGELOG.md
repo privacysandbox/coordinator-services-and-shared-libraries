@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.26.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.25.0...v1.26.0) (2025-06-10)
+
+### Changes
+- INFRA
+  - [CA] Remove terraform version constraint in child modules
+- MPKGDS
+  - [AWS] Fix AWS assume role policy issue with multiple roles
+  - [GCP] Ignore changes to KeyDb DDL Terraform field
+- PBS
+  - [CA] Introduce docker compose binary
+  - [CA] Introduce test to verify one to one mapping between budget type and budget consumer
+  - [CA] Use docker-compose in PBS GCP Integration test
+
 ## [1.25.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.24.0...v1.25.0) (2025-05-27)
 ### Important Note
 **[GCP]**

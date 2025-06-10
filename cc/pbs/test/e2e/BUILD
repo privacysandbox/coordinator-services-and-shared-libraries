@@ -16,12 +16,18 @@ load("@rules_cc//cc:defs.bzl", "cc_test")
 
 package(default_visibility = ["//visibility:private"])
 
+filegroup(
+    name = "docker_compose_yaml",
+    srcs = ["docker-compose.yaml"],
+)
+
 cc_test(
     name = "pbs_gcp_integration_test",
     size = "large",
     timeout = "long",
     srcs = ["pbs_gcp_integration_test.cc"],
     data = [
+        ":docker_compose_yaml",
         "//cc/pbs/deploy/pbs_server/build_defs:pbs_cloud_run_container_for_local.tar",
     ],
     tags = ["manual"],

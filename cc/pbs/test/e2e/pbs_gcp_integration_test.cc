@@ -13,10 +13,12 @@
 // limitations under the License.
 #include <gtest/gtest.h>
 
-#include <map>
 #include <memory>
 #include <string>
 
+#include "absl/status/status_matchers.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "cc/core/common/operation_dispatcher/src/retry_strategy.h"
 #include "cc/core/common/uuid/src/uuid.h"
@@ -29,46 +31,36 @@
 #include "google/cloud/spanner/admin/instance_admin_client.h"
 #include "google/cloud/spanner/admin/instance_admin_connection.h"
 #include "google/cloud/status_or.h"
+#include "google/protobuf/text_format.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
 namespace privacy_sandbox::pbs_common {
 namespace {
+using ::absl_testing::IsOk;
 using ::google::cloud::spanner_admin::DatabaseAdminClient;
 using ::google::cloud::spanner_admin::InstanceAdminClient;
 using ::google::cloud::spanner_admin::MakeDatabaseAdminConnection;
-using ::google::cloud::spanner_admin::MakeInstanceAdminConnection;
 using ::google::protobuf::TextFormat;
 using ::google::protobuf::json::MessageToJsonString;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::Byte;
-using ::privacy_sandbox::pbs_common::CreateNetwork;
 using ::privacy_sandbox::pbs_common::ExecutionResult;
-using ::privacy_sandbox::pbs_common::ExecutionResultOr;
 using ::privacy_sandbox::pbs_common::GetIpAddress;
 using ::privacy_sandbox::pbs_common::HttpClientOptions;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
 using ::privacy_sandbox::pbs_common::HttpMethod;
 using ::privacy_sandbox::pbs_common::HttpRequest;
-using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kDefaultMaxConnectionsPerHost;
-using ::privacy_sandbox::pbs_common::LoadImage;
-using ::privacy_sandbox::pbs_common::RemoveNetwork;
 using ::privacy_sandbox::pbs_common::RetryStrategyOptions;
 using ::privacy_sandbox::pbs_common::RetryStrategyType;
-using ::privacy_sandbox::pbs_common::StartContainer;
-using ::privacy_sandbox::pbs_common::StopContainer;
 using ::privacy_sandbox::pbs_common::SyncHttpClient;
 using ::privacy_sandbox::pbs_common::TimeDuration;
 using ::privacy_sandbox::pbs_common::ToString;
 using ::privacy_sandbox::pbs_common::Uuid;
 
-constexpr absl::string_view kNetworkName = "testnetwork";
+constexpr absl::string_view kNetworkName = "pbse2etestnetwork";
 constexpr absl::string_view kSpannerEmulatorName = "spanner";
 constexpr absl::string_view kSpannerGrpcPort = "9010";
-constexpr absl::string_view kSpannerGrpcDockerPort = "9010:9010";
-constexpr absl::string_view kSpannerHttpDockerPort = "9020:9020";
-constexpr absl::string_view kSpannerImageName =
-    "gcr.io/cloud-spanner-emulator/emulator:1.5.24";
 constexpr absl::string_view kSpannerProjectId = "my-project";
 constexpr absl::string_view kSpannerInstanceName = "myinstance";
 constexpr absl::string_view kSpannerDatabaseName = "mydatabase";
@@ -81,39 +73,11 @@ constexpr absl::string_view kSpannerCreateDatabaseStatement =
     ") PRIMARY KEY(Budget_Key, Timeframe)";
 constexpr absl::string_view kPbsContainerName = "pbs";
 constexpr absl::string_view kPbsHttpPort = "9090";
-constexpr absl::string_view kPbsHttpDockerPort = "9090:9090";
 constexpr absl::string_view kPbsHealthCheckPort = "9091";
-constexpr absl::string_view kPbsHealthCheckDockerPort = "9091:9091";
 constexpr absl::string_view kPbsServerImageLocation =
     "cc/pbs/deploy/pbs_server/build_defs/pbs_cloud_run_container_for_local.tar";
-constexpr absl::string_view kPbsServerImageName =
-    "bazel/cc/pbs/deploy/pbs_server/build_defs:pbs_cloud_run_container_local";
-constexpr absl::string_view kRequestBodyV2Template = R"(
-  {
-    "v" : "2.0",
-    "data": [
-      {
-        "reporting_origin": "http://a.fake.com",
-        "keys": [
-          {
-            "key": "%s",
-            "token": 1,
-            "reporting_time": "2019-12-11T07:20:50.52Z"
-          }
-        ]
-      },
-      {
-        "reporting_origin": "http://b.fake.com",
-        "keys": [
-          {
-            "key": "%s",
-            "token": 1,
-            "reporting_time": "2019-12-12T07:20:50.52Z"
-          }
-        ]
-      }
-    ]
-  })";
+constexpr absl::string_view kDockerComposeLocation =
+    "cc/pbs/test/e2e/docker-compose.yaml";
 constexpr TimeDuration kHTTPClientBackoffDurationInMs = 10;
 constexpr size_t kHTTPClientMaxRetries = 6;
 constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 5;
@@ -186,21 +150,6 @@ void SetupSpannerDatabase(absl::string_view ip_address) {
   AddProtoTypeColumns(*database, database_admin_client);
 }
 
-absl::Status WaitForRunning(absl::string_view network_name,
-                            absl::string_view container_name) {
-  std::string pbs_ip_address = "";
-  for (int i = 0; i < 3 && pbs_ip_address == ""; ++i) {
-    // We need to sleep here because that is the only way to figure out whether
-    // a container has been running successfully.
-    absl::SleepFor(absl::Seconds(3));
-    pbs_ip_address =
-        GetIpAddress(std::string(network_name), std::string(container_name));
-  }
-  return pbs_ip_address == "" ? absl::FailedPreconditionError(absl::StrCat(
-                                    container_name, " is not running."))
-                              : absl::OkStatus();
-}
-
 HttpHeaders CreateHttpHeaders() {
   HttpHeaders headers;
   headers.insert({
@@ -212,66 +161,62 @@ HttpHeaders CreateHttpHeaders() {
   return headers;
 }
 
-std::string CreateRequestBodyV2() {
-  return absl::StrFormat(kRequestBodyV2Template, ToString(Uuid::GenerateUuid()),
-                         ToString(Uuid::GenerateUuid()));
+absl::StatusOr<std::string> CreateBinaryRequestBodyV2() {
+  std::string proto_string = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        # the key field will be added later
+        budget_type: BUDGET_TYPE_BINARY_BUDGET
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
+    }
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys {
+        # the key field will be added later
+        budget_type: BUDGET_TYPE_BINARY_BUDGET
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
+    }
+  )pb";
+
+  ConsumePrivacyBudgetRequest req;
+  if (!TextFormat::ParseFromString(proto_string, &req)) {
+    return absl::FailedPreconditionError(
+        "Couldn't parse proto from the string");
+  }
+
+  for (auto& data : *req.mutable_data()) {
+    for (auto& key : *data.mutable_keys()) {
+      key.set_key(ToString(Uuid::GenerateUuid()));
+    }
+  }
+
+  std::string json_string;
+  if (auto status = MessageToJsonString(req, &json_string); !status.ok()) {
+    return status;
+  }
+  return json_string;
 }
 
 class PBSIntegrationTest : public testing::Test {
  protected:
   static void SetUpTestSuite() {
-    // Create the docker network.
-    int return_status = CreateNetwork(std::string(kNetworkName));
-    ASSERT_EQ(return_status, 0);
-    // Start Spanner emulator
-    return_status = StartContainer(
-        std::string(kNetworkName), std::string(kSpannerEmulatorName),
-        std::string(kSpannerImageName), std::string(kSpannerGrpcDockerPort),
-        std::string(kSpannerHttpDockerPort), {});
-    ASSERT_EQ(return_status, 0);
-    ASSERT_TRUE(WaitForRunning(kNetworkName, kSpannerEmulatorName).ok());
+    ASSERT_EQ(LoadImage(std::string(kPbsServerImageLocation)), 0);
+
+    // Assure that we can run docker compose within our test
+    ASSERT_EQ(RunDockerComposeCmd("version"), 0);
+    ASSERT_EQ(RunDockerComposeCmd(absl::StrFormat(
+                  "--file %s up --wait --detach", kDockerComposeLocation)),
+              0);
+
     std::string emulator_ip_address = GetIpAddress(
         std::string(kNetworkName), std::string(kSpannerEmulatorName));
     SetupSpannerDatabase(emulator_ip_address);
-    return_status = LoadImage(std::string(kPbsServerImageLocation));
-    ASSERT_EQ(return_status, 0);
-    std::map<std::string, std::string> environment_variables = {
-        {"google_scp_otel_enabled", "true"},
-        {"google_scp_pbs_host_address", "0.0.0.0"},
-        {"google_scp_pbs_host_port", std::string(kPbsHttpPort)},
-        {"google_scp_pbs_health_port", std::string(kPbsHealthCheckPort)},
-        {"google_scp_pbs_http2_server_use_tls", "false"},
-        {"google_scp_pbs_io_async_executor_queue_size", "100"},
-        {"google_scp_pbs_io_async_executor_threads_count", "2"},
-        {"google_scp_pbs_async_executor_queue_size", "100"},
-        {"google_scp_pbs_async_executor_threads_count", "2"},
-        {"google_scp_core_http2server_threads_count", "2"},
-        {"google_scp_pbs_relaxed_consistency_enabled", "true"},
-        {"google_scp_pbs_log_provider", "StdoutLogProvider"},
-        {"google_scp_gcp_project_id", std::string(kSpannerProjectId)},
-        {"google_scp_spanner_instance_name", std::string(kSpannerInstanceName)},
-        {"google_scp_spanner_database_name", std::string(kSpannerDatabaseName)},
-        {"google_scp_pbs_budget_key_table_name",
-         std::string(kSpanerBudgetTableName)},
-        {"google_scp_core_spanner_endpoint_override",
-         absl::StrCat(emulator_ip_address, ":", kSpannerGrpcPort)},
-        {"SPANNER_EMULATOR_HOST",
-         absl::StrCat(emulator_ip_address, ":", kSpannerGrpcPort)},
-        // Unused, but required environment variables
-        {"google_scp_pbs_transaction_manager_capacity", "-1"},
-        {"google_scp_pbs_journal_service_bucket_name", "unused"},
-        {"google_scp_pbs_journal_service_partition_name", "unused"},
-        {"google_scp_pbs_partition_lock_table_name", "unused"},
-        {"google_scp_pbs_partition_lease_duration_in_seconds", "-1"},
-        {"google_scp_pbs_remote_claimed_identity", "unused"},
-        {"google_pbs_stop_serving_v1_request", "true"},
-    };
-    return_status = StartContainer(
-        std::string(kNetworkName), std::string(kPbsContainerName),
-        std::string(kPbsServerImageName), std::string(kPbsHttpDockerPort),
-        std::string(kPbsHealthCheckDockerPort), environment_variables);
-    ASSERT_EQ(return_status, 0);
-    ASSERT_TRUE(WaitForRunning(kNetworkName, kPbsContainerName).ok());
   }
 
   void SetUp() override {
@@ -292,9 +237,9 @@ class PBSIntegrationTest : public testing::Test {
   }
 
   static void TearDownTestSuite() {
-    StopContainer(std::string(kPbsContainerName));
-    StopContainer(std::string(kSpannerEmulatorName));
-    RemoveNetwork(std::string(kNetworkName));
+    ASSERT_EQ(RunDockerComposeCmd(
+                  absl::StrFormat("--file %s  down", kDockerComposeLocation)),
+              0);
   }
 
   ExecutionResult PerformRequest(absl::string_view path,
@@ -330,25 +275,28 @@ TEST_F(PBSIntegrationTest, HealthCheck) {
 
 TEST_F(PBSIntegrationTest, ConsumeBudgetV2FivePhases) {
   HttpHeaders headers = CreateHttpHeaders();
-  std::string request_body = CreateRequestBodyV2();
+  absl::StatusOr<std::string> request_body = CreateBinaryRequestBodyV2();
+  ASSERT_THAT(request_body, IsOk());
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:begin", request_body, headers));
+      PerformRequest("/v1/transactions:begin", *request_body, headers));
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:prepare", request_body, headers));
+      PerformRequest("/v1/transactions:prepare", *request_body, headers));
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:commit", request_body, headers));
+      PerformRequest("/v1/transactions:commit", *request_body, headers));
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:notify", request_body, headers));
-  EXPECT_SUCCESS(PerformRequest("/v1/transactions:end", request_body, headers));
+      PerformRequest("/v1/transactions:notify", *request_body, headers));
+  EXPECT_SUCCESS(
+      PerformRequest("/v1/transactions:end", *request_body, headers));
 }
 
 TEST_F(PBSIntegrationTest, ConsumeBudgetV2TwoPhases) {
   HttpHeaders headers = CreateHttpHeaders();
-  std::string request_body = CreateRequestBodyV2();
+  absl::StatusOr<std::string> request_body = CreateBinaryRequestBodyV2();
+  ASSERT_THAT(request_body, IsOk());
   EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:health-check", request_body, headers));
-  EXPECT_SUCCESS(
-      PerformRequest("/v1/transactions:consume-budget", request_body, headers));
+      PerformRequest("/v1/transactions:health-check", *request_body, headers));
+  EXPECT_SUCCESS(PerformRequest("/v1/transactions:consume-budget",
+                                *request_body, headers));
 }
 }  // namespace
 }  // namespace privacy_sandbox::pbs_common

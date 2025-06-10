@@ -26,15 +26,10 @@ resource "google_spanner_database" "keydb" {
   name                     = "${var.environment}-keydb"
   version_retention_period = var.key_db_retention_period
 
-  # Do NOT modify existing DDL files. Terraform would recreate the database, causing data loss.
-  # Instead, create a file containing the new DDL statements and append it to this list.
-  ddl = [
-    file("${path.module}/files/01_create_keysets_table.sql"),
-    trimspace(file("${path.module}/files/02_create_expiry_time_index.sql")),
-    trimspace(file("${path.module}/files/03_add_activation_time_column.sql")),
-    trimspace(file("${path.module}/files/04_create_activation_expiry_index.sql")),
-    trimspace(file("${path.module}/files/05_drop_expiry_time_index.sql")),
-  ]
-
   deletion_protection = true
+
+  # Schema of this database is managed by Liquibase. 'ddl' field must not be used.
+  lifecycle {
+    ignore_changes = [ddl]
+  }
 }

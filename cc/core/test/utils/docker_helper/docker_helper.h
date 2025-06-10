@@ -63,4 +63,12 @@ std::string BuildStartContainerCmd(
 std::string GetIpAddress(const std::string& network_name,
                          const std::string& container_name);
 
+/**
+ * @brief Execute a docker-compose command
+ *
+ * @param args arguments to the docker-compose command
+ * @return the status code of the command execution
+ */
+int RunDockerComposeCmd(const std::string& args);
+
 }  // namespace privacy_sandbox::pbs_common

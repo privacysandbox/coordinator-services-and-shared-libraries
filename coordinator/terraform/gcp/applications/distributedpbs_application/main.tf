@@ -26,7 +26,7 @@ locals {
   pbs_artifact_registry_repository_name = var.pbs_artifact_registry_repository_name != null ? var.pbs_artifact_registry_repository_name : "${var.environment}-scp-pbs-artifact-registry-repo"
   pbs_instance_target_tag               = "${var.environment}-pbs-network-tag"
   service_subdomain_suffix              = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  pbs_domain                            = "${var.service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
+  pbs_domain                            = var.enable_domain_management ? "${var.service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : ""
   pbs_service_endpoint                  = var.enable_domain_management ? "https://${local.pbs_domain}" : "https://${local.pbs_ip_address}"
   pbs_ip_address                        = google_compute_global_address.pbs_ip_address.address
   pbs_cidr                              = "10.125.0.0/20"

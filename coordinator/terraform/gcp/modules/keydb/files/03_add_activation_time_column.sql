@@ -1,1 +1,0 @@
-ALTER TABLE KeySets ADD COLUMN ActivationTime TIMESTAMP

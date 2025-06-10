@@ -236,7 +236,7 @@ variable "pbs_application_environment_variables" {
   description = "Environment variables to be set for the application running on this environment."
   type        = list(map(string))
   nullable    = false
-  default     = [{}]
+  default     = []
 }
 
 variable "pbs_service_account_email" {

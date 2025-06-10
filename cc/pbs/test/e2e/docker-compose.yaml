@@ -1,0 +1,72 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+services:
+  spanner:
+    image: gcr.io/cloud-spanner-emulator/emulator:1.5.24
+    hostname: spanner
+    container_name: spanner
+    ports:
+      - 9010:9010
+      - 9020:9020
+    networks:
+      - pbse2etestnetwork
+  pbs:
+    image: bazel/cc/pbs/deploy/pbs_server/build_defs:pbs_cloud_run_container_local
+    hostname: pbs
+    container_name: pbs
+    ports:
+      - 9090:9090
+      - 9091:9091
+    environment: # Use "VAR: value" syntax for environment variables
+      google_scp_otel_enabled: "true"
+      google_scp_pbs_host_address: "0.0.0.0"
+      google_scp_pbs_host_port: "9090"
+      google_scp_pbs_health_port: "9091"
+      google_scp_pbs_http2_server_use_tls: "false"
+      google_scp_pbs_io_async_executor_queue_size: "100"
+      google_scp_pbs_io_async_executor_threads_count: "2"
+      google_scp_pbs_async_executor_queue_size: "100"
+      google_scp_pbs_async_executor_threads_count: "2"
+      google_scp_core_http2server_threads_count: "2"
+      google_scp_pbs_relaxed_consistency_enabled: "true"
+      google_scp_pbs_log_provider: "StdoutLogProvider"
+      google_scp_gcp_project_id: "my-project"
+      google_scp_spanner_instance_name: "myinstance"
+      google_scp_spanner_database_name: "mydatabase"
+      google_scp_pbs_budget_key_table_name: "budget"
+      google_scp_core_spanner_endpoint_override: "spanner:9010"
+      SPANNER_EMULATOR_HOST: "spanner:9010"
+      google_scp_pbs_transaction_manager_capacity: "-1"
+      google_scp_pbs_journal_service_bucket_name: "unused"
+      google_scp_pbs_journal_service_partition_name: "unused"
+      google_scp_pbs_partition_lock_table_name: "unused"
+      google_scp_pbs_partition_lease_duration_in_seconds: "-1"
+      google_scp_pbs_remote_claimed_identity: "unused"
+      google_pbs_stop_serving_v1_request: "true"
+      google_scp_core_enabled_log_levels: "Emergency,Alert,Critical,Debug,Info,Warning,Error"
+      google_scp_pbs_value_proto_migration_phase: "phase_2"
+      google_scp_pbs_migration_enable_budget_consumer_migration: "true"
+      google_scp_pbs_enable_request_response_proto_migration: "true"
+    networks:
+      - pbse2etestnetwork
+    depends_on:
+      spanner:
+        condition: service_started
+
+networks:
+    pbse2etestnetwork:
+      name: pbse2etestnetwork
+      external: false
+      driver: bridge

@@ -26,11 +26,8 @@ using std::map;
 using std::runtime_error;
 using std::string;
 
-// localstack version is pinned so that tests are repeatable
-static constexpr char kLocalstackImage[] = "localstack/localstack:1.0.3";
-// gcloud SDK tool version is pinned so that tests are repeatable
-static constexpr char kGcpImage[] =
-    "gcr.io/google.com/cloudsdktool/google-cloud-cli:380.0.0-emulators";
+static constexpr absl::string_view kDockerComposeBinaryPath =
+    "cc/core/test/utils/docker_helper/docker-compose";
 
 namespace privacy_sandbox::pbs_common {
 string PortMapToSelf(string port) {
@@ -144,6 +141,10 @@ std::string GetIpAddress(const std::string& network_name,
     length -= 1;
   }
   return result.substr(0, length);
+}
+
+int RunDockerComposeCmd(const std::string& args) {
+  return std::system(absl::StrCat(kDockerComposeBinaryPath, " ", args).c_str());
 }
 
 }  // namespace privacy_sandbox::pbs_common

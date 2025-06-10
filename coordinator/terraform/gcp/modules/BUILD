@@ -26,7 +26,6 @@ pkg_filegroup(
         "//coordinator/terraform/gcp/modules/encryptionkeyservice",
         "//coordinator/terraform/gcp/modules/federated_workloadidentitypoolprovider",
         "//coordinator/terraform/gcp/modules/keydb",
-        "//coordinator/terraform/gcp/modules/keydb/files",
         "//coordinator/terraform/gcp/modules/keygenerationservice",
         "//coordinator/terraform/gcp/modules/keystorageservice",
         "//coordinator/terraform/gcp/modules/parameters",

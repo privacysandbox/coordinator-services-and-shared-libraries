@@ -36,7 +36,7 @@ resource "aws_kms_alias" "key_encryption_key_alias" {
   target_key_id = aws_kms_key.key_encryption_key.id
 }
 
-// A role allowing GCP key generation instance access to encrypt with AWS key encryption key.
+# A role allowing GCP key generation instance access to encrypt with AWS key encryption key.
 resource "aws_iam_role" "key_encryption_key_role" {
   name = "${var.environment}-key-encryption-key-role"
 
@@ -48,7 +48,7 @@ resource "aws_iam_role" "key_encryption_key_role" {
         "Principal" : { "Federated" : "accounts.google.com" },
         "Action" : "sts:AssumeRoleWithWebIdentity",
         "Condition" : {
-          // A token will contain unique service account ID in the sub field.
+          # A token will contain unique service account ID in the sub field.
           "StringEquals" : {
             "accounts.google.com:sub" : var.key_encryptor_service_account_unique_id
           }

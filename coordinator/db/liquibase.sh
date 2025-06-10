@@ -22,7 +22,7 @@ SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
 main() {
   # Substitution for redacting OAuth token from JDBC URL in logs.
   # It looks for "oauthToken=" and replaces its value until a "&", ";", or whitespace.
-  local readonly SED_OAUTH_REDACTION="s/(oauthToken=)([^;&[:space:]]+)/\1[REDACTED]/g"
+  local SED_OAUTH_REDACTION="s/(oauthToken=)([^;&[:space:]]+)/\1[REDACTED]/g"
 
   if [[ -z "${PROJECT:-}" ]]; then
     echo "\$PROJECT must be specified" >&2
@@ -48,8 +48,8 @@ main() {
     --search-path "${SCRIPT_DIR}" \
     --changelog-file changelog.cloudspanner.yaml \
     "$@" \
-    > >(sed -E "${SED_OAUTH_REDACTION}") \
-    2> >(sed -E "${SED_OAUTH_REDACTION}" >&2)
+    > >(sed -u -E "${SED_OAUTH_REDACTION}") \
+    2> >(sed -u -E "${SED_OAUTH_REDACTION}" >&2)
 }
 
 main "$@"

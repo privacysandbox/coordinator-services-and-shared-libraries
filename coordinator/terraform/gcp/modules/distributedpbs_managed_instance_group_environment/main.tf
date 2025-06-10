@@ -72,13 +72,13 @@ locals {
     item.name => item.value
   }
 
-  // The environment variables in child terraform config will override the base
-  // terraform config. Base terraform config is define in this file.
-  //
-  // Quote from:
-  // https://developer.hashicorp.com/terraform/language/functions/merge
-  // "If more than one given map or object defines the same key or attribute,
-  // then the one that is later in the argument sequence takes precedence."
+  # The environment variables in child terraform config will override the base
+  # terraform config. Base terraform config is define in this file.
+  #
+  # Quote from:
+  # https://developer.hashicorp.com/terraform/language/functions/merge
+  # "If more than one given map or object defines the same key or attribute,
+  # then the one that is later in the argument sequence takes precedence."
 
   pbs_cloud_run_environment_variables_merged = merge(local.pbs_application_environment_variables_base, local.pbs_cloud_run_environment_variables, local.pbs_application_environment_variables_child)
 }

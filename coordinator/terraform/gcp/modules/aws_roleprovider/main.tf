@@ -66,12 +66,17 @@ data "aws_iam_policy_document" "assume_role" {
     # Note: if roles set is empty no conditions will be created, effectively
     # granting access to the whole account.
     dynamic "condition" {
-      for_each = var.aws_account_id_to_role_names[each.key]
+      # Create the condition block if and only if there are role names specified for this account.
+      # This ensures an "OR" logic for multiple roles by listing them in a single "ArnEquals" condition.
+      for_each = length(var.aws_account_id_to_role_names[each.key]) > 0 ? [""] : []
 
       content {
         test     = "ArnEquals"
         variable = "aws:PrincipalArn"
-        values   = ["arn:aws:iam::${each.key}:role/${condition.value}"]
+        # Build the list of role ARNs for the current account (each.key)
+        values = [
+          for role_name in var.aws_account_id_to_role_names[each.key] : "arn:aws:iam::${each.key}:role/${role_name}"
+        ]
       }
     }
   }

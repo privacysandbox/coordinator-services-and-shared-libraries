@@ -79,4 +79,9 @@ TEST(DockerHelper, BuildStopContainerCmd) {
   EXPECT_EQ(BuildStopContainerCmd("container_name"),
             "docker rm -f container_name");
 }
+
+TEST(DockerHelper, TestDockerCompose) {
+  EXPECT_EQ(RunDockerComposeCmd("version"), 0);
+}
+
 }  // namespace privacy_sandbox::pbs_common

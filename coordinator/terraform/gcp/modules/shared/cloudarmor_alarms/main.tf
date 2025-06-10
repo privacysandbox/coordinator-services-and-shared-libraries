@@ -17,23 +17,27 @@ resource "google_monitoring_alert_policy" "dos_attack" {
   # This ends up in a verbosity label `policyname=<display_name>`.
   display_name = "${var.service_prefix} DOS Attack"
   documentation {
-    # This ends up un-expanded in an alert label `policy:description=<content>`.
+    # Note we are using `${var.project_id}` to expand it in terraform so it is
+    # expanded in alerts instead of `$${project}` which is only expanded in
+    # cloud notifications and consoles.
+    #
+    # This ends up in an alert label `policy:description=<content>`.
     content = <<-EOT
       Cloud Armor adaptive protection has detected a possible DOS attack.
 
-      See the [Pantheon Adaptive Protection
-      Dash](https://pantheon.corp.google.com/net-security/securitypolicies/adaptiveprotection?project=$${project})
-      for details.
+      See the [Adaptive Protection Console](https://console.cloud.google.com/net-security/securitypolicies/adaptiveprotection?project=${var.project_id}) for details.
     EOT
-    # This ends up un-expanded in an alert label
-    # `policy:description_format=<mime_type>`.
+    # This ends up in an alert label `policy:description_format=<mime_type>`.
     mime_type = "text/markdown"
-    # This ends up in the standard urls alert label, probably unexpanded,
-    # hence using `${var.project_id}` to expand it in terraform instead of
-    # `$${project}` which cloud only expands into its own notifications.
+    # These end up in verbosity labels for the display_name and value.
+    #
+    # * policy:description:link_display_name[0-9]=<display_name>
+    # * policy:description:link_url[0-9]=<url>
+    #
+    # Interestingly they don't appear anywhere in the cloud consoles.
     links {
-      display_name = "Pantheon Adaptive Protection"
-      url          = "https://pantheon.corp.google.com/net-security/securitypolicies/adaptiveprotection?project=${var.project_id}"
+      display_name = "Adaptive Protection Console"
+      url          = "https://console.cloud.google.com/net-security/securitypolicies/adaptiveprotection?project=${var.project_id}"
     }
   }
   combiner = "OR"
@@ -47,9 +51,9 @@ resource "google_monitoring_alert_policy" "dos_attack" {
         severity="WARNING"
         resource.labels.policy_name="${var.security_policy_name}"
       EOT
-      # These end up as "log-<name>" alert labels.
+      # These end up as `log-<name>=<value>` alert labels.
       label_extractors = {
-        # resource.labels get turned into labels for the name  and verbosity
+        # resource.labels get turned into labels for the name and verbosity
         # labels for the value;
         #
         # * resource_label_name[0-9]=<name>
@@ -61,11 +65,14 @@ resource "google_monitoring_alert_policy" "dos_attack" {
         location    = "EXTRACT(resource.labels.location)"
         # These useful values in the jsonPayload don't appear in any other
         # labels or locations, so we create alert labels for them here.
-        backend_service = "EXTRACT(jsonPayload.backendService)"
-        confidence      = "EXTRACT(jsonPayload.confidence)"
-        attack_size     = "EXTRACT(jsonPayload.attackSize)"
-        rule_status     = "EXTRACT(jsonPayload.ruleStatus)"
-        autodeployed    = "EXTRACT(jsonPayload.autoDeployed)"
+        backend_service                = "EXTRACT(jsonPayload.backendService)"
+        attack_size                    = "EXTRACT(jsonPayload.attackSize)"
+        confidence                     = "EXTRACT(jsonPayload.confidence)"
+        autodeployed                   = "EXTRACT(jsonPayload.autoDeployed)"
+        rule_status                    = "EXTRACT(jsonPayload.ruleStatus)"
+        rule0_impacted_attack          = "EXTRACT(jsonPayload.suggestedRule[0].evaluation.impactedAttackProportion)"
+        rule0_impacted_baseline        = "EXTRACT(jsonPayload.suggestedRule[0].evaluation.impactedBaselineProportion)"
+        rule0_impacted_baseline_policy = "EXTRACT(jsonPayload.suggestedRule[0].evaluation.impactedBaselinePolicyProportion)"
       }
     }
   }
