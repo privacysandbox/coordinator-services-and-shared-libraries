@@ -20,11 +20,6 @@
 # symlinked). In order to make the upgrade process easier, this file should not
 # be modified for environment-specific customization.
 
-variable "project_id" {
-  description = "GCP Project ID in which this module will be created."
-  type        = string
-}
-
 variable "owners" {
   description = "Google group owners."
   type        = list(string)

@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "environment" {
-  description = "Description for the environment. Used to prefix resources. e.g. dev, staging, production."
-  type        = string
-  nullable    = false
-}
-
 variable "parent_domain_name" {
   description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
   type        = string

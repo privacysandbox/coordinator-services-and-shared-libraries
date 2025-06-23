@@ -13,8 +13,7 @@
 # limitations under the License.
 
 module "allowedoperatorgroup" {
-  source     = "../../../applications/allowedoperatorgroup"
-  project_id = "<project id>"
+  source = "../../../applications/allowedoperatorgroup"
 
   organization_domain = "<organization domain>"
   group_name_prefix   = "<prefix of the created group name>"

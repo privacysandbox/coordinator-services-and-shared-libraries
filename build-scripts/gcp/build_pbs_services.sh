@@ -24,12 +24,6 @@ IMAGE_REPO_PATH="$2"
 IMAGE_NAME="$3"
 IMAGE_TAG="$4"
 
-build_pbs_service() {
-  bazel run //coordinator/privacybudget/gcp:pbs_container_image \
-    --sandbox_writable_path="$HOME/.docker" \
-    -- -dst "$1"
-}
-
 build_pbs_cloud_run_service() {
   bazel run //coordinator/privacybudget/gcp:pbs_cloud_run_container_image \
     --sandbox_writable_path="$HOME/.docker" \
@@ -42,9 +36,6 @@ main() {
   destination="${IMAGE_REPO_PATH}/${IMAGE_NAME}:${IMAGE_TAG}"
 
   case "${COMPONENT}" in
-    pbs)
-      build_pbs_service "${destination}" | tee "${BUILD_LOG}"
-      ;;
     pbs_cloud_run)
       build_pbs_cloud_run_service "${destination}" | tee "${BUILD_LOG}"
       ;;

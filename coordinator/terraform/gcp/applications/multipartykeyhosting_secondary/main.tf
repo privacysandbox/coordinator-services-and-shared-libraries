@@ -22,11 +22,10 @@ terraform {
 }
 
 locals {
-  service_subdomain_suffix        = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  parent_domain_name              = var.parent_domain_name != null ? var.parent_domain_name : ""
-  key_storage_domain              = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.key_storage_service_subdomain}.${local.parent_domain_name}"
-  encryption_key_domain           = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
-  encryption_key_cloud_run_domain = var.environment != "prod" ? "${var.encryption_key_service_subdomain}-cr${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}-cr.${local.parent_domain_name}"
+  service_subdomain_suffix = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
+  parent_domain_name       = var.parent_domain_name != null ? var.parent_domain_name : ""
+  key_storage_domain       = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.key_storage_service_subdomain}.${local.parent_domain_name}"
+  encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
 }
 
 module "vpc" {
@@ -179,7 +178,6 @@ module "workload_identity_pool" {
   source                                          = "../../modules/workloadidentitypoolprovider"
   project_id                                      = var.wipp_project_id_override == null ? var.project_id : var.wipp_project_id_override
   wip_allowed_service_account_project_id_override = var.wip_allowed_service_account_project_id_override == null ? var.project_id : var.wip_allowed_service_account_project_id_override
-  environment                                     = var.environment
 
   # Limited to 32 characters
   workload_identity_pool_id          = "${var.environment}-cowip"
@@ -197,7 +195,6 @@ module "workload_identity_pool" {
   wip_allowed_service_account_id           = "${var.environment}-coallowedusr"
   wip_allowed_service_account_display_name = "${var.environment} Allowed Coordinator User"
 
-  key_encryption_key_id                        = google_kms_crypto_key.key_encryption_key.id
   allowed_wip_iam_principals                   = var.allowed_wip_iam_principals
   allowed_wip_user_group                       = var.allowed_wip_user_group
   enable_attestation                           = var.enable_attestation

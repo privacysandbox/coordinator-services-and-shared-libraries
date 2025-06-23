@@ -142,6 +142,8 @@ resource "google_compute_region_instance_group_manager" "keygen_instance_group" 
   base_instance_name = "${var.environment}-keygen"
   region             = var.region
 
+  distribution_policy_target_shape = "BALANCED"
+
   version {
     instance_template = google_compute_instance_template.key_generation_vm.id
   }
@@ -149,6 +151,8 @@ resource "google_compute_region_instance_group_manager" "keygen_instance_group" 
   update_policy {
     minimal_action = "RESTART"
     type           = "OPPORTUNISTIC"
+    # BALANCED shape cannot redistribute.
+    instance_redistribution_type = "NONE"
     # Must be at least the number of zones for this group. The default is 3.
     max_unavailable_fixed = 3
   }

@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "project_id" {
-  description = "GCP Project ID in which this module will be created."
-  type        = string
-}
-
 variable "owners" {
   description = "Google group owners."
   type        = list(string)

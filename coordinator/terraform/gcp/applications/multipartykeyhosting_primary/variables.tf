@@ -98,6 +98,7 @@ variable "public_key_load_balancer_logs_enabled" {
 variable "enable_key_generation" {
   description = "Whether to enable the key generation cloud scheduler job for key rotation."
   type        = bool
+  default     = true
 }
 
 variable "key_generation_image" {
@@ -373,7 +374,7 @@ variable "get_public_key_cloudfunction_min_instances" {
 variable "encryption_key_service_cloudfunction_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "get_public_key_cloudfunction_max_instances" {

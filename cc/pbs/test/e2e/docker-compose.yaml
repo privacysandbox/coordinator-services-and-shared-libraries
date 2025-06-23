@@ -54,7 +54,6 @@ services:
       google_scp_pbs_partition_lock_table_name: "unused"
       google_scp_pbs_partition_lease_duration_in_seconds: "-1"
       google_scp_pbs_remote_claimed_identity: "unused"
-      google_pbs_stop_serving_v1_request: "true"
       google_scp_core_enabled_log_levels: "Emergency,Alert,Critical,Debug,Info,Warning,Error"
       google_scp_pbs_value_proto_migration_phase: "phase_2"
       google_scp_pbs_migration_enable_budget_consumer_migration: "true"

@@ -31,6 +31,5 @@ module "artifact_registry_repository" {
 module "pbs_service_account" {
   source      = "../../modules/distributedpbs_service_account"
   project_id  = var.project
-  region      = var.region
   environment = var.environment
 }

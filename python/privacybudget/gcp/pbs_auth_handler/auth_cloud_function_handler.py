@@ -152,28 +152,24 @@ def handle_request(headers):
   if claimed_identity_url is FAILURE:
     print('Failed to get claimed identity from headers')
     return forbidden('claimed_identity_url')
-  print('Claimed identity Url ', claimed_identity_url)
+  print(f'Claimed identity URL: {claimed_identity_url}')
   derived_site = convert_claimed_identity_url_to_site(claimed_identity_url)
-  print('Derived site from claimed identity in the request: ', derived_site)
+  print(f'Derived site from claimed identity in the request: {derived_site}')
 
   caller_identity = get_caller_identity(headers)
   if caller_identity is FAILURE:
     print('Failed to get caller identity')
     return forbidden('caller_identity')
 
-  print('Identified caller identity: ', caller_identity)
+  print(f'Identified caller identity: {caller_identity}')
   adtech_sites_or_error = get_adtech_sites(caller_identity)
+  print(
+    'Adtech sites allowlisted for the provided identity are: '
+    f'{adtech_sites_or_error}'
+  )
   if isinstance(adtech_sites_or_error, int):
-    print(
-        'Adtech sites allowlisted for the provided identity are: ',
-        adtech_sites_or_error,
-    )
     return forbidden('adtech_sites', adtech_sites_or_error)
 
-  print(
-      'Adtech sites allowlisted for the provided identity are: ',
-      adtech_sites_or_error,
-  )
   if derived_site not in adtech_sites_or_error:
     print(
         'Site derived from reported origin is not one of the allowlisted '

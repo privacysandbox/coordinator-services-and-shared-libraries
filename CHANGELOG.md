@@ -1,5 +1,29 @@
 # Changelog
 
+## For next release
+
+## [1.27.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.26.0...v1.27.0) (2025-06-24)
+### Important notes
+[GCP]
+- `enable_key_generation` is set to `true` by default.
+- [Breaking change] The `project_id` variable has been removed from the `allowedoperatorgroup` module.
+- KeyDb schema is now managed by Liquibase. Please see `./coordinator/db/liquibase.sh` for reference.
+  - Before the release, `./liquibase.sh changelog-sync-to-tag 1` **must** be run to intialize the database.
+  - Before terraform apply, `./liquibase.sh update` **must** be run. The update will be a no-op, as no new changes are introduced in this release.
+
+### Changes
+- MPKGDS
+  - [GCP] Make defaults in application module consistent
+  - [GCP] Remove unused variables in terraform configuration of `allowedgroupoperator`,`multipartykeyhosting_secondary`, `operator_workloadidentitypoolprovider`
+  - [GCP] Set keygen MIG to BALANCED shape
+- BUILD
+  - [CA] Remove non-bzlmod support
+  - [CA] Update container dependencies.
+- PBS
+  - [CA] Cleanup `google_pbs_stop_serving_v1_request flag` in PBS codebase
+  - [GCP] Remove references to PBS VM image in build scripts
+  - [GCP] Remove unused variables in terraform configuration of `distributedpbs_alarms`, `distributedpbs_application`, `distributedpbs_base`
+
 ## [1.26.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.25.0...v1.26.0) (2025-06-10)
 
 ### Changes

@@ -23,9 +23,3 @@ variable "environment" {
   type        = string
   nullable    = false
 }
-
-variable "region" {
-  description = "Region where all resources will be created."
-  type        = string
-  nullable    = false
-}

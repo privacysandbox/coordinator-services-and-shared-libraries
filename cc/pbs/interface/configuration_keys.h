@@ -81,8 +81,4 @@ static constexpr char kEnableBudgetConsumerMigration[] =
 // Migration of PBS to use request response proto
 static constexpr char kEnableRequestResponseProtoMigration[] =
     "google_scp_pbs_enable_request_response_proto_migration";
-
-// Stop servering requests with JSON request version 1.0
-static constexpr char kEnableStopServingV1Request[] =
-    "google_pbs_stop_serving_v1_request";
 }  // namespace privacy_sandbox::pbs

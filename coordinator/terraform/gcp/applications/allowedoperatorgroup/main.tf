@@ -15,7 +15,6 @@
 module "allowed_user_group" {
   source = "../../modules/allowedusergroup"
 
-  project_id          = var.project_id
   organization_domain = var.organization_domain
 
   group_name = "${var.group_name_prefix}-allowedopusers-external"

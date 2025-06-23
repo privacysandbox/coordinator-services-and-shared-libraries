@@ -42,8 +42,6 @@ module "pbs_a_record" {
   count  = var.enable_domain_management ? 1 : 0
   source = "../../modules/distributedpbs_domain_a_record"
 
-  environment = var.environment
-
   parent_domain_project = var.parent_domain_project
   parent_domain_name    = var.parent_domain_name
   pbs_ip_address        = local.pbs_ip_address

@@ -135,17 +135,22 @@ constexpr absl::string_view kUserAgent = "aggregation-service/2.8.7";
 constexpr size_t k20191212DaysFromEpoch = 18242;
 constexpr size_t k20191012DaysFromEpoch = 18181;
 constexpr absl::string_view kRequestBody = R"({
-        "v": "1.0",
-        "t": [
+        "v": "2.0",
+        "data": [
             {
-                "key": "test_key",
-                "token": 1,
-                "reporting_time": "2019-10-12T07:20:50.52Z"
-            },
-            {
-                "key": "test_key_2",
-                "token": 1,
-                "reporting_time": "2019-12-12T07:20:50.52Z"
+                "reporting_origin": "https://fake.com",
+                "keys": [
+                    {
+                        "key": "test_key",
+                        "token": 1,
+                        "reporting_time": "2019-10-12T07:20:50.52Z"
+                    },
+                    {
+                        "key": "test_key_2",
+                        "token": 1,
+                        "reporting_time": "2019-12-12T07:20:50.52Z"
+                    }
+                ]
             }
         ]
     })";

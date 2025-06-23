@@ -22,11 +22,6 @@ variable "wip_allowed_service_account_project_id_override" {
   type        = string
 }
 
-variable "environment" {
-  description = "Description for the environment, e.g. dev, staging, production."
-  type        = string
-}
-
 variable "workload_identity_pool_id" {
   description = "ID for Workload Identity Provider. ID has a 32 character limit."
   type        = string
@@ -64,11 +59,6 @@ variable "wip_allowed_service_account_id" {
 
 variable "wip_allowed_service_account_display_name" {
   description = "Display name for WIP Allowed Users Service Account."
-  type        = string
-}
-
-variable "key_encryption_key_id" {
-  description = "KMS key which will be used to decrypt."
   type        = string
 }
 

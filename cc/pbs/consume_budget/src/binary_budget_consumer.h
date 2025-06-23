@@ -135,7 +135,6 @@ class BinaryBudgetConsumer : public BudgetConsumer {
   bool enable_write_to_value_column_ = false;
   bool enable_write_to_value_proto_column_ = false;
   bool enable_read_truth_from_value_column_ = false;
-  bool stop_serving_v1_request_ = false;
 };
 
 }  // namespace privacy_sandbox::pbs

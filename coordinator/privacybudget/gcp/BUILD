@@ -22,12 +22,3 @@ container_push(
     repository = "",
     tag = "",
 )
-
-container_push(
-    name = "pbs_container_image",
-    format = "Docker",
-    image = "//cc/pbs/deploy/pbs_server/build_defs:reproducible_pbs_container_gcp",
-    registry = "",
-    repository = "",
-    tag = "",
-)

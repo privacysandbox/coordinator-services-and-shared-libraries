@@ -25,7 +25,6 @@
 module "allowedoperatorgroup" {
   source = "../../../applications/allowedoperatorgroup"
 
-  project_id          = var.project_id
   organization_domain = var.organization_domain
   group_name_prefix   = var.group_name_prefix
 
