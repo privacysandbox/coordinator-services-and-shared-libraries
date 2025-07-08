@@ -22,7 +22,7 @@ terraform {
 }
 
 locals {
-  spanner_config = "regional-${var.region}"
+  spanner_config = var.pbs_auth_spanner_instance_config != null ? var.pbs_auth_spanner_instance_config : "regional-${var.region}"
 
   # Do not modify this Spanner variable. Doing so will result in data loss as
   # the spanner database will be destroyed and recreated.
@@ -35,13 +35,14 @@ resource "google_spanner_instance" "pbs_auth_spanner_instance" {
   name             = "${var.environment}-pbsauthinst"
   display_name     = "${var.environment}-pbsauthinst"
   config           = local.spanner_config
+  edition          = var.pbs_auth_spanner_instance_edition
   processing_units = var.pbs_auth_spanner_instance_processing_units
 }
 
 resource "google_spanner_database" "pbs_auth_spanner_database" {
   project                  = var.project_id
   instance                 = google_spanner_instance.pbs_auth_spanner_instance.name
-  name                     = "${var.environment}-pbsauthdb"
+  name                     = "${var.environment}-${var.pbs_auth_spanner_database_name_suffix}"
   version_retention_period = var.pbs_auth_spanner_database_retention_period
   deletion_protection      = var.pbs_auth_spanner_database_deletion_protection
 

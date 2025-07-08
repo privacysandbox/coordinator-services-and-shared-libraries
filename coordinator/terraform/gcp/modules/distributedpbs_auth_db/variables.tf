@@ -38,10 +38,25 @@ variable "pbs_auth_spanner_database_retention_period" {
   nullable    = false
 }
 
+variable "pbs_auth_spanner_instance_config" {
+  description = "Spanner instance configuration name."
+  type        = string
+}
+
+variable "pbs_auth_spanner_instance_edition" {
+  description = "Spanner instance edition."
+  type        = string
+}
+
 variable "pbs_auth_spanner_instance_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
   nullable    = false
+}
+
+variable "pbs_auth_spanner_database_name_suffix" {
+  description = "Suffix of the Spanner database name."
+  type        = string
 }
 
 variable "pbs_auth_spanner_database_deletion_protection" {

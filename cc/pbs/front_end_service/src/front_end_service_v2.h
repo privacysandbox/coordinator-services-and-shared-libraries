@@ -102,20 +102,10 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
 
   // Returns the BudgetConsumer interface based on first seen "budget_type"
   pbs_common::ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
-  GetBudgetConsumer(const nlohmann::json& request_body);
-
-  // Returns the BudgetConsumer interface based on first seen "budget_type"
-  pbs_common::ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
   GetBudgetConsumer(const privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest&
                         request_proto);
 
   pbs_common::ExecutionResult ParseRequestWithBudgetConsumer(
-      pbs_common::AsyncContext<pbs_common::HttpRequest,
-                               pbs_common::HttpResponse>& http_context,
-      absl::string_view transaction_id,
-      ConsumeBudgetsRequest& consume_budget_request);
-
-  pbs_common::ExecutionResult ParseRequestWithoutBudgetConsumer(
       pbs_common::AsyncContext<pbs_common::HttpRequest,
                                pbs_common::HttpResponse>& http_context,
       absl::string_view transaction_id,
@@ -172,12 +162,6 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
   // OpenTelemetry Instrument for measuring the number of budgets exhausted
   std::shared_ptr<opentelemetry::metrics::Histogram<uint64_t>>
       budgets_exhausted_;
-
-  // Should use budget consumer or continue on the old path
-  bool should_enable_budget_consumer_;
-
-  // Should Consume Privacy Budget Request Response protos be used
-  bool should_use_request_response_protos_;
 };
 
 }  // namespace privacy_sandbox::pbs

@@ -70,17 +70,6 @@ variable "pbs_cloud_run_name" {
   nullable    = false
 }
 
-variable "pbs_main_port" {
-  description = "The port to access the main PBS. Should map to pbs_named_port."
-  type        = number
-  nullable    = false
-}
-
-variable "pbs_vpc_network_id" {
-  description = "This is the VPC (google compute network) ID to use for the load balancer."
-  type        = string
-}
-
 variable "pbs_tls_alternate_names" {
   description = "PBS Subject Alternative Names for the TLS cert"
   type        = list(string)

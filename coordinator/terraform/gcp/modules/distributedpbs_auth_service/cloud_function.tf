@@ -52,6 +52,8 @@ resource "google_storage_bucket_object" "pbs_auth_package_bucket_object" {
   name   = "${var.environment}_${local.cloudfunction_name_suffix}_${filesha256(var.auth_cloud_function_handler_path)}"
   count  = var.pbs_auth_package_path == null ? 1 : 0
   bucket = var.pbs_auth_package_bucket != null ? var.pbs_auth_package_bucket : google_storage_bucket.pbs_auth_package[0].name
+  # This is used by local and CI deployments.
+  # tflint-ignore: opa_deny_gcs_local_source
   source = var.auth_cloud_function_handler_path
 
   lifecycle {

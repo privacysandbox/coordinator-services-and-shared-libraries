@@ -35,48 +35,34 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Listens for pubsub message and generates keys when message is received. */
+/** Listens for pubsub messages and executes arbitrary code when a message is received. */
 public abstract class PubSubListener {
 
   private static final Logger logger = LoggerFactory.getLogger(PubSubListener.class);
 
   private final String projectId;
   private final String subscriptionId;
-  private final int numberOfKeysToCreate;
-  private final int keysValidityInDays;
-  private final int ttlInDays;
 
   private TransportChannelProvider channelProvider = null; // Only used for testing
   private CredentialsProvider credentialsProvider = null; // Only used for testing
   private int timeoutInSeconds = -1; // Only used for testing
 
-  public PubSubListener(
-      PubSubListenerConfig config,
-      String projectId,
-      String subscriptionId,
-      int numberOfKeysToCreate,
-      int keysValidityInDays,
-      int ttlInDays) {
+  public PubSubListener(PubSubListenerConfig config, String projectId, String subscriptionId) {
     this.projectId = projectId;
     this.subscriptionId = subscriptionId;
-    this.numberOfKeysToCreate = numberOfKeysToCreate;
-    this.keysValidityInDays = keysValidityInDays;
-    this.ttlInDays = ttlInDays;
     config.endpointUrl().ifPresent(endpoint -> setTransportChannelAndCredentials(endpoint));
     config.timeoutInSeconds().ifPresent(timeout -> timeoutInSeconds = timeout);
   }
 
-  /** Executes task that will generate keys (if needed) after pubsub message is received. */
-  protected abstract void createKeys(
-      int numberOfKeysToCreate, int keysValidityInDays, int ttlInDays) throws ServiceException;
+  /** Executes arbitrary code that will be run after pubsub message is received. */
+  protected abstract void execute() throws ServiceException;
 
-  /** Sets up subscriber for given subscriptionId. Create keys when message is received. */
+  /** Sets up subscriber for given subscriptionId and runs execute when a message is received. */
   public void start() {
     ProjectSubscriptionName subscriptionName =
         ProjectSubscriptionName.of(projectId, subscriptionId);
 
-    MessageReceiver receiver =
-        getMessageReceiver(numberOfKeysToCreate, keysValidityInDays, ttlInDays);
+    MessageReceiver receiver = getMessageReceiver();
 
     Subscriber subscriber = getSubscriber(subscriptionName, receiver);
 
@@ -104,14 +90,13 @@ public abstract class PubSubListener {
     if (credentialsProvider != null) {
       builder.setCredentialsProvider(credentialsProvider);
     }
-    // Use single thread here to avoid keys collisions or incorrect key counts.
+    // Use only a single thread for the executor.
     builder.setExecutorProvider(
         InstantiatingExecutorProvider.newBuilder().setExecutorThreadCount(1).build());
     return builder.build();
   }
 
-  private MessageReceiver getMessageReceiver(
-      int numberOfKeysToCreate, int keysValidityInDays, int ttlInDays) {
+  private MessageReceiver getMessageReceiver() {
     return (PubsubMessage message, AckReplyConsumer consumer) -> {
       // Handle incoming message, then ack the received message.
       logger.info(
@@ -120,12 +105,12 @@ public abstract class PubSubListener {
               + "Data: "
               + message.getData().toStringUtf8());
       try {
-        createKeys(numberOfKeysToCreate, keysValidityInDays, ttlInDays);
+        execute();
         logger.info(
             "Task has been invoked. Send ack for message with Id: " + message.getMessageId());
         consumer.ack();
       } catch (ServiceException e) {
-        logger.error("Error creating keys.", e);
+        logger.error("Error executing task.", e);
       }
     };
   }

@@ -30,6 +30,10 @@ public final class CreateSplitKeysPubSubListener extends PubSubListener {
 
   private final CreateSplitKeyTask task;
 
+  private final int numberOfKeysToCreate;
+  private final int keysValidityInDays;
+  private final int ttlInDays;
+
   @Inject
   public CreateSplitKeysPubSubListener(
       PubSubListenerConfig config,
@@ -39,14 +43,16 @@ public final class CreateSplitKeysPubSubListener extends PubSubListener {
       @KeyGenerationKeyCount Integer numberOfKeysToCreate,
       @KeyGenerationValidityInDays Integer keysValidityInDays,
       @KeyGenerationTtlInDays Integer ttlInDays) {
-    super(config, projectId, subscriptionId, numberOfKeysToCreate, keysValidityInDays, ttlInDays);
+    super(config, projectId, subscriptionId);
+    this.numberOfKeysToCreate = numberOfKeysToCreate;
+    this.keysValidityInDays = keysValidityInDays;
+    this.ttlInDays = ttlInDays;
     this.task = task;
   }
 
   /** Executes task that will generate split keys (if needed) after Pub/Sub message is received. */
   @Override
-  protected void createKeys(int numberOfKeysToCreate, int keysValidityInDays, int ttlInDays)
-      throws ServiceException {
+  protected void execute() throws ServiceException {
     task.create(
         /* numDesiredKeys= */ numberOfKeysToCreate,
         /* validityInDays= */ keysValidityInDays,

@@ -56,9 +56,7 @@ common_files = [
 mpkhs_files = [
     "//coordinator/terraform/gcp/applications:multipartykeyhosting_applications_pkg",
     "//coordinator/terraform/gcp/environments_mp_primary/demo:mp_primary_coordinator_demo",
-    "//coordinator/terraform/gcp/environments_mp_primary/shared:mp_primary_coordinator_shared",
     "//coordinator/terraform/gcp/environments_mp_secondary/demo:mp_secondary_coordinator_demo",
-    "//coordinator/terraform/gcp/environments_mp_secondary/shared:mp_secondary_coordinator_shared",
     "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_pkg",
     "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_shared_pkg",
     ":khs_dist_jars",

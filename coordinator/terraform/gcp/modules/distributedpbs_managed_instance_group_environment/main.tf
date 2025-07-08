@@ -178,6 +178,11 @@ resource "google_cloud_run_v2_service" "pbs_instance" {
       max_instance_count = var.pbs_cloud_run_max_instances
     }
     max_instance_request_concurrency = var.pbs_cloud_run_max_concurrency
+    labels = {
+      # Create a new revision if pbs_cloud_run_revision_force_replace is true. This
+      # is done by applying a unique timestamp label on each deployment.
+      force_new_revision_timestamp = var.pbs_cloud_run_revision_force_replace ? formatdate("YYYY-MM-DD_hh_mm_ss", timestamp()) : null,
+    }
   }
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"

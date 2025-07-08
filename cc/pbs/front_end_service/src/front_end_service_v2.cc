@@ -40,7 +40,6 @@
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/front_end_service/src/front_end_utils.h"
-#include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/execution_result.h"
@@ -59,7 +58,6 @@ using ::privacy_sandbox::pbs_common::ExecutionResultOr;
 using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::GetClaimedIdentityOrUnknownValue;
 using ::privacy_sandbox::pbs_common::GetErrorMessage;
-using ::privacy_sandbox::pbs_common::GetErrorName;
 using ::privacy_sandbox::pbs_common::GetUserAgentOrUnknownValue;
 using ::privacy_sandbox::pbs_common::GlobalLogger;
 using ::privacy_sandbox::pbs_common::HttpHandler;
@@ -144,8 +142,7 @@ FrontEndServiceV2::FrontEndServiceV2(
       async_executor_(async_executor),
       config_provider_(config_provider),
       budget_consumption_helper_(budget_consumption_helper),
-      metric_router_(metric_router),
-      should_enable_budget_consumer_(false) {
+      metric_router_(metric_router) {
   MetricInit();
 }
 
@@ -296,18 +293,6 @@ ExecutionResult FrontEndServiceV2::Init() noexcept {
     return failure_execution_result;
   }
 
-  config_provider_->Get(kEnableBudgetConsumerMigration,
-                        should_enable_budget_consumer_);
-  config_provider_->Get(kEnableRequestResponseProtoMigration,
-                        should_use_request_response_protos_);
-
-  SCP_INFO(kFrontEndService, kZeroUuid,
-           absl::StrCat("Using Budget Consumer ",
-                        should_enable_budget_consumer_ ? "true" : "false"));
-  SCP_INFO(
-      kFrontEndService, kZeroUuid,
-      absl::StrCat("Using Request Response Protos ",
-                   should_use_request_response_protos_ ? "true" : "false"));
   return SuccessExecutionResult();
 }
 
@@ -335,25 +320,6 @@ std::string FrontEndServiceV2::ObtainTransactionOrigin(
     return *authorized_domain;
   }
   return "";
-}
-
-[[deprecated(
-    "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
-FrontEndServiceV2::GetBudgetConsumer(const nlohmann::json& request_body) {
-  auto budget_type = ValidateAndGetBudgetType(request_body);
-  if (!budget_type.Successful()) {
-    return budget_type.result();
-  }
-
-  if (budget_type.value() != kBudgetTypeBinaryBudget) {
-    SCP_INFO(kFrontEndService, kZeroUuid,
-             absl::StrCat("Unsupported budget type ", budget_type.value()));
-    return FailureExecutionResult(
-        SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-  }
-
-  return std::make_unique<BinaryBudgetConsumer>(config_provider_.get());
 }
 
 ExecutionResultOr<std::unique_ptr<BudgetConsumer>>
@@ -405,57 +371,25 @@ ExecutionResult FrontEndServiceV2::ParseRequestWithBudgetConsumer(
     AsyncContext<HttpRequest, HttpResponse>& http_context,
     absl::string_view transaction_id,
     ConsumeBudgetsRequest& consume_budget_request) {
-  if (should_use_request_response_protos_) {
-    privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest request_proto;
-    absl::string_view request_body(http_context.request->body.bytes->begin(),
-                                   http_context.request->body.bytes->end());
-    auto parse_status = JsonStringToMessage(request_body, &request_proto);
-    if (parse_status.ok()) {
-      auto budget_consumer = GetBudgetConsumer(request_proto);
-      if (!budget_consumer.Successful()) {
-        return budget_consumer.result();
-      }
-      consume_budget_request.budget_consumer = std::move(*budget_consumer);
-      return consume_budget_request.budget_consumer->ParseTransactionRequest(
-          http_context.request->auth_context, *http_context.request->headers,
-          request_proto);
-    }
-
-    // Failing to parse JSON string into request proto doesn't mean the request
-    // is invalid. ConsumePrivacyBudgetRequest can only be parsed from v2.0
-    // requests, not v1.0 requests. Fall back to JSON if that's the case.
-  }
-
-  auto transaction_request =
-      nlohmann::json::parse(http_context.request->body.bytes->begin(),
-                            http_context.request->body.bytes->end(),
-                            /*cb=*/nullptr, /*allow_exceptions=*/false);
-  if (transaction_request.is_discarded()) {
+  privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest request_proto;
+  absl::string_view request_body(http_context.request->body.bytes->begin(),
+                                 http_context.request->body.bytes->end());
+  auto parse_status = JsonStringToMessage(request_body, &request_proto);
+  if (!parse_status.ok()) {
     SCP_INFO(kFrontEndService, kZeroUuid,
-             absl::StrFormat("Failed to parse request body."))
+             absl::StrCat("Failed to parse request ", parse_status.message()));
     return FailureExecutionResult(
         SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
   }
-  auto budget_consumer = GetBudgetConsumer(transaction_request);
+
+  auto budget_consumer = GetBudgetConsumer(request_proto);
   if (!budget_consumer.Successful()) {
     return budget_consumer.result();
   }
   consume_budget_request.budget_consumer = std::move(*budget_consumer);
-
   return consume_budget_request.budget_consumer->ParseTransactionRequest(
       http_context.request->auth_context, *http_context.request->headers,
-      transaction_request);
-}
-
-[[deprecated("No longer needed when budget consumer is enabled in PBS.")]]
-ExecutionResult FrontEndServiceV2::ParseRequestWithoutBudgetConsumer(
-    AsyncContext<HttpRequest, HttpResponse>& http_context,
-    absl::string_view transaction_id,
-    ConsumeBudgetsRequest& consume_budget_request) {
-  auto transaction_origin = ObtainTransactionOrigin(http_context);
-  return ParseBeginTransactionRequestBody(
-      *http_context.request->auth_context.authorized_domain, transaction_origin,
-      http_context.request->body, consume_budget_request.budgets);
+      request_proto);
 }
 
 ExecutionResult FrontEndServiceV2::PrepareTransaction(
@@ -493,23 +427,15 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
           http_context);
   consume_budget_context.response = std::make_shared<ConsumeBudgetsResponse>();
 
-  ExecutionResult parse_execution_result;
-  if (should_enable_budget_consumer_) {
-    parse_execution_result = ParseRequestWithBudgetConsumer(
-        http_context, *transaction_id, *consume_budget_context.request);
-  } else {
-    parse_execution_result = ParseRequestWithoutBudgetConsumer(
-        http_context, *transaction_id, *consume_budget_context.request);
-  }
+  ExecutionResult parse_execution_result = ParseRequestWithBudgetConsumer(
+      http_context, *transaction_id, *consume_budget_context.request);
 
   if (!parse_execution_result.Successful()) {
     return parse_execution_result;
   }
 
   size_t key_count =
-      should_enable_budget_consumer_
-          ? consume_budget_context.request->budget_consumer->GetKeyCount()
-          : consume_budget_context.request->budgets.size();
+      consume_budget_context.request->budget_consumer->GetKeyCount();
 
   if (keys_per_transaction_count_) {
     opentelemetry::context::Context context;
@@ -527,21 +453,11 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
                         *transaction_id, key_count),
         transaction_id->c_str(), key_count);
 
-    if (should_enable_budget_consumer_) {
-      for (const auto& budget_metadata :
-           consume_budget_context.request->budget_consumer->DebugKeyList()) {
-        SCP_DEBUG_CONTEXT(kFrontEndService, http_context,
-                          absl::StrFormat("Transaction: %s %s", *transaction_id,
-                                          budget_metadata));
-      }
-    } else {
-      for (const auto& consume_budget_metadata :
-           consume_budget_context.request->budgets) {
-        SCP_DEBUG_CONTEXT(
-            kFrontEndService, http_context,
-            absl::StrFormat("Transaction: %s %s", *transaction_id,
-                            consume_budget_metadata.DebugString()));
-      }
+    for (const auto& budget_metadata :
+         consume_budget_context.request->budget_consumer->DebugKeyList()) {
+      SCP_DEBUG_CONTEXT(kFrontEndService, http_context,
+                        absl::StrFormat("Transaction: %s %s", *transaction_id,
+                                        budget_metadata));
     }
   }
 
@@ -579,13 +495,12 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
 
   const std::vector<size_t>& budget_exhausted_indices =
       consume_budget_context.response->budget_exhausted_indices;
-  if (should_enable_budget_consumer_ && !budget_exhausted_indices.empty()) {
+  if (!budget_exhausted_indices.empty()) {
     // We will serialize the budget exhausted indices irrspective of whether
     // it's a failure or success
     auto serialization_execution_result =
         SerializeTransactionFailedCommandIndicesResponse(
-            budget_exhausted_indices, should_use_request_response_protos_,
-            http_context.response->body);
+            budget_exhausted_indices, http_context.response->body);
     if (!serialization_execution_result.Successful()) {
       // We can log it but should not update the error code getting back
       // to the client since it will make it confusing for the proper
@@ -611,26 +526,6 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
               "transaction_id: %s. execution_result: %s",
               transaction_id,
               GetErrorMessage(consume_budget_context.result.status_code)));
-      if (!should_enable_budget_consumer_) {
-        auto serialization_execution_result =
-            SerializeTransactionFailedCommandIndicesResponse(
-                budget_exhausted_indices, should_use_request_response_protos_,
-                http_context.response->body);
-        if (!serialization_execution_result.Successful()) {
-          // We can log it but should not update the error code getting back
-          // to the client since it will make it confusing for the proper
-          // diagnosis on the transaction execution errors.
-          //
-          // This behavior is consistent with front_end_service.cc
-          SCP_ERROR_CONTEXT(
-              kFrontEndService, http_context, serialization_execution_result,
-              absl::StrFormat(
-                  "Serialization of the transaction response failed. "
-                  "transaction_id: %s.",
-                  transaction_id.c_str()),
-              transaction_id.c_str());
-        }
-      }
 
       // Count number of budgets exhausted.
       if (budgets_exhausted_) {
@@ -654,9 +549,7 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
   // Consumed all the budgets successfully.
   if (successful_budget_consumed_counter_) {
     size_t key_count =
-        should_enable_budget_consumer_
-            ? consume_budget_context.request->budget_consumer->GetKeyCount()
-            : consume_budget_context.request->budgets.size();
+        consume_budget_context.request->budget_consumer->GetKeyCount();
     opentelemetry::context::Context context;
     successful_budget_consumed_counter_->Record(key_count, labels, context);
   }

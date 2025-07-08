@@ -39,7 +39,6 @@ pbs_common::ExecutionResult ParseBeginTransactionRequestBody(
 
 pbs_common::ExecutionResult SerializeTransactionFailedCommandIndicesResponse(
     const std::vector<size_t> command_failed_indices,
-    bool should_use_request_response_protos,
     pbs_common::BytesBuffer& response_body);
 
 pbs_common::ExecutionResult ExtractTransactionIdFromHTTPHeaders(
@@ -57,27 +56,6 @@ pbs_common::ExecutionResultOr<std::string> ExtractTransactionOrigin(
 
 pbs_common::ExecutionResultOr<std::string> TransformReportingOriginToSite(
     const std::string& reporting_origin);
-
-[[deprecated(
-    "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-pbs_common::ExecutionResultOr<std::string> ValidateAndGetBudgetType(
-    const nlohmann::json& request_body);
-
-// A function type used by ParseCommonV2TransactionRequestBody.
-// After validating common fields like version, reporting origin, and site,
-// ParseCommonV2TransactionRequestBody iterates through each key entry in the
-// request JSON. For each valid key entry, it invokes this processor function,
-// passing the key JSON object, its index in the overall request, the
-// associated reporting origin, and the determined budget type. This allows the
-// caller to implement specific logic for handling each key entry from the JSON.
-using KeyBodyProcesserFunction = absl::AnyInvocable<pbs_common::ExecutionResult(
-    const nlohmann::json& key_body, const size_t key_index,
-    absl::string_view reporting_origin, absl::string_view budget_type)>;
-[[deprecated(
-    "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-pbs_common::ExecutionResult ParseCommonV2TransactionRequestBody(
-    absl::string_view authorized_domain, const nlohmann::json& request_body,
-    KeyBodyProcesserFunction key_body_processer);
 
 pbs_common::ExecutionResultOr<
     privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest::PrivacyBudgetKey::

@@ -56,22 +56,6 @@ class BudgetConsumer {
    *
    * @param authorized_domain The authorized domain in HTTP auth headers.
    * @param request_headers The headers from the HTTP request.
-   * @param request_body The body of the HTTP request.
-   * @return ExecutionResult The execution result of the operation.
-   */
-  [[deprecated(
-      "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-  virtual pbs_common::ExecutionResult ParseTransactionRequest(
-      const pbs_common::AuthContext& auth_context,
-      const pbs_common::HttpHeaders& request_headers,
-      const nlohmann::json& request_body) = 0;
-
-  /**
-   * @brief Parse the HTTP request headers and body to an internal state to be
-   * later used by the BudgetConsumptionHelper.
-   *
-   * @param authorized_domain The authorized domain in HTTP auth headers.
-   * @param request_headers The headers from the HTTP request.
    * @param request_proto The request proto derived from the HTTP request body.
    * @return ExecutionResult The execution result of the operation.
    */

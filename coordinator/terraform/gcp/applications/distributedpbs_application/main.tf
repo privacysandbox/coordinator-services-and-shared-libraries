@@ -24,12 +24,9 @@ terraform {
 locals {
   pbs_auth_allowed_principals           = var.pbs_remote_coordinator_service_account_email != null ? concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}", "serviceAccount:${var.pbs_remote_coordinator_service_account_email}"]) : concat(var.pbs_auth_allowed_principals, ["serviceAccount:${var.pbs_service_account_email}"])
   pbs_artifact_registry_repository_name = var.pbs_artifact_registry_repository_name != null ? var.pbs_artifact_registry_repository_name : "${var.environment}-scp-pbs-artifact-registry-repo"
-  pbs_instance_target_tag               = "${var.environment}-pbs-network-tag"
   service_subdomain_suffix              = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   pbs_domain                            = var.enable_domain_management ? "${var.service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : ""
-  pbs_service_endpoint                  = var.enable_domain_management ? "https://${local.pbs_domain}" : "https://${local.pbs_ip_address}"
-  pbs_ip_address                        = google_compute_global_address.pbs_ip_address.address
-  pbs_cidr                              = "10.125.0.0/20"
+  pbs_service_endpoint                  = var.enable_domain_management ? "https://${local.pbs_domain}" : "https://${google_compute_global_address.pbs_ip_address.address}"
 }
 
 # Reserve IP address for PBS.
@@ -44,7 +41,7 @@ module "pbs_a_record" {
 
   parent_domain_project = var.parent_domain_project
   parent_domain_name    = var.parent_domain_name
-  pbs_ip_address        = local.pbs_ip_address
+  pbs_ip_address        = google_compute_global_address.pbs_ip_address.address
   pbs_domain            = local.pbs_domain
 }
 
@@ -54,7 +51,10 @@ module "pbs_auth_storage" {
   project_id                                    = var.project
   environment                                   = var.environment
   region                                        = var.region
+  pbs_auth_spanner_instance_config              = var.pbs_auth_spanner_instance_config
+  pbs_auth_spanner_instance_edition             = var.pbs_auth_spanner_instance_edition
   pbs_auth_spanner_instance_processing_units    = var.pbs_auth_spanner_instance_processing_units
+  pbs_auth_spanner_database_name_suffix         = var.pbs_auth_spanner_database_name_suffix
   pbs_auth_spanner_database_retention_period    = var.pbs_auth_spanner_database_retention_period
   pbs_auth_spanner_database_deletion_protection = var.pbs_auth_spanner_database_deletion_protection
 }
@@ -95,7 +95,10 @@ module "pbs_storage" {
   region                                         = var.region
   pbs_cloud_storage_journal_bucket_force_destroy = var.pbs_cloud_storage_journal_bucket_force_destroy
   pbs_cloud_storage_journal_bucket_versioning    = var.pbs_cloud_storage_journal_bucket_versioning
+  pbs_spanner_instance_config                    = var.pbs_spanner_instance_config
+  pbs_spanner_instance_edition                   = var.pbs_spanner_instance_edition
   pbs_spanner_instance_processing_units          = var.pbs_spanner_instance_processing_units
+  pbs_spanner_database_name_suffix               = var.pbs_spanner_database_name_suffix
   pbs_spanner_database_retention_period          = var.pbs_spanner_database_retention_period
   pbs_spanner_database_deletion_protection       = var.pbs_spanner_database_deletion_protection
   pbs_spanner_autoscaling_config                 = var.pbs_spanner_autoscaling_config
@@ -126,9 +129,10 @@ module "pbs_managed_instance_group_environment" {
 
   main_port = var.pbs_main_port
 
-  pbs_cloud_run_min_instances   = var.pbs_cloud_run_min_instances
-  pbs_cloud_run_max_instances   = var.pbs_cloud_run_max_instances
-  pbs_cloud_run_max_concurrency = var.pbs_cloud_run_max_concurrency
+  pbs_cloud_run_min_instances          = var.pbs_cloud_run_min_instances
+  pbs_cloud_run_max_instances          = var.pbs_cloud_run_max_instances
+  pbs_cloud_run_max_concurrency        = var.pbs_cloud_run_max_concurrency
+  pbs_cloud_run_revision_force_replace = var.pbs_cloud_run_revision_force_replace
 }
 
 module "pbs_lb" {
@@ -142,11 +146,9 @@ module "pbs_lb" {
   pbs_domain                     = local.pbs_domain
   parent_domain_name             = var.parent_domain_name
   parent_domain_project          = var.parent_domain_project
-  pbs_ip_address                 = local.pbs_ip_address
+  pbs_ip_address                 = google_compute_global_address.pbs_ip_address.address
   pbs_auth_cloudfunction_name    = module.pbs_auth.pbs_auth_cloudfunction_name
   pbs_cloud_run_name             = module.pbs_managed_instance_group_environment.pbs_cloud_run_name
-  pbs_main_port                  = var.pbs_main_port
-  pbs_vpc_network_id             = google_compute_network.vpc_default_network.self_link
   pbs_tls_alternate_names        = var.pbs_tls_alternate_names
   certificate_manager_has_prefix = var.certificate_manager_has_prefix
 
@@ -161,90 +163,4 @@ module "pbs_lb" {
   depends_on = [
     module.pbs_a_record,
   ]
-}
-
-resource "google_compute_network" "vpc_default_network" {
-  # Max 63 characters
-  name                    = "${var.environment}-pbs-mig-vpc"
-  project                 = var.project
-  description             = "VPC created for PBS environment ${var.environment}"
-  auto_create_subnetworks = false
-  mtu                     = 1500
-}
-
-resource "google_compute_subnetwork" "mig_subnetwork" {
-  name                     = "${var.environment}-pbs-mig-hc-vpc-subnet"
-  project                  = var.project
-  ip_cidr_range            = local.pbs_cidr
-  network                  = google_compute_network.vpc_default_network.self_link
-  region                   = var.region
-  private_ip_google_access = true
-}
-
-# Cloud router with NAT to provide internet to VMs without external IPs.
-resource "google_compute_router" "pbs" {
-  name    = "${var.environment}-pbs-router"
-  project = var.project
-  region  = var.region
-  network = google_compute_network.vpc_default_network.id
-
-  bgp {
-    asn = 64514
-  }
-}
-moved {
-  from = module.vpc_nat.google_compute_router.router[0]
-  to   = google_compute_router.pbs
-}
-
-resource "random_string" "nat" {
-  length  = 6
-  upper   = false
-  special = false
-}
-moved {
-  from = module.vpc_nat.random_string.name_suffix
-  to   = random_string.nat
-}
-
-resource "google_compute_router_nat" "pbs" {
-  name    = "cloud-nat-${random_string.nat.result}"
-  project = var.project
-  region  = var.region
-  router  = google_compute_router.pbs.name
-
-  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
-  nat_ip_allocate_option             = "AUTO_ONLY"
-}
-moved {
-  from = module.vpc_nat.google_compute_router_nat.main
-  to   = google_compute_router_nat.pbs
-}
-
-resource "google_compute_firewall" "ingress_instance_firewall" {
-  project     = var.project
-  name        = "${var.environment}-pbs-instance-fw"
-  description = "Firewall rule to allow communications for PBS instances from the evnironment ${var.environment}."
-  network     = google_compute_network.vpc_default_network.self_link
-
-  priority = 100
-
-  source_ranges = [
-    local.pbs_cidr
-  ]
-
-  target_tags = [local.pbs_instance_target_tag]
-
-  allow {
-    protocol = "tcp"
-    ports    = [var.pbs_main_port]
-  }
-
-  allow {
-    protocol = "icmp"
-  }
-
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
-  }
 }

@@ -23,6 +23,6 @@ def terraform():
 package(default_visibility = ["//visibility:public"])
 exports_files(["terraform"])
 """,
-        sha256 = "728b6fbcb288ad1b7b6590585410a98d3b7e05efe4601ef776c37e15e9a83a96",
-        url = "https://releases.hashicorp.com/terraform/1.2.3/terraform_1.2.3_linux_amd64.zip",
+        sha256 = "dcaf8ba801660a431a6769ec44ba53b66c1ad44637512ef3961f7ffe4397ef7c",
+        url = "https://releases.hashicorp.com/terraform/1.12.1/terraform_1.12.1_linux_amd64.zip",
     )

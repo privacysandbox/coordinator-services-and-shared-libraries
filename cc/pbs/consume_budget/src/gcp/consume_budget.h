@@ -62,25 +62,11 @@ class BudgetConsumptionHelper : public BudgetConsumptionHelperInterface {
                                      ConsumeBudgetsResponse>&
           consume_budgets_context);
 
-  pbs_common::ExecutionResult ConsumeBudgetsSyncWithoutBudgetConsumer(
-      const pbs_common::AsyncContext<ConsumeBudgetsRequest,
-                                     ConsumeBudgetsResponse>&
-          consume_budgets_context);
-
   pbs_common::ConfigProviderInterface* config_provider_;
   pbs_common::AsyncExecutorInterface* async_executor_;
   pbs_common::AsyncExecutorInterface* io_async_executor_;
   std::shared_ptr<google::cloud::spanner::Connection> spanner_connection_;
   std::string table_name_;
-
-  // These are migration parameters that will be removed eventually and
-  // ValueProto column will be the source of truth.
-  bool enable_write_to_value_column_ = false;
-  bool enable_write_to_value_proto_column_ = false;
-  bool enable_read_truth_from_value_column_ = true;
-
-  // Should use budget consumer or continue on the old path
-  bool should_enable_budget_consumer_;
 };
 
 }  // namespace privacy_sandbox::pbs

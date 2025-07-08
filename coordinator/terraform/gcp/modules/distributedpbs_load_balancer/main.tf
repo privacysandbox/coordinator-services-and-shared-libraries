@@ -19,10 +19,6 @@
 # only wraps the managed instance group.
 
 locals {
-  # IP CIDR ranges for the load balancer and health check services owned by Google
-  # https://cloud.google.com/load-balancing/docs/https/setting-up-https#configuring_firewall_rules
-  lb_ip1                         = "130.211.0.0/22"
-  lb_ip2                         = "35.191.0.0/16"
   enable_certificate_mananger_v1 = var.enable_domain_management && !var.certificate_manager_has_prefix
   enable_certificate_mananger_v2 = var.enable_domain_management && var.certificate_manager_has_prefix
 }
@@ -45,27 +41,6 @@ data "google_dns_managed_zone" "dns_zone" {
 resource "random_id" "pbs_cert_manager" {
   byte_length = 5
   prefix      = "${var.environment}-pbs-cert-manager-"
-}
-
-# Setup the firewall rule for LB incoming traffic
-resource "google_compute_firewall" "load_balancer_firewall" {
-  project     = var.project_id
-  name        = "${var.environment}-pbs-lb-firewall"
-  description = "Firewall rule to allow main service ports for PBS environment ${var.environment}"
-  network     = var.pbs_vpc_network_id
-
-  # Allow requests from these IP address ranges
-  source_ranges = [
-    local.lb_ip1,
-    local.lb_ip2,
-    var.pbs_ip_address
-  ]
-
-  # Allow the main service port
-  allow {
-    protocol = "tcp"
-    ports    = [var.pbs_main_port]
-  }
 }
 
 # Network Endpoint Group to route to auth cloud function

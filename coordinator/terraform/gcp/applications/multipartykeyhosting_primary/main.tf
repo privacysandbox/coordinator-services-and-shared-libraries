@@ -62,7 +62,9 @@ module "keydb" {
 
   project_id               = var.project_id
   environment              = var.environment
+  name_suffix              = var.key_db_name_suffix
   spanner_instance_config  = var.spanner_instance_config
+  spanner_instance_edition = var.spanner_instance_edition
   spanner_processing_units = var.spanner_processing_units
   key_db_retention_period  = var.key_db_retention_period
 }

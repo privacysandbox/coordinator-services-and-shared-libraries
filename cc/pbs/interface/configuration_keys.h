@@ -73,12 +73,4 @@ static constexpr char kContainerType[] = "google_scp_pbs_container_type";
 // Migration phase for ValueProto column.
 static constexpr char kValueProtoMigrationPhase[] =
     "google_scp_pbs_value_proto_migration_phase";
-
-// Migration of PBS to use budget consumer
-static constexpr char kEnableBudgetConsumerMigration[] =
-    "google_scp_pbs_migration_enable_budget_consumer_migration";
-
-// Migration of PBS to use request response proto
-static constexpr char kEnableRequestResponseProtoMigration[] =
-    "google_scp_pbs_enable_request_response_proto_migration";
 }  // namespace privacy_sandbox::pbs

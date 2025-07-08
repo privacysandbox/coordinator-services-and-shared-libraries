@@ -1,6 +1,29 @@
 # Changelog
 
-## For next release
+## [1.28.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.27.0...v1.28.0) (2025-07-07)
+### Important notes
+[GCP]
+- The shared/ directory found under `coordinator/terraform/gcp/environments_mp_(primary|secondary)` has been removed.
+[CA]
+- Infastructure has been upgraded to use Terraform version v1.12.1. Please upgrade to Terraform version 1.12.X before executing any terraform commands. Terraform code will only be backwards compatible with v1.2.3 for this release only.
+
+### Changes
+- INFRA
+  - [GCP] Remove `shared/` terraform directory
+- MPKGDS
+  - [GCP] Add the legacy AWS public key path to GCP request handler map to
+    support old version of Chrome client
+  - [GCP] Allow specifying KeyDB name suffix
+  - [GCP] Enable specifying Spanner edition
+- BUILD
+  - [CA] Update container dependencies
+- PBS
+  - [CA] Cleanup C++ uses of
+    `google_scp_pbs_migration_enable_budget_consumer_migration`
+  - [CA] Clean cout statements in http2 connection pool test
+  - [GCP] Allow specifying database name suffixes
+  - [GCP] Enable specifying Spanner instance config and edition
+  - [GCP] Removed unused VPC from Terraform
 
 ## [1.27.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.26.0...v1.27.0) (2025-06-24)
 ### Important notes
@@ -25,7 +48,6 @@
   - [GCP] Remove unused variables in terraform configuration of `distributedpbs_alarms`, `distributedpbs_application`, `distributedpbs_base`
 
 ## [1.26.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.25.0...v1.26.0) (2025-06-10)
-
 ### Changes
 - INFRA
   - [CA] Remove terraform version constraint in child modules

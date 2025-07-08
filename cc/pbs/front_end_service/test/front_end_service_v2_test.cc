@@ -26,7 +26,6 @@
 #include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/interface/async_context.h"
-#include "cc/core/interface/config_provider_interface.h"
 #include "cc/core/interface/errors.h"
 #include "cc/core/interface/http_server_interface.h"
 #include "cc/core/interface/http_types.h"
@@ -34,7 +33,6 @@
 #include "cc/core/telemetry/src/common/metric_utils.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
-#include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/errors.h"
@@ -209,22 +207,9 @@ std::unique_ptr<FrontEndServiceV2Peer> MakeFrontEndServiceV2Peer(
 // failure based on different scenarios. Since the SetUp() performs Init(),
 // those tests cannout use this test fixture.
 
-struct FrontEndServiceV2LifecycleTestParam {
-  bool enable_budget_consumer_migration;
-  bool enable_request_response_proto_migration;
-};
-
-class FrontEndServiceV2LifecycleTest
-    : public testing::Test,
-      public testing::WithParamInterface<FrontEndServiceV2LifecycleTestParam> {
+class FrontEndServiceV2LifecycleTest : public testing::Test {
  protected:
   void SetUp() override {
-    mock_config_provider_ = std::make_shared<MockConfigProvider>();
-    mock_config_provider_->SetBool(kEnableBudgetConsumerMigration,
-                                   IsWithBudgetConsumer());
-    mock_config_provider_->SetBool(kEnableRequestResponseProtoMigration,
-                                   ShouldUseRequestResponseProto());
-
     metric_router_ = std::make_unique<InMemoryMetricRouter>();
     budget_consumption_helper_ =
         std::make_unique<MockBudgetConsumptionHelper>();
@@ -232,7 +217,7 @@ class FrontEndServiceV2LifecycleTest
     FrontEndServiceV2PeerOptions options;
     options.budget_consumption_helper = budget_consumption_helper_.get();
     options.metric_router = metric_router_.get();
-    options.mock_config_provider = mock_config_provider_;
+    options.mock_config_provider = std::make_shared<MockConfigProvider>();
     options.http2_server = http2_server_;
     front_end_service_v2_peer_ = MakeFrontEndServiceV2Peer(options);
 
@@ -241,26 +226,11 @@ class FrontEndServiceV2LifecycleTest
         << GetErrorMessage(execution_result.status_code);
   }
 
-  bool IsWithBudgetConsumer() {
-    return GetParam().enable_budget_consumer_migration;
-  }
-
-  bool ShouldUseRequestResponseProto() {
-    return GetParam().enable_request_response_proto_migration;
-  }
-
   std::shared_ptr<MockHttpServerInterface> http2_server_;
-  std::shared_ptr<MockConfigProvider> mock_config_provider_;
   std::unique_ptr<InMemoryMetricRouter> metric_router_;
   std::unique_ptr<MockBudgetConsumptionHelper> budget_consumption_helper_;
   std::unique_ptr<FrontEndServiceV2Peer> front_end_service_v2_peer_;
 };
-
-INSTANTIATE_TEST_SUITE_P(
-    FrontEndServiceV2LifecycleTest, FrontEndServiceV2LifecycleTest,
-    Values(FrontEndServiceV2LifecycleTestParam{true, true},
-           FrontEndServiceV2LifecycleTestParam{true, false},
-           FrontEndServiceV2LifecycleTestParam{false, false}));
 
 void InsertCommonHeaders(
     absl::string_view transaction_id, absl::string_view secret,
@@ -303,7 +273,7 @@ TEST(FrontEndServiceV2Test, TestInitSuccess) {
       << GetErrorMessage(execution_result.status_code);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestBeginTransaction) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestBeginTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
@@ -326,7 +296,7 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestBeginTransaction) {
       << GetErrorMessage(execution_result.status_code);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestBeginTransactionWithEmptyHeader) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestBeginTransactionWithEmptyHeader) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.response = CreateEmptyResponse();
@@ -378,7 +348,7 @@ TEST(FrontEndServiceV2Test, TestBeginTransactionWithoutInit) {
       SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransaction) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestPrepareTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
@@ -501,45 +471,25 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransaction) {
   EXPECT_TRUE(captured_http_context.result)
       << GetErrorMessage(captured_http_context.result.status_code);
 
-  if (IsWithBudgetConsumer()) {
-    ASSERT_EQ(captured_consume_budgets_context.request->budget_consumer
-                  ->GetKeyCount(),
-              2);
-    std::vector<std::string> expected_keys_list{
-        absl::StrCat("Budget Key: https://fake.com/test_key", " Day ",
-                     std::to_string(k20191012DaysFromEpoch), " Hour 7"),
-        absl::StrCat("Budget Key: https://fake.com/test_key_2", " Day ",
-                     std::to_string(k20191212DaysFromEpoch), " Hour 7")};
-    EXPECT_THAT(captured_consume_budgets_context.request->budget_consumer
-                    ->DebugKeyList(),
-                UnorderedElementsAreArray(expected_keys_list));
-    // With budget consumer, we serialize budget exhausted indices even for
-    // success
-    EXPECT_EQ(
-        nlohmann::json::parse(captured_http_context.response->body.ToString()),
-        nlohmann::json::parse(kBudgetExhaustedResponseBody));
-  } else {
-    ASSERT_EQ(captured_consume_budgets_context.request->budgets.size(), 2);
-    EXPECT_EQ(
-        *captured_consume_budgets_context.request->budgets[0].budget_key_name,
-        "https://fake.com/test_key");
-    EXPECT_EQ(captured_consume_budgets_context.request->budgets[0].token_count,
-              1);
-    EXPECT_EQ(captured_consume_budgets_context.request->budgets[0].time_bucket,
-              1570864850000000000);
-
-    EXPECT_EQ(
-        *captured_consume_budgets_context.request->budgets[1].budget_key_name,
-        "https://fake.com/test_key_2");
-    EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].token_count,
-              1);
-    EXPECT_EQ(captured_consume_budgets_context.request->budgets[1].time_bucket,
-              1576135250000000000);
-    EXPECT_EQ(captured_http_context.response->body.Size(), 0);
-  }
+  ASSERT_EQ(
+      captured_consume_budgets_context.request->budget_consumer->GetKeyCount(),
+      2);
+  std::vector<std::string> expected_keys_list{
+      absl::StrCat("Budget Key: https://fake.com/test_key", " Day ",
+                   std::to_string(k20191012DaysFromEpoch), " Hour 7"),
+      absl::StrCat("Budget Key: https://fake.com/test_key_2", " Day ",
+                   std::to_string(k20191212DaysFromEpoch), " Hour 7")};
+  EXPECT_THAT(
+      captured_consume_budgets_context.request->budget_consumer->DebugKeyList(),
+      UnorderedElementsAreArray(expected_keys_list));
+  // With budget consumer, we serialize budget exhausted indices even for
+  // success
+  EXPECT_EQ(
+      nlohmann::json::parse(captured_http_context.response->body.ToString()),
+      nlohmann::json::parse(kBudgetExhaustedResponseBody));
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransactionBudgetExhausted) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestPrepareTransactionBudgetExhausted) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.request->body.bytes = std::make_shared<std::vector<Byte>>(
@@ -645,7 +595,7 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestPrepareTransactionBudgetExhausted) {
       nlohmann::json::parse(kBudgetExhaustedResponseBody));
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest,
+TEST_F(FrontEndServiceV2LifecycleTest,
        TestPrepareTransactionBudgetsNotConsumed) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
@@ -721,12 +671,8 @@ TEST_P(FrontEndServiceV2LifecycleTest,
             SC_CONSUME_BUDGET_FAIL_TO_COMMIT);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest,
+TEST_F(FrontEndServiceV2LifecycleTest,
        TestPrepareTransactionBudgetConsumerInvalidJson) {
-  if (!IsWithBudgetConsumer()) {
-    return;
-  }
-
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   http_context.request->body.bytes = std::make_shared<std::vector<Byte>>();
@@ -753,12 +699,8 @@ TEST_P(FrontEndServiceV2LifecycleTest,
   EXPECT_FALSE(has_captured);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest,
+TEST_F(FrontEndServiceV2LifecycleTest,
        TestPrepareTransactionBudgetConsumerWithEmptyData) {
-  if (!IsWithBudgetConsumer()) {
-    return;
-  }
-
   constexpr absl::string_view empty_data_json = R"({ "v": "2.0", "data": [] })";
 
   AsyncContext<HttpRequest, HttpResponse> http_context;
@@ -811,12 +753,8 @@ TEST_P(FrontEndServiceV2LifecycleTest,
   EXPECT_FALSE(has_captured);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest,
+TEST_F(FrontEndServiceV2LifecycleTest,
        TestPrepareTransactionBudgetConsumerWithEmptyKey) {
-  if (!IsWithBudgetConsumer()) {
-    return;
-  }
-
   constexpr absl::string_view empty_key_json = R"({
   "v": "2.0",
   "data": [
@@ -877,12 +815,8 @@ TEST_P(FrontEndServiceV2LifecycleTest,
   EXPECT_FALSE(has_captured);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest,
+TEST_F(FrontEndServiceV2LifecycleTest,
        TestPrepareTransactionBudgetConsumerUnsupportedBudgetType) {
-  if (!IsWithBudgetConsumer()) {
-    return;
-  }
-
   constexpr absl::string_view json_body = R"({
   "v": "2.0",
   "data": [
@@ -950,7 +884,7 @@ TEST_P(FrontEndServiceV2LifecycleTest,
   EXPECT_FALSE(has_captured);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestCommitTransaction) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestCommitTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
@@ -964,7 +898,7 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestCommitTransaction) {
       << GetErrorMessage(execution_result.status_code);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestNotifyTransaction) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestNotifyTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
@@ -978,7 +912,7 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestNotifyTransaction) {
       << GetErrorMessage(execution_result.status_code);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestAbortTransaction) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestAbortTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
@@ -992,7 +926,7 @@ TEST_P(FrontEndServiceV2LifecycleTest, TestAbortTransaction) {
       << GetErrorMessage(execution_result.status_code);
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestEndTransaction) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestEndTransaction) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,
@@ -1025,7 +959,7 @@ TEST(FrontEndServiceV2Test, TestRegisterResourceHandlerIsCalled) {
   EXPECT_TRUE(front_end_service_v2_peer->Init());
 }
 
-TEST_P(FrontEndServiceV2LifecycleTest, TestGetTransactionStatusReturns404) {
+TEST_F(FrontEndServiceV2LifecycleTest, TestGetTransactionStatusReturns404) {
   AsyncContext<HttpRequest, HttpResponse> http_context;
   http_context.request = std::make_shared<HttpRequest>();
   InsertCommonHeaders(kTransactionId, kTransactionSecret, kReportingOrigin,

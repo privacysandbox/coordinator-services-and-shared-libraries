@@ -22,9 +22,6 @@
 #include <memory>
 #include <string>
 
-#include <google/protobuf/util/json_util.h>
-
-#include "absl/status/status_matchers.h"
 #include "absl/strings/str_join.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/interface/http_types.h"
@@ -37,25 +34,21 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "google/cloud/spanner/mocks/mock_spanner_connection.h"
 #include "google/cloud/spanner/mocks/row.h"
+#include "google/protobuf/text_format.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
 namespace privacy_sandbox::pbs {
 namespace {
 
-using ::absl_testing::IsOk;
-using ::google::protobuf::util::JsonStringToMessage;
+using ::google::protobuf::TextFormat;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs_common::AuthContext;
 using ::privacy_sandbox::pbs_common::ExecutionResult;
 using ::privacy_sandbox::pbs_common::FailureExecutionResult;
 using ::privacy_sandbox::pbs_common::HttpHeaders;
-using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::privacy_sandbox::pbs_common::ResultIs;
 using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
-using ::testing::Bool;
-using ::testing::Combine;
-using ::testing::ConvertGenerator;
 using ::testing::ElementsAre;
 using ::testing::Return;
 using ::testing::UnorderedElementsAreArray;
@@ -81,19 +74,9 @@ constexpr size_t k20191211DaysFromEpoch = 18241;
 constexpr absl::string_view kAuthorizedDomain = "https://fake.com";
 constexpr absl::string_view kTableName = "fake-table-name";
 
-struct BinaryBudgetConsumerTestParam {
-  using TupleT = std::tuple<absl::string_view, bool>;
-
-  explicit BinaryBudgetConsumerTestParam(const TupleT& t)
-      : migration_phase(std::get<0>(t)), test_proto(std::get<1>(t)) {}
-
-  absl::string_view migration_phase;
-  bool test_proto;
-};
-
 class BinaryBudgetConsumerTest
     : public testing::Test,
-      public testing::WithParamInterface<BinaryBudgetConsumerTestParam> {
+      public testing::WithParamInterface<absl::string_view> {
  protected:
   void SetUp() override {
     auto mock_config_provider = std::make_unique<MockConfigProvider>();
@@ -104,11 +87,7 @@ class BinaryBudgetConsumerTest
     mock_source_ = std::make_unique<spanner_mocks::MockResultSetSource>();
   }
 
-  std::string GetMigrationPhase() {
-    return std::string(GetParam().migration_phase);
-  }
-
-  bool ShouldTestProto() { return GetParam().test_proto; }
+  std::string GetMigrationPhase() { return std::string(GetParam()); }
 
   bool WriteValueColumn() {
     return (GetMigrationPhase() == kMigrationPhase1 ||
@@ -233,71 +212,37 @@ class BinaryBudgetConsumerTest
     };
   }
 
-  ExecutionResult MakeParseTransactionRequestCall(
-      const AuthContext& auth_context, const HttpHeaders& request_headers,
-      const nlohmann::json& request_body) {
-    if (ShouldTestProto()) {
-      ConsumePrivacyBudgetRequest request_proto;
-      EXPECT_THAT(JsonStringToMessage(request_body.dump(), &request_proto),
-                  IsOk());
-      return binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_proto);
-    }
-    return binary_budget_consumer_->ParseTransactionRequest(
-        GetAuthContext(), HttpHeaders{}, request_body);
-  }
-
   std::unique_ptr<BinaryBudgetConsumer> binary_budget_consumer_;
   std::unique_ptr<spanner_mocks::MockResultSetSource> mock_source_;
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    BinaryBudgetConsumerTest, BinaryBudgetConsumerTest,
-    ConvertGenerator<BinaryBudgetConsumerTestParam::TupleT>(
-        Combine(Values(kMigrationPhase1, kMigrationPhase2, kMigrationPhase3,
-                       kMigrationPhase4),
-                Bool())));
+INSTANTIATE_TEST_SUITE_P(BinaryBudgetConsumerTest, BinaryBudgetConsumerTest,
+                         Values(kMigrationPhase1, kMigrationPhase2,
+                                kMigrationPhase3, kMigrationPhase4));
 
 TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2Success) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "234",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
-    },
-    {
-      "reporting_origin": "http://b.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "reporting_time": "2019-12-12T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "234"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys { key: "234" token: 1 reporting_time: "2019-12-12T07:20:50.52Z" }
+    }
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
@@ -316,45 +261,28 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2Success) {
 
 TEST_P(BinaryBudgetConsumerTest,
        RepeatedKeyButDifferentReportingTimeDateValidRequestBodyV2Success) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "123",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-12T07:20:50.52Z"
-        }
-      ]
-    },
-    {
-      "reporting_origin": "http://b.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "reporting_time": "2019-12-12T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "123"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-12T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys { key: "234" token: 1 reporting_time: "2019-12-12T07:20:50.52Z" }
+    }
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
@@ -373,45 +301,28 @@ TEST_P(BinaryBudgetConsumerTest,
 
 TEST_P(BinaryBudgetConsumerTest,
        RepeatedKeyButDifferentReportingTimeHourValidRequestBodyV2Success) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "123",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T08:20:50.52Z"
-        }
-      ]
-    },
-    {
-      "reporting_origin": "http://b.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "reporting_time": "2019-12-12T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "123"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T08:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys { key: "234" token: 1 reporting_time: "2019-12-12T07:20:50.52Z" }
+    }
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Unfortunately we cannot compare spanner key sets (seems they are ordered
@@ -430,429 +341,221 @@ TEST_P(BinaryBudgetConsumerTest,
 
 TEST_P(BinaryBudgetConsumerTest,
        RepeatedKeyButDifferentReportingTimeMinutesValidRequestBodyV2Failure) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "123",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T07:21:50.52Z"
-        }
-      ]
-    },
-    {
-      "reporting_origin": "http://b.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "reporting_time": "2019-12-12T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "123"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:21:50.52Z"
+      }
     }
-  ]
-}
-  )");
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys { key: "234" token: 1 reporting_time: "2019-12-12T07:20:50.52Z" }
+    }
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingKeyInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys { token: 1, reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, RepeatedKeyInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
                                     SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingReportingTimeInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "124",
-          "token": 1
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys { key: "124", token: 1 }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidReportingTimeInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://b.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "reporting_time": "invalid"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys { key: "234", token: 1, reporting_time: "invalid" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(FailureExecutionResult(
                                     SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MissingTokenInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "234",
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys { key: "234", reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, TokenAndTokensInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        key: "234"
+        token: 1
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, EmptyTokensInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "tokens": [
-            {}
-          ],
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        key: "234"
+        tokens {}
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, MultipleTokensInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "tokens": [
-            {
-              "token_int32": 1
-            },
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        key: "234"
+        tokens { token_int32: 1 }
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
 }
 
 TEST_P(BinaryBudgetConsumerTest, InvalidTokensInRequestBody) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "tokens": [
-            {
-              "token_int32": 2
-            }
-          ],
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        key: "234"
+        tokens { token_int32: 2 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result,
               ResultIs(FailureExecutionResult(
                   SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
-}
-
-TEST_P(BinaryBudgetConsumerTest, InvalidBudgetTypeRequestBody) {
-  if (ShouldTestProto()) {
-    // Proto parsing will fail for this test
-    return;
-  }
-
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "budget_type": "iamnotbinarybudget",
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
-    }
-  ]
-}
-  )");
-
-  ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_THAT(execution_result,
-              ResultIs(FailureExecutionResult(
-                  SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY)));
-}
-
-TEST_P(BinaryBudgetConsumerTest, StopServingV1Request) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "1.0",
-  "t": [
-    {
-      "key": "123",
-      "token": 1,
-      "reporting_time": "2019-12-11T07:20:50.52Z"
-    },
-    {
-      "key": "234",
-      "token": 1,
-      "reporting_time": "2019-12-11T07:20:50.52Z"
-    }
-  ]
-}
-  )");
-
-  auto mock_config_provider = std::make_unique<MockConfigProvider>();
-  mock_config_provider->Set(kValueProtoMigrationPhase, GetMigrationPhase());
-
-  auto binary_budget_consumer =
-      std::make_unique<BinaryBudgetConsumer>(mock_config_provider.get());
-  ExecutionResult execution_result =
-      binary_budget_consumer->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(
-      execution_result,
-      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
-}
-
-TEST_P(BinaryBudgetConsumerTest, InvalidVersionInRequestBodyV1) {
-  if (ShouldTestProto()) {
-    // Proto is only supported for request version v2
-    return;
-  }
-
-  nlohmann::json request_body = nlohmann::json::parse(R"({ "v": "" })");
-
-  ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(
-      execution_result,
-      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
-}
-
-TEST_P(BinaryBudgetConsumerTest, InvalidVersionAndDataInRequestBodyV1) {
-  if (ShouldTestProto()) {
-    // Proto is only supported for request version v2
-    return;
-  }
-
-  nlohmann::json request_body =
-      nlohmann::json::parse(R"({ "v": "", "t": "" })");
-
-  ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(
-      execution_result,
-      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
-}
-
-TEST_P(BinaryBudgetConsumerTest, InvalidVersion2InRequestBodyV1) {
-  if (ShouldTestProto()) {
-    // Proto is only supported for request version v2
-    return;
-  }
-
-  nlohmann::json request_body =
-      nlohmann::json::parse(R"({ "v": "1.2", "t": "" })");
-
-  ExecutionResult execution_result =
-      binary_budget_consumer_->ParseTransactionRequest(
-          GetAuthContext(), HttpHeaders{}, request_body);
-  EXPECT_EQ(
-      execution_result,
-      FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY));
 }
 
 // Spanner mutations are ordered. Since we use absl::flat_hash_map, the order
@@ -861,45 +564,28 @@ TEST_P(BinaryBudgetConsumerTest, InvalidVersion2InRequestBodyV1) {
 // actual mutations.
 
 TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2SuccessfulMutations) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "234",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
-    },
-    {
-      "reporting_origin": "http://b.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "reporting_time": "2019-12-12T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "234"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys { key: "234" token: 1 reporting_time: "2019-12-12T07:20:50.52Z" }
+    }
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Entries present with budget consumed at the first hour
@@ -926,26 +612,19 @@ TEST_P(BinaryBudgetConsumerTest, ValidRequestBodyV2SuccessfulMutations) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionOnExistingRowShouldSuccess) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Entries present with budget consumed at the first hour
@@ -984,26 +663,19 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionOnExistingRowShouldSuccess) {
 
 TEST_P(BinaryBudgetConsumerTest,
        BudgetConsumptionOnNonExistingRowShouldSuccess) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow()).WillRepeatedly(Return(spanner::Row()));
@@ -1034,26 +706,19 @@ TEST_P(BinaryBudgetConsumerTest,
 }
 
 TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithoutBudget) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // consume budget for 7th hour
@@ -1082,45 +747,28 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithoutBudget) {
 
 TEST_P(BinaryBudgetConsumerTest,
        BudgetConsumptionWithoutBudgetForMultipleKeys) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "234",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
-    },
-    {
-      "reporting_origin": "http://b.fake.com",
-      "keys": [
-        {
-          "key": "234",
-          "token": 1,
-          "reporting_time": "2019-12-12T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "234"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T07:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+    data {
+      reporting_origin: "http://b.fake.com"
+      keys { key: "234" token: 1 reporting_time: "2019-12-12T07:20:50.52Z" }
+    }
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // consume budget for 7th hour
@@ -1155,35 +803,24 @@ TEST_P(BinaryBudgetConsumerTest,
 
 TEST_P(BinaryBudgetConsumerTest,
        BudgetConsumptionWithoutBudgetForSameKeyDifferentHours) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "123",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T08:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "123"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T08:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // consume budget for 7th hour
@@ -1212,26 +849,19 @@ TEST_P(BinaryBudgetConsumerTest,
 }
 
 TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidRow) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
@@ -1253,26 +883,19 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidRow) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidJsonValueColumn) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
@@ -1301,26 +924,19 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidJsonValueColumn) {
 
 TEST_P(BinaryBudgetConsumerTest,
        BudgetConsumptionWithoutTokenCountFieldInJson) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
@@ -1349,26 +965,19 @@ TEST_P(BinaryBudgetConsumerTest,
 
 TEST_P(BinaryBudgetConsumerTest,
        BudgetConsumptionWithInvalidTokenCountFieldInJson) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
@@ -1396,26 +1005,19 @@ TEST_P(BinaryBudgetConsumerTest,
 }
 
 TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithNoLaplaceDp) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
@@ -1444,26 +1046,19 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithNoLaplaceDp) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpSize) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow())
@@ -1490,26 +1085,19 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpSize) {
 }
 
 TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpTokens) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   std::vector<int32_t> token_count(kDefaultTokenCountSize,
@@ -1542,35 +1130,24 @@ TEST_P(BinaryBudgetConsumerTest, BudgetConsumptionWithInvalidLaplaceDpTokens) {
 TEST_P(
     BinaryBudgetConsumerTest,
     BudgetConsumptionWithSameKeyButDifferentHoursOnExistingRowShouldSucceed) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "123",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T08:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "123"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T08:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   // Entries present with budget consumed at the first hour
@@ -1610,35 +1187,24 @@ TEST_P(
 
 TEST_P(BinaryBudgetConsumerTest,
        BudgetConsumptionWithSameKeyButDiffHoursOnNonExistingRowSucceed) {
-  nlohmann::json request_body = nlohmann::json::parse(R"(
-{
-  "v": "2.0",
-  "data": [
-    {
-      "reporting_origin": "http://a.fake.com",
-      "keys": [
-        {
-          "key": "123",
-          "token": 1,
-          "reporting_time": "2019-12-11T07:20:50.52Z"
-        },
-        {
-          "key": "123",
-          "tokens": [
-            {
-              "token_int32": 1
-            }
-          ],
-          "reporting_time": "2019-12-11T08:20:50.52Z"
-        }
-      ]
+  absl::string_view request_body_proto = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys { key: "123" token: 1 reporting_time: "2019-12-11T07:20:50.52Z" }
+      keys {
+        key: "123"
+        tokens { token_int32: 1 }
+        reporting_time: "2019-12-11T08:20:50.52Z"
+      }
     }
-  ]
-}
-  )");
+  )pb";
+  ConsumePrivacyBudgetRequest request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_body_proto, &request));
 
-  ExecutionResult execution_result = MakeParseTransactionRequestCall(
-      GetAuthContext(), HttpHeaders{}, request_body);
+  ExecutionResult execution_result =
+      binary_budget_consumer_->ParseTransactionRequest(GetAuthContext(),
+                                                       HttpHeaders{}, request);
   EXPECT_THAT(execution_result, ResultIs(SuccessExecutionResult()));
 
   EXPECT_CALL(*mock_source_, NextRow()).WillRepeatedly(Return(spanner::Row()));

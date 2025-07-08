@@ -79,10 +79,28 @@ variable "pbs_auth_spanner_database_retention_period" {
   nullable    = false
 }
 
+variable "pbs_auth_spanner_instance_config" {
+  description = "Spanner instance configuration name."
+  type        = string
+  default     = null
+}
+
+variable "pbs_auth_spanner_instance_edition" {
+  description = "Spanner instance edition."
+  type        = string
+  default     = null
+}
+
 variable "pbs_auth_spanner_instance_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
   nullable    = false
+}
+
+variable "pbs_auth_spanner_database_name_suffix" {
+  description = "Suffix of the Spanner database name."
+  type        = string
+  default     = "pbsauthdb"
 }
 
 variable "pbs_auth_spanner_database_deletion_protection" {
@@ -100,10 +118,28 @@ variable "pbs_spanner_database_retention_period" {
   nullable    = false
 }
 
+variable "pbs_spanner_instance_config" {
+  description = "Spanner instance configuration name."
+  type        = string
+  default     = null
+}
+
+variable "pbs_spanner_instance_edition" {
+  description = "Spanner instance edition."
+  type        = string
+  default     = null
+}
+
 variable "pbs_spanner_instance_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
   default     = null
+}
+
+variable "pbs_spanner_database_name_suffix" {
+  description = "Suffix of the Spanner database name."
+  type        = string
+  default     = "pbsdb"
 }
 
 variable "pbs_spanner_database_deletion_protection" {
@@ -247,13 +283,17 @@ variable "pbs_cloud_run_max_instances" {
   nullable    = false
 }
 
-
-
 variable "pbs_cloud_run_max_concurrency" {
   description = "The maximum number of concurrent requests per Cloud Run PBS instance."
   type        = number
   nullable    = false
   default     = 1000
+}
+
+variable "pbs_cloud_run_revision_force_replace" {
+  description = "Whether to create a new PBS Cloud Run revision for every deployment."
+  type        = bool
+  default     = false
 }
 
 ################################################################################

@@ -24,9 +24,12 @@
 
 namespace privacy_sandbox::pbs_common {
 
-// Token validity
-// Defaults to 1hr
-// https://cloud.google.com/docs/authentication/token-types#id-lifetime
+// ID token validity duration, in seconds.
+//
+// Google Cloud ID tokens are valid for up to 3600 seconds (1 hour).
+// This value is set to 3000 seconds (50 minutes) to ensure tokens are
+// refreshed before they expire.
+// See: https://cloud.google.com/docs/authentication/token-types#id-lifetime
 inline constexpr std::int32_t kIdTokenValidity = 3000;
 
 /**

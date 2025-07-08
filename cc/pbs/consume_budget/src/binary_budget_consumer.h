@@ -42,13 +42,6 @@ class BinaryBudgetConsumer : public BudgetConsumer {
 
   ~BinaryBudgetConsumer() override = default;
 
-  [[deprecated(
-      "Use proto instead of JSON. JSON parsers will be removed shortly.")]]
-  pbs_common::ExecutionResult ParseTransactionRequest(
-      const pbs_common::AuthContext& auth_context,
-      const pbs_common::HttpHeaders& request_headers,
-      const nlohmann::json& request_body) override;
-
   pbs_common::ExecutionResult ParseTransactionRequest(
       const pbs_common::AuthContext& auth_context,
       const pbs_common::HttpHeaders& request_headers,
@@ -109,12 +102,6 @@ class BinaryBudgetConsumer : public BudgetConsumer {
     bool is_key_already_present_in_database = false;
     std::array<int8_t, /*token_count=*/24> budget_state{};
   };
-
-  pbs_common::ExecutionResult ParseRequestBodyV1(
-      absl::string_view transaction_origin, const nlohmann::json& request_body);
-
-  pbs_common::ExecutionResult ParseRequestBodyV2(
-      absl::string_view authorized_domain, const nlohmann::json& request_body);
 
   template <typename TokenMetadataType>
     requires(

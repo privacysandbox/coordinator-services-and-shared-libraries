@@ -1,10 +1,11 @@
-# Copyright 2022 Google LLC
+#!/bin/bash
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_pkg//:mappings.bzl", "pkg_files")
+# Runs tflint in coordinator Terraform directories.
 
-package(default_visibility = ["//visibility:public"])
+set -e
 
-pkg_files(
-    name = "mpkhs_primary_shared",
-    srcs = glob(
-        ["*"],
-        exclude = ["BUILD"],
-    ),
-    prefix = "mpkhs_primary",
-)
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+bazel run @tflint//:tflint -- --init
+TFLINT_OPA_POLICY_DIR="${REPO_ROOT}/.tflint.d/policies" \
+  bazel run @tflint//:tflint -- \
+  --config "${REPO_ROOT}/.tflint.hcl" \
+  --chdir "${REPO_ROOT}/coordinator/terraform/gcp" \
+  --recursive

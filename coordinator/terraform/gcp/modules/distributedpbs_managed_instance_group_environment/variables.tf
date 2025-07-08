@@ -136,6 +136,11 @@ variable "pbs_cloud_run_max_concurrency" {
   nullable    = false
 }
 
+variable "pbs_cloud_run_revision_force_replace" {
+  description = "Whether to create a new PBS Cloud Run revision for every deployment."
+  type        = bool
+}
+
 ################################################################################
 # Network Variables.
 ################################################################################

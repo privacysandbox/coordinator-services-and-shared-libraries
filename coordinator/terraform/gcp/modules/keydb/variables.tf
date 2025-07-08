@@ -22,9 +22,19 @@ variable "environment" {
   description = "Environment where this service is deployed (e.g. dev, prod)."
 }
 
+variable "name_suffix" {
+  description = "Suffix of the Spanner database name."
+  type        = string
+}
+
 variable "spanner_instance_config" {
   type        = string
   description = "Multi region config value for the Spanner Instance. Example: 'nam10' for North America."
+}
+
+variable "spanner_instance_edition" {
+  description = "Spanner instance edition."
+  type        = string
 }
 
 variable "spanner_processing_units" {

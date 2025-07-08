@@ -22,7 +22,7 @@ terraform {
 }
 
 locals {
-  spanner_config = "regional-${var.region}"
+  spanner_config = var.pbs_spanner_instance_config != null ? var.pbs_spanner_instance_config : "regional-${var.region}"
 
   # Do not modify these Spanner variable. Doing so will result in data loss as
   # the spanner database will be destroyed and recreated.
@@ -73,6 +73,7 @@ resource "google_spanner_instance" "pbs_spanner_instance" {
   name             = "${var.environment}-pbsinst"
   display_name     = "${var.environment}-pbsinst"
   config           = local.spanner_config
+  edition          = var.pbs_spanner_instance_edition
   processing_units = var.pbs_spanner_autoscaling_config == null ? var.pbs_spanner_instance_processing_units : null
 
   dynamic "autoscaling_config" {
@@ -101,7 +102,7 @@ resource "google_spanner_instance" "pbs_spanner_instance" {
 resource "google_spanner_database" "pbs_spanner_database" {
   project                  = var.project_id
   instance                 = google_spanner_instance.pbs_spanner_instance.name
-  name                     = "${var.environment}-pbsdb"
+  name                     = "${var.environment}-${var.pbs_spanner_database_name_suffix}"
   version_retention_period = var.pbs_spanner_database_retention_period
   deletion_protection      = var.pbs_spanner_database_deletion_protection
 

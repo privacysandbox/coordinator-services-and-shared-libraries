@@ -156,8 +156,6 @@ TEST_F(HttpConnectionPoolTest,
         auto connection = std::make_shared<MockHttpConnection>(
             async_executor, host, service, is_https, metric_router_.get());
         if (create_connection_counter % 2 != 0) {
-          std::cout << "Dropping connection at " << create_connection_counter
-                    << std::endl;
           connection->SetIsDropped();
           connection->SetIsNotReady();
           // Set the override for recycle connection to check if this Dropped
@@ -172,8 +170,6 @@ TEST_F(HttpConnectionPoolTest,
                 };
           }
         } else {
-          std::cout << "Connection at " << create_connection_counter
-                    << " is ready" << std::endl;
           connection->SetIsNotDropped();
           connection->SetIsReady();
         }
@@ -212,13 +208,9 @@ TEST_F(HttpConnectionPoolTest,
         auto connection = std::make_shared<MockHttpConnection>(
             async_executor, host, service, is_https, metric_router_.get());
         if (create_connection_counter % 2 != 0) {
-          std::cout << "Dropping connection at " << create_connection_counter
-                    << " and the connection is not ready yet" << std::endl;
           connection->SetIsDropped();
           connection->SetIsNotReady();
         } else {
-          std::cout << "Connection at " << create_connection_counter
-                    << " is ready" << std::endl;
           connection->SetIsNotDropped();
           connection->SetIsReady();
         }
@@ -255,13 +247,9 @@ TEST_F(HttpConnectionPoolTest,
         auto connection = std::make_shared<MockHttpConnection>(
             async_executor, host, service, is_https, metric_router_.get());
         if (create_connection_counter % 2 != 0) {
-          std::cout << "Dropping connection at " << create_connection_counter
-                    << " and the connection is not ready yet" << std::endl;
           connection->SetIsDropped();
           connection->SetIsNotReady();
         } else {
-          std::cout << "Connection at " << create_connection_counter
-                    << " is ready" << std::endl;
           connection->SetIsNotDropped();
           connection->SetIsNotReady();
         }

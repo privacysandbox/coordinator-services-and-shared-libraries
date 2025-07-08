@@ -55,8 +55,6 @@ using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
 namespace spanner = google::cloud::spanner;
 
 constexpr absl::string_view kBinaryBudgetConsumer = "BinaryBudgetConsumer";
-constexpr absl::string_view kVersion1 = "1.0";
-constexpr absl::string_view kVersion2 = "2.0";
 constexpr absl::string_view kTokenCountJsonField = "TokenCount";
 constexpr int32_t kDefaultLaplaceDpBudgetCount = 6400;
 constexpr int8_t kFullBudgetCount = 1;
@@ -90,15 +88,6 @@ constexpr absl::string_view kMigrationPhase3 = "phase_3";
 constexpr absl::string_view kMigrationPhase4 = "phase_4";
 constexpr std::array<absl::string_view, 4> kMigrationPhases = {
     kMigrationPhase1, kMigrationPhase2, kMigrationPhase3, kMigrationPhase4};
-
-std::string ObtainTransactionOrigin(absl::string_view authorized_domain,
-                                    const HttpHeaders& request_headers) {
-  auto transaction_origin = ExtractTransactionOrigin(request_headers);
-  if (transaction_origin.Successful() && !transaction_origin->empty()) {
-    return transaction_origin.value();
-  }
-  return std::string(authorized_domain);
-}
 
 ExecutionResultOr<TimeBucket> ReportingTimeToTimeBucket(
     const std::string& reporting_time) {
@@ -270,165 +259,6 @@ BinaryBudgetConsumer::BinaryBudgetConsumer(
   enable_read_truth_from_value_column_ =
       pbs_value_column_migration_phase == kMigrationPhase1 ||
       pbs_value_column_migration_phase == kMigrationPhase2;
-}
-
-// V2 Request Example:
-// {
-//   "v": "2.0",
-//   "data": [
-//     {
-//       "reporting_origin": <reporting_origin_string>,
-//       "keys": [{
-//         "key": "<string>",
-//         "token": <uint8_t>,
-//         "reporting_time": "<string>"
-//       }]
-//     }
-//   ]
-// }
-ExecutionResult BinaryBudgetConsumer::ParseRequestBodyV2(
-    absl::string_view authorized_domain, const nlohmann::json& request_body) {
-  absl::flat_hash_set<std::string> visited;
-  auto key_body_processor =
-      [this, &visited](const nlohmann::json& key_body, const size_t key_index,
-                       absl::string_view reporting_origin,
-                       absl::string_view budget_type) -> ExecutionResult {
-    auto k_it = key_body.find("key");
-    auto reporting_time_it = key_body.find("reporting_time");
-
-    if (k_it == key_body.end() || reporting_time_it == key_body.end()) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-               "One of more JSON keys absent : "
-               "\"key\" or \"reporting_time\"");
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-
-    auto budget_key =
-        absl::StrCat(reporting_origin, "/", k_it->get<std::string>());
-    const std::string& reporting_time = reporting_time_it->get<std::string>();
-    auto reporting_timestamp = ReportingTimeToTimeBucket(reporting_time);
-    if (!reporting_timestamp.Successful()) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "Invalid reporting time");
-      return reporting_timestamp.result();
-    }
-
-    TimeGroup time_group = Utils::GetTimeGroup(*reporting_timestamp);
-    TimeBucket time_bucket = Utils::GetTimeBucket(*reporting_timestamp);
-
-    std::string visited_key =
-        absl::StrCat(budget_key, "_", time_group, "_", time_bucket);
-    if (visited.find(visited_key) != visited.end()) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-               absl::StrFormat("Repeated key found : %s", visited_key))
-      return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-    }
-    visited.emplace(visited_key);
-
-    // Binary budget consumption
-    if (budget_type != kBudgetTypeBinaryBudget) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-               absl::StrFormat("Expected binary budget type, found %s",
-                               budget_type));
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-
-    auto token_it = key_body.find("token");
-    auto tokens_it = key_body.find("tokens");
-    if (token_it == key_body.end() && tokens_it == key_body.end()) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-               "JSON key absent : \"token\" or \"tokens\"");
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-    if (token_it != key_body.end() && tokens_it != key_body.end()) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-               "Both JSON keys are present : \"token\" or \"tokens\"");
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-
-    if (tokens_it != key_body.end()) {
-      if (tokens_it->size() != 1) {
-        SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-                 "JSON key \"tokens\" is not of size 1");
-        return FailureExecutionResult(
-            SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-      }
-      token_it = tokens_it->begin()->find("token_int32");
-      if (token_it == tokens_it->begin()->end()) {
-        SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-                 "JSON key \"token\" not found inside JSON key \"tokens\"");
-        return FailureExecutionResult(
-            SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-      }
-    }
-
-    int8_t token = token_it->get<int8_t>();
-    if (token != kFullBudgetCount) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-               absl::StrFormat("Expected token equals %d, found %d",
-                               kFullBudgetCount, token));
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-    PbsPrimaryKey pbs_primary_key(budget_key, std::to_string(time_group));
-
-    ConsumptionState& consumption_state = metadata_[pbs_primary_key];
-    consumption_state.hour_of_day_to_key_index_map[time_bucket] = key_index;
-    ++key_count_;
-
-    return SuccessExecutionResult();
-  };
-
-  return ParseCommonV2TransactionRequestBody(authorized_domain, request_body,
-                                             std::move(key_body_processor));
-}
-
-ExecutionResult BinaryBudgetConsumer::ParseTransactionRequest(
-    const AuthContext& auth_context, const HttpHeaders& request_headers,
-    const nlohmann::json& request_body) {
-  try {
-    if (auth_context.authorized_domain == nullptr) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "No auth context found");
-      return FailureExecutionResult(SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST);
-    }
-    absl::string_view authorized_domain = *auth_context.authorized_domain;
-    std::string transaction_origin =
-        ObtainTransactionOrigin(authorized_domain, request_headers);
-
-    if (request_body.is_discarded()) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "Invalid request body");
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-
-    auto version_it = request_body.find("v");
-    if (version_it == request_body.end()) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "JSON key absent : \"v\"");
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-    if (version_it->get<std::string>() != kVersion1 &&
-        version_it->get<std::string>() != kVersion2) {
-      SCP_INFO(kBinaryBudgetConsumer, kZeroUuid, "Invalid version");
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-
-    if (version_it->get<std::string>() == kVersion1) {
-      return FailureExecutionResult(
-          SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-    }
-    return ParseRequestBodyV2(authorized_domain, request_body);
-  } catch (const std::exception& exception) {
-    SCP_INFO(kBinaryBudgetConsumer, kZeroUuid,
-             absl::StrCat("ParseBeginTransactionRequestBody failed ",
-                          exception.what()));
-    return FailureExecutionResult(
-        SC_PBS_FRONT_END_SERVICE_INVALID_REQUEST_BODY);
-  }
 }
 
 ExecutionResult BinaryBudgetConsumer::ParseTransactionRequest(

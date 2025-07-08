@@ -32,8 +32,14 @@ public abstract class PublicKeyServiceHttpFunctionBase extends CloudFunctionServ
       String.format(
           "/.well-known/%s/v1/public-keys",
           System.getenv().getOrDefault("APPLICATION_NAME", "default"));
+  // The legacy path pattern, used in AWS, is needed in the cross cloud environment
+  private static final String PATTERN_STR_LEGACY = "/v1alpha/publicKeys";
+
   private static final Pattern GET_PUBLIC_KEYS_URL_PATTERN =
       Pattern.compile(PATTERN_STR, Pattern.CASE_INSENSITIVE);
+  private static final Pattern GET_PUBLIC_KEYS_URL_PATTERN_LEGACY =
+      Pattern.compile(PATTERN_STR_LEGACY, Pattern.CASE_INSENSITIVE);
+
   private final GetPublicKeysRequestHandler getPublicKeysRequestHandler;
 
   /**
@@ -50,6 +56,9 @@ public abstract class PublicKeyServiceHttpFunctionBase extends CloudFunctionServ
   protected ImmutableMap<HttpMethod, ImmutableMap<Pattern, CloudFunctionRequestHandler>>
       getRequestHandlerMap() {
     return ImmutableMap.of(
-        GET, ImmutableMap.of(GET_PUBLIC_KEYS_URL_PATTERN, this.getPublicKeysRequestHandler));
+        GET,
+        ImmutableMap.of(
+            GET_PUBLIC_KEYS_URL_PATTERN, this.getPublicKeysRequestHandler,
+            GET_PUBLIC_KEYS_URL_PATTERN_LEGACY, this.getPublicKeysRequestHandler));
   }
 }

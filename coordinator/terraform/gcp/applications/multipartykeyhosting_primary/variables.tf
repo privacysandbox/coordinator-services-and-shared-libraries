@@ -66,6 +66,12 @@ variable "spanner_instance_config" {
   type        = string
 }
 
+variable "spanner_instance_edition" {
+  description = "Spanner instance edition."
+  type        = string
+  default     = null
+}
+
 variable "spanner_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
@@ -79,6 +85,12 @@ variable "key_db_retention_period" {
   description = "Duration to maintain table versioning for point-in-time recovery."
   type        = string
   default     = "7d"
+}
+
+variable "key_db_name_suffix" {
+  description = "Suffix of the Spanner database name. Defaults to `keydb`."
+  type        = string
+  default     = "keydb"
 }
 
 ################################################################################

@@ -17,13 +17,14 @@ resource "google_spanner_instance" "keydb_instance" {
   name             = "${var.environment}-keydbinstance"
   display_name     = "${var.environment}-keydbinstance"
   config           = var.spanner_instance_config
+  edition          = var.spanner_instance_edition
   processing_units = var.spanner_processing_units
 }
 
 resource "google_spanner_database" "keydb" {
   project                  = var.project_id
   instance                 = google_spanner_instance.keydb_instance.name
-  name                     = "${var.environment}-keydb"
+  name                     = "${var.environment}-${var.name_suffix}"
   version_retention_period = var.key_db_retention_period
 
   deletion_protection = true
