@@ -33,6 +33,7 @@ java_library(
         "//java/external:gcp_cloud_function",
         "//java/external:gcp_cloud_monitoring",
         "//java/external:gcp_monitoring_v3",
+        "//java/external:google_api_client",
         "//java/external:google_auth_library_oauth2_http",
         "//java/external:google_http_client",
         "//java/external:google_http_client_gson",

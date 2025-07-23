@@ -31,12 +31,14 @@
 #include "cc/core/interface/http_types.h"
 #include "cc/core/telemetry/mock/in_memory_metric_router.h"
 #include "cc/core/telemetry/src/common/metric_utils.h"
+#include "cc/pbs/consume_budget/src/binary_budget_consumer.h"
 #include "cc/pbs/consume_budget/src/gcp/error_codes.h"
 #include "cc/pbs/front_end_service/src/error_codes.h"
 #include "cc/pbs/interface/consume_budget_interface.h"
 #include "cc/pbs/interface/type_def.h"
 #include "cc/public/core/interface/errors.h"
 #include "cc/public/core/interface/execution_result.h"
+#include "cc/public/core/test/interface/execution_result_matchers.h"
 #include "google/protobuf/text_format.h"
 
 namespace privacy_sandbox::pbs {
@@ -1021,6 +1023,52 @@ TEST(TestOneToOneMappingBetBudgetTypeAndBudgetConsumer,
         << "Duplicate consumer type returned for enum value " << budget_type
         << ". Type: " << type_name << " was already returned by another enum.";
   }
+}
+
+TEST_F(FrontEndServiceV2LifecycleTest,
+       GetBudgetConsumerWithBudgetTypeUnspecifiedReturnsBinaryBudget) {
+  std::string request_proto_string = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        budget_type: BUDGET_TYPE_UNSPECIFIED
+      }
+    }
+  )pb";
+
+  ConsumePrivacyBudgetRequest consume_budget_request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_proto_string,
+                                          &consume_budget_request));
+
+  auto budget_consumer =
+      front_end_service_v2_peer_->GetBudgetConsumer(consume_budget_request);
+  EXPECT_THAT(budget_consumer.result(), ResultIs(SuccessExecutionResult()));
+  EXPECT_NE(dynamic_cast<BinaryBudgetConsumer*>(budget_consumer.value().get()),
+            nullptr);
+}
+
+TEST_F(FrontEndServiceV2LifecycleTest,
+       GetBudgetConsumerWithBinaryBudgetTypeReturnsBinaryBudget) {
+  std::string request_proto_string = R"pb(
+    version: "2.0"
+    data {
+      reporting_origin: "http://a.fake.com"
+      keys {
+        budget_type: BUDGET_TYPE_BINARY_BUDGET
+      }
+    }
+  )pb";
+
+  ConsumePrivacyBudgetRequest consume_budget_request;
+  ASSERT_TRUE(TextFormat::ParseFromString(request_proto_string,
+                                          &consume_budget_request));
+
+  auto budget_consumer =
+      front_end_service_v2_peer_->GetBudgetConsumer(consume_budget_request);
+  EXPECT_THAT(budget_consumer.result(), ResultIs(SuccessExecutionResult()));
+  EXPECT_NE(dynamic_cast<BinaryBudgetConsumer*>(budget_consumer.value().get()),
+            nullptr);
 }
 
 }  // namespace

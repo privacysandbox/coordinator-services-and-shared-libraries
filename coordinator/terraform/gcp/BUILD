@@ -18,16 +18,6 @@ load("@rules_pkg//:pkg.bzl", "pkg_tar")
 package(default_visibility = ["//visibility:public"])
 
 pkg_files(
-    name = "khs_dist_jars",
-    srcs = [
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyServiceHttpCloudFunctionDeploy",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyServiceHttpCloudFunctionDeploy",
-        "//java/com/google/scp/coordinator/keymanagement/keystorage/service/gcp:KeyStorageServiceHttpCloudFunctionDeploy",
-    ],
-    prefix = "jars",
-)
-
-pkg_files(
     name = "pbs_dist_files",
     srcs = [
         "//cc/pbs/proto/storage:budget_value_proto_descriptor",
@@ -59,7 +49,6 @@ mpkhs_files = [
     "//coordinator/terraform/gcp/environments_mp_secondary/demo:mp_secondary_coordinator_demo",
     "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_pkg",
     "//coordinator/terraform/gcp/modules:multipartykeyhosting_modules_shared_pkg",
-    ":khs_dist_jars",
 ]
 
 pbs_files = [

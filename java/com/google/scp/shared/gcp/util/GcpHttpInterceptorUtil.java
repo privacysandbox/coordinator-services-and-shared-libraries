@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.gcp.util;
 
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.json.webtoken.JsonWebSignature;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.IdTokenCredentials;
 import com.google.auth.oauth2.IdTokenProvider;
@@ -23,6 +25,7 @@ import com.google.auth.oauth2.IdTokenProvider.Option;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.function.Consumer;
 import org.apache.hc.core5.http.EntityDetails;
 import org.apache.hc.core5.http.HttpRequest;
@@ -86,9 +89,17 @@ public final class GcpHttpInterceptorUtil {
       idTokenCredentials.refreshIfExpired();
       return idTokenCredentials.getIdToken().getTokenValue();
     }
+
+    public final Optional<String> getServiceAccountEmail() throws IOException {
+      idTokenCredentials.refreshIfExpired();
+      String tokenValue = idTokenCredentials.getIdToken().getTokenValue();
+
+      JsonWebSignature jws = JsonWebSignature.parse(new GsonFactory(), tokenValue);
+      return Optional.ofNullable(jws.getPayload().get("email")).map(Object::toString);
+    }
   }
 
-  private static final class GcpHttpInterceptor extends GcpHttpInterceptorBase
+  static final class GcpHttpInterceptor extends GcpHttpInterceptorBase
       implements org.apache.http.HttpRequestInterceptor {
 
     public GcpHttpInterceptor(GoogleCredentials sourceCredentials, String audience) {
@@ -100,6 +111,8 @@ public final class GcpHttpInterceptorUtil {
         org.apache.http.HttpRequest httpRequest, org.apache.http.protocol.HttpContext httpContext)
         throws IOException {
       httpRequest.addHeader("Authorization", String.format("Bearer %s", getIdToken()));
+      getServiceAccountEmail()
+          .ifPresent(email -> httpRequest.addHeader("Gcp-Service-Account-Email", email));
     }
   }
 

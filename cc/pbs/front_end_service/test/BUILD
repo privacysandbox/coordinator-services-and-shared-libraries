@@ -48,6 +48,7 @@ cc_test(
         "//cc/core/telemetry/src/common:telemetry_metric_utils",
         "//cc/core/telemetry/src/metric:telemetry_metric",
         "//cc/core/test/utils:utils_lib",
+        "//cc/pbs/consume_budget/src:binary_budget_consumer",
         "//cc/pbs/front_end_service/src:error_codes",
         "//cc/pbs/front_end_service/src:front_end_service_v2",
         "//cc/pbs/interface:pbs_interface_lib",

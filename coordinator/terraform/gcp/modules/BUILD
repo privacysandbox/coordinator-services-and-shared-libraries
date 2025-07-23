@@ -28,6 +28,7 @@ pkg_filegroup(
         "//coordinator/terraform/gcp/modules/keydb",
         "//coordinator/terraform/gcp/modules/keygenerationservice",
         "//coordinator/terraform/gcp/modules/keystorageservice",
+        "//coordinator/terraform/gcp/modules/logging_metrics",
         "//coordinator/terraform/gcp/modules/parameters",
         "//coordinator/terraform/gcp/modules/publickeyhostingservice",
         "//coordinator/terraform/gcp/modules/version",

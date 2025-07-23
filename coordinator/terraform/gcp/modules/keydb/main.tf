@@ -19,6 +19,8 @@ resource "google_spanner_instance" "keydb_instance" {
   config           = var.spanner_instance_config
   edition          = var.spanner_instance_edition
   processing_units = var.spanner_processing_units
+
+  default_backup_schedule_type = "NONE"
 }
 
 resource "google_spanner_database" "keydb" {
@@ -32,5 +34,31 @@ resource "google_spanner_database" "keydb" {
   # Schema of this database is managed by Liquibase. 'ddl' field must not be used.
   lifecycle {
     ignore_changes = [ddl]
+  }
+}
+
+resource "google_spanner_backup_schedule" "keydb" {
+  count = var.backups != null ? 1 : 0
+
+  project            = var.project_id
+  instance           = google_spanner_database.keydb.instance
+  database           = google_spanner_database.keydb.name
+  name               = "keydb-backups"
+  retention_duration = var.backups.retention_duration
+
+  spec {
+    cron_spec {
+      text = var.backups.cron_spec
+    }
+  }
+
+  dynamic "full_backup_spec" {
+    for_each = var.backups.incremental ? [] : [0]
+    content {}
+  }
+
+  dynamic "incremental_backup_spec" {
+    for_each = var.backups.incremental ? [0] : []
+    content {}
   }
 }

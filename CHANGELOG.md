@@ -1,9 +1,47 @@
 # Changelog
+## [1.29.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.28.0...v1.29.0) (2025-07-21)
+### Important Note
+[GCP]
+- [Default backup schedules](https://cloud.google.com/spanner/docs/backup#default-backup-schedules) will no longer be created on new KeyDB databases
+- [Feature enabling] Custom backup schedules can be set for KeyDB
+  - [To Enable] Configure the `key_db_backups` variable in `mpkhs_primary` or `mpkhs_secondary`:
+    ```
+      # Example custom backup schedule for KeyDB: 90d retention, daily full backup at 00:00 UTC
+      key_db_backups = {
+        retention_duration = "7776000s"
+        cron_spec          = "0 0 * * *"
+        incremental        = false
+      }
+    ```
+  - [To Rollback] Remove the `key_db_backups` variable.
+- [Feature enabling] A log-based metric can be created for scheduled Spanner backup events
+  - [To Enable] Configure the `enabled_logging_metrics` variable in `mpkhs_primary` or `mpkhs_secondary`:
+    ```
+      enabled_logging_metrics = {
+        spanner_scheduled_backups = true
+      }
+    ```
+  - [To Rollback] Remove the `enabled_logging_metrics` variable.
+
+### Changes
+- INFRA
+  - [GCP] Update security policies to use optional attributes
+  - [GCP] Use write-only attribute alternative in parameters module
+- MPKGDS
+  - [GCP] Add a log-based metric for Spanner backup events
+  - [GCP] Allow setting a Spanner backup schedule
+  - [GCP] Remove dependency on KHS jars after completing migration from Cloud Function to Cloud Run
+- BUILD
+  - [CA] Update container dependencies
+- PBS
+  - [CA] Extract integration tests
+
 
 ## [1.28.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.27.0...v1.28.0) (2025-07-07)
 ### Important notes
 [GCP]
 - The shared/ directory found under `coordinator/terraform/gcp/environments_mp_(primary|secondary)` has been removed.
+
 [CA]
 - Infastructure has been upgraded to use Terraform version v1.12.1. Please upgrade to Terraform version 1.12.X before executing any terraform commands. Terraform code will only be backwards compatible with v1.2.3 for this release only.
 

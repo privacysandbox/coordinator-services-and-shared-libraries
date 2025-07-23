@@ -191,27 +191,27 @@ variable "key_storage_ddos_thresholds" {
   description = "An object containing adaptive protection threshold configuration values for Key Storage Service."
   type = object({
     name                               = string
-    detection_load_threshold           = number
-    detection_absolute_qps             = number
-    detection_relative_to_baseline_qps = number
+    detection_load_threshold           = optional(number)
+    detection_absolute_qps             = optional(number)
+    detection_relative_to_baseline_qps = optional(number)
   })
 }
 
 variable "key_storage_security_policy_rules" {
   description = "Set of objects to define as security policy rules for Key Storage Service."
   type = set(object({
-    description = string
+    description = optional(string)
     action      = string
     priority    = number
-    preview     = bool
+    preview     = optional(bool)
     match = object({
-      versioned_expr = string
-      config = object({
+      versioned_expr = optional(string)
+      config = optional(object({
         src_ip_ranges = list(string)
-      })
-      expr = object({
+      }))
+      expr = optional(object({
         expression = string
-      })
+      }))
     })
   }))
 }

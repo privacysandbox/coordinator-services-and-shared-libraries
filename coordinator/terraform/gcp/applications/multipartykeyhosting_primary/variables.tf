@@ -93,6 +93,17 @@ variable "key_db_name_suffix" {
   default     = "keydb"
 }
 
+variable "key_db_backups" {
+  description = "Spanner database backup settings."
+  type = object({
+    # In seconds, e.g. "86400s" for 1 day, max 366 days.
+    retention_duration = string
+    cron_spec          = string
+    incremental        = bool
+  })
+  default = null
+}
+
 ################################################################################
 # Load Balancer Variables.
 ################################################################################
@@ -648,4 +659,16 @@ variable "cloud_armor_notification_channel_id" {
   EOT
   type        = string
   default     = null
+}
+
+################################################################################
+# Log-based metrics
+################################################################################
+
+variable "enabled_logging_metrics" {
+  description = "Log-based metrics to enable."
+  type = object({
+    spanner_scheduled_backups = optional(bool, false)
+  })
+  default = {}
 }

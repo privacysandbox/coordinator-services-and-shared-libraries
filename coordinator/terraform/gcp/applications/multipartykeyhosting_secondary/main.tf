@@ -65,6 +65,7 @@ module "keydb" {
   spanner_instance_edition = var.spanner_instance_edition
   spanner_processing_units = var.spanner_processing_units
   key_db_retention_period  = var.key_db_retention_period
+  backups                  = var.key_db_backups
 }
 
 module "keystorageservice" {
@@ -173,6 +174,13 @@ module "domain_a_records" {
     (local.key_storage_domain) : module.keystorageservice.load_balancer_ip_cloud_run,
     (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_cloud_run_loadbalancer_ip,
   } : {}
+}
+
+module "logging_metrics" {
+  source = "../../modules/logging_metrics"
+
+  project_id      = var.project_id
+  enabled_metrics = var.enabled_logging_metrics
 }
 
 # Coordinator WIP Provider

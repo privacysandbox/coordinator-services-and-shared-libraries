@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -30,6 +31,7 @@
 #include "cc/core/config_provider/src/env_config_provider.h"
 #include "cc/core/http2_client/src/synchronous_http2_client.h"
 #include "cc/core/interface/errors.h"
+#include "cc/core/interface/http_types.h"
 #include "cc/core/interface/type_def.h"
 #include "cc/core/test/utils/proto_test_utils.h"
 #include "cc/pbs/interface/type_def.h"
@@ -41,6 +43,8 @@ namespace {
 
 using ::absl_testing::IsOk;
 using ::absl_testing::IsOkAndHolds;
+using ::google::protobuf::RepeatedField;
+using ::google::protobuf::RepeatedPtrField;
 using ::google::protobuf::TextFormat;
 using ::google::protobuf::json::JsonStringToMessage;
 using ::google::protobuf::util::MessageToJsonString;
@@ -48,6 +52,7 @@ using ::privacy_sandbox::pbs::kTransactionIdHeader;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetRequest;
 using ::privacy_sandbox::pbs::v1::ConsumePrivacyBudgetResponse;
 using ::testing::ExplainMatchResult;
+using ::testing::Pointee;
 using ::testing::PrintToString;
 using ::testing::SizeIs;
 using ::testing::Test;
@@ -61,7 +66,7 @@ constexpr absl::string_view kGcpToken = "GCP_IDENTITY_TOKEN";
 constexpr absl::string_view kHttpTag = "http://";
 constexpr absl::string_view kHttpsTag = "https://";
 constexpr TimeDuration kHttpClientBackoffDurationInMs = 10;
-constexpr size_t kHttpClientMaxRetries = 6;
+constexpr int kHttpClientMaxRetries = 6;
 constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 5;
 
 struct BudgetConsumptionResponse {
@@ -138,7 +143,7 @@ class PbsPostSubmitTest : public Test {
 
   absl::StatusOr<BudgetConsumptionResponse> PerformRequest(
       const ConsumePrivacyBudgetRequest& req) {
-    auto http_request = MakeHttpRequest(req);
+    absl::StatusOr<HttpRequest> http_request = MakeHttpRequest(req);
     if (!http_request.ok()) {
       return http_request.status();
     }
@@ -155,7 +160,7 @@ class PbsPostSubmitTest : public Test {
 
     if (response.http_response->body.bytes != nullptr &&
         response.http_response->body.bytes->size() > 0) {
-      auto response_proto =
+      absl::StatusOr<ConsumePrivacyBudgetResponse> response_proto =
           ExtractProtoFromHttpResponse(response.http_response->body);
       if (!response_proto.ok()) {
         return response_proto.status();
@@ -170,7 +175,7 @@ class PbsPostSubmitTest : public Test {
   absl::StatusOr<HttpRequest> MakeHttpRequest(
       const ConsumePrivacyBudgetRequest& request) {
     std::string request_body;
-    if (auto status = MessageToJsonString(request, &request_body);
+    if (absl::Status status = MessageToJsonString(request, &request_body);
         !status.ok()) {
       return status;
     }
@@ -197,7 +202,7 @@ class PbsPostSubmitTest : public Test {
       const BytesBuffer& body) {
     ConsumePrivacyBudgetResponse received_response_proto;
     absl::string_view request_body(body.bytes->begin(), body.bytes->end());
-    if (auto status =
+    if (absl::Status status =
             JsonStringToMessage(request_body, &received_response_proto);
         !status.ok()) {
       return status;
@@ -231,68 +236,75 @@ absl::StatusOr<std::string> GetReportingOrigin(
                                     std::string(claimed_identity));
 }
 
-TEST_F(PbsPostSubmitTest, BasicBinaryBudgetConsumption) {
-  constexpr size_t kKeyCount = 50;
-  constexpr size_t kDataCount = 3;
+TEST_F(PbsPostSubmitTest, BinaryBudgetConsumption) {
+  constexpr int kKeyCount = 50;
+  constexpr int kDataCount = 3;
 
   ConsumePrivacyBudgetRequest consume_budget_request;
   consume_budget_request.set_version("2.0");
 
-  auto data_sections = consume_budget_request.mutable_data();
-  data_sections->Reserve(kDataCount);
   using PrivacyBudgetKey = ConsumePrivacyBudgetRequest::PrivacyBudgetKey;
   using BudgetRequestData = ConsumePrivacyBudgetRequest::BudgetRequestData;
 
-  for (size_t data_index = 0; data_index < kDataCount; ++data_index) {
+  RepeatedPtrField<BudgetRequestData>* data_sections =
+      consume_budget_request.mutable_data();
+  data_sections->Reserve(kDataCount);
+
+  for (int data_index = 0; data_index < kDataCount; ++data_index) {
     // Reporting origin if of the form
-    // http<s>://pbsorigin<data-index>-<build-num>.<claimed-identity>
-    auto reporting_origin = GetReportingOrigin(
-        absl::StrCat("pbsorigin", data_index, "-", kokoro_build_num_),
+    // http<s>://pbsoriginbin<data-index>-<build-num>.<claimed-identity>
+    absl::StatusOr<std::string> reporting_origin = GetReportingOrigin(
+        absl::StrCat("pbsoriginbin", data_index, "-", kokoro_build_num_),
         claimed_identity_);
     ASSERT_THAT(reporting_origin, IsOk());
 
-    BudgetRequestData data_section;
-    data_section.set_reporting_origin(*reporting_origin);
+    BudgetRequestData* data_section = data_sections->Add();
+    data_section->set_reporting_origin(*reporting_origin);
 
-    auto key_sections = data_section.mutable_keys();
+    RepeatedPtrField<PrivacyBudgetKey>* key_sections =
+        data_section->mutable_keys();
     key_sections->Reserve(kKeyCount);
 
-    for (size_t key_index = 0; key_index < kKeyCount; ++key_index) {
-      PrivacyBudgetKey key;
-      key.set_key(absl::StrCat(kokoro_build_id_, "-", key_index));
-      key.set_reporting_time(absl::FormatTime(
+    for (int key_index = 0; key_index < kKeyCount; ++key_index) {
+      PrivacyBudgetKey* key = key_sections->Add();
+      key->set_key(absl::StrCat(kokoro_build_id_, "-", key_index));
+      key->set_reporting_time(absl::FormatTime(
           "%Y-%m-%dT%H:%M:%E3SZ", absl::Now(), absl::UTCTimeZone()));
-      key.set_budget_type(PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET);
+      key->set_budget_type(PrivacyBudgetKey::BUDGET_TYPE_BINARY_BUDGET);
 
-      key.set_token(1);
-      key_sections->Add(std::move(key));
+      key->set_token(1);
     }
-    ASSERT_THAT(*key_sections, SizeIs(kKeyCount));
-    data_sections->Add(std::move(data_section));
+    ASSERT_THAT(key_sections, Pointee(SizeIs(kKeyCount)));
   }
-  ASSERT_THAT(*data_sections, SizeIs(kDataCount));
+  ASSERT_THAT(data_sections, Pointee(SizeIs(kDataCount)));
 
-  BudgetConsumptionResponse expected_response{
+  const BudgetConsumptionResponse expected_response_success{
       .status_code = HttpStatusCode::OK,
       .response_proto = std::nullopt,
   };
 
-  EXPECT_THAT(PerformRequest(consume_budget_request),
-              IsOkAndHolds(EqualsBudgetConsumptionResponse(expected_response)));
+  EXPECT_THAT(
+      PerformRequest(consume_budget_request),
+      IsOkAndHolds(EqualsBudgetConsumptionResponse(expected_response_success)));
 
   ConsumePrivacyBudgetResponse expected_response_proto;
   expected_response_proto.set_version("1.0");
-  auto budget_exhausted_indices =
+
+  RepeatedField<::uint32_t>* budget_exhausted_indices =
       expected_response_proto.mutable_exhausted_budget_indices();
   budget_exhausted_indices->Reserve(kKeyCount * kDataCount);
-  for (size_t index = 0; index < kKeyCount * kDataCount; ++index) {
+  for (int index = 0; index < kKeyCount * kDataCount; ++index) {
     budget_exhausted_indices->Add(index);
   }
-  expected_response.response_proto = std::move(expected_response_proto);
-  expected_response.status_code = HttpStatusCode::CONFLICT;
 
-  EXPECT_THAT(PerformRequest(consume_budget_request),
-              IsOkAndHolds(EqualsBudgetConsumptionResponse(expected_response)));
+  const BudgetConsumptionResponse expected_response_failure{
+      .status_code = HttpStatusCode::CONFLICT,
+      .response_proto = std::move(expected_response_proto),
+  };
+
+  EXPECT_THAT(
+      PerformRequest(consume_budget_request),
+      IsOkAndHolds(EqualsBudgetConsumptionResponse(expected_response_failure)));
 }
 
 }  // namespace

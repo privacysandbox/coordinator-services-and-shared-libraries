@@ -112,6 +112,17 @@ variable "key_db_name_suffix" {
   default     = "keydb"
 }
 
+variable "key_db_backups" {
+  description = "Spanner database backup settings."
+  type = object({
+    # In seconds, e.g. "86400s" for 1 day, max 366 days.
+    retention_duration = string
+    cron_spec          = string
+    incremental        = bool
+  })
+  default = null
+}
+
 ################################################################################
 # Routing Variables.
 ################################################################################
@@ -369,9 +380,9 @@ variable "encryption_key_ddos_thresholds" {
   description = "An object containing adaptive protection threshold configuration values for Encryption Key Service."
   type = object({
     name                               = string
-    detection_load_threshold           = number
-    detection_absolute_qps             = number
-    detection_relative_to_baseline_qps = number
+    detection_load_threshold           = optional(number)
+    detection_absolute_qps             = optional(number)
+    detection_relative_to_baseline_qps = optional(number)
   })
   default = null
 }
@@ -380,9 +391,9 @@ variable "key_storage_ddos_thresholds" {
   description = "An object containing adaptive protection threshold configuration values for Key Storage Service."
   type = object({
     name                               = string
-    detection_load_threshold           = number
-    detection_absolute_qps             = number
-    detection_relative_to_baseline_qps = number
+    detection_load_threshold           = optional(number)
+    detection_absolute_qps             = optional(number)
+    detection_relative_to_baseline_qps = optional(number)
   })
   default = null
 }
@@ -390,18 +401,18 @@ variable "key_storage_ddos_thresholds" {
 variable "encryption_key_security_policy_rules" {
   description = "Set of objects to define as security policy rules for Encryption Key Service."
   type = set(object({
-    description = string
+    description = optional(string)
     action      = string
     priority    = number
-    preview     = bool
+    preview     = optional(bool)
     match = object({
-      versioned_expr = string
-      config = object({
+      versioned_expr = optional(string)
+      config = optional(object({
         src_ip_ranges = list(string)
-      })
-      expr = object({
+      }))
+      expr = optional(object({
         expression = string
-      })
+      }))
     })
   }))
   default = []
@@ -410,18 +421,18 @@ variable "encryption_key_security_policy_rules" {
 variable "key_storage_security_policy_rules" {
   description = "Set of objects to define as security policy rules for Key Storage Service."
   type = set(object({
-    description = string
+    description = optional(string)
     action      = string
     priority    = number
-    preview     = bool
+    preview     = optional(bool)
     match = object({
-      versioned_expr = string
-      config = object({
+      versioned_expr = optional(string)
+      config = optional(object({
         src_ip_ranges = list(string)
-      })
-      expr = object({
+      }))
+      expr = optional(object({
         expression = string
-      })
+      }))
     })
   }))
   default = []
@@ -460,4 +471,16 @@ variable "cloud_armor_notification_channel_id" {
   EOT
   type        = string
   default     = null
+}
+
+################################################################################
+# Log-based metrics
+################################################################################
+
+variable "enabled_logging_metrics" {
+  description = "Log-based metrics to enable."
+  type = object({
+    spanner_scheduled_backups = optional(bool, false)
+  })
+  default = {}
 }

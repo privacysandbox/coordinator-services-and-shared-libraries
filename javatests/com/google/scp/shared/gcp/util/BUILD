@@ -17,6 +17,19 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
+    name = "GcpHttpInterceptorUtilTest",
+    srcs = ["GcpHttpInterceptorUtilTest.java"],
+    deps = [
+        "//java/com/google/scp/shared/gcp/util",
+        "//java/external:apache_httpcore",
+        "//java/external:google_auth_library_oauth2_http",
+        "//java/external:google_truth",
+        "//java/external:junit",
+        "//java/external:mockito",
+    ],
+)
+
+java_test(
     name = "CloudFunctionUtilTest",
     srcs = ["CloudFunctionUtilTest.java"],
     deps = [

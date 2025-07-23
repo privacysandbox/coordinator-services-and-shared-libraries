@@ -57,6 +57,8 @@ using ::privacy_sandbox::pbs_common::SyncHttpClient;
 using ::privacy_sandbox::pbs_common::TimeDuration;
 using ::privacy_sandbox::pbs_common::ToString;
 using ::privacy_sandbox::pbs_common::Uuid;
+using ::testing::Values;
+using ::testing::WithParamInterface;
 
 constexpr absl::string_view kNetworkName = "pbse2etestnetwork";
 constexpr absl::string_view kSpannerEmulatorName = "spanner";
@@ -262,6 +264,31 @@ class PBSIntegrationTest : public testing::Test {
   std::string pbs_health_check_url_;
 };
 
+class PBSIntegrationTestWithBudgetType
+    : public PBSIntegrationTest,
+      public WithParamInterface<
+          ConsumePrivacyBudgetRequest::PrivacyBudgetKey::BudgetType> {
+ protected:
+  void SetUp() override { PBSIntegrationTest::SetUp(); }
+
+  void TearDown() override { PBSIntegrationTest::TearDown(); }
+
+  absl::StatusOr<std::string> CreateRequestBodyV2() {
+    switch (GetParam()) {
+      case ConsumePrivacyBudgetRequest::PrivacyBudgetKey::
+          BUDGET_TYPE_BINARY_BUDGET:
+        return CreateBinaryRequestBodyV2();
+      default:
+        return absl::FailedPreconditionError("Unsupported budget type");
+    }
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(PBSIntegrationTestWithBudgetType,
+                         PBSIntegrationTestWithBudgetType,
+                         Values(ConsumePrivacyBudgetRequest::PrivacyBudgetKey::
+                                    BUDGET_TYPE_BINARY_BUDGET));
+
 TEST_F(PBSIntegrationTest, HealthCheck) {
   HttpRequest http_request{};
   http_request.path = std::make_shared<std::string>(
@@ -273,9 +300,9 @@ TEST_F(PBSIntegrationTest, HealthCheck) {
   EXPECT_SUCCESS(http_client_->PerformRequest(http_request).execution_result);
 }
 
-TEST_F(PBSIntegrationTest, ConsumeBudgetV2FivePhases) {
+TEST_P(PBSIntegrationTestWithBudgetType, ConsumeBudgetV2FivePhases) {
   HttpHeaders headers = CreateHttpHeaders();
-  absl::StatusOr<std::string> request_body = CreateBinaryRequestBodyV2();
+  absl::StatusOr<std::string> request_body = CreateRequestBodyV2();
   ASSERT_THAT(request_body, IsOk());
   EXPECT_SUCCESS(
       PerformRequest("/v1/transactions:begin", *request_body, headers));
@@ -289,9 +316,9 @@ TEST_F(PBSIntegrationTest, ConsumeBudgetV2FivePhases) {
       PerformRequest("/v1/transactions:end", *request_body, headers));
 }
 
-TEST_F(PBSIntegrationTest, ConsumeBudgetV2TwoPhases) {
+TEST_P(PBSIntegrationTestWithBudgetType, ConsumeBudgetV2TwoPhases) {
   HttpHeaders headers = CreateHttpHeaders();
-  absl::StatusOr<std::string> request_body = CreateBinaryRequestBodyV2();
+  absl::StatusOr<std::string> request_body = CreateRequestBodyV2();
   ASSERT_THAT(request_body, IsOk());
   EXPECT_SUCCESS(
       PerformRequest("/v1/transactions:health-check", *request_body, headers));

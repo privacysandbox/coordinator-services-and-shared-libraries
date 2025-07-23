@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,24 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = ">= 6.29.0"
-    }
-  }
-}
+load("@rules_pkg//:mappings.bzl", "pkg_files")
 
-resource "google_secret_manager_secret" "coordinator_parameter" {
-  project   = var.project_id
-  secret_id = format("scp-%s-%s", var.environment, var.parameter_name)
-  replication {
-    auto {}
-  }
-}
+package(default_visibility = ["//visibility:public"])
 
-resource "google_secret_manager_secret_version" "coordinator_parameter_value" {
-  secret         = google_secret_manager_secret.coordinator_parameter.id
-  secret_data_wo = var.parameter_value
-}
+pkg_files(
+    name = "logging_metrics",
+    srcs = glob(
+        ["*"],
+        exclude = [
+            "BUILD",
+        ],
+    ),
+    prefix = "logging_metrics",
+)
