@@ -46,9 +46,6 @@ public final class PrivacyBudgetClientImplV2 implements PrivacyBudgetClientV2 {
   private static final String HEATH_CHECK_PATH = "/transactions:health-check";
   private static final String CONSUME_BUDGET_PATH = "/transactions:consume-budget";
   private static final String TRANSACTION_ID_HEADER_KEY = "x-gscp-transaction-id";
-  private static final String TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY =
-      "x-gscp-transaction-last-execution-timestamp";
-  private static final String TRANSACTION_SECRET_HEADER_KEY = "x-gscp-transaction-secret";
   private static final String CLAIMED_IDENTITY_HEADER_KEY = "x-gscp-claimed-identity";
 
   private static final ObjectMapper mapper = new TimeObjectMapper();
@@ -142,14 +139,7 @@ public final class PrivacyBudgetClientImplV2 implements PrivacyBudgetClientV2 {
     ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
     mapBuilder.put(
         TRANSACTION_ID_HEADER_KEY, transactionRequest.transactionId().toString().toUpperCase());
-    mapBuilder.put(TRANSACTION_SECRET_HEADER_KEY, transactionRequest.transactionSecret());
     mapBuilder.put(CLAIMED_IDENTITY_HEADER_KEY, transactionRequest.claimedIdentity());
-
-    // TODO: The server still extracts this in non-BEGIN phases. Remove both.
-    if (!endpointPath.equals(HEATH_CHECK_PATH)) {
-      mapBuilder.put(TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY, "1234");
-    }
-
     return mapBuilder.build();
   }
 

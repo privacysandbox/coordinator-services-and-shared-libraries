@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-#include "config_provider.h"
+#include "cc/core/config_provider/src/config_provider.h"
 
 #include <fstream>
 #include <list>
+#include <string>
 
-using std::ifstream;
-using std::string;
 using json = nlohmann::json;
-using std::list;
 
 namespace privacy_sandbox::pbs_common {
 namespace {}  // namespace
 
 ExecutionResult ConfigProvider::Init() noexcept {
   try {
-    ifstream jsonFile(config_file_);
+    std::ifstream jsonFile(config_file_);
     config_json_ = json::parse(jsonFile);
   } catch (json::parse_error& e) {
     return FailureExecutionResult(SC_CONFIG_PROVIDER_CANNOT_PARSE_CONFIG_FILE);
@@ -56,8 +54,8 @@ ExecutionResult ConfigProvider::Get(const ConfigKey& key,
 };
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key,
-                                    string& out) noexcept {
-  return Get<string>(key, out);
+                                    std::string& out) noexcept {
+  return Get<std::string>(key, out);
 };
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key, bool& out) noexcept {
@@ -70,22 +68,22 @@ ExecutionResult ConfigProvider::Get(const ConfigKey& key,
 };
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key,
-                                    list<string>& out) noexcept {
-  return Get<string>(key, out);
+                                    std::list<std::string>& out) noexcept {
+  return Get<std::string>(key, out);
 };
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key,
-                                    list<int32_t>& out) noexcept {
+                                    std::list<int32_t>& out) noexcept {
   return Get<int32_t>(key, out);
 };
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key,
-                                    list<size_t>& out) noexcept {
+                                    std::list<size_t>& out) noexcept {
   return Get<size_t>(key, out);
 };
 
 ExecutionResult ConfigProvider::Get(const ConfigKey& key,
-                                    list<bool>& out) noexcept {
+                                    std::list<bool>& out) noexcept {
   return Get<bool>(key, out);
 };
 }  // namespace privacy_sandbox::pbs_common

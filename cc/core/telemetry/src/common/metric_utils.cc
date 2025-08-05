@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "metric_utils.h"
+#include "cc/core/telemetry/src/common/metric_utils.h"
 
 #include <functional>
 #include <iostream>

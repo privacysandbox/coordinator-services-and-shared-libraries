@@ -42,24 +42,14 @@ using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::privacy_sandbox::pbs_common::MockHttpClient;
 using ::privacy_sandbox::pbs_common::ResultIs;
 using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
-using std::make_shared;
-using std::shared_ptr;
-
-static constexpr char kTokenServerPath[] =
-    "http://metadata/computeMetadata/v1/instance/service-accounts/default/"
-    "identity";
-constexpr char kBase64EncodedAuthToken[] =
-    "someheader."
-    "eyJleHAiOjE2NzI3NjA3MDEsImlzcyI6Imlzc3VlciIsImF1ZCI6ImF1ZGllbmNlIiwic3ViIj"
-    "oic3ViamVjdCIsImlhdCI6MTY3Mjc1NzEwMX0=.signature";
 
 class GcpCloudDependencyFactoryTest : public ::testing::Test {
  protected:
   GcpCloudDependencyFactoryTest()
-      : async_executor1_(make_shared<AsyncExecutor>(2, 10000, true)),
-        async_executor2_(make_shared<AsyncExecutor>(2, 10000, true)),
-        mock_http_client_(make_shared<MockHttpClient>()),
-        mock_config_provider_(make_shared<MockConfigProvider>()),
+      : async_executor1_(std::make_shared<AsyncExecutor>(2, 10000, true)),
+        async_executor2_(std::make_shared<AsyncExecutor>(2, 10000, true)),
+        mock_http_client_(std::make_shared<MockHttpClient>()),
+        mock_config_provider_(std::make_shared<MockConfigProvider>()),
         gcp_factory_(mock_config_provider_) {}
 
   void SetUp() override {
@@ -85,10 +75,10 @@ class GcpCloudDependencyFactoryTest : public ::testing::Test {
     EXPECT_THAT(async_executor2_->Stop(), ResultIs(SuccessExecutionResult()));
   }
 
-  shared_ptr<AsyncExecutorInterface> async_executor1_;
-  shared_ptr<AsyncExecutorInterface> async_executor2_;
-  shared_ptr<MockHttpClient> mock_http_client_;
-  shared_ptr<MockConfigProvider> mock_config_provider_;
+  std::shared_ptr<AsyncExecutorInterface> async_executor1_;
+  std::shared_ptr<AsyncExecutorInterface> async_executor2_;
+  std::shared_ptr<MockHttpClient> mock_http_client_;
+  std::shared_ptr<MockConfigProvider> mock_config_provider_;
   GcpDependencyFactory gcp_factory_;
 };
 

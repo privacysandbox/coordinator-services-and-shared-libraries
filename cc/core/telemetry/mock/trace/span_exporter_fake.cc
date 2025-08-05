@@ -14,7 +14,10 @@
 
 #include "cc/core/telemetry/mock/trace/span_exporter_fake.h"
 
+#include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "cc/core/telemetry/src/common/trace/trace_utils.h"
 

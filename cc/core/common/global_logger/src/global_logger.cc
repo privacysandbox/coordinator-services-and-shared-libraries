@@ -14,33 +14,29 @@
  * limitations under the License.
  */
 
-#include "global_logger.h"
+#include "cc/core/common/global_logger/src/global_logger.h"
 
 #include <memory>
 #include <unordered_set>
 #include <utility>
 
-using std::move;
-using std::unique_ptr;
-using std::unordered_set;
-
 namespace privacy_sandbox::pbs_common {
-static unique_ptr<LoggerInterface> logger_instance_;
-static unordered_set<LogLevel> enabled_log_levels_ = {
+static std::unique_ptr<LoggerInterface> logger_instance_;
+static std::unordered_set<LogLevel> enabled_log_levels_ = {
     LogLevel::kAlert,     LogLevel::kCritical, LogLevel::kDebug,
     LogLevel::kEmergency, LogLevel::kError,    LogLevel::kInfo,
     LogLevel::kWarning};
 
-const unique_ptr<LoggerInterface>& GlobalLogger::GetGlobalLogger() {
+const std::unique_ptr<LoggerInterface>& GlobalLogger::GetGlobalLogger() {
   return logger_instance_;
 }
 
 void GlobalLogger::SetGlobalLogLevels(
-    const unordered_set<LogLevel>& log_levels) {
+    const std::unordered_set<LogLevel>& log_levels) {
   enabled_log_levels_ = log_levels;
 }
 
-void GlobalLogger::SetGlobalLogger(unique_ptr<LoggerInterface> logger) {
+void GlobalLogger::SetGlobalLogger(std::unique_ptr<LoggerInterface> logger) {
   logger_instance_ = std::move(logger);
 }
 

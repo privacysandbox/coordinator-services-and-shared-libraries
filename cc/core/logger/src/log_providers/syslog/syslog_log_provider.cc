@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "syslog_log_provider.h"
+#include "cc/core/logger/src/log_providers/syslog/syslog_log_provider.h"
 
 #include <stdio.h>
 #include <syslog.h>
@@ -28,9 +28,8 @@
 #include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
 #include "cc/core/common/uuid/src/uuid.h"
+#include "cc/core/logger/src/log_providers/syslog/error_codes.h"
 #include "cc/core/logger/src/log_utils.h"
-
-#include "error_codes.h"
 
 namespace privacy_sandbox::pbs_common {
 
@@ -69,7 +68,7 @@ void SyslogLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
                             const string_view& machine_name,
                             const string_view& cluster_name,
                             const string_view& location,
-                            const string_view& message, va_list args) noexcept {
+                            const string_view& message) noexcept {
   std::string severity = absl::AsciiStrToUpper(LogLevelToString(level));
 
   auto formatted_message = StrCat(
@@ -80,25 +79,25 @@ void SyslogLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
   try {
     switch (level) {
       case LogLevel::kDebug:
-        vsyslog(LOG_DEBUG, formatted_message.c_str(), args);
+        syslog(LOG_DEBUG, "%s", formatted_message.c_str());
         break;
       case LogLevel::kInfo:
-        vsyslog(LOG_INFO, formatted_message.c_str(), args);
+        syslog(LOG_INFO, "%s", formatted_message.c_str());
         break;
       case LogLevel::kWarning:
-        vsyslog(LOG_WARNING, formatted_message.c_str(), args);
+        syslog(LOG_WARNING, "%s", formatted_message.c_str());
         break;
       case LogLevel::kError:
-        vsyslog(LOG_ERR, formatted_message.c_str(), args);
+        syslog(LOG_ERR, "%s", formatted_message.c_str());
         break;
       case LogLevel::kAlert:
-        vsyslog(LOG_ALERT, formatted_message.c_str(), args);
+        syslog(LOG_ALERT, "%s", formatted_message.c_str());
         break;
       case LogLevel::kEmergency:
-        vsyslog(LOG_EMERG, formatted_message.c_str(), args);
+        syslog(LOG_EMERG, "%s", formatted_message.c_str());
         break;
       case LogLevel::kCritical:
-        vsyslog(LOG_CRIT, formatted_message.c_str(), args);
+        syslog(LOG_CRIT, "%s", formatted_message.c_str());
         break;
       case LogLevel::kNone:
         cerr << "Invalid log type";

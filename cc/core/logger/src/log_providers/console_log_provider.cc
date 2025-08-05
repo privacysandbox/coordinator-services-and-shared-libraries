@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "console_log_provider.h"
+#include "cc/core/logger/src/log_providers/console_log_provider.h"
 
+#include <cstdio>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -25,13 +26,6 @@
 #include "cc/core/common/uuid/src/uuid.h"
 
 namespace privacy_sandbox::pbs_common {
-
-using std::cout;
-using std::endl;
-using std::string;
-using std::string_view;
-using std::vector;
-using std::vsnprintf;
 
 constexpr size_t nano_seconds_multiplier = (1000 * 1000 * 1000);
 
@@ -47,12 +41,14 @@ ExecutionResult ConsoleLogProvider::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
-void ConsoleLogProvider::Log(
-    const LogLevel& level, const Uuid& correlation_id,
-    const Uuid& parent_activity_id, const Uuid& activity_id,
-    const string_view& component_name, const string_view& machine_name,
-    const string_view& cluster_name, const string_view& location,
-    const string_view& message, va_list args) noexcept {
+void ConsoleLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
+                             const Uuid& parent_activity_id,
+                             const Uuid& activity_id,
+                             const std::string_view& component_name,
+                             const std::string_view& machine_name,
+                             const std::string_view& cluster_name,
+                             const std::string_view& location,
+                             const std::string_view& message) noexcept {
   auto current_timestamp =
       TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
   auto current_timestamp_seconds = current_timestamp / nano_seconds_multiplier;
@@ -62,22 +58,11 @@ void ConsoleLogProvider::Log(
          << cluster_name << "|" << machine_name << "|" << component_name << "|"
          << ToString(correlation_id) << "|" << ToString(parent_activity_id)
          << "|" << ToString(activity_id) << "|" << location << "|"
-         << static_cast<int>(level) << ": ";
-
-  va_list size_args;
-  va_copy(size_args, args);
-  const auto size = vsnprintf(nullptr, 0U, message.data(), size_args);
-  auto output_message = vector<char>(size + 1);
-  // vsnprintf adds a terminator at the end, so we need to specify size + 1
-  // here.
-  vsnprintf(&output_message[0], size + 1, message.data(), args);
-
-  output << string(output_message.data(), size);
-
+         << static_cast<int>(level) << ": " << message;
   Print(output.str());
 }
 
-void ConsoleLogProvider::Print(const string& output) noexcept {
-  cout << output << endl;
+void ConsoleLogProvider::Print(const std::string& output) noexcept {
+  std::cout << output << std::endl;
 }
 }  // namespace privacy_sandbox::pbs_common

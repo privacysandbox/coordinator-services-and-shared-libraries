@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "stdout_log_provider.h"
+#include "cc/core/logger/src/log_providers/stdout/stdout_log_provider.h"
 
 #include <iostream>
 #include <string>
@@ -48,8 +48,7 @@ void StdoutLogProvider::Log(const LogLevel& level, const Uuid& correlation_id,
                             const std::string_view& machine_name,
                             const std::string_view& cluster_name,
                             const std::string_view& location,
-                            const std::string_view& message,
-                            va_list args) noexcept {
+                            const std::string_view& message) noexcept {
   std::string severity;
 
   switch (level) {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CC_PBS_FRONT_END_SERVICE_SRC_FRONT_END_SERVICE_V2
-#define CC_PBS_FRONT_END_SERVICE_SRC_FRONT_END_SERVICE_V2
+#ifndef CC_PBS_FRONT_END_SERVICE_SRC_FRONT_END_SERVICE_V2_H_
+#define CC_PBS_FRONT_END_SERVICE_SRC_FRONT_END_SERVICE_V2_H_
 
 #include <memory>
 #include <string>
@@ -166,4 +166,4 @@ class FrontEndServiceV2 : public FrontEndServiceInterface {
 
 }  // namespace privacy_sandbox::pbs
 
-#endif  // CC_PBS_FRONT_END_SERVICE_SRC_FRONT_END_SERVICE_V2
+#endif  // CC_PBS_FRONT_END_SERVICE_SRC_FRONT_END_SERVICE_V2_H_

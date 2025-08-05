@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef CC_CORE_LOGGER_SRC_LOG_PROVIDERS_SYSLOG_SYSLOG_LOG_PROVIDER_H_
+#define CC_CORE_LOGGER_SRC_LOG_PROVIDERS_SYSLOG_SYSLOG_LOG_PROVIDER_H_
 
 #include <syslog.h>
 
@@ -21,8 +23,7 @@
 
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/logger/interface/log_provider_interface.h"
-
-#include "error_codes.h"
+#include "cc/core/logger/src/log_providers/syslog/error_codes.h"
 
 namespace privacy_sandbox::pbs_common {
 
@@ -46,10 +47,11 @@ class SyslogLogProvider : public LogProviderInterface {
            const std::string_view& component_name,
            const std::string_view& machine_name,
            const std::string_view& cluster_name,
-           const std::string_view& location, const std::string_view& message,
-           va_list args) noexcept override;
+           const std::string_view& location,
+           const std::string_view& message) noexcept override;
 
  private:
   const char* log_channel = "scp-log";
 };
 }  // namespace privacy_sandbox::pbs_common
+#endif  // CC_CORE_LOGGER_SRC_LOG_PROVIDERS_SYSLOG_SYSLOG_LOG_PROVIDER_H_

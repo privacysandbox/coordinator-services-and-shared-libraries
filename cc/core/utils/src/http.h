@@ -156,14 +156,14 @@ std::string HttpMethodToString(HttpMethod method);
  */
 constexpr std::array<double, 78> MakeLatencyHistogramBoundaries() noexcept {
   const double power_base = std::pow(10.0L, 0.1L);  // 1.2589254117941673
-  constexpr double scale_factor = 0.0001L;  // 100µs (0.0001s)
+  constexpr double scale_factor = 0.0001L;          // 100µs (0.0001s)
 
   std::array<double, 78> boundaries;
   boundaries[0] = 0.0L;  // Set the first element to 0
 
   // Calculate boundaries from index 1 onwards.
   for (std::size_t i = 1; i < boundaries.size(); i++) {
-    boundaries[i] = std::pow(power_base, /*exponent*/i - 1) * scale_factor;
+    boundaries[i] = std::pow(power_base, /*exponent*/ i - 1) * scale_factor;
   }
 
   return boundaries;

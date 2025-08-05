@@ -87,3 +87,13 @@ variable "pbs_spanner_autoscaling_config" {
   })
   default = null
 }
+
+variable "backups" {
+  description = "Spanner database backup settings."
+  type = object({
+    # In seconds, e.g. "86400s" for 1 day, max 366 days.
+    retention_duration = string
+    cron_spec          = string
+    incremental        = bool
+  })
+}

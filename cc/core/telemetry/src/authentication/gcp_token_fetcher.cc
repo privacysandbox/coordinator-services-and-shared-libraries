@@ -12,15 +12,15 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "gcp_token_fetcher.h"
+#include "cc/core/telemetry/src/authentication/gcp_token_fetcher.h"
 
 #include <memory>
+#include <string>
 
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/errors.h"
-
-#include "token_fetcher_utils.h"
+#include "cc/core/telemetry/src/authentication/token_fetcher_utils.h"
 
 namespace privacy_sandbox::pbs_common {
 
@@ -32,8 +32,9 @@ ExecutionResultOr<std::string> GcpTokenFetcher::FetchIdToken(
   auto execution_result = FetchIdTokenInternal(*iam_client_, auth_config);
   if (!execution_result.Successful()) {
     SCP_ERROR(kGcpTokenFetcher, kZeroUuid, execution_result.result(),
-              "FetchIdToken() ID Token fetch failed: %s",
-              GetErrorMessage(execution_result.result().status_code));
+              absl::StrFormat("FetchIdToken() ID Token fetch failed: %s",
+                              GetErrorMessage(
+                                  execution_result.result().status_code)));
   }
   return execution_result;
 }

@@ -15,6 +15,8 @@
 #include <gtest/gtest.h>
 
 #include <functional>
+#include <iostream>
+#include <memory>
 #include <vector>
 
 #include "cc/core/async_executor/src/single_thread_async_executor.h"
@@ -23,34 +25,23 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using std::atomic;
-using std::cout;
-using std::endl;
-using std::function;
-using std::make_shared;
-using std::shared_ptr;
-using std::thread;
-using std::vector;
-using std::chrono::duration_cast;
-using std::chrono::milliseconds;
-using std::this_thread::sleep_for;
 
 class SingleThreadAsyncExecutorBenchmarkTest : public ::testing::Test {
  protected:
   void SetUpExecutor() {
     size_t queue_size = 100000000;
     bool drop_tasks_on_stop = false;
-    async_executor_ =
-        make_shared<SingleThreadAsyncExecutor>(queue_size, drop_tasks_on_stop);
+    async_executor_ = std::make_shared<SingleThreadAsyncExecutor>(
+        queue_size, drop_tasks_on_stop);
     EXPECT_SUCCESS(async_executor_->Init());
     EXPECT_SUCCESS(async_executor_->Run());
   }
 
   int num_threads_scheduling_tasks_ = 10;
   int task_schedule_count_per_thread_ = 1000000;
-  shared_ptr<SingleThreadAsyncExecutor> async_executor_;
-  atomic<int64_t> execution_count_ = 0;
-  function<void()> test_work_function_ = [&]() {
+  std::shared_ptr<SingleThreadAsyncExecutor> async_executor_;
+  std::atomic<int64_t> execution_count_ = 0;
+  std::function<void()> test_work_function_ = [&]() {
     execution_count_ += 1;
     execution_count_ += 1;
     execution_count_ += 1;
@@ -62,7 +53,7 @@ class SingleThreadAsyncExecutorBenchmarkTest : public ::testing::Test {
 TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTask) {
   GTEST_SKIP();
   SetUpExecutor();
-  atomic<bool> start = false;
+  std::atomic<bool> start = false;
   auto task_queueing_function = [&](int id) {
     while (!start) {}
     for (int i = 0; i < task_schedule_count_per_thread_; i++) {
@@ -71,7 +62,7 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTask) {
     }
   };
 
-  vector<thread> threads;
+  std::vector<std::thread> threads;
   for (int i = 0; i < num_threads_scheduling_tasks_; i++) {
     threads.emplace_back(task_queueing_function, i);
   }
@@ -81,12 +72,14 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTask) {
   start = true;
   while (execution_count_ != (num_threads_scheduling_tasks_ *
                               task_schedule_count_per_thread_ * 5)) {
-    sleep_for(milliseconds(5));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
   auto end_ns = TimeProvider::GetSteadyTimestampInNanoseconds();
 
-  cout << (duration_cast<milliseconds>(end_ns - start_ns)).count()
-       << " milliseconds elapsed" << endl;
+  std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(end_ns -
+                                                                      start_ns))
+                   .count()
+            << " milliseconds elapsed" << std::endl;
 
   EXPECT_SUCCESS(async_executor_->Stop());
   EXPECT_EQ(execution_count_.load(), 5 * num_threads_scheduling_tasks_ *
@@ -99,7 +92,7 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTask) {
 TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTaskMixedPriority) {
   GTEST_SKIP();
   SetUpExecutor();
-  atomic<bool> start = false;
+  std::atomic<bool> start = false;
   auto task_queueing_function = [&](int id) {
     while (!start) {}
     for (int i = 0; i < task_schedule_count_per_thread_; i++) {
@@ -111,7 +104,7 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTaskMixedPriority) {
     }
   };
 
-  vector<thread> threads;
+  std::vector<std::thread> threads;
   for (int i = 0; i < num_threads_scheduling_tasks_; i++) {
     threads.emplace_back(task_queueing_function, i);
   }
@@ -121,12 +114,14 @@ TEST_F(SingleThreadAsyncExecutorBenchmarkTest, PerfTestSmallTaskMixedPriority) {
   start = true;
   while (execution_count_ != (num_threads_scheduling_tasks_ *
                               task_schedule_count_per_thread_ * 5)) {
-    sleep_for(milliseconds(5));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
   auto end_ns = TimeProvider::GetSteadyTimestampInNanoseconds();
 
-  cout << (duration_cast<milliseconds>(end_ns - start_ns)).count()
-       << " milliseconds elapsed" << endl;
+  std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(end_ns -
+                                                                      start_ns))
+                   .count()
+            << " milliseconds elapsed" << std::endl;
 
   EXPECT_SUCCESS(async_executor_->Stop());
   EXPECT_EQ(execution_count_.load(), 5 * num_threads_scheduling_tasks_ *

@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef CC_CORE_LOGGER_SRC_LOG_PROVIDERS_STDOUT_STDOUT_LOG_PROVIDER_H_
+#define CC_CORE_LOGGER_SRC_LOG_PROVIDERS_STDOUT_STDOUT_LOG_PROVIDER_H_
+
 #include <string_view>
 
 #include "cc/core/common/uuid/src/uuid.h"
@@ -35,7 +38,8 @@ class StdoutLogProvider : public LogProviderInterface {
            const std::string_view& component_name,
            const std::string_view& machine_name,
            const std::string_view& cluster_name,
-           const std::string_view& location, const std::string_view& message,
-           va_list args) noexcept override;
+           const std::string_view& location,
+           const std::string_view& message) noexcept override;
 };
 }  // namespace privacy_sandbox::pbs_common
+#endif  // CC_CORE_LOGGER_SRC_LOG_PROVIDERS_STDOUT_STDOUT_LOG_PROVIDER_H_

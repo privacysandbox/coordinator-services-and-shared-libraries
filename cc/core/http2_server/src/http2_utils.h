@@ -20,9 +20,8 @@
 #include <memory>
 #include <string>
 
+#include "cc/core/http2_server/src/error_codes.h"
 #include "cc/core/interface/http_types.h"
-
-#include "error_codes.h"
 
 namespace privacy_sandbox::pbs_common {
 class Http2Utils {

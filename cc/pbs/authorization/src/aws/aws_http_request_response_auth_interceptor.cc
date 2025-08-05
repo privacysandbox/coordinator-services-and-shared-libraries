@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "aws_http_request_response_auth_interceptor.h"
+#include "cc/pbs/authorization/src/aws/aws_http_request_response_auth_interceptor.h"
 
 #include <array>
 #include <iterator>
@@ -48,8 +48,6 @@ using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kClaimedIdentityHeader;
 using ::privacy_sandbox::pbs_common::PadBase64Encoding;
 using ::privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
-using std::make_shared;
-using std::string;
 using json = nlohmann::json;
 
 constexpr char kAccessKey[] = "access_key";
@@ -79,7 +77,7 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
     return padded_token_or.result();
   }
 
-  string token;
+  std::string token;
   auto execution_result = Base64Decode(*padded_token_or, token);
   if (!execution_result) {
     return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
@@ -96,23 +94,23 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
       !json_token.contains(kAmzDate)) {
     return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
-  const string& access_key = json_token[kAccessKey].get<string>();
-  const string& signature = json_token[kSignature].get<string>();
-  const string& amz_date = json_token[kAmzDate].get<string>();
-  const string& security_token = [&json_token]() {
+  const std::string& access_key = json_token[kAccessKey].get<std::string>();
+  const std::string& signature = json_token[kSignature].get<std::string>();
+  const std::string& amz_date = json_token[kAmzDate].get<std::string>();
+  const std::string& security_token = [&json_token]() {
     if (json_token.contains(kSecurityToken)) {
-      return json_token[kSecurityToken].get<string>();
+      return json_token[kSecurityToken].get<std::string>();
     }
-    return string();
+    return std::string();
   }();
 
-  http_request.headers->insert({string(kClaimedIdentityHeader),
+  http_request.headers->insert({std::string(kClaimedIdentityHeader),
                                 authorization_metadata.claimed_identity});
 
   AwsV4Signer signer(access_key, "", security_token, "execute-api",
                      aws_region_);
-  std::vector<string> headers_to_sign{std::begin(kSignedHeaders),
-                                      std::end(kSignedHeaders)};
+  std::vector<std::string> headers_to_sign{std::begin(kSignedHeaders),
+                                           std::end(kSignedHeaders)};
   return signer.SignRequestWithSignature(http_request, headers_to_sign,
                                          amz_date, signature);
 }
@@ -120,7 +118,7 @@ ExecutionResult AwsHttpRequestResponseAuthInterceptor::PrepareRequest(
 ExecutionResultOr<AuthorizedMetadata>
 AwsHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     const AuthorizationMetadata&, const HttpResponse& http_response) {
-  string body_str = http_response.body.ToString();
+  std::string body_str = http_response.body.ToString();
   json body_json;
   bool parse_fail = true;
   try {
@@ -131,8 +129,9 @@ AwsHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
-  return AuthorizedMetadata{.authorized_domain = make_shared<AuthorizedDomain>(
-                                body_json[kAuthorizedDomain].get<string>())};
+  return AuthorizedMetadata{
+      .authorized_domain = std::make_shared<AuthorizedDomain>(
+          body_json[kAuthorizedDomain].get<std::string>())};
 }
 
 }  // namespace privacy_sandbox::pbs

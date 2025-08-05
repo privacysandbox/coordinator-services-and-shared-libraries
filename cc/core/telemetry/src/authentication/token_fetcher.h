@@ -11,8 +11,8 @@
 //  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
-#ifndef CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER
-#define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER
+#ifndef CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_H_
+#define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_H_
 
 #include <chrono>
 #include <memory>
@@ -38,4 +38,4 @@ class TokenFetcher {
       GrpcAuthConfig& auth_config) = 0;
 };
 }  // namespace privacy_sandbox::pbs_common
-#endif
+#endif  // CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_H_

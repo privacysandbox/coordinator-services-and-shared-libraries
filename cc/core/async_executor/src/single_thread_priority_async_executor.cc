@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "single_thread_priority_async_executor.h"
+#include "cc/core/async_executor/src/single_thread_priority_async_executor.h"
 
 #include <atomic>
 #include <chrono>
@@ -22,33 +22,21 @@
 #include <thread>
 #include <vector>
 
+#include "cc/core/async_executor/src/async_executor_utils.h"
+#include "cc/core/async_executor/src/error_codes.h"
+#include "cc/core/async_executor/src/typedef.h"
 #include "cc/core/common/time_provider/src/time_provider.h"
 
-#include "async_executor_utils.h"
-#include "error_codes.h"
-#include "typedef.h"
-
 namespace privacy_sandbox::pbs_common {
-using std::function;
-using std::make_shared;
-using std::make_unique;
-using std::mutex;
-using std::priority_queue;
-using std::shared_ptr;
-using std::thread;
-using std::unique_lock;
-using std::vector;
-using std::chrono::milliseconds;
-using std::chrono::nanoseconds;
 
 ExecutionResult SingleThreadPriorityAsyncExecutor::Init() noexcept {
   if (queue_cap_ <= 0 || queue_cap_ > kMaxQueueCap) {
     return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_QUEUE_CAP);
   }
 
-  queue_ = make_shared<
-      priority_queue<shared_ptr<AsyncTask>, vector<shared_ptr<AsyncTask>>,
-                     AsyncTaskCompareGreater>>();
+  queue_ = std::make_shared<std::priority_queue<
+      std::shared_ptr<AsyncTask>, std::vector<std::shared_ptr<AsyncTask>>,
+      AsyncTaskCompareGreater>>();
   return SuccessExecutionResult();
 };
 
@@ -62,7 +50,7 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::Run() noexcept {
   }
 
   is_running_ = true;
-  working_thread_ = make_unique<thread>(
+  working_thread_ = std::make_unique<std::thread>(
       [affinity_cpu_number =
            affinity_cpu_number_](SingleThreadPriorityAsyncExecutor* ptr) {
         if (affinity_cpu_number.has_value()) {
@@ -81,7 +69,7 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::Run() noexcept {
 }
 
 void SingleThreadPriorityAsyncExecutor::StartWorker() noexcept {
-  unique_lock<mutex> thread_lock(mutex_);
+  std::unique_lock<std::mutex> thread_lock(mutex_);
   auto wait_timeout_duration_ns = kInfiniteWaitDurationNs;
 
   while (true) {
@@ -116,10 +104,10 @@ void SingleThreadPriorityAsyncExecutor::StartWorker() noexcept {
         TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks();
 
     next_scheduled_task_timestamp_ = queue_->top()->GetExecutionTimestamp();
-    wait_timeout_duration_ns = nanoseconds(0);
+    wait_timeout_duration_ns = std::chrono::nanoseconds(0);
     if (current_timestamp < next_scheduled_task_timestamp_) {
-      wait_timeout_duration_ns =
-          nanoseconds(next_scheduled_task_timestamp_ - current_timestamp);
+      wait_timeout_duration_ns = std::chrono::nanoseconds(
+          next_scheduled_task_timestamp_ - current_timestamp);
     } else {
       auto top = queue_->top();
       queue_->pop();
@@ -135,7 +123,7 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::Stop() noexcept {
     return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
-  unique_lock<mutex> thread_lock(mutex_);
+  std::unique_lock<std::mutex> thread_lock(mutex_);
   is_running_ = false;
 
   if (drop_tasks_on_stop_) {
@@ -152,7 +140,7 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::Stop() noexcept {
   // there is a chance that Stop returns successful but the thread has not been
   // killed.
   while (!(worker_thread_started_.load() && worker_thread_stopped_.load())) {
-    std::this_thread::sleep_for(milliseconds(kSleepDurationMs));
+    std::this_thread::sleep_for(std::chrono::milliseconds(kSleepDurationMs));
   }
 
   return SuccessExecutionResult();
@@ -160,24 +148,24 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::Stop() noexcept {
 
 ExecutionResult SingleThreadPriorityAsyncExecutor::ScheduleFor(
     const AsyncOperation& work, Timestamp timestamp) noexcept {
-  function<bool()> cancellation_callback = []() { return false; };
+  std::function<bool()> cancellation_callback = []() { return false; };
   return ScheduleFor(work, timestamp, cancellation_callback);
 };
 
 ExecutionResult SingleThreadPriorityAsyncExecutor::ScheduleFor(
     const AsyncOperation& work, Timestamp timestamp,
-    function<bool()>& cancellation_callback) noexcept {
+    std::function<bool()>& cancellation_callback) noexcept {
   if (!is_running_) {
     return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
-  unique_lock<mutex> thread_lock(mutex_);
+  std::unique_lock<std::mutex> thread_lock(mutex_);
 
   if (queue_->size() >= queue_cap_) {
     return RetryExecutionResult(SC_ASYNC_EXECUTOR_EXCEEDING_QUEUE_CAP);
   }
 
-  auto task = make_shared<AsyncTask>(work, timestamp);
+  auto task = std::make_shared<AsyncTask>(work, timestamp);
   cancellation_callback = [task]() mutable { return task->Cancel(); };
   queue_->push(task);
 
@@ -190,8 +178,8 @@ ExecutionResult SingleThreadPriorityAsyncExecutor::ScheduleFor(
   return SuccessExecutionResult();
 };
 
-ExecutionResultOr<thread::id> SingleThreadPriorityAsyncExecutor::GetThreadId()
-    const {
+ExecutionResultOr<std::thread::id>
+SingleThreadPriorityAsyncExecutor::GetThreadId() const {
   if (!is_running_.load()) {
     return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }

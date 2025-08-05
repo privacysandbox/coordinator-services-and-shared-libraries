@@ -344,6 +344,24 @@ variable "encryption_key_service_subdomain" {
   default     = "privatekeyservice"
 }
 
+variable "private_key_service_alternate_domain_names" {
+  description = "A list of alternate domain names for the private key service for which to add as a subject alternative name in the SSL certificate. Eg: [service-example.com]"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_private_key_service_certificate_map" {
+  description = "Attach the certificate manager certificate to the private key load balancer"
+  type        = bool
+  default     = false
+}
+
+variable "disable_private_key_service_compute_engine_ssl_cert" {
+  description = "Disables the existing compute engine SSL certificate. Only set this to true once all certificates have been migrated to certificate manager"
+  type        = bool
+  default     = false
+}
+
 variable "enable_public_key_alternative_domain" {
   description = "Set to true to enable the creation of alternative domain certificates and related resources."
   type        = bool

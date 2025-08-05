@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "in_memory_metric_reader.h"
+#include "cc/core/telemetry/mock/in_memory_metric_reader.h"
 
 #include <chrono>
 #include <future>

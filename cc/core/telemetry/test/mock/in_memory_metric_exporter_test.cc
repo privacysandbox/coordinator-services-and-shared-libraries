@@ -14,6 +14,9 @@
 
 #include "cc/core/telemetry/mock/in_memory_metric_exporter.h"
 
+#include <memory>
+#include <vector>
+
 #include "include/gtest/gtest.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/resource/resource.h"

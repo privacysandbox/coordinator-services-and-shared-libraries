@@ -14,9 +14,11 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
 #include <string_view>
 #include <vector>
 
+#include "absl/strings/str_format.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/logger_interface.h"
 #include "cc/core/logger/mock/mock_logger.h"
@@ -24,9 +26,6 @@
 #include "cc/core/test/scp_test_base.h"
 
 namespace privacy_sandbox::pbs_common {
-
-using std::string;
-using std::vector;
 
 class LoggerTests : public ScpTestBase {
  protected:
@@ -45,13 +44,13 @@ class LoggerTests : public ScpTestBase {
   }
 
   Uuid uuid;
-  string uuid_str;
+  std::string uuid_str;
   Uuid parent_uuid;
-  string parent_uuid_str;
+  std::string parent_uuid_str;
   Uuid correlation_id;
-  string correlation_id_str;
-  string location;
-  const string component_name = "LoggerTest";
+  std::string correlation_id_str;
+  std::string location;
+  const std::string component_name = "LoggerTest";
 };
 
 TEST_F(LoggerTests, LogDebug) {
@@ -131,7 +130,7 @@ TEST_F(LoggerTests, LogWithArgs) {
   MockLogger logger;
 
   logger.Warning(component_name, correlation_id, parent_uuid, uuid, location,
-                 "Message %d %s", 1, "error");
+                 absl::StrFormat("Message %d %s", 1, "error"));
 
   auto logs = logger.GetMessages();
   EXPECT_EQ(logs.size(), 1);
@@ -146,10 +145,10 @@ TEST_F(LoggerTests, LogWithArgs) {
 }
 
 TEST_F(LoggerTests, LogLevelToAndFromString) {
-  vector<LogLevel> log_levels = {LogLevel::kAlert, LogLevel::kCritical,
-                                 LogLevel::kDebug, LogLevel::kEmergency,
-                                 LogLevel::kError, LogLevel::kInfo,
-                                 LogLevel::kNone,  LogLevel::kWarning};
+  std::vector<LogLevel> log_levels = {LogLevel::kAlert, LogLevel::kCritical,
+                                      LogLevel::kDebug, LogLevel::kEmergency,
+                                      LogLevel::kError, LogLevel::kInfo,
+                                      LogLevel::kNone,  LogLevel::kWarning};
 
   for (auto log_level : log_levels) {
     EXPECT_EQ(LogLevelFromString(LogLevelToString(log_level)), log_level);

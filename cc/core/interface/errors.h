@@ -118,8 +118,9 @@ std::string HttpStatusCodeToString(HttpStatusCode status);
  * @param error component-specific error code.
  */
 inline uint64_t MakeErrorCode(uint64_t component, uint64_t error) {
-  return (((uint64_t)(1) << 31) | ((uint64_t)(component) << 16) |
-          ((uint64_t)(error)));
+  return (((static_cast<uint64_t>(1)) << 31) |
+          ((static_cast<uint64_t>(component)) << 16) |
+          (static_cast<uint64_t>(error)));
 }
 
 /**

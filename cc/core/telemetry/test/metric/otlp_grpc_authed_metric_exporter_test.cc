@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/telemetry/src/common/telemetry_configuration.h"

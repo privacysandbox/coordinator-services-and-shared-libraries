@@ -28,14 +28,6 @@ locals {
   encryption_key_domain    = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${local.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${local.parent_domain_name}"
 }
 
-module "vpc" {
-  source = "../../modules/vpc"
-
-  environment = var.environment
-  project_id  = var.project_id
-  regions     = toset([var.primary_region, var.secondary_region])
-}
-
 # Cloud KMS encryption ring and key encryption key (KEK)
 resource "google_kms_key_ring" "key_encryption_ring" {
   project  = var.project_id
@@ -98,8 +90,12 @@ module "keystorageservice" {
   key_storage_service_custom_audiences = var.key_storage_service_custom_audiences
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
-  key_storage_domain       = local.key_storage_domain
+  enable_domain_management                            = var.enable_domain_management
+  key_storage_domain                                  = local.key_storage_domain
+  parent_domain_name                                  = var.parent_domain_name
+  parent_domain_name_project                          = var.parent_domain_name_project
+  disable_key_storage_service_compute_engine_ssl_cert = var.disable_key_storage_service_compute_engine_ssl_cert
+  enable_key_storage_service_certificate_map          = var.enable_key_storage_service_certificate_map
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics
@@ -146,8 +142,13 @@ module "encryptionkeyservice" {
   private_key_service_canary_percent   = var.private_key_service_canary_percent
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
-  encryption_key_domain    = local.encryption_key_domain
+  enable_domain_management                            = var.enable_domain_management
+  encryption_key_domain                               = local.encryption_key_domain
+  private_key_service_alternate_domain_names          = var.private_key_service_alternate_domain_names
+  parent_domain_name                                  = var.parent_domain_name
+  parent_domain_name_project                          = var.parent_domain_name_project
+  enable_private_key_service_certificate_map          = var.enable_private_key_service_certificate_map
+  disable_private_key_service_compute_engine_ssl_cert = var.disable_private_key_service_compute_engine_ssl_cert
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics

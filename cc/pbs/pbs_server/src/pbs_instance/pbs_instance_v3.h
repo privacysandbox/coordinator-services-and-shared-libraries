@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3
-#define CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3
+#ifndef CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3_H_
+#define CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3_H_
 
 #include <memory>
 #include <string>
@@ -73,4 +73,4 @@ class PBSInstanceV3 : public pbs_common::ServiceInterface {
 
 }  // namespace privacy_sandbox::pbs
 
-#endif  // CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3
+#endif  // CC_PBS_PBS_SERVER_SRC_PBS_INSTANCE_PBS_INSTANCE_V3_H_

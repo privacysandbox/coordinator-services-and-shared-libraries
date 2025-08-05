@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SCP_CORE_INTERFACE_ERRORS_H_
-#define SCP_CORE_INTERFACE_ERRORS_H_
+#ifndef CC_PUBLIC_CORE_INTERFACE_ERRORS_H_
+#define CC_PUBLIC_CORE_INTERFACE_ERRORS_H_
 
 #include <cstdint>
 
@@ -29,4 +29,4 @@ namespace privacy_sandbox::pbs_common {
 const char* GetErrorMessage(uint64_t error_code);
 }  // namespace privacy_sandbox::pbs_common
 
-#endif  // SCP_CORE_INTERFACE_ERRORS_H_
+#endif  // CC_PUBLIC_CORE_INTERFACE_ERRORS_H_

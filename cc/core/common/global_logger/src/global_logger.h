@@ -17,6 +17,7 @@
 
 #include <cstdarg>
 #include <memory>
+#include <string>
 #include <unordered_set>
 
 #include "absl/strings/str_format.h"
@@ -37,77 +38,76 @@ class GlobalLogger {
   (std::string(__FILE__) + ":" + __func__ + ":" + std::to_string(__LINE__)) \
       .c_str()
 
-#define SCP_INFO(component_name, activity_id, message, ...)                    \
-  __SCP_INFO_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid,       \
-                 privacy_sandbox::pbs_common::kZeroUuid, activity_id, message, \
-                 ##__VA_ARGS__)
+#define SCP_INFO(component_name, activity_id, message)                   \
+  __SCP_INFO_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid, \
+                 privacy_sandbox::pbs_common::kZeroUuid, activity_id, message)
 
-#define SCP_INFO_CONTEXT(component_name, async_context, message, ...)         \
+#define SCP_INFO_CONTEXT(component_name, async_context, message)              \
   __SCP_INFO_LOG(component_name, async_context.correlation_id,                \
                  async_context.parent_activity_id, async_context.activity_id, \
-                 message, ##__VA_ARGS__)
+                 message)
 
 #define __SCP_INFO_LOG(component_name, correlation_id, parent_activity_id, \
-                       activity_id, message, ...)                          \
+                       activity_id, message)                               \
   if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&      \
       privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(        \
           privacy_sandbox::pbs_common::LogLevel::kInfo)) {                 \
     privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Info(    \
         component_name, correlation_id, parent_activity_id, activity_id,   \
-        SCP_LOCATION, message, ##__VA_ARGS__);                             \
+        SCP_LOCATION, message);                                            \
   }
-#define SCP_DEBUG(component_name, activity_id, message, ...)              \
+#define SCP_DEBUG(component_name, activity_id, message)                   \
   __SCP_DEBUG_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid, \
                   privacy_sandbox::pbs_common::kZeroUuid, activity_id,    \
-                  message, ##__VA_ARGS__)
-#define SCP_DEBUG_CONTEXT(component_name, async_context, message, ...)         \
+                  message)
+#define SCP_DEBUG_CONTEXT(component_name, async_context, message)              \
   __SCP_DEBUG_LOG(component_name, async_context.correlation_id,                \
                   async_context.parent_activity_id, async_context.activity_id, \
-                  message, ##__VA_ARGS__)
+                  message)
 
 #define __SCP_DEBUG_LOG(component_name, correlation_id, parent_activity_id, \
-                        activity_id, message, ...)                          \
+                        activity_id, message)                               \
   if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&       \
       privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(         \
           privacy_sandbox::pbs_common::LogLevel::kDebug)) {                 \
     privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Debug(    \
         component_name, correlation_id, parent_activity_id, activity_id,    \
-        SCP_LOCATION, message, ##__VA_ARGS__);                              \
+        SCP_LOCATION, message);                                             \
   }
 
-#define SCP_WARNING(component_name, activity_id, message, ...)              \
+#define SCP_WARNING(component_name, activity_id, message)                   \
   __SCP_WARNING_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid, \
                     privacy_sandbox::pbs_common::kZeroUuid, activity_id,    \
-                    message, ##__VA_ARGS__)
+                    message)
 
-#define SCP_WARNING_CONTEXT(component_name, async_context, message, ...) \
-  __SCP_WARNING_LOG(component_name, async_context.correlation_id,        \
-                    async_context.parent_activity_id,                    \
-                    async_context.activity_id, message, ##__VA_ARGS__)
+#define SCP_WARNING_CONTEXT(component_name, async_context, message) \
+  __SCP_WARNING_LOG(component_name, async_context.correlation_id,   \
+                    async_context.parent_activity_id,               \
+                    async_context.activity_id, message)
 
 #define __SCP_WARNING_LOG(component_name, correlation_id, parent_activity_id, \
-                          activity_id, message, ...)                          \
+                          activity_id, message)                               \
   if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&         \
       privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(           \
           privacy_sandbox::pbs_common::LogLevel::kWarning)) {                 \
     privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Warning(    \
         component_name, correlation_id, parent_activity_id, activity_id,      \
-        SCP_LOCATION, message, ##__VA_ARGS__);                                \
+        SCP_LOCATION, message);                                               \
   }
 
-#define SCP_ERROR(component_name, activity_id, execution_result, message, ...) \
-  __SCP_ERROR_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid,      \
-                  privacy_sandbox::pbs_common::kZeroUuid, activity_id,         \
-                  execution_result, message, ##__VA_ARGS__)
+#define SCP_ERROR(component_name, activity_id, execution_result, message) \
+  __SCP_ERROR_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid, \
+                  privacy_sandbox::pbs_common::kZeroUuid, activity_id,    \
+                  execution_result, message)
 
 #define SCP_ERROR_CONTEXT(component_name, async_context, execution_result,     \
-                          message, ...)                                        \
+                          message)                                             \
   __SCP_ERROR_LOG(component_name, async_context.correlation_id,                \
                   async_context.parent_activity_id, async_context.activity_id, \
-                  execution_result, message, ##__VA_ARGS__)
+                  execution_result, message)
 
 #define __SCP_ERROR_LOG(component_name, correlation_id, parent_activity_id, \
-                        activity_id, execution_result, message, ...)        \
+                        activity_id, execution_result, message)             \
   if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&       \
       privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(         \
           privacy_sandbox::pbs_common::LogLevel::kError)) {                 \
@@ -117,24 +117,22 @@ class GlobalLogger {
                                   execution_result.status_code);            \
     privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Error(    \
         component_name, correlation_id, parent_activity_id, activity_id,    \
-        SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);           \
+        SCP_LOCATION, message_with_error.c_str());                          \
   }
 
-#define SCP_CRITICAL(component_name, activity_id, execution_result, message, \
-                     ...)                                                    \
+#define SCP_CRITICAL(component_name, activity_id, execution_result, message) \
   __SCP_CRITICAL_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid, \
                      privacy_sandbox::pbs_common::kZeroUuid, activity_id,    \
-                     execution_result, message, ##__VA_ARGS__)
+                     execution_result, message)
 
 #define SCP_CRITICAL_CONTEXT(component_name, async_context, execution_result, \
-                             message, ...)                                    \
+                             message)                                         \
   __SCP_CRITICAL_LOG(component_name, async_context.correlation_id,            \
                      async_context.parent_activity_id,                        \
-                     async_context.activity_id, execution_result, message,    \
-                     ##__VA_ARGS__)
+                     async_context.activity_id, execution_result, message)
 
 #define __SCP_CRITICAL_LOG(component_name, correlation_id, parent_activity_id, \
-                           activity_id, execution_result, message, ...)        \
+                           activity_id, execution_result, message)             \
   if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&          \
       privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(            \
           privacy_sandbox::pbs_common::LogLevel::kCritical)) {                 \
@@ -144,22 +142,22 @@ class GlobalLogger {
                                   execution_result.status_code);               \
     privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Critical(    \
         component_name, correlation_id, parent_activity_id, activity_id,       \
-        SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);              \
+        SCP_LOCATION, message_with_error.c_str());                             \
   }
 
-#define SCP_ALERT(component_name, activity_id, execution_result, message, ...) \
-  __SCP_ALERT_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid,      \
-                  privacy_sandbox::pbs_common::kZeroUuid, activity_id,         \
-                  execution_result, message, ##__VA_ARGS__)
+#define SCP_ALERT(component_name, activity_id, execution_result, message) \
+  __SCP_ALERT_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid, \
+                  privacy_sandbox::pbs_common::kZeroUuid, activity_id,    \
+                  execution_result, message)
 
 #define SCP_ALERT_CONTEXT(component_name, async_context, execution_result,     \
-                          message, ...)                                        \
+                          message)                                             \
   __SCP_ALERT_LOG(component_name, async_context.correlation_id,                \
                   async_context.parent_activity_id, async_context.activity_id, \
-                  execution_result, message, ##__VA_ARGS__)
+                  execution_result, message)
 
 #define __SCP_ALERT_LOG(component_name, correlation_id, parent_activity_id, \
-                        activity_id, execution_result, message, ...)        \
+                        activity_id, execution_result, message)             \
   if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&       \
       privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(         \
           privacy_sandbox::pbs_common::LogLevel::kAlert)) {                 \
@@ -169,25 +167,23 @@ class GlobalLogger {
                                   execution_result.status_code);            \
     privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Alert(    \
         component_name, correlation_id, parent_activity_id, activity_id,    \
-        SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);           \
+        SCP_LOCATION, message_with_error.c_str());                          \
   }
 
-#define SCP_EMERGENCY(component_name, activity_id, execution_result, message, \
-                      ...)                                                    \
+#define SCP_EMERGENCY(component_name, activity_id, execution_result, message) \
   __SCP_EMERGENCY_LOG(component_name, privacy_sandbox::pbs_common::kZeroUuid, \
                       privacy_sandbox::pbs_common::kZeroUuid, activity_id,    \
-                      execution_result, message, ##__VA_ARGS__)
+                      execution_result, message)
 
 #define SCP_EMERGENCY_CONTEXT(component_name, async_context, execution_result, \
-                              message, ...)                                    \
+                              message)                                         \
   __SCP_EMERGENCY_LOG(component_name, async_context.correlation_id,            \
                       async_context.parent_activity_id,                        \
-                      async_context.activity_id, execution_result, message,    \
-                      ##__VA_ARGS__)
+                      async_context.activity_id, execution_result, message)
 
 #define __SCP_EMERGENCY_LOG(component_name, correlation_id,                    \
                             parent_activity_id, activity_id, execution_result, \
-                            message, ...)                                      \
+                            message)                                           \
   if (privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger() &&          \
       privacy_sandbox::pbs_common::GlobalLogger::IsLogLevelEnabled(            \
           privacy_sandbox::pbs_common::LogLevel::kEmergency)) {                \
@@ -197,5 +193,5 @@ class GlobalLogger {
                                   execution_result.status_code);               \
     privacy_sandbox::pbs_common::GlobalLogger::GetGlobalLogger()->Emergency(   \
         component_name, correlation_id, parent_activity_id, activity_id,       \
-        SCP_LOCATION, message_with_error.c_str(), ##__VA_ARGS__);              \
+        SCP_LOCATION, message_with_error.c_str());                             \
   }

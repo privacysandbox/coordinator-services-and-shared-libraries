@@ -16,9 +16,9 @@
 
 #include <gtest/gtest.h>
 
-#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
+#include <string>
 
-using std::string;
+#include "cc/core/common/concurrent_queue/src/concurrent_queue.h"
 
 namespace privacy_sandbox::pbs_common {
 TEST(ERRORS, ComponentCodeRegistered) {
@@ -43,7 +43,7 @@ TEST(ERRORS, ErrorMessageReturn) {
   DEFINE_ERROR_CODE(COMPONENT_NAME_ERROR, COMPONENT_NAME, 0xFFFF,
                     "Component error message test", HttpStatusCode::BAD_REQUEST)
 
-  static string error_message = GetErrorMessage(COMPONENT_NAME_ERROR);
+  static std::string error_message = GetErrorMessage(COMPONENT_NAME_ERROR);
   EXPECT_EQ(error_message, "Component error message test");
 }
 
@@ -83,7 +83,7 @@ TEST(ERRORS, MapErrorCodePublic) {
   MAP_TO_PUBLIC_ERROR_CODE(COMPONENT_NAME_ERROR, PUBLIC_COMPONENT_ERROR);
 
   auto public_error_code = GetPublicErrorCode(COMPONENT_NAME_ERROR);
-  static string error_message = GetErrorMessage(public_error_code);
+  static std::string error_message = GetErrorMessage(public_error_code);
   EXPECT_EQ(error_message, "Public error message test");
 }
 

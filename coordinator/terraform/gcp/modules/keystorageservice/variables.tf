@@ -41,6 +41,17 @@ variable "key_storage_domain" {
   type        = string
 }
 
+variable "parent_domain_name" {
+  description = "The parent domain name used for this environment. NOTE: The hosted zone must exist."
+  type        = string
+  nullable    = false
+}
+
+variable "parent_domain_name_project" {
+  description = "The project owning the parent domain name used for this environment. NOTE: The hosted zone must exist."
+  type        = string
+}
+
 variable "allowed_wip_iam_principals" {
   description = "List of allowed coordinator IAM principals."
   type        = list(string)
@@ -87,6 +98,16 @@ variable "key_storage_service_cloudfunction_min_instances" {
 variable "key_storage_service_cloudfunction_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
+}
+
+variable "disable_key_storage_service_compute_engine_ssl_cert" {
+  description = "Disables the existing compute engine SSL certificate. Only set this to true once the certificate has been migrated to certificate manager"
+  type        = bool
+}
+
+variable "enable_key_storage_service_certificate_map" {
+  description = "Attach the certificate manager certificate to the key storage load balancer"
+  type        = bool
 }
 
 variable "cloudfunction_timeout_seconds" {

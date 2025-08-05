@@ -20,6 +20,8 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <string>
+#include <utility>
 
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/authorization_proxy/src/error_codes.h"

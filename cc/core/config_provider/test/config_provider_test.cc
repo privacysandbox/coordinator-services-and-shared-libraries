@@ -27,43 +27,38 @@
 #include "cc/core/config_provider/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using std::list;
-using std::move;
-using std::string;
-using std::filesystem::path;
-
 namespace privacy_sandbox::pbs_common {
-path GetTestDataDir(std::string relative_path) {
-  path test_srcdir_env = std::getenv("TEST_SRCDIR");
-  path test_workspace_env = std::getenv("TEST_WORKSPACE");
+std::filesystem::path GetTestDataDir(std::string relative_path) {
+  std::filesystem::path test_srcdir_env = std::getenv("TEST_SRCDIR");
+  std::filesystem::path test_workspace_env = std::getenv("TEST_WORKSPACE");
 
-  return path(test_srcdir_env) / path(test_workspace_env) /
-         std::move(relative_path);
+  return std::filesystem::path(test_srcdir_env) /
+         std::filesystem::path(test_workspace_env) / std::move(relative_path);
 }
 
 TEST(ConfigProviderTest, GetConfigs) {
-  path relative_path =
+  std::filesystem::path relative_path =
       "cc/core/config_provider/test/resources/test_config.json";
-  path full_path = GetTestDataDir(relative_path);
+  std::filesystem::path full_path = GetTestDataDir(relative_path);
 
   ConfigProvider config(full_path);
 
   config.Init();
 
-  string out_string;
-  string expect_string = "10.10.10.20";
+  std::string out_string;
+  std::string expect_string = "10.10.10.20";
   size_t out_int;
   size_t expect_int = 5000;
   bool out_bool;
   bool expect_bool = true;
-  list<string> out_string_list;
-  list<string> expect_string_list({"1", "2"});
-  list<int32_t> out_int_list;
-  list<int32_t> expect_int_list({1, 2});
-  list<size_t> out_size_list;
-  list<size_t> expect_size_list({3, 4});
-  list<bool> out_bool_list;
-  list<bool> expect_bool_list({true, false});
+  std::list<std::string> out_string_list;
+  std::list<std::string> expect_string_list({"1", "2"});
+  std::list<int32_t> out_int_list;
+  std::list<int32_t> expect_int_list({1, 2});
+  std::list<size_t> out_size_list;
+  std::list<size_t> expect_size_list({3, 4});
+  std::list<bool> out_bool_list;
+  std::list<bool> expect_bool_list({true, false});
 
   config.Get("server-ip", out_string);
   config.Get("server-run", out_bool);
@@ -83,15 +78,15 @@ TEST(ConfigProviderTest, GetConfigs) {
 }
 
 TEST(ConfigProviderTest, GetConfigsFailed) {
-  path relative_path =
+  std::filesystem::path relative_path =
       "cc/core/config_provider/test/resources/test_config.json";
-  path full_path = GetTestDataDir(relative_path);
+  std::filesystem::path full_path = GetTestDataDir(relative_path);
 
   ConfigProvider config(full_path);
 
   config.Init();
 
-  string out_string;
+  std::string out_string;
 
   EXPECT_SUCCESS(config.Init());
 
@@ -105,9 +100,9 @@ TEST(ConfigProviderTest, GetConfigsFailed) {
 }
 
 TEST(ConfigProviderTest, InitFailed) {
-  path relative_path =
+  std::filesystem::path relative_path =
       "cc/core/config_provider/test/resources/unknown_config.json";
-  path full_path = GetTestDataDir(relative_path);
+  std::filesystem::path full_path = GetTestDataDir(relative_path);
 
   ConfigProvider config(full_path);
 
@@ -116,15 +111,15 @@ TEST(ConfigProviderTest, InitFailed) {
 }
 
 TEST(ConfigProviderTest, ShowErrorInfo) {
-  path relative_path =
+  std::filesystem::path relative_path =
       "cc/core/config_provider/test/resources/unknown_config.json";
-  path full_path = GetTestDataDir(relative_path);
+  std::filesystem::path full_path = GetTestDataDir(relative_path);
 
   ConfigProvider config(full_path);
 
   auto status_code = config.Init().status_code;
 
-  string status_description = GetErrorMessage(status_code);
+  std::string status_description = GetErrorMessage(status_code);
 
   EXPECT_EQ(status_description, "Config provider cannot load config file");
 }

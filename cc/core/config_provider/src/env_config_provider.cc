@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-#include "env_config_provider.h"
+#include "cc/core/config_provider/src/env_config_provider.h"
 
 #include <list>
 #include <string>
 
 #include "cc/public/core/interface/execution_result.h"
-
-using std::list;
-using std::string;
 
 namespace privacy_sandbox::pbs_common {
 
@@ -49,8 +46,8 @@ ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
 }
 
 ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
-                                       string& out) noexcept {
-  return Get<string>(key, out);
+                                       std::string& out) noexcept {
+  return Get<std::string>(key, out);
 }
 
 ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
@@ -59,22 +56,22 @@ ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
 }
 
 ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
-                                       list<string>& out) noexcept {
-  return Get<string>(key, out);
+                                       std::list<std::string>& out) noexcept {
+  return Get<std::string>(key, out);
 }
 
 ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
-                                       list<int32_t>& out) noexcept {
+                                       std::list<int32_t>& out) noexcept {
   return Get<int32_t>(key, out);
 }
 
 ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
-                                       list<size_t>& out) noexcept {
+                                       std::list<size_t>& out) noexcept {
   return Get<size_t>(key, out);
 }
 
 ExecutionResult EnvConfigProvider::Get(const ConfigKey& key,
-                                       list<bool>& out) noexcept {
+                                       std::list<bool>& out) noexcept {
   return Get<bool>(key, out);
 }
 

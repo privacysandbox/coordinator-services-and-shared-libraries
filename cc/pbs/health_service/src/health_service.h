@@ -30,6 +30,7 @@
 #include "opentelemetry/metrics/observer_result.h"
 
 namespace privacy_sandbox::pbs {
+
 /**
  * @brief To provide health check functionality, a health service will return
  * success execution result to all health inquiries.

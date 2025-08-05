@@ -21,6 +21,8 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "absl/strings/str_join.h"
 #include "cc/core/config_provider/mock/mock_config_provider.h"

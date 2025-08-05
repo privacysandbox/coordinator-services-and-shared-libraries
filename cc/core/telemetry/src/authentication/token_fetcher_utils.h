@@ -12,8 +12,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_UTILS
-#define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_UTILS
+#ifndef CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_UTILS_H_
+#define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_UTILS_H_
 
 #include <string>
 
@@ -30,4 +30,4 @@ ExecutionResultOr<std::string> FetchIdTokenInternal(
 
 }  // namespace privacy_sandbox::pbs_common
 
-#endif
+#endif  // CC_CORE_TELEMETRY_SRC_AUTHENTICATION_TOKEN_FETCHER_UTILS_H_

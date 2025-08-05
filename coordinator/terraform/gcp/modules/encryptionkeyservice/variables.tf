@@ -32,9 +32,35 @@ variable "enable_domain_management" {
   type        = bool
 }
 
+variable "parent_domain_name_project" {
+  description = "The project owning the parent domain name used for this environment. NOTE: The hosted zone must exist."
+  type        = string
+}
+
+variable "parent_domain_name" {
+  description = "The parent domain name used for this environment. NOTE: The hosted zone must exist."
+  type        = string
+  nullable    = false
+}
+
 variable "encryption_key_domain" {
   description = "Domain to use to create a managed SSL cert for this service."
   type        = string
+}
+
+variable "private_key_service_alternate_domain_names" {
+  description = "A list of alternate domain names for the private key service for which to add as a cert manager cert. Eg: [service-example.com]"
+  type        = list(string)
+}
+
+variable "enable_private_key_service_certificate_map" {
+  description = "Attach the certificate manager certificate to the private key load balancer"
+  type        = bool
+}
+
+variable "disable_private_key_service_compute_engine_ssl_cert" {
+  description = "Disables the existing compute engine SSL certificate. Only set this to true once all certificates have been migrated to certificate manager"
+  type        = bool
 }
 
 variable "encryption_key_service_cloudfunction_memory_mb" {

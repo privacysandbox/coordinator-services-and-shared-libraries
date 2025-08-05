@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gcp_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/gcp/gcp_dependency_factory.h"
 
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <variant>

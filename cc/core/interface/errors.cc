@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-#include "errors.h"
+#include "cc/core/interface/errors.h"
+
+#include <map>
+#include <string>
 
 namespace privacy_sandbox::pbs_common {
 std::map<uint64_t, std::map<uint64_t, SCPError>>& GetGlobalErrorCodes() {

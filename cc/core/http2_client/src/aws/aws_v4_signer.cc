@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "aws_v4_signer.h"
+#include "cc/core/http2_client/src/aws/aws_v4_signer.h"
 
 #include <time.h>
 
@@ -38,11 +38,6 @@ using boost::algorithm::split;
 using boost::algorithm::to_lower_copy;
 using boost::algorithm::token_compress_off;
 using boost::algorithm::token_compress_on;
-using std::distance;
-using std::string;
-using std::stringstream;
-using std::vector;
-using std::chrono::system_clock;
 
 static constexpr const char* kEmptyStringSha256 =
     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -56,8 +51,8 @@ static constexpr const char* hex_lookup = "0123456789abcdef";
 
 namespace privacy_sandbox::pbs_common {
 
-static string HexEncode(unsigned char data[], size_t size) {
-  string result;
+static std::string HexEncode(unsigned char data[], size_t size) {
+  std::string result;
   result.reserve(size * 2);
   for (size_t i = 0; i < size; ++i) {
     auto b = data[i];
@@ -67,7 +62,7 @@ static string HexEncode(unsigned char data[], size_t size) {
   return result;
 }
 
-static string Sha256(const string& data) {
+static std::string Sha256(const std::string& data) {
   SHA256_CTX sha256;
   SHA256_Init(&sha256);
   SHA256_Update(&sha256, data.data(), data.size());
@@ -76,20 +71,21 @@ static string Sha256(const string& data) {
   return HexEncode(hash, sizeof(hash));
 }
 
-vector<unsigned char> HmacSha256(const vector<unsigned char>& key,
-                                 const string& data) {
+std::vector<unsigned char> HmacSha256(const std::vector<unsigned char>& key,
+                                      const std::string& data) {
   unsigned char hmac[EVP_MAX_MD_SIZE];
   unsigned int size = 0;
   HMAC(EVP_sha256(), key.data(), key.size(),
        reinterpret_cast<const unsigned char*>(data.data()), data.length(), hmac,
        &size);
-  return vector(hmac, hmac + size);
+  return std::vector(hmac, hmac + size);
 }
 
-AwsV4Signer::AwsV4Signer(const string& aws_access_key,
-                         const string& aws_secret_key,
-                         const string& aws_security_token,
-                         const string& service_name, const string& aws_region)
+AwsV4Signer::AwsV4Signer(const std::string& aws_access_key,
+                         const std::string& aws_secret_key,
+                         const std::string& aws_security_token,
+                         const std::string& service_name,
+                         const std::string& aws_region)
     : aws_access_key_(aws_access_key),
       aws_secret_key_(aws_secret_key),
       aws_security_token_(aws_security_token),
@@ -97,17 +93,16 @@ AwsV4Signer::AwsV4Signer(const string& aws_access_key,
       aws_region_(aws_region) {}
 
 ExecutionResult AwsV4Signer::SignRequest(
-    HttpRequest& http_request, const string& headers_to_sign) noexcept {
-  vector<string> headers;
-  // split the string, compress adjacent delimiters
+    HttpRequest& http_request, const std::string& headers_to_sign) noexcept {
+  std::vector<std::string> headers;
+  // split the std::string, compress adjacent delimiters
   split(headers, headers_to_sign, is_any_of(";, "), token_compress_on);
   return SignRequest(http_request, headers);
 }
 
-ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
-                                               vector<string>& headers_to_sign,
-                                               string& signature,
-                                               string& x_amz_date) noexcept {
+ExecutionResult AwsV4Signer::GetSignatureParts(
+    HttpRequest& http_request, std::vector<std::string>& headers_to_sign,
+    std::string& signature, std::string& x_amz_date) noexcept {
   if (headers_to_sign.size() == 0) {
     return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_NO_HEADER_SPECIFIED);
   }
@@ -120,7 +115,7 @@ ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
   }
   // Find the "X-Amz-Date" header, if non found, put one.
   auto date_entry = headers->find(kAmzDateHeader);
-  string timestamp_value;
+  std::string timestamp_value;
   if (date_entry == headers->end()) {
     timestamp_value = GetSigningTime();
     headers->insert({kAmzDateHeader, timestamp_value});
@@ -132,7 +127,7 @@ ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
 
   if (host_entry == headers->end()) {
     auto& path = *http_request.path;
-    string host_value;
+    std::string host_value;
     size_t start_idx;
     if (path.rfind("http", 0) != 0) {  // if path not starts with http
       return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
@@ -150,37 +145,37 @@ ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
       host_value = path.substr(start_idx);
     } else {
       host_value = path.substr(
-          start_idx, distance(path.begin() + start_idx, end_itr.begin()));
+          start_idx, std::distance(path.begin() + start_idx, end_itr.begin()));
     }
     headers->insert({kHostHeader, host_value});
   }
 
   // Sort all headers in headers_to_sign by its all lower cases order.
   std::sort(headers_to_sign.begin(), headers_to_sign.end(),
-            [](const string& a, const string& b) {
+            [](const std::string& a, const std::string& b) {
               return to_lower_copy(a) < to_lower_copy(b);
             });
   // #1 Create canonical request
   // https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
-  string canonical_request;
+  std::string canonical_request;
   auto res =
       CreateCanonicalRequest(canonical_request, http_request, headers_to_sign);
   if (!res) {
     return res;
   }
-  // #2 Create string to sign
-  // https://docs.aws.amazon.com/general/latest/gr/sigv4-create-string-to-sign.html
-  stringstream str_to_sign_builder;
+  // #2 Create std::string to sign
+  // https://docs.aws.amazon.com/general/latest/gr/sigv4-create-std::string-to-sign.html
+  std::stringstream str_to_sign_builder;
   str_to_sign_builder << kSigV4Algorithm << '\n' << timestamp_value << '\n';
   // Take the front part of the timestamp as date.
-  string date = DateFromTimestamp(timestamp_value);
+  std::string date = DateFromTimestamp(timestamp_value);
   str_to_sign_builder << date << '/' << aws_region_ << '/' << service_name_
                       << "/aws4_request\n";
   str_to_sign_builder << Sha256(canonical_request);
-  string str_to_sign = str_to_sign_builder.str();
+  std::string str_to_sign = str_to_sign_builder.str();
   // #3 Calculate signature
   // https://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html
-  string signature_hex = CalculateSignature(str_to_sign, date);
+  std::string signature_hex = CalculateSignature(str_to_sign, date);
   // #4 Add to HTTP request, to be done in callers of this function
   // https://docs.aws.amazon.com/general/latest/gr/sigv4-add-signature-to-request.html
 
@@ -191,15 +186,16 @@ ExecutionResult AwsV4Signer::GetSignatureParts(HttpRequest& http_request,
 }
 
 ExecutionResult AwsV4Signer::SignRequest(
-    HttpRequest& http_request, vector<string>& headers_to_sign) noexcept {
-  string signature;
-  string x_amz_date;
+    HttpRequest& http_request,
+    std::vector<std::string>& headers_to_sign) noexcept {
+  std::string signature;
+  std::string x_amz_date;
   auto ret =
       GetSignatureParts(http_request, headers_to_sign, signature, x_amz_date);
   if (!ret) {
     return ret;
   }
-  string date = DateFromTimestamp(x_amz_date);
+  std::string date = DateFromTimestamp(x_amz_date);
   // #4 Add to HTTP request
   // https://docs.aws.amazon.com/general/latest/gr/sigv4-add-signature-to-request.html
   AddSignatureHeader(http_request, headers_to_sign, date, signature);
@@ -207,10 +203,10 @@ ExecutionResult AwsV4Signer::SignRequest(
   return SuccessExecutionResult();
 }
 
-string AwsV4Signer::CalculateSignature(const string& string_to_sign,
-                                       const string& date) noexcept {
-  string init_key_str = string("AWS4") + aws_secret_key_;
-  vector<unsigned char> secret(init_key_str.begin(), init_key_str.end());
+std::string AwsV4Signer::CalculateSignature(const std::string& string_to_sign,
+                                            const std::string& date) noexcept {
+  std::string init_key_str = std::string("AWS4") + aws_secret_key_;
+  std::vector<unsigned char> secret(init_key_str.begin(), init_key_str.end());
   auto hmac_date = HmacSha256(secret, date);
   auto hmac_region = HmacSha256(hmac_date, aws_region_);
   auto hmac_service = HmacSha256(hmac_region, service_name_);
@@ -220,9 +216,9 @@ string AwsV4Signer::CalculateSignature(const string& string_to_sign,
 }
 
 ExecutionResult AwsV4Signer::CreateCanonicalRequest(
-    string& canonical_request, HttpRequest& http_request,
-    const vector<string>& headers_to_sign) noexcept {
-  stringstream canonical_request_builder;
+    std::string& canonical_request, HttpRequest& http_request,
+    const std::vector<std::string>& headers_to_sign) noexcept {
+  std::stringstream canonical_request_builder;
   if (http_request.method == HttpMethod::UNKNOWN) {
     return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
   }
@@ -240,7 +236,7 @@ ExecutionResult AwsV4Signer::CreateCanonicalRequest(
   // assume it is in form of "https://example.com/path/to/resource", and here we
   // extract the path part after the host name by finding the third '/'
   auto& path = *http_request.path;
-  string canonical_path;
+  std::string canonical_path;
   if (path.length() > 0 && path[0] == '/') {
     canonical_path = path;
   } else {
@@ -248,26 +244,26 @@ ExecutionResult AwsV4Signer::CreateCanonicalRequest(
     if (itr.empty()) {
       canonical_path = "/";
     } else {
-      canonical_path = path.substr(distance(path.begin(), itr.begin()));
+      canonical_path = path.substr(std::distance(path.begin(), itr.begin()));
     }
   }
   canonical_request_builder << canonical_path << "\n";
   if (http_request.query && http_request.query->size() > 0) {
     // If we have any query parameters, sort them.
     // First, we split by '&';
-    vector<string> query_params;
-    static auto predicate = [](string::value_type c) { return c == '&'; };
+    std::vector<std::string> query_params;
+    static auto predicate = [](std::string::value_type c) { return c == '&'; };
     split(query_params, *http_request.query, predicate, token_compress_off);
     // Then, sort and re-assemble
     std::sort(query_params.begin(), query_params.end());
-    string sorted_query = join(query_params, "&");
+    std::string sorted_query = join(query_params, "&");
     canonical_request_builder << sorted_query;
   }
   canonical_request_builder << "\n";
-  // The "signed headers" in the form of ';' delimited, all lower case string.
-  // e.g. content-type;host;x-amz-date
+  // The "signed headers" in the form of ';' delimited, all lower case
+  // std::string. e.g. content-type;host;x-amz-date
   auto& headers = http_request.headers;
-  stringstream signed_headers;
+  std::stringstream signed_headers;
   // In the following loop, we produce two things: the header:value strings in
   // the canonical request, and the "signed headers";
   for (const auto& header : headers_to_sign) {
@@ -295,8 +291,8 @@ ExecutionResult AwsV4Signer::CreateCanonicalRequest(
   signed_headers << '\n';
   canonical_request_builder << signed_headers.str();
   if (http_request.body.length > 0) {
-    string body(http_request.body.bytes->data(),
-                http_request.body.bytes->size());
+    std::string body(http_request.body.bytes->data(),
+                     http_request.body.bytes->size());
     canonical_request_builder << Sha256(body);
   } else {
     canonical_request_builder << kEmptyStringSha256;
@@ -306,30 +302,29 @@ ExecutionResult AwsV4Signer::CreateCanonicalRequest(
 }
 
 ExecutionResult AwsV4Signer::SignRequestWithSignature(
-    HttpRequest& http_request, vector<string>& headers_to_sign,
-    const string& x_amz_date, const string& signature) noexcept {
+    HttpRequest& http_request, std::vector<std::string>& headers_to_sign,
+    const std::string& x_amz_date, const std::string& signature) noexcept {
   // Sort all headers in headers_to_sign by its all lower cases order.
   std::sort(headers_to_sign.begin(), headers_to_sign.end(),
-            [](const string& a, const string& b) {
+            [](const std::string& a, const std::string& b) {
               return to_lower_copy(a) < to_lower_copy(b);
             });
   if (!http_request.headers) {
     return FailureExecutionResult(SC_HTTP2_CLIENT_AUTH_BAD_REQUEST);
   }
   // Remove potentially existing X-Amz-Date header, insert designated one.
-  http_request.headers->erase(string(kAmzDateHeader));
-  http_request.headers->insert({string(kAmzDateHeader), x_amz_date});
-  string date = DateFromTimestamp(x_amz_date);
+  http_request.headers->erase(std::string(kAmzDateHeader));
+  http_request.headers->insert({std::string(kAmzDateHeader), x_amz_date});
+  std::string date = DateFromTimestamp(x_amz_date);
   AddSignatureHeader(http_request, headers_to_sign, date, signature);
   return SuccessExecutionResult();
 }
 
-void AwsV4Signer::AddSignatureHeader(HttpRequest& http_request,
-                                     const vector<string>& headers_to_sign,
-                                     const std::string& date,
-                                     const string& signature) {
+void AwsV4Signer::AddSignatureHeader(
+    HttpRequest& http_request, const std::vector<std::string>& headers_to_sign,
+    const std::string& date, const std::string& signature) {
   auto& headers = http_request.headers;
-  stringstream auth_header_value_builder;
+  std::stringstream auth_header_value_builder;
   auth_header_value_builder
       << kSigV4Algorithm << " Credential=" << aws_access_key_ << '/' << date
       << '/' << aws_region_ << '/' << service_name_ << "/aws4_request, "
@@ -343,22 +338,22 @@ void AwsV4Signer::AddSignatureHeader(HttpRequest& http_request,
   headers->insert({kAuthorizationHeader, auth_header_value});
 
   // If the X-Amz-Security-Token header does not exist, add it.
-  string token;
+  std::string token;
   if (!aws_security_token_.empty() &&
       headers->count(kAmzSecurityTokenHeader) == 0) {
     headers->insert({kAmzSecurityTokenHeader, aws_security_token_});
   }
 }
 
-string AwsV4Signer::GetSigningTime() {
-  auto chrono_now = system_clock::now();
-  time_t time_t_now = system_clock::to_time_t(chrono_now);
+std::string AwsV4Signer::GetSigningTime() {
+  auto chrono_now = std::chrono::system_clock::now();
+  time_t time_t_now = std::chrono::system_clock::to_time_t(chrono_now);
   struct tm gmt_timestamp;
   gmtime_r(&time_t_now, &gmt_timestamp);
   char formatted_timestamp[64] = {0};
   std::strftime(formatted_timestamp, sizeof(formatted_timestamp),
                 kAmzDateFormat, &gmt_timestamp);
-  return string(formatted_timestamp);
+  return std::string(formatted_timestamp);
 }
 
 }  // namespace privacy_sandbox::pbs_common

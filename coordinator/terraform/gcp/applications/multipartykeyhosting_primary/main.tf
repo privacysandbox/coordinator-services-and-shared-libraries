@@ -134,6 +134,7 @@ module "publickeyhostingservice" {
   get_public_key_cloud_cdn_max_ttl_seconds     = var.get_public_key_cloud_cdn_max_ttl_seconds
   public_key_load_balancer_logs_enabled        = var.public_key_load_balancer_logs_enabled
   parent_domain_name                           = var.parent_domain_name
+  parent_domain_name_project                   = var.parent_domain_name_project
 
   # Domain Management
   enable_domain_management                  = var.enable_domain_management
@@ -182,8 +183,13 @@ module "encryptionkeyservice" {
   private_key_service_canary_percent   = var.private_key_service_canary_percent
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
-  encryption_key_domain    = local.encryption_key_domain
+  enable_domain_management                            = var.enable_domain_management
+  encryption_key_domain                               = local.encryption_key_domain
+  private_key_service_alternate_domain_names          = var.private_key_service_alternate_domain_names
+  parent_domain_name                                  = var.parent_domain_name
+  parent_domain_name_project                          = var.parent_domain_name_project
+  enable_private_key_service_certificate_map          = var.enable_private_key_service_certificate_map
+  disable_private_key_service_compute_engine_ssl_cert = var.disable_private_key_service_compute_engine_ssl_cert
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics

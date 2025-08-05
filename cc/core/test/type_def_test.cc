@@ -18,6 +18,8 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+
 namespace privacy_sandbox::pbs_common {
 namespace {
 

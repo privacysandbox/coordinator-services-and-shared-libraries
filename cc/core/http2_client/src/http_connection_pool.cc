@@ -315,8 +315,9 @@ void HttpConnectionPool::ObserveClientOpenConnectionsCallback(
     execution_result = self_ptr->connections_.Find(key, entry);
     if (!execution_result.Successful()) {
       SCP_DEBUG(kHttpConnection, kZeroUuid,
-                "Could not fetch the connection pool entry for key %s",
-                key.c_str());
+                absl::StrFormat(
+                    "Could not fetch the connection pool entry for key %s",
+                    key.c_str()));
       return;
     }
 

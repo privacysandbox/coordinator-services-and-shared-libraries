@@ -12,8 +12,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef CC_CORE_TELEMETRY_SRC_AUTHENTICATION_METRIC_UTILS
-#define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_METRIC_UTILS
+#ifndef CC_CORE_TELEMETRY_SRC_COMMON_METRIC_UTILS_H_
+#define CC_CORE_TELEMETRY_SRC_COMMON_METRIC_UTILS_H_
 
 #include <optional>
 #include <vector>
@@ -70,4 +70,4 @@ GetMetricAttributes(
 
 }  // namespace privacy_sandbox::pbs_common
 
-#endif
+#endif  // CC_CORE_TELEMETRY_SRC_COMMON_METRIC_UTILS_H_

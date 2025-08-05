@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-#include "health_service.h"
+#include "cc/pbs/health_service/src/health_service.h"
 
 #include <fstream>
 #include <functional>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
+#include "cc/pbs/health_service/src/error_codes.h"
 #include "cc/pbs/interface/configuration_keys.h"
 #include "cc/pbs/interface/type_def.h"
 #include "opentelemetry/metrics/provider.h"
-
-#include "error_codes.h"
 
 using absl::SimpleAtoi;
 using absl::SkipEmpty;
@@ -43,17 +45,6 @@ using ::privacy_sandbox::pbs_common::HttpRequest;
 using ::privacy_sandbox::pbs_common::HttpResponse;
 using ::privacy_sandbox::pbs_common::kZeroUuid;
 using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
-using std::bind;
-using std::error_code;
-using std::getline;
-using std::ifstream;
-using std::string;
-using std::stringstream;
-using std::vector;
-using std::chrono::seconds;
-using std::filesystem::space;
-using std::filesystem::space_info;
-using std::placeholders::_1;
 
 static constexpr int kExpectedMemInfoLinePartsCount = 3;
 static constexpr uint64_t kMemoryUsagePercentageHealthyThreshold = 95;
@@ -105,8 +96,8 @@ HealthService::~HealthService() {
 
 ExecutionResult HealthService::Init() noexcept {
   HttpHandler check_health_handler =
-      bind(&HealthService::CheckHealth, this, _1);
-  string resource_path("/health");
+      std::bind(&HealthService::CheckHealth, this, std::placeholders::_1);
+  std::string resource_path("/health");
   http_server_->RegisterResourceHandler(HttpMethod::GET, resource_path,
                                         check_health_handler);
 
@@ -213,19 +204,20 @@ bool HealthService::PerformMemoryAndStorageUsageCheck() noexcept {
   return config_exists && check_mem_and_storage;
 }
 
-string HealthService::GetMemInfoFilePath() noexcept {
-  return string(kMemInfoFileName);
+std::string HealthService::GetMemInfoFilePath() noexcept {
+  return std::string(kMemInfoFileName);
 }
 
 /**
  * @brief Parse a meminfo line and read the numeric value.
  *
- * @param meminfo_line A string representing a line in the meminfo file.
+ * @param meminfo_line A std::string representing a line in the meminfo file.
  * line.
  * @return ExecutionResultOr<uint64_t>
  */
-static ExecutionResultOr<uint64_t> GetMemInfoLineEntryKb(string meminfo_line) {
-  vector<string> line_parts =
+static ExecutionResultOr<uint64_t> GetMemInfoLineEntryKb(
+    std::string meminfo_line) {
+  std::vector<std::string> line_parts =
       StrSplit(meminfo_line, kMemInfoLineSeparator, SkipEmpty());
 
   if (line_parts.size() != kExpectedMemInfoLinePartsCount) {
@@ -234,7 +226,7 @@ static ExecutionResultOr<uint64_t> GetMemInfoLineEntryKb(string meminfo_line) {
   }
 
   uint64_t read_memory_kb;
-  stringstream int_parsing_stream;
+  std::stringstream int_parsing_stream;
   int_parsing_stream << line_parts.at(kExpectedMemInfoLineNumericValueIndex);
   int_parsing_stream >> read_memory_kb;
 
@@ -254,7 +246,7 @@ static int ComputePercentage(uint64_t partial, uint64_t total) {
 
 ExecutionResultOr<int> HealthService::GetMemoryUsagePercentage() noexcept {
   auto meminfo_file_path = GetMemInfoFilePath();
-  ifstream meminfo_file(meminfo_file_path);
+  std::ifstream meminfo_file(meminfo_file_path);
   if (meminfo_file.fail()) {
     return FailureExecutionResult(
         SC_PBS_HEALTH_SERVICE_COULD_NOT_OPEN_MEMINFO_FILE);
@@ -265,11 +257,11 @@ ExecutionResultOr<int> HealthService::GetMemoryUsagePercentage() noexcept {
   // ...
   // So we parse the lines of interest to compute the used percentage.
 
-  string line = "";
+  std::string line = "";
   uint64_t total_usable_mem_kb = 0;
   uint64_t total_available_mem_kb = 0;
 
-  while (getline(meminfo_file, line)) {
+  while (std::getline(meminfo_file, line)) {
     if (StrContains(line, kTotalUsableMemory)) {
       auto mem_value = GetMemInfoLineEntryKb(line);
       if (mem_value.Successful()) {
@@ -295,22 +287,23 @@ ExecutionResultOr<int> HealthService::GetMemoryUsagePercentage() noexcept {
   }
 
   SCP_DEBUG(kServiceName, kZeroUuid,
-            "Memory : { \"total\": \"%lu kb\", \"available\": \"%lu kb\" }",
-            total_usable_mem_kb, total_available_mem_kb);
+            absl::StrFormat(
+                "Memory : { \"total\": \"%lu kb\", \"available\": \"%lu kb\" }",
+                total_usable_mem_kb, total_available_mem_kb));
 
   return ComputePercentage(total_available_mem_kb, total_usable_mem_kb);
 }
 
-ExecutionResultOr<space_info> HealthService::GetFileSystemSpaceInfo(
-    string directory) noexcept {
-  error_code ec;
-  space_info info = space(directory, ec);
+ExecutionResultOr<std::filesystem::space_info>
+HealthService::GetFileSystemSpaceInfo(std::string directory) noexcept {
+  std::error_code ec;
+  std::filesystem::space_info info = std::filesystem::space(directory, ec);
   if (ec) {
     auto result = FailureExecutionResult(
         SC_PBS_HEALTH_SERVICE_COULD_NOT_READ_FILESYSTEM_INFO);
     SCP_ERROR(kServiceName, kZeroUuid, result,
-              "Failed to read the filesystem information: %s",
-              ec.message().c_str());
+              absl::StrFormat("Failed to read the filesystem information: %s",
+                              ec.message()));
     return result;
   }
 
@@ -318,7 +311,7 @@ ExecutionResultOr<space_info> HealthService::GetFileSystemSpaceInfo(
 }
 
 ExecutionResultOr<int> HealthService::GetFileSystemStorageUsagePercentage(
-    const string& directory) noexcept {
+    const std::string& directory) noexcept {
   auto info = GetFileSystemSpaceInfo(directory);
   if (!info.result().Successful()) {
     return info.result();
@@ -331,8 +324,9 @@ ExecutionResultOr<int> HealthService::GetFileSystemStorageUsagePercentage(
   }
 
   SCP_DEBUG(kServiceName, kZeroUuid,
-            "Storage : { \"total\": \"%lu b\", \"available\": \"%lu b\" }",
-            info_object.capacity, info_object.available);
+            absl::StrFormat(
+                "Storage : { \"total\": \"%lu b\", \"available\": \"%lu b\" }",
+                info_object.capacity, info_object.available));
 
   return ComputePercentage(info_object.available, info_object.capacity);
 }

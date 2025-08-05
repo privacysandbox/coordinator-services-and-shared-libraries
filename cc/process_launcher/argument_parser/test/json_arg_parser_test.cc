@@ -18,6 +18,9 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <vector>
+
 #include "cc/core/test/scp_test_base.h"
 #include "cc/process_launcher/argument_parser/src/error_codes.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"

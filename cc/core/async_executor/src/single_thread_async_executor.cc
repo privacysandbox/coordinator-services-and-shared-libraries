@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "single_thread_async_executor.h"
+#include "cc/core/async_executor/src/single_thread_async_executor.h"
 
 #include <atomic>
 #include <chrono>
@@ -24,13 +24,6 @@
 #include "cc/core/async_executor/src/typedef.h"
 
 namespace privacy_sandbox::pbs_common {
-using std::make_shared;
-using std::make_unique;
-using std::mutex;
-using std::shared_ptr;
-using std::thread;
-using std::unique_lock;
-using std::chrono::milliseconds;
 
 static constexpr size_t kLockWaitTimeInMilliseconds = 5;
 
@@ -40,9 +33,9 @@ ExecutionResult SingleThreadAsyncExecutor::Init() noexcept {
   }
 
   normal_pri_queue_ =
-      make_shared<ConcurrentQueue<shared_ptr<AsyncTask>>>(queue_cap_);
+      std::make_shared<ConcurrentQueue<std::shared_ptr<AsyncTask>>>(queue_cap_);
   high_pri_queue_ =
-      make_shared<ConcurrentQueue<shared_ptr<AsyncTask>>>(queue_cap_);
+      std::make_shared<ConcurrentQueue<std::shared_ptr<AsyncTask>>>(queue_cap_);
   return SuccessExecutionResult();
 };
 
@@ -56,7 +49,7 @@ ExecutionResult SingleThreadAsyncExecutor::Run() noexcept {
   }
 
   is_running_ = true;
-  working_thread_ = make_unique<thread>(
+  working_thread_ = std::make_unique<std::thread>(
       [affinity_cpu_number =
            affinity_cpu_number_](SingleThreadAsyncExecutor* ptr) {
         if (affinity_cpu_number.has_value()) {
@@ -75,11 +68,12 @@ ExecutionResult SingleThreadAsyncExecutor::Run() noexcept {
 }
 
 void SingleThreadAsyncExecutor::StartWorker() noexcept {
-  unique_lock<mutex> thread_lock(mutex_);
+  std::unique_lock<std::mutex> thread_lock(mutex_);
 
   while (true) {
     condition_variable_.wait_for(
-        thread_lock, milliseconds(kLockWaitTimeInMilliseconds), [&]() {
+        thread_lock, std::chrono::milliseconds(kLockWaitTimeInMilliseconds),
+        [&]() {
           return !is_running_ || high_pri_queue_->Size() > 0 ||
                  normal_pri_queue_->Size() > 0;
         });
@@ -91,7 +85,7 @@ void SingleThreadAsyncExecutor::StartWorker() noexcept {
       continue;
     }
 
-    shared_ptr<AsyncTask> task;
+    std::shared_ptr<AsyncTask> task;
     // The priority is with the high pri tasks.
     if (!high_pri_queue_->TryDequeue(task).Successful() &&
         !normal_pri_queue_->TryDequeue(task).Successful()) {
@@ -113,11 +107,11 @@ ExecutionResult SingleThreadAsyncExecutor::Stop() noexcept {
     return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);
   }
 
-  unique_lock<mutex> thread_lock(mutex_);
+  std::unique_lock<std::mutex> thread_lock(mutex_);
   is_running_ = false;
 
   if (drop_tasks_on_stop_) {
-    shared_ptr<AsyncTask> task;
+    std::shared_ptr<AsyncTask> task;
     while (normal_pri_queue_->TryDequeue(task).Successful()) {}
     while (high_pri_queue_->TryDequeue(task).Successful()) {}
   }
@@ -130,7 +124,7 @@ ExecutionResult SingleThreadAsyncExecutor::Stop() noexcept {
   // there is a chance that Stop returns successful but the thread has not been
   // killed.
   while (!(worker_thread_started_.load() && worker_thread_stopped_.load())) {
-    std::this_thread::sleep_for(milliseconds(kSleepDurationMs));
+    std::this_thread::sleep_for(std::chrono::milliseconds(kSleepDurationMs));
   }
 
   return SuccessExecutionResult();
@@ -146,7 +140,7 @@ ExecutionResult SingleThreadAsyncExecutor::Schedule(
     return FailureExecutionResult(SC_ASYNC_EXECUTOR_INVALID_PRIORITY_TYPE);
   }
 
-  auto task = make_shared<AsyncTask>(work);
+  auto task = std::make_shared<AsyncTask>(work);
   ExecutionResult execution_result;
   if (priority == AsyncPriority::Normal) {
     execution_result = normal_pri_queue_->TryEnqueue(task);
@@ -162,7 +156,8 @@ ExecutionResult SingleThreadAsyncExecutor::Schedule(
   return SuccessExecutionResult();
 };
 
-ExecutionResultOr<thread::id> SingleThreadAsyncExecutor::GetThreadId() const {
+ExecutionResultOr<std::thread::id> SingleThreadAsyncExecutor::GetThreadId()
+    const {
 #if !defined(PBS_ENABLE_BENCHMARKING)
   if (!is_running_.load()) {
     return FailureExecutionResult(SC_ASYNC_EXECUTOR_NOT_RUNNING);

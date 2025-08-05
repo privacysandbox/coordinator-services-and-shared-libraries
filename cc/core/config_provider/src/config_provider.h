@@ -21,10 +21,9 @@
 
 #include <nlohmann/json.hpp>
 
+#include "cc/core/config_provider/src/error_codes.h"
 #include "cc/core/interface/config_provider_interface.h"
 #include "cc/public/core/interface/execution_result.h"
-
-#include "error_codes.h"
 
 namespace privacy_sandbox::pbs_common {
 /*! @copydoc ConfigProviderInterface

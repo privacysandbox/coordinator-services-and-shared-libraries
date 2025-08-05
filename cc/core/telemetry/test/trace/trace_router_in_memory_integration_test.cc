@@ -15,7 +15,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
+#include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include "cc/core/telemetry/mock/trace/trace_router_fake.h"
 #include "cc/core/telemetry/src/common/trace/trace_utils.h"

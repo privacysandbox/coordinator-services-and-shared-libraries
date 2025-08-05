@@ -18,6 +18,8 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/config_provider/src/env_config_provider.h"
 #include "cc/core/interface/config_provider_interface.h"
@@ -39,8 +41,6 @@ using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::kCloudServiceRegion;
 using ::privacy_sandbox::pbs_common::MockConfigProvider;
 using ::privacy_sandbox::pbs_common::ResultIs;
-using std::make_shared;
-using std::shared_ptr;
 
 static void SetAllConfigs() {
   setenv(kAsyncExecutorQueueSize, "10000", 1);
@@ -81,12 +81,12 @@ class PBSInstanceConfiguration : public ::testing::Test {
     UnsetAllConfigs();
     SetAllConfigs();
 
-    env_config_provider_ = make_shared<EnvConfigProvider>();
+    env_config_provider_ = std::make_shared<EnvConfigProvider>();
   }
 
   ~PBSInstanceConfiguration() { UnsetAllConfigs(); }
 
-  shared_ptr<ConfigProviderInterface> env_config_provider_;
+  std::shared_ptr<ConfigProviderInterface> env_config_provider_;
 };
 
 TEST_F(PBSInstanceConfiguration,

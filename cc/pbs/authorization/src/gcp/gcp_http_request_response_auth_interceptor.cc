@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "gcp_http_request_response_auth_interceptor.h"
+#include "cc/pbs/authorization/src/gcp/gcp_http_request_response_auth_interceptor.h"
 
 #include <stddef.h>
 
@@ -53,11 +53,6 @@ using ::privacy_sandbox::pbs_common::PadBase64Encoding;
 using ::privacy_sandbox::pbs_common::RetryExecutionResult;
 using ::privacy_sandbox::pbs_common::SC_AUTHORIZATION_SERVICE_BAD_TOKEN;
 using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
-using std::make_pair;
-using std::make_shared;
-using std::shared_ptr;
-using std::string;
-using std::vector;
 using json = nlohmann::json;
 
 constexpr char kAuthorizationHeader[] = "Authorization";
@@ -68,9 +63,9 @@ constexpr char kAuthorizedDomain[] = "authorized_domain";
 
 constexpr size_t kIdTokenParts = 3;
 
-const vector<string>& GetRequiredJWTComponents() {
+const std::vector<std::string>& GetRequiredJWTComponents() {
   static const auto* const components =
-      new vector<string>{"iss", "aud", "sub", "iat", "exp"};
+      new std::vector<std::string>{"iss", "aud", "sub", "iat", "exp"};
   return *components;
 }
 
@@ -85,7 +80,7 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
   }
 
   // The token is split like so: <HEADER>.<PAYLOAD>.<SIGNATURE>
-  vector<string> parts =
+  std::vector<std::string> parts =
       absl::StrSplit(authorization_metadata.authorization_token, '.');
   if (parts.size() != kIdTokenParts) {
     return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
@@ -100,7 +95,7 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
     return padded_token_or.result();
   }
 
-  string token;
+  std::string token;
   auto execution_result = Base64Decode(*padded_token_or, token);
   if (!execution_result) {
     return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
@@ -121,11 +116,11 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
     return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
-  http_request.headers->insert({string(kClaimedIdentityHeader),
+  http_request.headers->insert({std::string(kClaimedIdentityHeader),
                                 authorization_metadata.claimed_identity});
 
   http_request.headers->insert(
-      {string(kAuthorizationHeader),
+      {std::string(kAuthorizationHeader),
        absl::StrFormat(kAuthHeaderFormat,
                        authorization_metadata.authorization_token)});
 
@@ -135,7 +130,7 @@ ExecutionResult GcpHttpRequestResponseAuthInterceptor::PrepareRequest(
 ExecutionResultOr<AuthorizedMetadata>
 GcpHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     const AuthorizationMetadata&, const HttpResponse& http_response) {
-  string body_str = http_response.body.ToString();
+  std::string body_str = http_response.body.ToString();
   json body_json;
   bool parse_fail = true;
   try {
@@ -146,8 +141,9 @@ GcpHttpRequestResponseAuthInterceptor::ObtainAuthorizedMetadataFromResponse(
     return FailureExecutionResult(SC_AUTHORIZATION_SERVICE_BAD_TOKEN);
   }
 
-  return AuthorizedMetadata{.authorized_domain = make_shared<AuthorizedDomain>(
-                                body_json[kAuthorizedDomain].get<string>())};
+  return AuthorizedMetadata{
+      .authorized_domain = std::make_shared<AuthorizedDomain>(
+          body_json[kAuthorizedDomain].get<std::string>())};
 }
 
 }  // namespace privacy_sandbox::pbs

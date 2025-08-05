@@ -102,6 +102,7 @@ module "pbs_storage" {
   pbs_spanner_database_retention_period          = var.pbs_spanner_database_retention_period
   pbs_spanner_database_deletion_protection       = var.pbs_spanner_database_deletion_protection
   pbs_spanner_autoscaling_config                 = var.pbs_spanner_autoscaling_config
+  backups                                        = var.pbs_spanner_backups
 }
 
 module "pbs_managed_instance_group_environment" {

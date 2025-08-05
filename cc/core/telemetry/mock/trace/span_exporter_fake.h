@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef CC_CORE_TELEMETRY_MOCK_TRACE_TRACE_EXPORTER_FAKE_H_
-#define CC_CORE_TELEMETRY_MOCK_TRACE_TRACE_EXPORTER_FAKE_H_
+#ifndef CC_CORE_TELEMETRY_MOCK_TRACE_SPAN_EXPORTER_FAKE_H_
+#define CC_CORE_TELEMETRY_MOCK_TRACE_SPAN_EXPORTER_FAKE_H_
 
 #include <atomic>
 #include <memory>
@@ -176,4 +176,4 @@ class SpanExporterFake : public opentelemetry::sdk::trace::SpanExporter {
 };
 
 }  // namespace privacy_sandbox::pbs_common
-#endif  // CC_CORE_TELEMETRY_MOCK_TRACE_TRACE_EXPORTER_FAKE_H_
+#endif  // CC_CORE_TELEMETRY_MOCK_TRACE_SPAN_EXPORTER_FAKE_H_

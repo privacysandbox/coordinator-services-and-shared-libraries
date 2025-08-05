@@ -450,8 +450,7 @@ ExecutionResult FrontEndServiceV2::PrepareTransaction(
     SCP_DEBUG_CONTEXT(
         kFrontEndService, http_context,
         absl::StrFormat("Starting Transaction: %s Total Keys: %lld",
-                        *transaction_id, key_count),
-        transaction_id->c_str(), key_count);
+                        *transaction_id, key_count));
 
     for (const auto& budget_metadata :
          consume_budget_context.request->budget_consumer->DebugKeyList()) {
@@ -511,8 +510,7 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
           kFrontEndService, http_context, serialization_execution_result,
           absl::StrFormat("Serialization of the transaction response failed. "
                           "transaction_id: %s.",
-                          transaction_id.c_str()),
-          transaction_id.c_str());
+                          transaction_id.c_str()));
     }
   }
 
@@ -538,8 +536,7 @@ void FrontEndServiceV2::OnConsumeBudgetCallback(
       SCP_ERROR_CONTEXT(
           kFrontEndService, http_context, consume_budget_context.result,
           absl::StrFormat("Failed to consume budget. transaction_id: %s.",
-                          transaction_id.c_str()),
-          transaction_id.c_str());
+                          transaction_id.c_str()));
     }
 
     http_context.result = consume_budget_context.result;

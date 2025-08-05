@@ -18,9 +18,8 @@
 
 #include <memory>
 
+#include "cc/core/common/concurrent_queue/src/error_codes.h"
 #include "oneapi/tbb/concurrent_queue.h"
-
-#include "error_codes.h"
 
 namespace privacy_sandbox::pbs_common {
 /**

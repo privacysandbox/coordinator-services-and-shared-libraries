@@ -41,7 +41,7 @@ cc_test(
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:storage",
         "@com_google_absl//absl/status:status_matchers",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
 )
 

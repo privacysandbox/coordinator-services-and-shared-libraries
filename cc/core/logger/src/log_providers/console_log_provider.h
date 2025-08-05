@@ -40,8 +40,8 @@ class ConsoleLogProvider : public LogProviderInterface {
            const std::string_view& component_name,
            const std::string_view& machine_name,
            const std::string_view& cluster_name,
-           const std::string_view& location, const std::string_view& message,
-           va_list args) noexcept override;
+           const std::string_view& location,
+           const std::string_view& message) noexcept override;
 
  protected:
   virtual void Print(const std::string& output) noexcept;

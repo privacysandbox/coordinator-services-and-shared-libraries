@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "base64.h"
+#include "cc/core/utils/src/base64.h"
 
 #include <memory>
 #include <string>
 
 #include <openssl/base64.h>
 
-#include "error_codes.h"
+#include "cc/core/utils/src/error_codes.h"
 
 namespace privacy_sandbox::pbs_common {
 ExecutionResult Base64Decode(const std::string& encoded, std::string& decoded) {
@@ -80,8 +80,8 @@ ExecutionResultOr<std::string> PadBase64Encoding(const std::string& encoded) {
       // represent 3 (8-bit) decoded characters. A single encoded character is
       // 6-bit and is not enough in size to represent a decoded character of 8
       // bits.
-      ret_val = FailureExecutionResult(
-          SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
+      ret_val =
+          FailureExecutionResult(SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH);
       break;
   }
   return ret_val;

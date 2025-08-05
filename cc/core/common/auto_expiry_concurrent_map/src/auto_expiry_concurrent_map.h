@@ -25,14 +25,13 @@
 #include <utility>
 #include <vector>
 
+#include "cc/core/common/auto_expiry_concurrent_map/src/error_codes.h"
 #include "cc/core/common/concurrent_map/src/concurrent_map.h"
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/public/core/interface/execution_result.h"
-
-#include "error_codes.h"
 
 static constexpr char kAutoExpiryConcurrentMap[] = "AutoExpiryConcurrentMap";
 
@@ -186,13 +185,14 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
             SC_AUTO_EXPIRY_CONCURRENT_MAP_STOP_INCOMPLETE);
         SCP_ERROR(
             kAutoExpiryConcurrentMap, kZeroUuid, result,
-            "Exiting prematurely. Waited for '%llu' (ms). There are still "
-            "'%llu' pending callbacks.",
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                TimeProvider::GetSteadyTimestampInNanoseconds() -
-                wait_start_timestamp)
-                .count(),
-            pending_garbage_collection_callbacks_.load());
+            absl::StrFormat(
+                "Exiting prematurely. Waited for '%llu' (ms). There are still "
+                "'%llu' pending callbacks.",
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    TimeProvider::GetSteadyTimestampInNanoseconds() -
+                    wait_start_timestamp)
+                    .count(),
+                pending_garbage_collection_callbacks_.load()));
         return result;
       }
     }
@@ -223,8 +223,8 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
     auto execution_result = concurrent_map_.Insert(pair, record);
 
     if (!execution_result.Successful()) {
-      if (execution_result != FailureExecutionResult(
-                                  SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
+      if (execution_result !=
+          FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)) {
         return execution_result;
       }
 
@@ -366,8 +366,8 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
     if (!is_running_) {
       sync_mutex.unlock();
 
-      auto execution_result = FailureExecutionResult(
-          SC_AUTO_EXPIRY_CONCURRENT_MAP_CANNOT_SCHEDULE);
+      auto execution_result =
+          FailureExecutionResult(SC_AUTO_EXPIRY_CONCURRENT_MAP_CANNOT_SCHEDULE);
       SCP_ERROR(
           kAutoExpiryConcurrentMap, kZeroUuid, execution_result,
           "Concurrent map is not running. Cannot schedule garbage collection.");

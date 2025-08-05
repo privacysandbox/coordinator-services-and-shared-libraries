@@ -19,7 +19,10 @@
 
 #include <functional>
 #include <future>
+#include <map>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
@@ -42,9 +45,6 @@ namespace {
 using ::nghttp2::asio_http2::server::http2;
 using ::nghttp2::asio_http2::server::request;
 using ::nghttp2::asio_http2::server::response;
-using std::placeholders::_1;
-using std::placeholders::_2;
-using std::placeholders::_3;
 
 static constexpr TimeDuration kHttp2ReadTimeoutInSeconds = 10;
 
@@ -128,7 +128,8 @@ class HttpServer {
           200u, {{std::string("content-length"),
                   {std::to_string(length + SHA256_DIGEST_LENGTH), false}}});
       auto handler = std::make_shared<RandomGenHandler>(length);
-      res.end(bind(&RandomGenHandler::handle, handler, _1, _2, _3));
+      res.end(bind(&RandomGenHandler::handle, handler, std::placeholders::_1,
+                   std::placeholders::_2, std::placeholders::_3));
     });
 
     server.listen_and_serve(ec, address_, port_, true);

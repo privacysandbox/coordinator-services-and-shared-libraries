@@ -55,6 +55,6 @@ class LogProviderInterface : public ServiceInterface {
                    const std::string_view& machine_name,
                    const std::string_view& cluster_name,
                    const std::string_view& location,
-                   const std::string_view& message, va_list args) noexcept = 0;
+                   const std::string_view& message) noexcept = 0;
 };
 }  // namespace privacy_sandbox::pbs_common

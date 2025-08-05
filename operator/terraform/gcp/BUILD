@@ -26,16 +26,26 @@ pkg_files(
     prefix = "jars",
 )
 
+terraform_files = [
+    "//operator/terraform/gcp/applications:applications_pkg",
+    "//operator/terraform/gcp/environments:operator_tar_environments",
+    "//operator/terraform/gcp/modules:modules_pkg",
+    "//operator/terraform/gcp/modules/shared:modules_shared_pkg",
+    "//operator/terraform/gcp/util_scripts:util_scripts_pkg",
+]
+
 pkg_tar(
     name = "operator_tar",
     srcs = [
         ":dist_jars",
-        "//operator/terraform/gcp/applications:applications_pkg",
-        "//operator/terraform/gcp/environments:operator_tar_environments",
-        "//operator/terraform/gcp/modules:modules_pkg",
-        "//operator/terraform/gcp/modules/shared:modules_shared_pkg",
-        "//operator/terraform/gcp/util_scripts:util_scripts_pkg",
-    ],
+    ] + terraform_files,
+    extension = "tgz",
+    strip_prefix = "/",
+)
+
+pkg_tar(
+    name = "operator_terraform_tar",
+    srcs = terraform_files,
     extension = "tgz",
     strip_prefix = "/",
 )

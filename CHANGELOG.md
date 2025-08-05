@@ -1,4 +1,22 @@
 # Changelog
+## [1.30.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.29.0...v1.30.0) (2025-08-05)
+
+### Changes
+- INFRA
+  - [GCP] Add certificate manager support for key storage service
+  - [GCP] Add certificate map support for the private key service
+- MPKGDS
+  - [GCP] Remove VPC from Type-2
+- OPERATOR
+  - [GCP] Add dedicated target to package only operator terraform files
+- BUILD
+  - [CA] Refactor include paths for C++ headers
+  - [CA] Remove unused Spanner backup scheduler
+  - [CA] Update container dependencies.
+- PBS
+  - [GCP] Allow setting a Spanner backup schedule
+  - [CA] Refactor logger to use absl::StrFormat
+
 ## [1.29.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.28.0...v1.29.0) (2025-07-21)
 ### Important Note
 [GCP]
@@ -35,7 +53,6 @@
   - [CA] Update container dependencies
 - PBS
   - [CA] Extract integration tests
-
 
 ## [1.28.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.27.0...v1.28.0) (2025-07-07)
 ### Important notes

@@ -249,9 +249,6 @@ go_deps.module(
 use_repo(
     go_deps,
     "com_github_bazelbuild_buildtools",
-    "com_github_googleapis_gax_go_v2",
-    "com_github_stretchr_testify",
-    "com_google_cloud_go_spanner",
 )
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")

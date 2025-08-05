@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "aws_token_fetcher.h"
+#include "cc/core/telemetry/src/authentication/aws_token_fetcher.h"
 
 #include <memory>
 #include <string>
@@ -20,9 +20,8 @@
 #include "cc/core/common/global_logger/src/global_logger.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/errors.h"
+#include "cc/core/telemetry/src/authentication/token_fetcher_utils.h"
 #include "google/cloud/credentials.h"
-
-#include "token_fetcher_utils.h"
 
 namespace privacy_sandbox::pbs_common {
 
@@ -48,8 +47,9 @@ ExecutionResultOr<std::string> AwsTokenFetcher::FetchIdToken(
   auto execution_result = FetchIdTokenInternal(*iam_client_, auth_config);
   if (!execution_result.Successful()) {
     SCP_ERROR(kAwsTokenFetcher, kZeroUuid, execution_result.result(),
-              "[Aws Token Fetch] Id token fetch failed: %s",
-              GetErrorMessage(execution_result.result().status_code));
+              absl::StrFormat(
+                  "[Aws Token Fetch] Id token fetch failed: %s",
+                  GetErrorMessage(execution_result.result().status_code)));
   }
   return execution_result;
 }

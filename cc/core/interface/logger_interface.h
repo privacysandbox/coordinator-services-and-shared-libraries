@@ -19,8 +19,7 @@
 #include <string_view>
 
 #include "cc/core/common/uuid/src/uuid.h"
-
-#include "service_interface.h"
+#include "cc/core/interface/service_interface.h"
 
 namespace privacy_sandbox::pbs_common {
 /// The log level
@@ -57,7 +56,7 @@ class LoggerInterface : public ServiceInterface {
                     const Uuid& parent_activity_id, const Uuid& activity_id,
                     const Uuid& correlation_id,
                     const std::string_view& location,
-                    const std::string_view& message, ...) noexcept = 0;
+                    const std::string_view& message) noexcept = 0;
 
   /**
    * @brief Logs a message with Debug severity.
@@ -73,7 +72,7 @@ class LoggerInterface : public ServiceInterface {
                      const Uuid& parent_activity_id, const Uuid& activity_id,
                      const Uuid& correlation_id,
                      const std::string_view& location,
-                     const std::string_view& message, ...) noexcept = 0;
+                     const std::string_view& message) noexcept = 0;
 
   /**
    * @brief Logs a message with Warning severity.
@@ -89,7 +88,7 @@ class LoggerInterface : public ServiceInterface {
                        const Uuid& parent_activity_id, const Uuid& activity_id,
                        const Uuid& correlation_id,
                        const std::string_view& location,
-                       const std::string_view& message, ...) noexcept = 0;
+                       const std::string_view& message) noexcept = 0;
 
   /**
    * @brief Logs a message with Error severity.
@@ -105,7 +104,7 @@ class LoggerInterface : public ServiceInterface {
                      const Uuid& parent_activity_id, const Uuid& activity_id,
                      const Uuid& correlation_id,
                      const std::string_view& location,
-                     const std::string_view& message, ...) noexcept = 0;
+                     const std::string_view& message) noexcept = 0;
 
   /**
    * @brief Logs a message with Alert severity.
@@ -121,7 +120,7 @@ class LoggerInterface : public ServiceInterface {
                      const Uuid& parent_activity_id, const Uuid& activity_id,
                      const Uuid& correlation_id,
                      const std::string_view& location,
-                     const std::string_view& message, ...) noexcept = 0;
+                     const std::string_view& message) noexcept = 0;
 
   /**
    * @brief Logs a message with Critical severity.
@@ -137,7 +136,7 @@ class LoggerInterface : public ServiceInterface {
                         const Uuid& parent_activity_id, const Uuid& activity_id,
                         const Uuid& correlation_id,
                         const std::string_view& location,
-                        const std::string_view& message, ...) noexcept = 0;
+                        const std::string_view& message) noexcept = 0;
 
   /**
    * @brief Logs a message with Emergency severity.
@@ -153,6 +152,6 @@ class LoggerInterface : public ServiceInterface {
                          const Uuid& parent_activity_id,
                          const Uuid& activity_id, const Uuid& correlation_id,
                          const std::string_view& location,
-                         const std::string_view& message, ...) noexcept = 0;
+                         const std::string_view& message) noexcept = 0;
 };
 }  // namespace privacy_sandbox::pbs_common

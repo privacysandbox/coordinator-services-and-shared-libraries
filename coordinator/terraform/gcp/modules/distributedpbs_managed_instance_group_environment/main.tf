@@ -57,7 +57,6 @@ locals {
     google_scp_otel_metric_export_interval_msec                           = "60000",
     google_scp_otel_metric_export_timeout_msec                            = "50000",
     OTEL_METRICS_EXPORTER                                                 = "googlecloud",
-    google_scp_pbs_enable_request_response_proto_migration                = "true",
     google_pbs_stop_serving_v1_request                                    = "true",
   }
   pbs_cloud_run_environment_variables = {

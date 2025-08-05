@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CC_CORE_HTTP2_CLIENT_SRC_HTTP_CLIENT_DEF
-#define CC_CORE_HTTP2_CLIENT_SRC_HTTP_CLIENT_DEF
+#ifndef CC_CORE_HTTP2_CLIENT_SRC_HTTP_CLIENT_DEF_H_
+#define CC_CORE_HTTP2_CLIENT_SRC_HTTP_CLIENT_DEF_H_
 
 #include "absl/strings/string_view.h"
 
@@ -52,4 +52,4 @@ inline constexpr absl::string_view kClientReturnCodeLabel =
     "client.return_code";
 
 }  // namespace privacy_sandbox::pbs_common
-#endif  // CC_CORE_HTTP2_CLIENT_SRC_HTTP_CLIENT_DEF
+#endif  // CC_CORE_HTTP2_CLIENT_SRC_HTTP_CLIENT_DEF_H_

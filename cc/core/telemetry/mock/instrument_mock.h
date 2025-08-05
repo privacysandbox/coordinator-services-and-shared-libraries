@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef CC_CORE_TELEMETRY_MOCK_INSTRUMENT_MOCK
-#define CC_CORE_TELEMETRY_MOCK_INSTRUMENT_MOCK
+#ifndef CC_CORE_TELEMETRY_MOCK_INSTRUMENT_MOCK_H_
+#define CC_CORE_TELEMETRY_MOCK_INSTRUMENT_MOCK_H_
 
 #include "absl/container/flat_hash_map.h"
 #include "gmock/gmock.h"
@@ -79,4 +79,4 @@ class MockUpDownCounter : public opentelemetry::metrics::UpDownCounter<T> {
 };
 }  // namespace privacy_sandbox::pbs_common
 
-#endif  // CC_CORE_TELEMETRY_MOCK_INSTRUMENT_MOCK
+#endif  // CC_CORE_TELEMETRY_MOCK_INSTRUMENT_MOCK_H_

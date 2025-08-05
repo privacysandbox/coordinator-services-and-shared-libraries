@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <utility>
 
 #include "cc/core/config_provider/src/env_config_provider.h"
 #include "cc/core/interface/configuration_keys.h"

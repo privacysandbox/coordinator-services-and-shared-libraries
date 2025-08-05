@@ -22,7 +22,10 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 
+#include <cstdio>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 

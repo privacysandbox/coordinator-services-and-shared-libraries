@@ -24,6 +24,8 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "cc/core/async_executor/mock/mock_async_executor.h"
@@ -36,30 +38,17 @@
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
 namespace privacy_sandbox::pbs_common {
-using std::defer_lock;
-using std::find;
-using std::function;
-using std::make_shared;
-using std::shared_lock;
-using std::shared_ptr;
-using std::shared_timed_mutex;
-using std::static_pointer_cast;
-using std::string;
-using std::unique_lock;
-using std::vector;
-using std::chrono::milliseconds;
-using std::chrono::seconds;
 
 class EmptyEntry {};
 
 using UnderlyingEntry = AutoExpiryConcurrentMap<
-    int, shared_ptr<EmptyEntry>,
+    int, std::shared_ptr<EmptyEntry>,
     oneapi::tbb::tbb_hash_compare<int>>::AutoExpiryConcurrentMapEntry;
 
 class AutoExpiryConcurrentMapTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    mock_async_executor_ = make_shared<MockAsyncExecutor>();
+    mock_async_executor_ = std::make_shared<MockAsyncExecutor>();
     mock_async_executor_->schedule_for_mock =
         [&](const AsyncOperation& work, Timestamp, std::function<bool()>&) {
           return SuccessExecutionResult();
@@ -67,19 +56,20 @@ class AutoExpiryConcurrentMapTest : public ::testing::Test {
   }
 
   size_t cache_lifetime_ = 10;
-  shared_ptr<MockAsyncExecutor> mock_async_executor_;
-  function<void(int&, shared_ptr<EmptyEntry>&, function<void(bool)>)>
+  std::shared_ptr<MockAsyncExecutor> mock_async_executor_;
+  std::function<void(int&, std::shared_ptr<EmptyEntry>&,
+                     std::function<void(bool)>)>
       on_before_element_deletion_callback_ =
-          [](int& key, shared_ptr<EmptyEntry>&,
-             function<void(bool can_delete)> deleter) {};
+          [](int& key, std::shared_ptr<EmptyEntry>&,
+             std::function<void(bool can_delete)> deleter) {};
 };
 
 TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
@@ -87,7 +77,7 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
       auto_expiry_map.Insert(pair, entry),
       ResultIs(FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   underlying_entry->being_evicted = true;
@@ -101,7 +91,7 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
   underlying_entry->being_evicted = false;
 
   auto current_clock = (TimeProvider::GetSteadyTimestampInNanoseconds() +
-                        seconds(cache_lifetime_))
+                        std::chrono::seconds(cache_lifetime_))
                            .count();
 
   EXPECT_THAT(
@@ -113,11 +103,11 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
 
 TEST_F(AutoExpiryConcurrentMapTest,
        InsertingNewElementExtendOnAccessEnabledBlockingDisabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, false, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
@@ -125,7 +115,7 @@ TEST_F(AutoExpiryConcurrentMapTest,
       auto_expiry_map.Insert(pair, entry),
       ResultIs(FailureExecutionResult(SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   underlying_entry->being_evicted = true;
@@ -139,7 +129,7 @@ TEST_F(AutoExpiryConcurrentMapTest,
   underlying_entry->being_evicted = false;
 
   auto current_clock = (TimeProvider::GetSteadyTimestampInNanoseconds() +
-                        seconds(cache_lifetime_))
+                        std::chrono::seconds(cache_lifetime_))
                            .count();
 
   EXPECT_THAT(
@@ -150,16 +140,16 @@ TEST_F(AutoExpiryConcurrentMapTest,
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessDisabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, false, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   uint64_t current_expiration = underlying_entry->expiration_time.load();
@@ -175,16 +165,16 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessDisabled) {
 
 TEST_F(AutoExpiryConcurrentMapTest,
        InsertingNewElementExtendOnAccessDisabledBlockingDisabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, false, false, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   uint64_t current_expiration = underlying_entry->expiration_time.load();
@@ -199,18 +189,18 @@ TEST_F(AutoExpiryConcurrentMapTest,
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, FindingElementExtendOnAccessEnabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
   EXPECT_SUCCESS(auto_expiry_map.Find(3, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   underlying_entry->being_evicted = true;
@@ -223,7 +213,7 @@ TEST_F(AutoExpiryConcurrentMapTest, FindingElementExtendOnAccessEnabled) {
   underlying_entry->being_evicted = false;
 
   auto current_clock = (TimeProvider::GetSteadyTimestampInNanoseconds() +
-                        seconds(cache_lifetime_))
+                        std::chrono::seconds(cache_lifetime_))
                            .count();
   EXPECT_SUCCESS(auto_expiry_map.Find(3, entry));
 
@@ -233,18 +223,18 @@ TEST_F(AutoExpiryConcurrentMapTest, FindingElementExtendOnAccessEnabled) {
 
 TEST_F(AutoExpiryConcurrentMapTest,
        FindingElementExtendOnAccessEnabledBlockingDisabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, false, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
   EXPECT_SUCCESS(auto_expiry_map.Find(3, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   underlying_entry->being_evicted = true;
@@ -255,7 +245,7 @@ TEST_F(AutoExpiryConcurrentMapTest,
   underlying_entry->being_evicted = false;
 
   auto current_clock = (TimeProvider::GetSteadyTimestampInNanoseconds() +
-                        seconds(cache_lifetime_))
+                        std::chrono::seconds(cache_lifetime_))
                            .count();
   EXPECT_SUCCESS(auto_expiry_map.Find(3, entry));
 
@@ -264,16 +254,16 @@ TEST_F(AutoExpiryConcurrentMapTest,
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, FindingElementExtendOnAccessDisabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, false, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   uint64_t current_expiration = underlying_entry->expiration_time.load();
@@ -285,16 +275,16 @@ TEST_F(AutoExpiryConcurrentMapTest, FindingElementExtendOnAccessDisabled) {
 
 TEST_F(AutoExpiryConcurrentMapTest,
        FindingElementExtendOnAccessDisabledBlockingDisabled) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, false, false, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   uint64_t current_expiration = underlying_entry->expiration_time.load();
@@ -305,11 +295,11 @@ TEST_F(AutoExpiryConcurrentMapTest,
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, Erase) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, false, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Run());
   EXPECT_THAT(
@@ -320,11 +310,11 @@ TEST_F(AutoExpiryConcurrentMapTest, Erase) {
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, GetKeys) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, false, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   EXPECT_SUCCESS(auto_expiry_map.Run());
 
   auto pair = make_pair(3, entry);
@@ -332,24 +322,24 @@ TEST_F(AutoExpiryConcurrentMapTest, GetKeys) {
   pair = make_pair(4, entry);
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  vector<int> keys;
+  std::vector<int> keys;
   EXPECT_SUCCESS(auto_expiry_map.Keys(keys));
   EXPECT_EQ(keys.size(), 2);
-  EXPECT_NE(find(keys.begin(), keys.end(), 3), keys.end());
-  EXPECT_NE(find(keys.begin(), keys.end(), 4), keys.end());
+  EXPECT_NE(std::find(keys.begin(), keys.end(), 3), keys.end());
+  EXPECT_NE(std::find(keys.begin(), keys.end(), 4), keys.end());
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, DisableEviction) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   EXPECT_SUCCESS(auto_expiry_map.Run());
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   EXPECT_EQ(underlying_entry->is_evictable, true);
@@ -367,16 +357,16 @@ TEST_F(AutoExpiryConcurrentMapTest, DisableEviction) {
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, EnableEviction) {
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   EXPECT_SUCCESS(auto_expiry_map.Run());
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   EXPECT_EQ(underlying_entry->is_evictable, true);
@@ -397,31 +387,31 @@ TEST_F(AutoExpiryConcurrentMapTest, EnableEviction) {
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, GarbageCollection) {
-  vector<int> keys_to_be_deleted;
+  std::vector<int> keys_to_be_deleted;
   auto on_before_element_deletion_callback_ =
-      [&](int& key, shared_ptr<EmptyEntry>&,
-          function<void(bool can_delete)> deleter) {
+      [&](int& key, std::shared_ptr<EmptyEntry>&,
+          std::function<void(bool can_delete)> deleter) {
         keys_to_be_deleted.push_back(key);
       };
 
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
   EXPECT_SUCCESS(auto_expiry_map.Run());
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
   pair = make_pair(4, entry);
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
   underlying_entry->expiration_time = 0;
 
-  shared_lock<shared_timed_mutex> lock(underlying_entry->record_lock);
+  std::shared_lock<std::shared_timed_mutex> lock(underlying_entry->record_lock);
 
   auto_expiry_map.RunGarbageCollector();
   EXPECT_EQ(keys_to_be_deleted.size(), 0);
@@ -444,33 +434,33 @@ TEST_F(AutoExpiryConcurrentMapTest, GarbageCollection) {
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, OnRemoveEntryFromCacheLogged) {
-  vector<int> keys_to_be_deleted;
+  std::vector<int> keys_to_be_deleted;
   auto on_before_element_deletion_callback_ =
-      [&](int& key, shared_ptr<EmptyEntry>&,
-          function<void(bool can_delete)> deleter) {
+      [&](int& key, std::shared_ptr<EmptyEntry>&,
+          std::function<void(bool can_delete)> deleter) {
         keys_to_be_deleted.push_back(key);
       };
 
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
   EXPECT_SUCCESS(auto_expiry_map.Run());
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
   pair = make_pair(4, entry);
   EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
 
-  shared_ptr<UnderlyingEntry> underlying_entry;
+  std::shared_ptr<UnderlyingEntry> underlying_entry;
   auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
 
   std::pair<
       int,
       std::shared_ptr<AutoExpiryConcurrentMap<
-          int, shared_ptr<EmptyEntry>,
+          int, std::shared_ptr<EmptyEntry>,
           oneapi::tbb::tbb_hash_compare<int>>::AutoExpiryConcurrentMapEntry>>
       map_pair = std::make_pair(3, underlying_entry);
   auto_expiry_map.OnRemoveEntryFromCacheLogged(map_pair, true);
@@ -484,9 +474,9 @@ TEST_F(AutoExpiryConcurrentMapTest, OnRemoveEntryFromCacheLogged) {
 }
 
 TEST_F(AutoExpiryConcurrentMapTest, Run) {
-  vector<ExecutionResult> results = {SuccessExecutionResult(),
-                                     FailureExecutionResult(123),
-                                     RetryExecutionResult(123)};
+  std::vector<ExecutionResult> results = {SuccessExecutionResult(),
+                                          FailureExecutionResult(123),
+                                          RetryExecutionResult(123)};
 
   for (auto result : results) {
     mock_async_executor_->schedule_for_mock =
@@ -494,7 +484,7 @@ TEST_F(AutoExpiryConcurrentMapTest, Run) {
           return result;
         };
 
-    AutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+    AutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
         10, true, true, on_before_element_deletion_callback_,
         mock_async_executor_);
 
@@ -511,19 +501,19 @@ TEST_F(AutoExpiryConcurrentMapTest, NoDeletionForUnloadedData) {
   bool schedule_for_is_called = false;
   mock_async_executor_->schedule_for_mock =
       [&](const AsyncOperation& work, Timestamp timestamp,
-          function<bool()>& cancellation_callback) {
+          std::function<bool()>& cancellation_callback) {
         schedule_for_is_called = true;
         return SuccessExecutionResult();
       };
 
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       0, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
+  auto entry = std::make_shared<EmptyEntry>();
   auto pair = make_pair(3, entry);
-  shared_ptr<UnderlyingEntry> underlying_entry =
-      make_shared<UnderlyingEntry>(entry, 0);
+  std::shared_ptr<UnderlyingEntry> underlying_entry =
+      std::make_shared<UnderlyingEntry>(entry, 0);
   auto underlying_pair = make_pair(3, underlying_entry);
   auto_expiry_map.GetUnderlyingConcurrentMap().Insert(underlying_pair,
                                                       underlying_entry);
@@ -546,18 +536,18 @@ TEST_F(AutoExpiryConcurrentMapTest, NoDeletionForUnExpired) {
   bool schedule_for_is_called = false;
   mock_async_executor_->schedule_for_mock =
       [&](const AsyncOperation& work, Timestamp timestamp,
-          function<bool()>& cancellation_callback) {
+          std::function<bool()>& cancellation_callback) {
         schedule_for_is_called = true;
         return SuccessExecutionResult();
       };
 
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       0, true, true, on_before_element_deletion_callback_,
       mock_async_executor_);
 
-  auto entry = make_shared<EmptyEntry>();
-  shared_ptr<UnderlyingEntry> underlying_entry =
-      make_shared<UnderlyingEntry>(entry, 0);
+  auto entry = std::make_shared<EmptyEntry>();
+  std::shared_ptr<UnderlyingEntry> underlying_entry =
+      std::make_shared<UnderlyingEntry>(entry, 0);
   auto underlying_pair = make_pair(3, underlying_entry);
   auto_expiry_map.GetUnderlyingConcurrentMap().Insert(underlying_pair,
                                                       underlying_entry);
@@ -572,29 +562,29 @@ TEST_F(AutoExpiryConcurrentMapTest, NoDeletionForUnExpired) {
 
 TEST(AutoExpiryConcurrentMapDeletionTest, DeletionForExpired) {
   size_t total_count = 0;
-  vector<function<void(bool)>> deleters;
-  auto on_before_element_deletion_callback = [&](int& key,
-                                                 shared_ptr<EmptyEntry>& entry,
-                                                 function<void(bool)> deleter) {
-    total_count++;
-    deleters.push_back(deleter);
-  };
+  std::vector<std::function<void(bool)>> deleters;
+  auto on_before_element_deletion_callback =
+      [&](int& key, std::shared_ptr<EmptyEntry>& entry,
+          std::function<void(bool)> deleter) {
+        total_count++;
+        deleters.push_back(deleter);
+      };
 
-  auto mock_async_executor = make_shared<MockAsyncExecutor>();
+  auto mock_async_executor = std::make_shared<MockAsyncExecutor>();
 
-  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+  MockAutoExpiryConcurrentMap<int, std::shared_ptr<EmptyEntry>> auto_expiry_map(
       0, true, true, on_before_element_deletion_callback, mock_async_executor);
 
-  auto entry = make_shared<EmptyEntry>();
-  shared_ptr<UnderlyingEntry> underlying_entry =
-      make_shared<UnderlyingEntry>(entry, 0);
+  auto entry = std::make_shared<EmptyEntry>();
+  std::shared_ptr<UnderlyingEntry> underlying_entry =
+      std::make_shared<UnderlyingEntry>(entry, 0);
   auto underlying_pair = make_pair(3, underlying_entry);
   auto_expiry_map.GetUnderlyingConcurrentMap().Insert(underlying_pair,
                                                       underlying_entry);
   underlying_entry->expiration_time = 0;
   underlying_entry->is_evictable = true;
 
-  entry = make_shared<EmptyEntry>();
+  entry = std::make_shared<EmptyEntry>();
   underlying_pair = make_pair(5, underlying_entry);
   auto_expiry_map.GetUnderlyingConcurrentMap().Insert(underlying_pair,
                                                       underlying_entry);
@@ -614,11 +604,11 @@ TEST(AutoExpiryConcurrentMapDeletionTest, DeletionForExpired) {
   deleters[0](true);
 
   bool schedule_for_called = false;
-  mock_async_executor->schedule_for_mock = [&](const AsyncOperation& work,
-                                               Timestamp, function<bool()>&) {
-    schedule_for_called = true;
-    return SuccessExecutionResult();
-  };
+  mock_async_executor->schedule_for_mock =
+      [&](const AsyncOperation& work, Timestamp, std::function<bool()>&) {
+        schedule_for_called = true;
+        return SuccessExecutionResult();
+      };
 
   deleters[1](false);
 
@@ -631,7 +621,7 @@ TEST(AutoExpiryConcurrentMapDeletionTest, DeletionForExpired) {
 }
 
 TEST(AutoExpiryConcurrentMapEntryTest, ExtendEntryExpiration) {
-  shared_ptr<EmptyEntry> empty_entry;
+  std::shared_ptr<EmptyEntry> empty_entry;
   UnderlyingEntry entry(empty_entry, 1);
   entry.expiration_time = 0;
   EXPECT_EQ(entry.IsExpired(), true);
@@ -654,7 +644,7 @@ TEST(AutoExpiryConcurrentMapEntryTest, ExtendEntryExpiration) {
 }
 
 TEST(AutoExpiryConcurrentMapEntryTest, IsEntryExpired) {
-  shared_ptr<EmptyEntry> empty_entry;
+  std::shared_ptr<EmptyEntry> empty_entry;
   UnderlyingEntry entry(empty_entry, 1);
   entry.expiration_time = UINT64_MAX;
   EXPECT_EQ(entry.IsExpired(), false);
@@ -667,27 +657,27 @@ TEST(AutoExpiryConcurrentMapEntryTest, IsEntryExpired) {
   EXPECT_EQ(entry.IsExpired(), true);
 
   entry.expiration_time =
-      (current_time + seconds(2)).count(); /* adding 2 seconds */
+      (current_time + std::chrono::seconds(2)).count(); /* adding 2 seconds */
   EXPECT_EQ(entry.IsExpired(), false);
 }
 
 TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
   std::mutex gc_completion_lambdas_mutex;
   std::vector<std::function<void(bool)>> gc_completion_lambdas;
-  auto async_executor =
-      make_shared<AsyncExecutor>(/*thread_count=*/4, /*queue_capacity=*/100);
+  auto async_executor = std::make_shared<AsyncExecutor>(/*thread_count=*/4,
+                                                        /*queue_capacity=*/100);
 
   // Do not invoke the completion lambdas yet, but collect them and invoke them
   // later.
   auto on_before_gc_lambda = [&gc_completion_lambdas,
                               &gc_completion_lambdas_mutex](
-                                 string&, shared_ptr<string>&,
+                                 std::string&, std::shared_ptr<std::string>&,
                                  std::function<void(bool)> completion_lambda) {
-    unique_lock lock(gc_completion_lambdas_mutex);
+    std::unique_lock lock(gc_completion_lambdas_mutex);
     gc_completion_lambdas.push_back(std::move(completion_lambda));
   };
 
-  AutoExpiryConcurrentMap<string, shared_ptr<string>> map(
+  AutoExpiryConcurrentMap<std::string, std::shared_ptr<std::string>> map(
       /*evict_timeout=*/1, /*extend_entry_lifetime_on_access=*/false,
       /*block_entry_while_eviction=*/false, on_before_gc_lambda,
       async_executor);
@@ -695,19 +685,19 @@ TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
   // Insert 3 entries. 3 callback lambdas will be invoked once the garbage
   // collection work is started.
   {
-    shared_ptr<string> out_value;
-    EXPECT_SUCCESS(map.Insert(make_pair("key1", make_shared<string>("value1")),
-                              out_value));
+    std::shared_ptr<std::string> out_value;
+    EXPECT_SUCCESS(map.Insert(
+        make_pair("key1", std::make_shared<std::string>("value1")), out_value));
   }
   {
-    shared_ptr<string> out_value;
-    EXPECT_SUCCESS(map.Insert(make_pair("key2", make_shared<string>("value2")),
-                              out_value));
+    std::shared_ptr<std::string> out_value;
+    EXPECT_SUCCESS(map.Insert(
+        make_pair("key2", std::make_shared<std::string>("value2")), out_value));
   }
   {
-    shared_ptr<string> out_value;
-    EXPECT_SUCCESS(map.Insert(make_pair("key3", make_shared<string>("value3")),
-                              out_value));
+    std::shared_ptr<std::string> out_value;
+    EXPECT_SUCCESS(map.Insert(
+        make_pair("key3", std::make_shared<std::string>("value3")), out_value));
   }
 
   EXPECT_SUCCESS(async_executor->Init());
@@ -717,7 +707,7 @@ TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
   EXPECT_SUCCESS(map.Run());
 
   WaitUntil([&gc_completion_lambdas, &gc_completion_lambdas_mutex]() {
-    unique_lock lock(gc_completion_lambdas_mutex);
+    std::unique_lock lock(gc_completion_lambdas_mutex);
     return gc_completion_lambdas.size() == 3;
   });
 
@@ -731,7 +721,7 @@ TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
   // Cannot be stopped because there is pending work..
   EXPECT_THAT(
       WaitUntilOrReturn([&stop_completed]() { return stop_completed.load(); },
-                        /*timeout=*/milliseconds(2000)),
+                        /*timeout=*/std::chrono::milliseconds(2000)),
       ResultIs(FailureExecutionResult(SC_TEST_UTILS_TEST_WAIT_TIMEOUT)));
 
   // Invoke the lambdas to complete the pending work, and unblocking the stopper
@@ -742,7 +732,7 @@ TEST(AutoExpiryConcurrentMapEntryTest, StopShouldWaitForScheduledWork) {
 
   EXPECT_SUCCESS(
       WaitUntilOrReturn([&stop_completed]() { return stop_completed.load(); },
-                        /*timeout=*/milliseconds(2000)));
+                        /*timeout=*/std::chrono::milliseconds(2000)));
 
   stop_thread.join();
   EXPECT_SUCCESS(async_executor->Stop());

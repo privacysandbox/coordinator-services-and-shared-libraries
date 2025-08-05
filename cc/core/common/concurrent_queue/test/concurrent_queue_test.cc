@@ -26,11 +26,6 @@
 #include "cc/public/core/interface/execution_result.h"
 #include "cc/public/core/test/interface/execution_result_matchers.h"
 
-using std::atomic;
-using std::thread;
-using std::vector;
-using std::this_thread::yield;
-
 namespace privacy_sandbox::pbs_common {
 
 class ConcurrentQueueTests : public ScpTestBase {};
@@ -66,11 +61,11 @@ TEST_F(ConcurrentQueueTests, ErrorOnNoElement) {
 TEST_F(ConcurrentQueueTests, MultiThreadedEnqueue) {
   ConcurrentQueue<int> queue(100);
 
-  vector<thread> threads;
-  vector<atomic<uint64_t>> bitmap((1000 + 63) / 64);
+  std::vector<std::thread> threads;
+  std::vector<std::atomic<uint64_t>> bitmap((1000 + 63) / 64);
 
   for (auto i = 0; i < 1000; ++i) {
-    threads.push_back(thread([i, &queue, &bitmap]() {
+    threads.push_back(std::thread([i, &queue, &bitmap]() {
       int word_idx = i / 64;
       int bit_idx = i % 64;
       uint64_t mask = 1UL << bit_idx;
@@ -80,15 +75,15 @@ TEST_F(ConcurrentQueueTests, MultiThreadedEnqueue) {
       EXPECT_EQ(word.fetch_or(mask) & mask, 0);
       auto index = i;
       while (queue.TryEnqueue(index) != success) {
-        yield();
+        std::this_thread::yield();
       }
     }));
 
-    threads.push_back(thread([&queue, &bitmap]() {
+    threads.push_back(std::thread([&queue, &bitmap]() {
       int index = -1;
       auto success = SuccessExecutionResult();
       while (queue.TryDequeue(index) != success) {
-        yield();
+        std::this_thread::yield();
       }
       int word_idx = index / 64;
       int bit_idx = index % 64;

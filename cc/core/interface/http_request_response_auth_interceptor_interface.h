@@ -19,10 +19,10 @@
 #include <memory>
 #include <string>
 
-#include "async_context.h"
-#include "authorization_proxy_interface.h"
-#include "http_types.h"
-#include "service_interface.h"
+#include "cc/core/interface/async_context.h"
+#include "cc/core/interface/authorization_proxy_interface.h"
+#include "cc/core/interface/http_types.h"
+#include "cc/core/interface/service_interface.h"
 
 namespace privacy_sandbox::pbs_common {
 /**

@@ -14,10 +14,14 @@
 
 #include "cc/core/telemetry/src/authentication/grpc_id_token_authenticator.h"
 
-#include <memory>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace privacy_sandbox::pbs_common {
 namespace {

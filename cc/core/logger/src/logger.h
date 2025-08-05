@@ -43,38 +43,38 @@ class Logger : public LoggerInterface {
 
   void Info(const std::string_view& component_name, const Uuid& correlation_id,
             const Uuid& parent_activity_id, const Uuid& activity_id,
-            const std::string_view& location, const std::string_view& message,
-            ...) noexcept override;
+            const std::string_view& location,
+            const std::string_view& message) noexcept override;
 
   void Debug(const std::string_view& component_name, const Uuid& correlation_id,
              const Uuid& parent_activity_id, const Uuid& activity_id,
-             const std::string_view& location, const std::string_view& message,
-             ...) noexcept override;
+             const std::string_view& location,
+             const std::string_view& message) noexcept override;
 
   void Warning(const std::string_view& component_name,
                const Uuid& correlation_id, const Uuid& parent_activity_id,
                const Uuid& activity_id, const std::string_view& location,
-               const std::string_view& message, ...) noexcept override;
+               const std::string_view& message) noexcept override;
 
   void Error(const std::string_view& component_name, const Uuid& correlation_id,
              const Uuid& parent_activity_id, const Uuid& activity_id,
-             const std::string_view& location, const std::string_view& message,
-             ...) noexcept override;
+             const std::string_view& location,
+             const std::string_view& message) noexcept override;
 
   void Alert(const std::string_view& component_name, const Uuid& correlation_id,
              const Uuid& parent_activity_id, const Uuid& activity_id,
-             const std::string_view& location, const std::string_view& message,
-             ...) noexcept override;
+             const std::string_view& location,
+             const std::string_view& message) noexcept override;
 
   void Critical(const std::string_view& component_name,
                 const Uuid& correlation_id, const Uuid& parent_activity_id,
                 const Uuid& activity_id, const std::string_view& location,
-                const std::string_view& message, ...) noexcept override;
+                const std::string_view& message) noexcept override;
 
   void Emergency(const std::string_view& component_name,
                  const Uuid& correlation_id, const Uuid& parent_activity_id,
                  const Uuid& activity_id, const std::string_view& location,
-                 const std::string_view& message, ...) noexcept override;
+                 const std::string_view& message) noexcept override;
 
  protected:
   /// A unique pointer to the log provider instance.

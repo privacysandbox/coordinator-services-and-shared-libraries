@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "logging_utils.h"
+#include "cc/core/test/utils/logging_utils.h"
 
 #include <memory>
 #include <utility>

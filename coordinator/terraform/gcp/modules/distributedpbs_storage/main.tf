@@ -76,6 +76,8 @@ resource "google_spanner_instance" "pbs_spanner_instance" {
   edition          = var.pbs_spanner_instance_edition
   processing_units = var.pbs_spanner_autoscaling_config == null ? var.pbs_spanner_instance_processing_units : null
 
+  default_backup_schedule_type = "NONE"
+
   dynamic "autoscaling_config" {
     for_each = var.pbs_spanner_autoscaling_config != null ? [var.pbs_spanner_autoscaling_config] : []
     content {
@@ -149,4 +151,30 @@ resource "google_spanner_database" "pbs_spanner_database" {
     #
     # ALTER TABLE ${local.pbs_spanner_budget_key_table_name} ADD COLUMN IF NOT EXISTS ValueProto privacy_sandbox_pbs.BudgetValue;
   ]
+}
+
+resource "google_spanner_backup_schedule" "pbs" {
+  count = var.backups != null ? 1 : 0
+
+  project            = var.project_id
+  instance           = google_spanner_database.pbs_spanner_database.instance
+  database           = google_spanner_database.pbs_spanner_database.name
+  name               = "pbs-backups"
+  retention_duration = var.backups.retention_duration
+
+  spec {
+    cron_spec {
+      text = var.backups.cron_spec
+    }
+  }
+
+  dynamic "full_backup_spec" {
+    for_each = var.backups.incremental ? [] : [0]
+    content {}
+  }
+
+  dynamic "incremental_backup_spec" {
+    for_each = var.backups.incremental ? [0] : []
+    content {}
+  }
 }

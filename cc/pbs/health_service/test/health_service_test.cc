@@ -19,10 +19,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <filesystem>
 #include <list>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "cc/core/async_executor/src/async_executor.h"
@@ -54,11 +54,6 @@ using ::privacy_sandbox::pbs_common::IsSuccessful;
 using ::privacy_sandbox::pbs_common::MockHttp2Server;
 using ::privacy_sandbox::pbs_common::ResultIs;
 using ::privacy_sandbox::pbs_common::SuccessExecutionResult;
-using std::list;
-using std::make_shared;
-using std::shared_ptr;
-using std::string;
-using std::filesystem::space_info;
 using testing::_;
 using testing::DoAll;
 using testing::NiceMock;
@@ -90,26 +85,28 @@ class ConfigProviderMock : public ConfigProviderInterface {
     return SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const ConfigKey& key, string& out) noexcept override {
+  ExecutionResult Get(const ConfigKey& key,
+                      std::string& out) noexcept override {
     return SuccessExecutionResult();
   }
 
   ExecutionResult Get(const ConfigKey& key,
-                      list<string>& out) noexcept override {
+                      std::list<std::string>& out) noexcept override {
     return SuccessExecutionResult();
   }
 
   ExecutionResult Get(const ConfigKey& key,
-                      list<int32_t>& out) noexcept override {
+                      std::list<int32_t>& out) noexcept override {
     return SuccessExecutionResult();
   }
 
   ExecutionResult Get(const ConfigKey& key,
-                      list<size_t>& out) noexcept override {
+                      std::list<size_t>& out) noexcept override {
     return SuccessExecutionResult();
   }
 
-  ExecutionResult Get(const ConfigKey& key, list<bool>& out) noexcept override {
+  ExecutionResult Get(const ConfigKey& key,
+                      std::list<bool>& out) noexcept override {
     return SuccessExecutionResult();
   }
 
@@ -124,24 +121,27 @@ class HealthServiceForTests : public HealthService {
 
   HealthServiceForTests() : HealthService() {}
 
-  HealthServiceForTests(shared_ptr<HttpServerInterface>& http_server,
-                        shared_ptr<ConfigProviderInterface>& config_provider,
-                        shared_ptr<AsyncExecutorInterface>& async_executor)
+  HealthServiceForTests(
+      std::shared_ptr<HttpServerInterface>& http_server,
+      std::shared_ptr<ConfigProviderInterface>& config_provider,
+      std::shared_ptr<AsyncExecutorInterface>& async_executor)
       : HealthService(http_server, config_provider, async_executor) {}
 
-  void SetMemInfoFilePath(const string& meminfo_file_path) {
+  void SetMemInfoFilePath(const std::string& meminfo_file_path) {
     meminfo_file_path_ = meminfo_file_path;
   }
 
-  string GetMemInfoFilePath() noexcept override { return meminfo_file_path_; }
+  std::string GetMemInfoFilePath() noexcept override {
+    return meminfo_file_path_;
+  }
 
   void SetFileSystemSpaceInfo(
-      const ExecutionResultOr<space_info>& fs_space_info) {
+      const ExecutionResultOr<std::filesystem::space_info>& fs_space_info) {
     fs_space_info_ = fs_space_info;
   }
 
-  ExecutionResultOr<space_info> GetFileSystemSpaceInfo(
-      string directory) noexcept override {
+  ExecutionResultOr<std::filesystem::space_info> GetFileSystemSpaceInfo(
+      std::string directory) noexcept override {
     return fs_space_info_;
   }
 
@@ -160,22 +160,22 @@ class HealthServiceForTests : public HealthService {
   }
 
   ExecutionResultOr<int> GetFileSystemStorageUsagePercentage(
-      const string& directory) {
+      const std::string& directory) {
     return HealthService::GetFileSystemStorageUsagePercentage(directory);
   }
 
  private:
-  string meminfo_file_path_;
-  ExecutionResultOr<space_info> fs_space_info_;
+  std::string meminfo_file_path_;
+  ExecutionResultOr<std::filesystem::space_info> fs_space_info_;
 };
 
 class HealthServiceTest : public ::testing::Test {
  protected:
   HealthServiceTest() {
-    config_provider_mock_ = make_shared<NiceMock<ConfigProviderMock>>();
-    http_server_ = make_shared<MockHttp2Server>();
-    async_executor_ =
-        make_shared<AsyncExecutor>(2 /* thread count */, 10000 /* queue cap */);
+    config_provider_mock_ = std::make_shared<NiceMock<ConfigProviderMock>>();
+    http_server_ = std::make_shared<MockHttp2Server>();
+    async_executor_ = std::make_shared<AsyncExecutor>(2 /* thread count */,
+                                                      10000 /* queue cap */);
     EXPECT_SUCCESS(async_executor_->Init());
     EXPECT_SUCCESS(async_executor_->Run());
 
@@ -194,7 +194,7 @@ class HealthServiceTest : public ::testing::Test {
     // Always be good on memory and drive usage
     health_service_.SetMemInfoFilePath(
         "cc/pbs/health_service/test/files/five_percent_meminfo_file.txt");
-    space_info fs_space_info;
+    std::filesystem::space_info fs_space_info;
     fs_space_info.capacity = 100;
     fs_space_info.available = 80;
     health_service_.SetFileSystemSpaceInfo(fs_space_info);
@@ -205,9 +205,9 @@ class HealthServiceTest : public ::testing::Test {
   ~HealthServiceTest() { EXPECT_SUCCESS(async_executor_->Stop()); }
 
   HealthServiceForTests health_service_;
-  shared_ptr<HttpServerInterface> http_server_;
-  shared_ptr<ConfigProviderInterface> config_provider_mock_;
-  shared_ptr<AsyncExecutorInterface> async_executor_;
+  std::shared_ptr<HttpServerInterface> http_server_;
+  std::shared_ptr<ConfigProviderInterface> config_provider_mock_;
+  std::shared_ptr<AsyncExecutorInterface> async_executor_;
   // For testing OTel metrics
   std::unique_ptr<InMemoryMetricRouter> metric_router_;
 };
@@ -348,7 +348,7 @@ TEST_F(HealthServiceTest, ShouldFailFsStoragePercentageIfReadingInfoFails) {
 }
 
 TEST_F(HealthServiceTest, ShouldFailIfFsStorageInfoReadingIsInvalid) {
-  space_info fs_space_info;
+  std::filesystem::space_info fs_space_info;
   fs_space_info.capacity = 0;
   fs_space_info.available = 50;
   health_service_.SetFileSystemSpaceInfo(fs_space_info);
@@ -369,7 +369,7 @@ TEST_F(HealthServiceTest, ShouldFailIfFsStorageInfoReadingIsInvalid) {
 }
 
 TEST_F(HealthServiceTest, ShouldGetFsStoragePercentage) {
-  space_info fs_space_info;
+  std::filesystem::space_info fs_space_info;
   fs_space_info.capacity = 100;
   fs_space_info.available = 50;
   health_service_.SetFileSystemSpaceInfo(fs_space_info);
@@ -397,7 +397,7 @@ TEST_F(HealthServiceTest, ShouldGetFsStoragePercentage) {
 
 TEST_F(HealthServiceTest,
        ShouldFailHealthCheckIfHealthyStorageThresholdIsExceeded) {
-  space_info fs_space_info;
+  std::filesystem::space_info fs_space_info;
   // Results in 96% utilization
   fs_space_info.capacity = 100;
   fs_space_info.available = 4;
@@ -445,7 +445,7 @@ TEST_F(HealthServiceTest, OTelReturnsCorrectMemoryUsageInfo) {
 
 TEST_F(HealthServiceTest,
        OTelReturnsCorrectInstanceFileSystemStorageUsageInfo) {
-  space_info fs_space_info;
+  std::filesystem::space_info fs_space_info;
   fs_space_info.capacity = 100;
   fs_space_info.available = 75;
   health_service_.SetFileSystemSpaceInfo(fs_space_info);

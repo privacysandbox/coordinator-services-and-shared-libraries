@@ -12,30 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "async_executor.h"
+#include "cc/core/async_executor/src/async_executor.h"
 
 #include <memory>
 #include <random>
 #include <thread>
 #include <vector>
 
+#include "cc/core/async_executor/src/error_codes.h"
+#include "cc/core/async_executor/src/typedef.h"
 #include "cc/core/interface/async_executor_interface.h"
 #include "cc/public/core/interface/execution_result.h"
 
-#include "error_codes.h"
-#include "typedef.h"
-
 namespace privacy_sandbox::pbs_common {
-using std::atomic;
-using std::is_same_v;
-using std::make_shared;
-using std::memory_order_relaxed;
-using std::mt19937;
-using std::random_device;
-using std::shared_ptr;
-using std::uniform_int_distribution;
-using std::vector;
-using std::this_thread::get_id;
 
 ExecutionResult AsyncExecutor::Init() noexcept {
   if (thread_count_ <= 0 || thread_count_ > kMaxThreadCount) {
@@ -51,14 +40,15 @@ ExecutionResult AsyncExecutor::Init() noexcept {
     // up. Should we instead randomly assign the CPUs?
     size_t cpu_affinity_number = i % std::thread::hardware_concurrency();
     urgent_task_executor_pool_.push_back(
-        make_shared<SingleThreadPriorityAsyncExecutor>(
+        std::make_shared<SingleThreadPriorityAsyncExecutor>(
             queue_cap_, drop_tasks_on_stop_, cpu_affinity_number));
     auto execution_result = urgent_task_executor_pool_.back()->Init();
     if (!execution_result.Successful()) {
       return execution_result;
     }
-    normal_task_executor_pool_.push_back(make_shared<SingleThreadAsyncExecutor>(
-        queue_cap_, drop_tasks_on_stop_, cpu_affinity_number));
+    normal_task_executor_pool_.push_back(
+        std::make_shared<SingleThreadAsyncExecutor>(
+            queue_cap_, drop_tasks_on_stop_, cpu_affinity_number));
     execution_result = normal_task_executor_pool_.back()->Init();
     if (!execution_result.Successful()) {
       return execution_result;
@@ -128,38 +118,40 @@ ExecutionResult AsyncExecutor::Stop() noexcept {
 }
 
 template <class TaskExecutorType>
-ExecutionResultOr<shared_ptr<TaskExecutorType>> AsyncExecutor::PickTaskExecutor(
+ExecutionResultOr<std::shared_ptr<TaskExecutorType>>
+AsyncExecutor::PickTaskExecutor(
     AsyncExecutorAffinitySetting affinity,
-    const vector<std::shared_ptr<TaskExecutorType>>& task_executor_pool,
+    const std::vector<std::shared_ptr<TaskExecutorType>>& task_executor_pool,
     TaskExecutorPoolType task_executor_pool_type,
     TaskLoadBalancingScheme task_load_balancing_scheme) {
-  static random_device random_device_local;
-  static mt19937 random_generator(random_device_local());
-  static uniform_int_distribution<uint64_t> distribution;
+  static std::random_device random_device_local;
+  static std::mt19937 random_generator(random_device_local());
+  static std::uniform_int_distribution<uint64_t> distribution;
 
   // Thread local task counters, initial value of the task counter with a random
   // value so that all the caller threads do not pick the same executor to start
   // with
-  static thread_local atomic<uint64_t> task_counter_urgent_thread_local(
+  static thread_local std::atomic<uint64_t> task_counter_urgent_thread_local(
       distribution(random_generator));
-  static thread_local atomic<uint64_t> task_counter_not_urgent_thread_local(
-      distribution(random_generator));
+  static thread_local std::atomic<uint64_t>
+      task_counter_not_urgent_thread_local(distribution(random_generator));
 
   // Global task counters
-  static atomic<uint64_t> task_counter_urgent(0);
-  static atomic<uint64_t> task_counter_not_urgent(0);
+  static std::atomic<uint64_t> task_counter_urgent(0);
+  static std::atomic<uint64_t> task_counter_not_urgent(0);
 
   if (affinity ==
       AsyncExecutorAffinitySetting::AffinitizedToCallingAsyncExecutor) {
     // Get the ID of the current running thread. Use it to pick an executor
     // out of the pool.
-    auto found_executors = thread_id_to_executor_map_.find(get_id());
+    auto found_executors =
+        thread_id_to_executor_map_.find(std::this_thread::get_id());
     if (found_executors != thread_id_to_executor_map_.end()) {
       const auto& [normal_executor, urgent_executor] = found_executors->second;
-      if constexpr (is_same_v<TaskExecutorType, NormalTaskExecutor>) {
+      if constexpr (std::is_same_v<TaskExecutorType, NormalTaskExecutor>) {
         return normal_executor;
       }
-      if constexpr (is_same_v<TaskExecutorType, UrgentTaskExecutor>) {
+      if constexpr (std::is_same_v<TaskExecutorType, UrgentTaskExecutor>) {
         return urgent_executor;
       }
     }
@@ -170,13 +162,13 @@ ExecutionResultOr<shared_ptr<TaskExecutorType>> AsyncExecutor::PickTaskExecutor(
   if (task_load_balancing_scheme ==
       TaskLoadBalancingScheme::RoundRobinPerThread) {
     if (task_executor_pool_type == TaskExecutorPoolType::UrgentPool) {
-      auto picked_index =
-          task_counter_urgent_thread_local.fetch_add(1, memory_order_relaxed) %
-          task_executor_pool.size();
+      auto picked_index = task_counter_urgent_thread_local.fetch_add(
+                              1, std::memory_order_relaxed) %
+                          task_executor_pool.size();
       return task_executor_pool.at(picked_index);
     } else if (task_executor_pool_type == TaskExecutorPoolType::NotUrgentPool) {
       auto picked_index = task_counter_not_urgent_thread_local.fetch_add(
-                              1, memory_order_relaxed) %
+                              1, std::memory_order_relaxed) %
                           task_executor_pool.size();
       return task_executor_pool.at(picked_index);
     } else {

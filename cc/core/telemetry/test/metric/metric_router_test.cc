@@ -15,6 +15,9 @@
 #include "cc/core/telemetry/src/metric/metric_router.h"
 
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/telemetry/mock/in_memory_metric_exporter.h"

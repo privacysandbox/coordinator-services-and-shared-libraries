@@ -12,8 +12,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef CC_CORE_TELEMETRY_SRC_AUTHENTICATION_GCP_TOKEN_FETCHER
-#define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_GCP_TOKEN_FETCHER
+#ifndef CC_CORE_TELEMETRY_SRC_AUTHENTICATION_GCP_TOKEN_FETCHER_H_
+#define CC_CORE_TELEMETRY_SRC_AUTHENTICATION_GCP_TOKEN_FETCHER_H_
 
 #include <chrono>
 #include <memory>
@@ -49,4 +49,4 @@ class GcpTokenFetcher : public TokenFetcher {
   void CreateIamClient();
 };
 }  // namespace privacy_sandbox::pbs_common
-#endif
+#endif  // CC_CORE_TELEMETRY_SRC_AUTHENTICATION_GCP_TOKEN_FETCHER_H_

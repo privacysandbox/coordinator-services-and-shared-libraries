@@ -15,13 +15,13 @@
 # Get the hosted zone, this already exists as an variable for each project
 data "google_dns_managed_zone" "dns_zone" {
   name    = replace(var.parent_domain_name, ".", "-")
-  project = var.project_id
+  project = var.parent_domain_name_project
 
   lifecycle {
     # Parent domain name should not be null
     precondition {
-      condition     = var.parent_domain_name != null && var.project_id != null
-      error_message = "Domain management is enabled with an null parent_domain_name or project_id."
+      condition     = var.parent_domain_name != null && var.parent_domain_name_project != null
+      error_message = "Domain management is enabled with an null parent_domain_name or parent_domain_name_project."
     }
   }
 }
@@ -205,7 +205,7 @@ resource "google_certificate_manager_dns_authorization" "public_key_dns_auth_def
 #  Add the default DNS auth record.
 resource "google_dns_record_set" "public_key_auth_record_default" {
   count        = var.enable_domain_management ? 1 : 0
-  project      = var.project_id
+  project      = var.parent_domain_name_project
   name         = google_certificate_manager_dns_authorization.public_key_dns_auth_default[0].dns_resource_record[0].name
   type         = google_certificate_manager_dns_authorization.public_key_dns_auth_default[0].dns_resource_record[0].type
   ttl          = 60

@@ -55,4 +55,4 @@ class InMemoryMetricRouter : public MetricRouter {
   std::shared_ptr<InMemoryMetricReader> metric_reader_;
 };
 }  // namespace privacy_sandbox::pbs_common
-#endif
+#endif  // CC_CORE_TELEMETRY_MOCK_IN_MEMORY_METRIC_ROUTER_H_

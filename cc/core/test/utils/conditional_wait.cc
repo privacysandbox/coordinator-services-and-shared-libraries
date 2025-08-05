@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "conditional_wait.h"
+#include "cc/core/test/utils/conditional_wait.h"
 
 #include <chrono>
 #include <functional>
@@ -21,15 +21,12 @@
 
 #include "absl/strings/str_cat.h"
 #include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/test/utils/error_codes.h"
 #include "cc/public/core/interface/execution_result.h"
 
-#include "error_codes.h"
-
 namespace privacy_sandbox::pbs_common {
-using std::function;
-using std::this_thread::yield;
 
-void WaitUntil(function<bool()> condition, DurationMs timeout) {
+void WaitUntil(std::function<bool()> condition, DurationMs timeout) {
   auto start_time = TimeProvider::GetSteadyTimestampInNanoseconds();
   while (!condition()) {
     auto now_time = TimeProvider::GetSteadyTimestampInNanoseconds();
@@ -42,11 +39,11 @@ void WaitUntil(function<bool()> condition, DurationMs timeout) {
               .count());
       throw TestTimeoutException();
     }
-    yield();
+    std::this_thread::yield();
   }
 }
 
-ExecutionResult WaitUntilOrReturn(function<bool()> condition,
+ExecutionResult WaitUntilOrReturn(std::function<bool()> condition,
                                   DurationMs timeout) noexcept {
   try {
     WaitUntil(condition, timeout);

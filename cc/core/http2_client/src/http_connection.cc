@@ -16,6 +16,7 @@
  */
 #include "cc/core/http2_client/src/http_connection.h"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <string>

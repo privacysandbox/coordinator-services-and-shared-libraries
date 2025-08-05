@@ -34,6 +34,9 @@
 #include "google/protobuf/text_format.h"
 #include "proto/pbs/api/v1/api.pb.h"
 
+using ::testing::AddGlobalTestEnvironment;
+using ::testing::InitGoogleTest;
+
 namespace privacy_sandbox::pbs_common {
 namespace {
 using ::absl_testing::IsOk;
@@ -205,9 +208,9 @@ absl::StatusOr<std::string> CreateBinaryRequestBodyV2() {
   return json_string;
 }
 
-class PBSIntegrationTest : public testing::Test {
- protected:
-  static void SetUpTestSuite() {
+class PbsGcpIntegrationTestEnvironment : public ::testing::Environment {
+ public:
+  void SetUp() override {
     ASSERT_EQ(LoadImage(std::string(kPbsServerImageLocation)), 0);
 
     // Assure that we can run docker compose within our test
@@ -221,6 +224,15 @@ class PBSIntegrationTest : public testing::Test {
     SetupSpannerDatabase(emulator_ip_address);
   }
 
+  void TearDown() override {
+    ASSERT_EQ(RunDockerComposeCmd(
+                  absl::StrFormat("--file %s  down", kDockerComposeLocation)),
+              0);
+  }
+};
+
+class PBSIntegrationTest : public testing::Test {
+ protected:
   void SetUp() override {
     HttpClientOptions http_client_options(
         RetryStrategyOptions(RetryStrategyType::Linear,
@@ -236,12 +248,6 @@ class PBSIntegrationTest : public testing::Test {
         "http://",
         GetIpAddress(std::string(kNetworkName), std::string(kPbsContainerName)),
         ":", kPbsHealthCheckPort);
-  }
-
-  static void TearDownTestSuite() {
-    ASSERT_EQ(RunDockerComposeCmd(
-                  absl::StrFormat("--file %s  down", kDockerComposeLocation)),
-              0);
   }
 
   ExecutionResult PerformRequest(absl::string_view path,
@@ -327,3 +333,10 @@ TEST_P(PBSIntegrationTestWithBudgetType, ConsumeBudgetV2TwoPhases) {
 }
 }  // namespace
 }  // namespace privacy_sandbox::pbs_common
+
+int main(int argc, char** argv) {
+  AddGlobalTestEnvironment(
+      new privacy_sandbox::pbs_common::PbsGcpIntegrationTestEnvironment());
+  InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

@@ -15,6 +15,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "cc/core/async_executor/mock/mock_async_executor.h"
 #include "cc/core/http2_client/mock/mock_http_connection.h"
 #include "cc/core/http2_client/mock/mock_http_connection_pool_with_overrides.h"

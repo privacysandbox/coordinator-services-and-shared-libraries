@@ -20,8 +20,8 @@
 
 #include "absl/time/time.h"
 
-#include "service_interface.h"
-#include "type_def.h"
+#include "cc/core/interface/service_interface.h"
+#include "cc/core/interface/type_def.h"
 
 namespace privacy_sandbox::pbs_common {
 /// Defines operation type.

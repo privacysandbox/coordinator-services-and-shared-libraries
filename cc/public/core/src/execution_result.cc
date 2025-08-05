@@ -18,8 +18,7 @@
 #include "cc/public/core/interface/execution_result.h"
 
 #include <map>
-
-using std::map;
+#include <string>
 
 namespace privacy_sandbox::pbs_common {
 std::string ExecutionStatusToString(const ExecutionStatus& status) {

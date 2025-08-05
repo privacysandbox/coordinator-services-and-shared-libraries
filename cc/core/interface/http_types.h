@@ -21,8 +21,7 @@
 #include <string>
 
 #include "cc/core/interface/errors.h"
-
-#include "type_def.h"
+#include "cc/core/interface/type_def.h"
 
 namespace privacy_sandbox::pbs_common {
 /// Http Methods enumerator.

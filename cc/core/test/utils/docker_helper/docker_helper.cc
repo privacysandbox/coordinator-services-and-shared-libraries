@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "docker_helper.h"
+#include "cc/core/test/utils/docker_helper/docker_helper.h"
 
 #include <cstdio>
 #include <map>
@@ -22,47 +22,43 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 
-using std::map;
-using std::runtime_error;
-using std::string;
-
 static constexpr absl::string_view kDockerComposeBinaryPath =
     "cc/core/test/utils/docker_helper/docker-compose";
 
 namespace privacy_sandbox::pbs_common {
-string PortMapToSelf(string port) {
+std::string PortMapToSelf(std::string port) {
   return port + ":" + port;
 }
 
 int StartContainer(
-    const string& network, const string& container_name,
-    const string& image_name, const string& port_mapping1,
-    const string& port_mapping2,
+    const std::string& network, const std::string& container_name,
+    const std::string& image_name, const std::string& port_mapping1,
+    const std::string& port_mapping2,
     const std::map<std::string, std::string>& environment_variables,
-    const string& addition_args) {
+    const std::string& addition_args) {
   return std::system(BuildStartContainerCmd(
                          network, container_name, image_name, port_mapping1,
                          port_mapping2, environment_variables, addition_args)
                          .c_str());
 }
 
-string BuildStartContainerCmd(
-    const string& network, const string& container_name,
-    const string& image_name, const string& port_mapping1,
-    const string& port_mapping2,
+std::string BuildStartContainerCmd(
+    const std::string& network, const std::string& container_name,
+    const std::string& image_name, const std::string& port_mapping1,
+    const std::string& port_mapping2,
     const std::map<std::string, std::string>& environment_variables,
-    const string& addition_args) {
+    const std::string& addition_args) {
   auto ports_mapping = absl::StrFormat("-p %s ", port_mapping1);
   if (!port_mapping2.empty()) {
     ports_mapping += absl::StrFormat("-p %s ", port_mapping2);
   }
 
-  string name_network;
+  std::string name_network;
   if (!network.empty()) {
     name_network = absl::StrFormat("--network=%s ", network);
   }
 
-  string envs;
+  std::string envs;
   for (auto it = environment_variables.begin();
        it != environment_variables.end(); ++it) {
     envs += absl::StrFormat("--env %s=%s ", it->first, it->second);
@@ -84,7 +80,7 @@ int LoadImage(const std::string& image_name) {
   return std::system(BuildLoadImageCmd(image_name).c_str());
 }
 
-string BuildLoadImageCmd(const std::string& image_name) {
+std::string BuildLoadImageCmd(const std::string& image_name) {
   return absl::StrFormat("docker load < %s", image_name);
 }
 
@@ -115,13 +111,13 @@ std::string BuildStopContainerCmd(const std::string& container_name) {
 std::string GetIpAddress(const std::string& network_name,
                          const std::string& container_name) {
   char buffer[20];
-  string result;
-  string command =
+  std::string result;
+  std::string command =
       absl::StrCat("docker inspect -f '{{ .NetworkSettings.Networks.",
                    network_name, ".IPAddress }}' ", container_name);
   auto pipe = popen(command.c_str(), "r");
   if (!pipe) {
-    throw runtime_error("Failed to fetch IP address for container!");
+    throw std::runtime_error("Failed to fetch IP address for container!");
     return "";
   }
 
@@ -131,7 +127,7 @@ std::string GetIpAddress(const std::string& network_name,
 
   auto return_status = pclose(pipe);
   if (return_status == EXIT_FAILURE) {
-    throw runtime_error(
+    throw std::runtime_error(
         "Failed to close pipe to fetch IP address for container!");
     return "";
   }

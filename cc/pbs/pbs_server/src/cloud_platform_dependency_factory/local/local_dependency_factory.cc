@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "local_dependency_factory.h"
+#include "cc/pbs/pbs_server/src/cloud_platform_dependency_factory/local/local_dependency_factory.h"
 
+#include <memory>
 #include <utility>
 
 #include "cc/core/common/uuid/src/uuid.h"

@@ -24,12 +24,10 @@
 #include "opentelemetry/metrics/provider.h"
 
 namespace privacy_sandbox::pbs_common {
-using std::make_unique;
-using std::shared_ptr;
 
 constexpr char kHttpClient[] = "Http2Client";
 
-HttpClient::HttpClient(shared_ptr<AsyncExecutorInterface>& async_executor,
+HttpClient::HttpClient(std::shared_ptr<AsyncExecutorInterface>& async_executor,
                        HttpClientOptions options,
                        absl::Nullable<MetricRouter*> metric_router)
     : http_connection_pool_(make_unique<HttpConnectionPool>(
@@ -72,7 +70,7 @@ ExecutionResult HttpClient::PerformRequest(
   operation_dispatcher_.Dispatch<AsyncContext<HttpRequest, HttpResponse>>(
       http_context,
       [this](AsyncContext<HttpRequest, HttpResponse>& http_context) mutable {
-        shared_ptr<HttpConnection> http_connection;
+        std::shared_ptr<HttpConnection> http_connection;
         auto execution_result = http_connection_pool_->GetConnection(
             http_context.request->path, http_connection);
         if (!execution_result.Successful()) {

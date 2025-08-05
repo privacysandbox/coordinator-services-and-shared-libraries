@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "http2_request.h"
+#include "cc/core/http2_server/src/http2_request.h"
 
 #include <algorithm>
 #include <memory>
@@ -22,18 +22,10 @@
 #include <utility>
 #include <vector>
 
+#include "cc/core/http2_server/src/http2_utils.h"
 #include "cc/public/core/interface/execution_result.h"
 
-#include "http2_utils.h"
-
 namespace privacy_sandbox::pbs_common {
-using std::bind;
-using std::copy;
-using std::make_shared;
-using std::string;
-using std::vector;
-using std::placeholders::_1;
-using std::placeholders::_2;
 
 static constexpr size_t kMaxRequestBodySize = 1 * 1024 * 1024 * 1024;  // 100MB
 
@@ -60,7 +52,7 @@ ExecutionResult NgHttp2Request::ReadMethod() noexcept {
 }
 
 ExecutionResult NgHttp2Request::ReadHeaders() noexcept {
-  headers = make_shared<HttpHeaders>();
+  headers = std::make_shared<HttpHeaders>();
   for (const auto& header : ng2_request_.header()) {
     headers->insert({header.first, header.second.value});
   }
@@ -87,7 +79,7 @@ void NgHttp2Request::OnRequestBodyDataChunkReceived(
     return;
   }
   // Otherwise, copy in data.
-  copy(data, data + length, body.bytes->begin() + body.length);
+  std::copy(data, data + length, body.bytes->begin() + body.length);
   body.length += length;
 }
 
@@ -118,7 +110,7 @@ ExecutionResult NgHttp2Request::UnwrapNgHttp2Request() noexcept {
       return FailureExecutionResult(SC_HTTP2_SERVER_INVALID_HEADER);
     }
   }
-  body.bytes = make_shared<vector<Byte>>(content_length);
+  body.bytes = std::make_shared<std::vector<Byte>>(content_length);
   body.length = 0;
   body.capacity = content_length;
   return SuccessExecutionResult();
@@ -126,8 +118,9 @@ ExecutionResult NgHttp2Request::UnwrapNgHttp2Request() noexcept {
 
 void NgHttp2Request::SetOnRequestBodyDataReceivedCallback(
     const RequestBodyDataReceivedCallback& callback) {
-  ng2_request_.on_data(bind(&NgHttp2Request::OnRequestBodyDataChunkReceived,
-                            this, _1, _2, callback));
+  ng2_request_.on_data(
+      std::bind(&NgHttp2Request::OnRequestBodyDataChunkReceived, this,
+                std::placeholders::_1, std::placeholders::_2, callback));
 }
 
 }  // namespace privacy_sandbox::pbs_common

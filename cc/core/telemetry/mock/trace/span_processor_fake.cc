@@ -14,6 +14,7 @@
 
 #include "cc/core/telemetry/mock/trace/span_processor_fake.h"
 
+#include <memory>
 #include <utility>
 
 #include "cc/core/common/global_logger/src/global_logger.h"

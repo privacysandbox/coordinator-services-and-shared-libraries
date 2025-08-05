@@ -23,9 +23,8 @@
 #include <thread>
 #include <vector>
 
+#include "cc/core/async_executor/src/async_task.h"
 #include "cc/core/interface/async_executor_interface.h"
-
-#include "async_task.h"
 
 namespace privacy_sandbox::pbs_common {
 /**

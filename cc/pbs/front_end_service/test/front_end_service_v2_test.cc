@@ -18,9 +18,12 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "absl/strings/string_view.h"
 #include "cc/core/async_executor/mock/mock_async_executor.h"
@@ -1031,9 +1034,7 @@ TEST_F(FrontEndServiceV2LifecycleTest,
     version: "2.0"
     data {
       reporting_origin: "http://a.fake.com"
-      keys {
-        budget_type: BUDGET_TYPE_UNSPECIFIED
-      }
+      keys { budget_type: BUDGET_TYPE_UNSPECIFIED }
     }
   )pb";
 
@@ -1054,9 +1055,7 @@ TEST_F(FrontEndServiceV2LifecycleTest,
     version: "2.0"
     data {
       reporting_origin: "http://a.fake.com"
-      keys {
-        budget_type: BUDGET_TYPE_BINARY_BUDGET
-      }
+      keys { budget_type: BUDGET_TYPE_BINARY_BUDGET }
     }
   )pb";
 

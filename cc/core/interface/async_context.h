@@ -24,9 +24,8 @@
 #include "cc/core/common/time_provider/src/time_provider.h"
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cc/core/interface/async_executor_interface.h"
-
-#include "errors.h"
-#include "type_def.h"
+#include "cc/core/interface/errors.h"
+#include "cc/core/interface/type_def.h"
 
 namespace privacy_sandbox::pbs_common {
 /**

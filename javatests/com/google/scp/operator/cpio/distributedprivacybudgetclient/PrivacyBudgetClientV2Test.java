@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.truth.Expect;
 import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
 import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
@@ -59,8 +58,6 @@ public final class PrivacyBudgetClientV2Test {
 
   private static final String HEALTH_CHECK_PHASE_URI = ENDPOINT + "/transactions:health-check";
   private static final String CONSUME_BUDGET_PHASE_URI = ENDPOINT + "/transactions:consume-budget";
-  private static final String TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY =
-      "x-gscp-transaction-last-execution-timestamp";
   private TransactionRequest transactionRequest;
   private HttpClientResponse successResponse;
   private HttpClientResponse retryableFailureResponse;
@@ -77,11 +74,7 @@ public final class PrivacyBudgetClientV2Test {
   public void setup() {
     this.privacyBudgetClient = new PrivacyBudgetClientImplV2(awsHttpClient, ENDPOINT);
     transactionRequest = generateTransactionRequest();
-    Map<String, String> responseHeaders =
-        ImmutableMap.of(
-            TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY,
-            String.valueOf(Instant.now().toEpochMilli()));
-    successResponse = HttpClientResponse.create(200, "", responseHeaders);
+    successResponse = HttpClientResponse.create(200, "", Collections.emptyMap());
     retryableFailureResponse = HttpClientResponse.create(500, "", Collections.emptyMap());
     nonRetryableFailureResponse = HttpClientResponse.create(400, "", Collections.emptyMap());
     badRequestFailureResponse = HttpClientResponse.create(400, "", Collections.emptyMap());
@@ -659,10 +652,6 @@ public final class PrivacyBudgetClientV2Test {
     headers.put(
         "x-gscp-transaction-id", transactionRequest.transactionId().toString().toUpperCase());
     headers.put("x-gscp-claimed-identity", "dummy-reporting-site");
-    headers.put("x-gscp-transaction-secret", "transaction-secret");
-    if (currentPhase != TransactionPhase.BEGIN && currentPhase != TransactionPhase.HEALTH_CHECK) {
-      headers.put(TRANSACTION_LAST_EXEC_TIMESTAMP_HEADER_KEY, "1234");
-    }
     return headers;
   }
 

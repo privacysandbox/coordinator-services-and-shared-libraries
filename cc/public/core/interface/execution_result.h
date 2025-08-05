@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
-#define SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
+#ifndef CC_PUBLIC_CORE_INTERFACE_EXECUTION_RESULT_H_
+#define CC_PUBLIC_CORE_INTERFACE_EXECUTION_RESULT_H_
 
 #include <cstdint>
 #include <string>
@@ -322,4 +322,4 @@ class ExecutionResultOr : public std::variant<ExecutionResult, T> {
 
 }  // namespace privacy_sandbox::pbs_common
 
-#endif  // SCP_CORE_INTERFACE_EXECUTION_RESULT_H_
+#endif  // CC_PUBLIC_CORE_INTERFACE_EXECUTION_RESULT_H_

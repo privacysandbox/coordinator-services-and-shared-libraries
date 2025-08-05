@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "docker_helper.h"
+#include "cc/core/test/utils/docker_helper/docker_helper.h"
 
 #include <gtest/gtest.h>
 
 #include <map>
-
-using std::map;
-using std::string;
+#include <string>
 
 namespace privacy_sandbox::pbs_common {
 TEST(DockerHelper, PortMapToSelf) {
@@ -39,7 +37,7 @@ TEST(DockerHelper, BuildStartContainerCmd) {
             "--name=container_name -p "
             "9000:8000 image_name");
 
-  map<string, string> envs({});
+  std::map<std::string, std::string> envs({});
   envs["host_address"] = "0.0.0.0";
   envs["host_port"] = "8080";
   EXPECT_EQ(BuildStartContainerCmd("network", "container_name", "image_name",

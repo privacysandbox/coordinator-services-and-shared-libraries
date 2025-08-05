@@ -12,8 +12,12 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+#include <map>
+#include <memory>
+#include <string>
 #include <thread>
 #include <variant>
+#include <vector>
 
 #include "cc/core/config_provider/mock/mock_config_provider.h"
 #include "cc/core/telemetry/mock/in_memory_metric_exporter.h"

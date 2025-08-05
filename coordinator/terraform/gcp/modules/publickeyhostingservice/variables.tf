@@ -129,9 +129,14 @@ variable "public_key_service_canary_percent" {
 }
 
 variable "parent_domain_name" {
-  description = "The parent domain name used for this PBS environment. NOTE: The hosted zone must exist."
+  description = "The parent domain name used for this environment. NOTE: The hosted zone must exist."
   type        = string
   nullable    = false
+}
+
+variable "parent_domain_name_project" {
+  description = "The project owning the parent domain name used for this environment. NOTE: The hosted zone must exist."
+  type        = string
 }
 
 variable "enable_public_key_alternative_domain" {

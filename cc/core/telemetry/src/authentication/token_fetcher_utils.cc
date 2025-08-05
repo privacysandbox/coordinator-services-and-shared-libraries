@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "token_fetcher_utils.h"
+#include "cc/core/telemetry/src/authentication/token_fetcher_utils.h"
 
 #include <string>
 #include <vector>
@@ -48,11 +48,13 @@ ExecutionResultOr<std::string> FetchIdTokenInternal(
   if (!response) {
     SCP_ERROR(
         kFetchIdTokenInternal, kZeroUuid, ExecutionResult(),
-        "FetchIdTokenInternal() iam_client.GenerateIdToken(\"%s\", delegates, "
-        "\"%s\") failed: %s: %s",
-        request_name.c_str(), audience.c_str(),
-        google::cloud::StatusCodeToString(response.status().code()).c_str(),
-        response.status().message().c_str());
+        absl::StrFormat(
+            "FetchIdTokenInternal() iam_client.GenerateIdToken(\"%s\", "
+            "delegates, "
+            "\"%s\") failed: %s: %s",
+            request_name.c_str(), audience.c_str(),
+            google::cloud::StatusCodeToString(response.status().code()).c_str(),
+            response.status().message().c_str()));
     return FailureExecutionResult(
         SC_TELEMETRY_AUTHENTICATION_ID_TOKEN_FETCH_FAILED);
   }

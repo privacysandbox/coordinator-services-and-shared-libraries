@@ -17,8 +17,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-using std::string;
-using std::vector;
+#include <string>
+#include <vector>
+
 using testing::ElementsAre;
 using testing::Field;
 using testing::Gt;
@@ -29,9 +30,9 @@ namespace privacy_sandbox::pbs_common {
 
 struct S {
   int x, y, z;
-  string a;
+  std::string a;
   S* o;
-  vector<int> v;
+  std::vector<int> v;
 };
 
 TEST(StructMatchersTest, OnePair) {

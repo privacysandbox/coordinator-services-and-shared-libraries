@@ -37,6 +37,8 @@ resource "google_spanner_instance" "pbs_auth_spanner_instance" {
   config           = local.spanner_config
   edition          = var.pbs_auth_spanner_instance_edition
   processing_units = var.pbs_auth_spanner_instance_processing_units
+
+  default_backup_schedule_type = "NONE"
 }
 
 resource "google_spanner_database" "pbs_auth_spanner_database" {

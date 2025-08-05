@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "http2_response.h"
+#include "cc/core/http2_server/src/http2_response.h"
 
 #include <string>
 
@@ -22,8 +22,6 @@
 namespace privacy_sandbox::pbs_common {
 using nghttp2::asio_http2::header_map;
 using nghttp2::asio_http2::header_value;
-using std::string;
-using std::placeholders::_1;
 
 void NgHttp2Response::OnClose(OnCloseErrorCode close_error_code,
                               OnCloseCallback callback) noexcept {
@@ -37,8 +35,8 @@ void NgHttp2Response::OnClose(OnCloseErrorCode close_error_code,
 }
 
 void NgHttp2Response::SetOnCloseCallback(const OnCloseCallback& callback) {
-  ng2_response_.on_close(
-      std::bind(&NgHttp2Response::OnClose, this, _1, callback));
+  ng2_response_.on_close(std::bind(&NgHttp2Response::OnClose, this,
+                                   std::placeholders::_1, callback));
 }
 
 void NgHttp2Response::Send() noexcept {

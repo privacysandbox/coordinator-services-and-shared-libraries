@@ -24,6 +24,7 @@ cc_test(
         "//cc/core/logger/mock:logger_mock",
         "//cc/core/logger/src:logger_lib",
         "//cc/core/test:core_test_lib",
+        "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",
     ],
 )

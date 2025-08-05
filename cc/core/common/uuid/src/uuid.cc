@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "uuid.h"
+#include "cc/core/common/uuid/src/uuid.h"
 
 #include <cctype>
 #include <cstdint>
@@ -22,9 +22,8 @@
 #include <string>
 
 #include "cc/core/common/time_provider/src/time_provider.h"
+#include "cc/core/common/uuid/src/error_codes.h"
 #include "cc/public/core/interface/execution_result.h"
-
-#include "error_codes.h"
 
 static constexpr char kHexMap[] = {"0123456789ABCDEF"};
 

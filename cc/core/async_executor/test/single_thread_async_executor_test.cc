@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <memory>
 #include <string>
 #include <thread>
 
@@ -32,13 +33,6 @@
 
 namespace privacy_sandbox::pbs_common {
 namespace {
-using std::atomic;
-using std::make_shared;
-using std::string;
-using std::chrono::duration_cast;
-using std::chrono::high_resolution_clock;
-using std::chrono::nanoseconds;
-using std::chrono::seconds;
 using testing::Values;
 
 TEST(SingleThreadAsyncExecutorTests, CannotInitWithTooBigQueueCap) {
@@ -109,11 +103,12 @@ TEST(SingleThreadAsyncExecutorTests, ExceedingQueueCapSchedule) {
 
   {
     // Blocking queue with enough work
-    executor.Schedule([&]() { std::this_thread::sleep_for(seconds(5)); },
-                      AsyncPriority::Normal);
+    executor.Schedule(
+        [&]() { std::this_thread::sleep_for(std::chrono::seconds(5)); },
+        AsyncPriority::Normal);
 
     // try to push more than the queue can handle
-    auto start_time = high_resolution_clock::now();
+    auto start_time = std::chrono::high_resolution_clock::now();
     while (true) {
       auto result = executor.Schedule([&]() {}, AsyncPriority::Normal);
 
@@ -122,9 +117,9 @@ TEST(SingleThreadAsyncExecutorTests, ExceedingQueueCapSchedule) {
         break;
       }
 
-      auto end_time = high_resolution_clock::now();
+      auto end_time = std::chrono::high_resolution_clock::now();
       auto diff = end_time - start_time;
-      if (diff > seconds(5)) {
+      if (diff > std::chrono::seconds(5)) {
         FAIL() << "Queue cap schedule was never exceeded.";
       }
     }
@@ -139,7 +134,7 @@ TEST(SingleThreadAsyncExecutorTests, CountWorkSingleThread) {
   executor.Init();
   executor.Run();
   {
-    atomic<int> count(0);
+    std::atomic<int> count(0);
     for (int i = 0; i < queue_cap / 2; i++) {
       executor.Schedule([&]() { count++; }, AsyncPriority::Normal);
       executor.Schedule([&]() { count++; }, AsyncPriority::High);
@@ -162,7 +157,7 @@ TEST_P(AffinityTest, CountWorkSingleThreadWithAffinity) {
   executor.Init();
   executor.Run();
   {
-    atomic<int> count(0);
+    std::atomic<int> count(0);
     for (int i = 0; i < queue_cap / 2; i++) {
       executor.Schedule(
           [&]() {
@@ -207,7 +202,7 @@ TEST(SingleThreadAsyncExecutorTests, CountWorkMultipleThread) {
   executor.Init();
   executor.Run();
 
-  atomic<int> count(0);
+  std::atomic<int> count(0);
   for (int i = 0; i < queue_cap / 2; i++) {
     executor.Schedule([&]() { count++; }, AsyncPriority::Normal);
     executor.Schedule([&]() { count++; }, AsyncPriority::High);
@@ -227,15 +222,15 @@ TEST(SingleThreadAsyncExecutorTests, AsyncContextCallback) {
   {
     // Atomic is not used here because we just reserve one thread in the
     size_t callback_count = 0;
-    auto request = make_shared<string>("request");
-    auto callback = [&](AsyncContext<string, string>& context) {
+    auto request = std::make_shared<std::string>("request");
+    auto callback = [&](AsyncContext<std::string, std::string>& context) {
       callback_count++;
     };
-    auto context = AsyncContext<string, string>(request, callback);
+    auto context = AsyncContext<std::string, std::string>(request, callback);
 
     executor.Schedule(
         [&]() {
-          context.response = make_shared<string>("response");
+          context.response = std::make_shared<std::string>("response");
           context.result = SuccessExecutionResult();
           context.Finish();
         },
@@ -246,7 +241,7 @@ TEST(SingleThreadAsyncExecutorTests, AsyncContextCallback) {
 
     executor.Schedule(
         [&]() {
-          context.response = make_shared<string>("response");
+          context.response = std::make_shared<std::string>("response");
           context.result = SuccessExecutionResult();
           context.Finish();
         },
@@ -269,8 +264,8 @@ TEST(SingleThreadAsyncExecutorTests, FinishWorkWhenStopInMiddle) {
   executor.Init();
   executor.Run();
 
-  atomic<int> normal_count(0);
-  atomic<int> medium_count(0);
+  std::atomic<int> normal_count(0);
+  std::atomic<int> medium_count(0);
   for (int i = 0; i < queue_cap / 2; i++) {
     executor.Schedule(
         [&]() {

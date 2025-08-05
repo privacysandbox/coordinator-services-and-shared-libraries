@@ -19,7 +19,7 @@
 #include <list>
 #include <string>
 
-#include "service_interface.h"
+#include "cc/core/interface/service_interface.h"
 
 namespace privacy_sandbox::pbs_common {
 
