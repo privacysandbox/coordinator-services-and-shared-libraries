@@ -20,7 +20,7 @@ locals {
 # Get the hosted zone, this already exists as an variable for each project
 data "google_dns_managed_zone" "dns_zone" {
   name    = replace(var.parent_domain_name, ".", "-")
-  project = var.project_id
+  project = var.parent_domain_name_project
 
   lifecycle {
     # Parent domain name should not be null
