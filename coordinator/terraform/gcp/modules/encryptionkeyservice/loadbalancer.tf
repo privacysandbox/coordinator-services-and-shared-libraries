@@ -176,7 +176,7 @@ resource "google_certificate_manager_dns_authorization" "encryption_key_dns_auth
 #  Add the default DNS auth record.
 resource "google_dns_record_set" "encryption_key_auth_record_default" {
   count        = var.enable_domain_management ? 1 : 0
-  project      = var.project_id
+  project      = var.parent_domain_name_project
   name         = google_certificate_manager_dns_authorization.encryption_key_dns_auth_default[0].dns_resource_record[0].name
   type         = google_certificate_manager_dns_authorization.encryption_key_dns_auth_default[0].dns_resource_record[0].type
   ttl          = 60
