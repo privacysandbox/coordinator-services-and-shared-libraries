@@ -1,4 +1,12 @@
 # Changelog
+## [1.31.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/release-v1.30...release-v1.31) (2025-08-19)
+
+### Changes
+- BUILD
+  - [CA] Update container dependencies.
+- PBS
+  - [CA] Cleanup google_pbs_stop_serving_v1_request
+
 ## [1.30.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/v1.29.0...v1.30.0) (2025-08-05)
 
 ### Changes
