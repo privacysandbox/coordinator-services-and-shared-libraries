@@ -147,7 +147,7 @@ resource "google_compute_global_forwarding_rule" "encryption_key_service_cloud_r
 # See console for status: https://console.cloud.google.com/loadbalancing/advanced/sslCertificates/list
 # Note: even if status of cert becomes 'Active', it can still take around 10 mins for requests to the domain to work.
 resource "google_compute_managed_ssl_certificate" "encryption_key_service_loadbalancer" {
-  count   = var.enable_domain_management ? 1 : 0
+  count   = var.enable_domain_management && !var.remove_private_key_service_compute_engine_ssl_cert ? 1 : 0
   project = var.project_id
   name    = "${var.environment}-encryption-key-cert"
 

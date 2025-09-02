@@ -144,6 +144,7 @@ resource "google_cloud_run_service_iam_policy" "no_auth" {
 }
 
 resource "google_cloud_run_v2_service" "pbs_instance" {
+  project  = var.project_id
   name     = "${var.environment}-${var.region}-pbs-cloud-run"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"

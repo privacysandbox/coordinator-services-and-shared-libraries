@@ -149,6 +149,7 @@ module "encryptionkeyservice" {
   parent_domain_name_project                          = var.parent_domain_name_project
   enable_private_key_service_certificate_map          = var.enable_private_key_service_certificate_map
   disable_private_key_service_compute_engine_ssl_cert = var.disable_private_key_service_compute_engine_ssl_cert
+  remove_private_key_service_compute_engine_ssl_cert  = var.remove_private_key_service_compute_engine_ssl_cert
 
   # OTel Metrics
   export_otel_metrics = var.export_otel_metrics

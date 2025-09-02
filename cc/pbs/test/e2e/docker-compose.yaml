@@ -55,7 +55,7 @@ services:
       google_scp_pbs_partition_lease_duration_in_seconds: "-1"
       google_scp_pbs_remote_claimed_identity: "unused"
       google_scp_core_enabled_log_levels: "Emergency,Alert,Critical,Debug,Info,Warning,Error"
-      google_scp_pbs_value_proto_migration_phase: "phase_2"
+      google_scp_pbs_value_proto_migration_phase: "phase_3"
     networks:
       - pbse2etestnetwork
     depends_on:

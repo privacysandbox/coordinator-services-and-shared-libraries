@@ -29,6 +29,7 @@ locals {
 resource "google_service_account" "pbs_auth_svc_account" {
   # Service account ID has a 30 character limit and our environment names are
   # allowed to be up to 18 characters
+  project      = var.project_id
   account_id   = "${var.environment}-pbsauthacnt"
   display_name = "PBS Auth Service Account"
 }
@@ -40,6 +41,7 @@ resource "random_id" "gcs_bucket_random_part" {
 resource "google_storage_bucket" "pbs_auth_package" {
   # Bucket names must be globally unique so we add a random part to the name.
   # Total must be max 63 characters
+  project                     = var.project_id
   name                        = "${var.environment}_pbs_auth_package_${random_id.gcs_bucket_random_part.hex}"
   count                       = var.pbs_auth_package_bucket == null ? 1 : 0
   location                    = var.region
@@ -65,6 +67,7 @@ resource "google_storage_bucket_object" "pbs_auth_package_bucket_object" {
 }
 
 resource "google_cloudfunctions2_function" "pbs_auth_cloudfunction" {
+  project  = var.project_id
   name     = "${var.environment}-${var.region}-${local.cloudfunction_name_suffix}"
   location = var.region
 

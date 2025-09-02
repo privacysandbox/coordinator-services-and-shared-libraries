@@ -45,6 +45,7 @@ resource "random_id" "pbs_cert_manager" {
 
 # Network Endpoint Group to route to auth cloud function
 resource "google_compute_region_network_endpoint_group" "pbs_auth_network_endpoint_group" {
+  project               = var.project_id
   count                 = var.enable_domain_management ? 1 : 0
   name                  = "${var.environment}-${var.region}-pbs-auth"
   network_endpoint_type = "SERVERLESS"
@@ -105,6 +106,7 @@ resource "google_compute_backend_service" "pbs_auth_loadbalancer_backend" {
 
 # Network Endpoint Group to route to Cloud Run PBS
 resource "google_compute_region_network_endpoint_group" "pbs_network_endpoint_group" {
+  project               = var.project_id
   name                  = "${var.environment}-${var.region}-pbs"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
@@ -320,6 +322,7 @@ resource "google_certificate_manager_certificate" "pbs_loadbalancer_alternate_ce
 }
 
 resource "google_certificate_manager_dns_authorization" "gcp_pbs_instance" {
+  project     = var.project_id
   count       = local.enable_certificate_mananger_v1 ? 1 : 0
   name        = "gcp-pbs-dns"
   description = "DNS Authorization for GCP PBS domain validation"
@@ -348,12 +351,14 @@ resource "google_certificate_manager_dns_authorization" "pbs_alternate_instance_
 }
 
 resource "google_certificate_manager_certificate_map" "pbs_loadbalancer_map" {
+  project     = var.project_id
   count       = var.enable_domain_management ? 1 : 0
   name        = "${random_id.pbs_cert_manager.hex}-map"
   description = "Certificate Map PBS"
 }
 
 resource "google_certificate_manager_certificate_map_entry" "default" {
+  project      = var.project_id
   count        = local.enable_certificate_mananger_v1 ? 1 : 0
   name         = "${random_id.pbs_cert_manager.hex}-map-entry"
   description  = "PBS Certificate Map entry"
@@ -381,6 +386,7 @@ resource "google_certificate_manager_certificate_map_entry" "pbs_alternate_dns_m
 }
 
 resource "google_certificate_manager_certificate_map_entry" "pbs_alternate_dns_map_entry_v2" {
+  project      = var.project_id
   for_each     = (local.enable_certificate_mananger_v2 && var.pbs_tls_alternate_names != null) ? toset(var.pbs_tls_alternate_names) : []
   name         = "${random_id.pbs_cert_manager.hex}-${substr(sha256(each.key), 0, 7)}-map-entry"
   description  = "Alternate PBS Certificate Map entry"

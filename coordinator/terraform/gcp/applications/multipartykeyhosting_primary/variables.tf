@@ -362,6 +362,12 @@ variable "disable_private_key_service_compute_engine_ssl_cert" {
   default     = false
 }
 
+variable "remove_private_key_service_compute_engine_ssl_cert" {
+  description = "Remove the existing compute engine SSL certificate. Only set this to true once the compute engine SSL certificate has been disabled"
+  type        = bool
+  default     = false
+}
+
 variable "enable_public_key_alternative_domain" {
   description = "Set to true to enable the creation of alternative domain certificates and related resources."
   type        = bool

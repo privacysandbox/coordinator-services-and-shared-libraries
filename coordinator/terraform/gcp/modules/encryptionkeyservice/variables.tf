@@ -63,6 +63,11 @@ variable "disable_private_key_service_compute_engine_ssl_cert" {
   type        = bool
 }
 
+variable "remove_private_key_service_compute_engine_ssl_cert" {
+  description = "Remove the existing compute engine SSL certificate. Only set this to true once the compute engine SSL certificate has been disabled"
+  type        = bool
+}
+
 variable "encryption_key_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for cloudfunction."
   type        = number

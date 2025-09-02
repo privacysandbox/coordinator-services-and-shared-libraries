@@ -1,4 +1,16 @@
 # Changelog
+## [1.32.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/release-v1.31...release-v1.32) (2025-09-02)
+
+### Changes
+- INFRA
+  - [GCP] Add remove_private_key_service_compute_engine_ssl_cert flag
+- BUILD
+  - [CA] Update container dependencies
+- PBS
+  - [GCP] Define project attribute for PBS Terraform files
+  - [CA] Update PBS value proto migration phase to phase_3
+
+
 ## [1.31.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/release-v1.30...release-v1.31) (2025-08-19)
 
 ### Changes
