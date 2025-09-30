@@ -79,19 +79,17 @@ public final class EncryptionKeyConverter {
           encryptionKey) {
     return encryptionKey.getKeySplitDataList().stream()
         .map(
-            keySplitData -> {
-              var keyDataBuilder =
-                  KeyData.newBuilder()
-                      .setPublicKeySignature(keySplitData.getPublicKeySignature())
-                      .setKeyEncryptionKeyUri(keySplitData.getKeySplitKeyEncryptionKeyUri());
-              // Only populate key material for the key data owned by this coordinator.
-              if (encryptionKey
-                  .getKeyEncryptionKeyUri()
-                  .equals(keySplitData.getKeySplitKeyEncryptionKeyUri())) {
-                keyDataBuilder.setKeyMaterial(encryptionKey.getJsonEncodedKeyset());
-              }
-              return keyDataBuilder.build();
-            })
+            keySplitData ->
+                // Only populate the key data owned by this coordinator.
+                encryptionKey
+                        .getKeyEncryptionKeyUri()
+                        .equals(keySplitData.getKeySplitKeyEncryptionKeyUri())
+                    ? KeyData.newBuilder()
+                        .setKeyEncryptionKeyUri(encryptionKey.getKeyEncryptionKeyUri())
+                        .setKeyMaterial(encryptionKey.getJsonEncodedKeyset())
+                        .setPublicKeySignature(keySplitData.getPublicKeySignature())
+                        .build()
+                    : KeyData.getDefaultInstance())
         .collect(ImmutableList.toImmutableList());
   }
 }

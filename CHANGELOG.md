@@ -1,4 +1,30 @@
 # Changelog
+## [1.33.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/release-v1.32...release-v1.33) (2025-09-30)
+### Important Note
+**[GCP]**
+- [Feature enabling] Migrate to `phase_3` in the PBS Spanner migration which enable reads from the ValueProto column.
+  - [To Enable] In the `auto.tfvars` for `distributedpbs_application`, change the following variables:
+    ```
+    pbs_application_environment_variables = [
+      ...
+      {
+        name  = "google_scp_pbs_value_proto_migration_phase"
+        value = "phase_3"
+      },
+    ]
+    ```
+  - [To Rollback] Rollback the terraform changes performed in the above steps and deploy PBS in the current version.
+    - Rolling back this environment variable in `phase_2` should sufficiently restore PBS to it's previous state.
+  - Default value of `google_scp_pbs_value_proto_migration_phase` is `phase_1` in which PBS neither writes nor reads the `ValueProto` column. **Currently, this flag is set to `phase_2`**. This change log instructs to advance this flag to `phase_3`.
+
+### Changes
+- MPKGDS
+  - [CA] Set empty peer coordinator's key data for v1 API
+- BUILD
+  - [CA] Update container dependencies
+- PBS
+  - [GCP] Reduce PBS Cloud Run memory limit from 32Gi to 8Gi
+
 ## [1.32.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/release-v1.31...release-v1.32) (2025-09-02)
 
 ### Changes
@@ -8,8 +34,7 @@
   - [CA] Update container dependencies
 - PBS
   - [GCP] Define project attribute for PBS Terraform files
-  - [CA] Update PBS value proto migration phase to phase_3
-
+  - [CA] Update PBS value proto migration phase to phase_3 in integration tests
 
 ## [1.31.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/compare/release-v1.30...release-v1.31) (2025-08-19)
 

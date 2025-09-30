@@ -166,7 +166,7 @@ resource "google_cloud_run_v2_service" "pbs_instance" {
       resources {
         limits = {
           cpu    = 8
-          memory = "32Gi"
+          memory = "8Gi"
         }
         startup_cpu_boost = true
         cpu_idle          = false
