@@ -1,5 +1,5 @@
 aws_requests_auth==0.4.3
-certifi==2022.12.7
+certifi==2023.7.22
 requests==2.28.2
 urllib3==1.26.14
 awscrt==0.16.16
